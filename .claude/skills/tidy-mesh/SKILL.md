@@ -1,6 +1,6 @@
 ---
 name: tidy-mesh
-description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and a run (the run profile), and for clothes that sit on the body, move with it and swing (drape, cloth, swing).
+description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and a run (the run profile), and for clothes that sit on the body, move with it and swing (drape, cloth, swing), and for a real body under clothes that hide it (a base body from a second picture, garments cut out of the clothed mesh: garment, follow).
 ---
 
 # tidy-mesh
@@ -684,6 +684,119 @@ What is weak, most visible first:
 - **Old block-outs are guessed.** Without `"fit"` on the pieces, a coat
   called "torso" is taken for tight cloth. Check `"pieces"`.
 
+## A real body under clothes that hide it
+
+A long skirt, a robe or a cloak hides the body. TRELLIS.2 sees only the
+cloth, so what it puts under it is a guess, and the block-out, the rig and
+the walk are all built on that guess. For such a character the pipeline
+makes the body for real (`baml_src/2b_undress`) and puts the clothes back
+on. Two scripts do the measuring and cutting; both run in a background
+Blender, never in the person's.
+
+    garment.py   two pictures and two meshes in; the base body laid on the clothed mesh, each hiding garment cut out
+    follow.py    after the finish: the base body and garments make the move stand.py made
+
+What goes in: the clothed picture and its mesh, and a second picture of
+the same character with the hiding clothes off (Codex edits the first:
+same pose, same framing, plain skin-tight black where the clothes were)
+and the mesh TRELLIS.2 makes of that, the base body.
+
+**It checks before it cuts.** `garment.py` stops, and says why with
+numbers, when:
+
+- the figure moved between the pictures (an edge of it, head top, hands
+  or feet, shifted more than 2% of its height; an edge the garment itself
+  reaches, like a hood at the top, is let off), or nearly nothing changed,
+  or nearly everything did;
+- a mesh, seen from the front, doesn't cover the figure in its own picture
+  (under 70%): it isn't framed the way the picture is;
+- the base body's uncovered parts (head, arms, feet: whatever lands
+  outside the change in the pictures) sit more than 0.8% of the height off
+  the clothed mesh typically, or one in ten of them more than 2.5%.
+
+The pipeline then has Codex edit the picture once more, with what went
+wrong in the request; a second failure stops the step
+(`BaseBodyMisaligned`, with the numbers).
+
+**The framing.** TRELLIS.2 centers the figure and scales it to fill its
+box, front toward -Y. So a face at (x, z) lands in the picture at a column
+and row worked out from the two outlines' edges: the mesh's box and the
+figure's box in the picture. The result's `"view"` says how well that
+holds (`overlap_pct`: on the dancer 89% and 88%). The mesh can be mirrored
+left to right; it is tried both ways and the one whose colors match the
+picture wins.
+
+**The fit.** Two TRELLIS.2 meshes of two pictures with the same framing
+come out in the same place at the same size (the dancer's: 0.16% of her
+height apart, untouched). When the clothes change the outline (a hood
+makes the figure taller, so everything else comes out smaller), they
+don't; so the base body is fitted, by size and position only, to the parts
+no clothes cover, starting from wherever is closest: as the meshes came,
+or where the pictures put them. `"fit"` has the scale, the shift and how
+far apart the uncovered parts end up, height band by band.
+
+**The cut: three votes, two agree.**
+
+| Vote | Says "garment" when | Good at | Weak at |
+|---|---|---|---|
+| picture | the face lands where the two pictures differ | the garment's outline, exactly, up to the waistband | it can't tell front from back from the legs inside, and base clothing changes pixels too (ankles) |
+| color | its texture color is one the garment has in the picture and the rest of the figure doesn't | the back, which the picture never saw; cloth that hugs the body | a garment the color of something else on the figure |
+| distance | it stands off the base body by more than 1.5% of the height | ruffles, hems, anything that hangs | cloth that hugs the body: cutting by distance alone tore the dancer's upper skirt away |
+
+On the dancer all three agree on 55% of the surface; picture and color
+alone keep the 7% that hugs the hips; picture and distance keep the 8.5%
+whose color is in doubt (the edges of the polka dots, shadowed folds).
+Then:
+
+- the cut grows over its own blurred edge, up to where the colors change:
+  a neighbor the picture votes for joins unless its color is clearly the
+  rest of the figure's. That is what brings the skirt whole to the
+  waistband (6,762 faces on the dancer);
+- the edge is evened out, scraps under 1% of the garment are dropped (79
+  of them, mostly bits of leg inside the skirt), holes under 1% are closed
+  (93);
+- garment points that end up under the real body's skin are lifted onto
+  it (`"seat"`). The clothed mesh hugged a guessed hip; the real one is a
+  little fuller. A TRELLIS.2 mesh is a thin shell with an outer and an
+  inner wall, so inside and outside are told apart by counting walls along
+  a line, not by which way the nearest face points.
+
+With several garments, each face goes to the one whose `slot` is at its
+height (a hood above a robe).
+
+**Read the result.** For each garment: `faces`, `area_pct`, `top` and
+`bottom` (shares of the height), `pieces`, `closed_round_its_top_pct`
+(100 = a whole waistband) and `other_colors_pct` (scraps of tights or
+shoes would show here). `"votes"` has the faces and area each vote claimed
+and each combination. `"overlay"` renders the clothed mesh front, quarter
+and back with every face in its votes' color: white all three, blue
+picture + color, yellow picture + distance, purple color + distance, green
+added in cleanup, red dropped. `scripts/base_shots.py` (`just base-shots`)
+puts the body, the clothes and both on one sheet above those.
+
+**Where things live.** In the run: `base/image.png`, `base/mesh.glb` (the
+second picture and its mesh), `base/body.glb` (the base body laid on the
+clothed mesh), `base/cut/<garment>.glb`, `base/cut.json` (the result),
+`base/sheet.png`; a failed try is kept in `base/tried-1/` with why. After
+the finish, `base/final.glb` and `garments/<garment>.glb` are the same
+pieces where the finished object stands.
+
+**Following the finish.** `stand.py` now keeps the whole move it makes
+(turn, scale, shift, multiplied up over every run) on the object as
+`forge_placed`. `follow.py` opens the run's `scene.blend`, reads it,
+checks it by moving the raw mesh onto the finished one (0.000% apart when
+the move is right), and applies it to every file in `"follow"`. With no
+kept move (a scene from before, or `final.glb` alone) it fits one: 24
+quarter turns, sized and centered, closest wins. A turn that isn't a
+quarter turn can't be found that way, and it says so instead of writing.
+
+**In the block-out.** When a run has `base/final.glb`, the low-poly prompt
+(`base_steps` in `lowpoly_prompt.baml`) has Claude bring it in beside the
+reference with `open.py` and `"add": True` as "Body", and each garment as
+"Garment: <name>"; measure body pieces on "Body" and each hidden garment
+on its own mesh; and pass `"reference": "Reference"` to `build.py`. Gear
+and `fit` tags, `drape.py` and the rest are as before.
+
 ## Faces: a character's head is measured, not guessed
 
 Left to itself, Claude spends a low-poly character's triangles on the
@@ -828,6 +941,8 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `drape.py` | lay each piece of clothing on the body (tight, loose or stiff), and mark the skin it hides | low poly (dressed characters), profiles, walk |
 | `cloth.py` | give clothes the body's weights; give loose cloth chains of bones to hang from | walk |
 | `swing.py` | after any baked motion: make the cloth bones hang and swing, clear of the legs, inside their limits | walk |
+| `garment.py` | check a base body against the clothed character (pictures, then meshes), lay it on, and cut each hiding garment out by three votes | base body (background only) |
+| `follow.py` | move the base body and garments the way the finish moved the mesh | base body (background only) |
 
 How they fit together:
 
@@ -976,6 +1091,19 @@ Rules for the live session:
   object's size straight out from it. A face only partly covered (a neck
   at a collar) goes one way or the other, so the edge is stepped.
 
+- The base body rests on the second picture keeping the figure still.
+  `garment.py` measures that and stops when it didn't; it can't repair it.
+- A garment the same color as what is under or beside it (a black coat
+  over black leggings) leaves the cut to distance, which loses cloth that
+  hugs the body. The edit asks for teal base clothing in that case.
+- Several hiding garments are told apart only by the height their slots
+  sit at.
+- Where garment points were lifted onto a fuller body, the cloth's two
+  walls can cross and the surface there looks crumpled up close (the
+  dancer's left hip).
+- `follow.py`'s fit finds quarter turns only; anything else needs the move
+  `stand.py` kept.
+
 ## Testing a script change
 
 ```
@@ -1003,7 +1131,13 @@ and made for real from a stick-figure clip (troll, lizardkin); and the clothes:
 drape.py on the troll, then Lincoln, the ninja, Roosevelt, the troll and
 the pirate made low poly, mid poly and walking by the real runner and
 measured with `scripts/cloth_check.py` over every frame (skin through
-cloth, the gap, the cloth bones' limits and seam, triangles). About ten
+cloth, the gap, the cloth bones' limits and seam, triangles). And the base
+body: `garment.py` on a made-up figure whose every face is known
+(`scripts/base_fixture.py`: the skirt must come out exactly, a shrunk body
+be laid back on, a moved picture and a different pose be turned down) and
+on the flamenco dancer when her runs are there (the fit, each vote, the
+skirt whole to the waistband), then `follow.py` after a finish done the
+way the Blender step does it. About ten
 minutes in all. With `--keep DIR`
 the face cases leave `troll-head-compared.png` and
 `pirate-head-compared.png`: front and side of the reference, each head, and

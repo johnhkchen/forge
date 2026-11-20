@@ -45,7 +45,11 @@ class PictureFailed {
 }
 
 function picture_request(brief: ObjectBrief) -> string {
-    let rules = if (brief.character ?? false) { CHARACTER_RULES } else { PICTURE_RULES };
+    let rules = if (brief.character ?? false) {
+        CHARACTER_RULES
+    } else {
+        PICTURE_RULES
+    };
     `
         Use your built-in image_gen tool to generate exactly one square image,
         then reply with the single word: done. Do not run shell commands and do
@@ -70,11 +74,22 @@ function codex_thread(events: string) -> string throws PictureFailed {
 
 /// Draws the brief's subject and saves it as image.png in the run folder.
 function draw(brief: ObjectBrief, run: Run) -> string {
+    codex_picture(run.dir, picture_request(brief), [], run.path("image.png"))
+}
+
+/// Asks codex for one picture and saves it as `target`. `attach` are
+/// pictures it is shown (absolute paths), for an edit of one.
+function codex_picture(dir: string, request: string, attach: string[], target: string) -> string {
     //# Ask codex for one picture
+    let shown = attach.flat_map((path) -> {
+        ["-i", path]
+    });
     let out = baml.sys.run(
         "codex",
-        args = ["exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only", "-C", run.dir, "-"],
-        input = picture_request(brief),
+        args = ["exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only", "-C", dir]
+            .concat(shown)
+            .concat(["-"]),
+        input = request,
         timeout = baml.time.Duration.from_seconds(PICTURE_TIMEOUT_S),
         capture_output = true,
     ) catch (e) {
@@ -101,7 +116,6 @@ function draw(brief: ObjectBrief, run: Run) -> string {
         })
         .at(0)
         ?? throw PictureFailed { reason: `no .png in ${folder}` };
-    let target = run.path("image.png");
     baml.fs.write_bytes(target, baml.fs.open(`${folder}/${drawn.name}`, "r").bytes());
     target
 }

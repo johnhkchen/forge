@@ -5,13 +5,21 @@ set dotenv-load
 default:
     @just --list
 
-# Make an object from an idea: brief, picture, mesh, Blender. props: none, held (what a character carries) or all (hats and backpacks too)
-make idea props="none":
-    baml run make -- --idea "{{idea}}" --props "{{props}}"
+# Make an object from an idea: brief, picture, mesh, Blender. props: none, held (what a character carries) or all (hats and backpacks too). undress: auto (a real body under clothes that hide it, when the brief says so), none, or the gear to take off ("ruffled skirt, cloak")
+make idea props="none" undress="auto":
+    baml run make -- --idea "{{idea}}" --props "{{props}}" --undress "{{undress}}"
 
-# Continue a stopped run at its first missing step (props as for make)
-resume dir props="none":
-    baml run resume -- --dir "{{dir}}" --props "{{props}}"
+# Continue a stopped run at its first missing step (props and undress as for make)
+resume dir props="none" undress="auto":
+    baml run resume -- --dir "{{dir}}" --props "{{props}}" --undress "{{undress}}"
+
+# Only the base body, for a run that has its picture and mesh: draw the character again without the gear named (or what its brief says hides the body), build that, cut the gear out of the clothed mesh. Leaves Blender alone
+undress dir gear="auto":
+    baml run undress_run -- --dir "{{dir}}" --gear "{{gear}}"
+
+# Pictures of a base body and the clothes cut for it: body, clothes, both, front and quarter, on one sheet (--votes adds garment.py's vote renders)
+base-shots body out +garments:
+    "{{blender_bin}}" -b --factory-startup -P scripts/base_shots.py -- "{{body}}" "{{out}}" {{garments}} 2>&1 | grep -E '^RESULT|Error|Traceback'
 
 # Only write the briefs for a finished character's props (held, or all); `just resume` each prop's folder to make it
 props dir wanted="held":
@@ -170,8 +178,8 @@ gallery port="8028" runs="runs":
     python3 scripts/gallery.py --port {{port}} --runs "{{runs}}"
 
 # Only brief, picture and mesh (leaves Blender alone); finish with `just resume`
-mesh idea:
-    baml run make_mesh -- --idea "{{idea}}"
+mesh idea undress="auto":
+    baml run make_mesh -- --idea "{{idea}}" --undress "{{undress}}"
 
 # Show the Blender code Claude ran in a run's step (polish, parts, lowpoly)
 transcript run step:

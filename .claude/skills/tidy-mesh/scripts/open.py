@@ -7,6 +7,8 @@
 # make: "empty_first" on someone else's scene opens a fresh "Forge" scene
 # instead (see "kept_scene" in the result). Joins the file's meshes into one
 # object, drops the empties glTF adds, and keeps it where the file put it.
+# "add": True brings a second mesh into a scene that already holds one (a
+# character's base body beside its clothed mesh) and removes nothing.
 #
 # Send this whole file through the blender MCP `execute_blender_code` tool
 # after editing PARAMS. Prints RESULT {json}: the object's name, triangles,
@@ -18,6 +20,7 @@ PARAMS = {
     "scene": None,         # a scene to put it in, like "Parts"; None = the open scene
     "name": "Reference",   # what to call the object
     "empty_first": False,  # with no "scene": empty the open scene first, if open.py made it
+    "add": False,          # True = keep what the scene holds and put this beside it
 }
 
 import bpy
@@ -34,6 +37,8 @@ if PARAMS["scene"]:
     if bpy.context.window:
         bpy.context.window.scene = scene
 kept = None
+if PARAMS["add"]:
+    PARAMS["empty_first"] = False
 if PARAMS["empty_first"] and not PARAMS["scene"] and not scene.get("opened_as"):
     # Not ours (the person's own scene, or one this tool didn't make):
     # leave it whole and work in a fresh scene instead.
@@ -43,7 +48,7 @@ if PARAMS["empty_first"] and not PARAMS["scene"] and not scene.get("opened_as"):
     if bpy.context.window:
         bpy.context.window.scene = scene
 removed = 0
-if PARAMS["scene"] or PARAMS["empty_first"]:
+if (PARAMS["scene"] or PARAMS["empty_first"]) and not PARAMS["add"]:
     for o in list(scene.objects):
         bpy.data.objects.remove(o, do_unlink=True)
         removed += 1

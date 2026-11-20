@@ -88,8 +88,12 @@ function objectPage(run, wanted) {
   const versions = versionsOf(run);
   const start = versions.find((v) => v.name === wanted) || versions.find((v) => v.name === "web") || versions[versions.length - 1];
   // `off` holds the gear the visitor took off; it carries over between the versions that have gear.
-  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, clip: "walk" };
+  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, clip: "walk", bare: false };
   const hasGear = versions.some((v) => v.gear?.length);
+  // A character whose clothes hide its body has a real body made from a second picture, and each
+  // of those clothes cut out on its own. They stand where the raw mesh stands and, once the object
+  // is finished, where the finished one does. The low-poly and mid-poly versions have their own gear.
+  const bareOf = (v) => (v.gear?.length || !run.base ? null : v.name === "raw" ? run.base.raw : run.base.finished);
 
   const stage = h("div", { class: "stage clay-well" });
   const factsBox = h("div", { class: "facts" });
@@ -100,6 +104,14 @@ function objectPage(run, wanted) {
   const compareBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.compare), onclick: () => { state.compare = !state.compare; compareBtn.setAttribute("aria-pressed", String(state.compare)); render(); } }, "Before / after");
   const wireBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.wire), onclick: () => { state.wire = !state.wire; wireBtn.setAttribute("aria-pressed", String(state.wire)); viewer?.setWire(state.wire); } }, "Wireframe");
 
+  // Pressed in, the clothed mesh steps aside for the body that is really under it; the clothes that
+  // hid it become chips, off to begin with, and each goes back on with a tap.
+  const bareBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => {
+    state.bare = !state.bare;
+    bareBtn.setAttribute("aria-pressed", String(state.bare));
+    for (const name of run.base.garments) if (state.bare) state.off.add(name); else state.off.delete(name);
+    render();
+  } }, "Without clothes");
   const socketsBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => { state.sockets = !state.sockets; socketsBtn.setAttribute("aria-pressed", String(state.sockets)); viewer?.setSockets(state.sockets); } }, "Where props go");
   // One clip at a time. Pressed in, the character walks or runs on the spot, or plays a hero shot from start
   // to end, over and over, with the view following it; let go, it stands still in its T-pose.
@@ -116,17 +128,19 @@ function objectPage(run, wanted) {
 
   // One chip per piece of gear: pressed in means it's on. Only the low-poly and mid-poly versions have gear that comes off.
   function showGear() {
-    const gear = state.version.gear || [];
+    const bare = state.bare ? bareOf(state.version) : null;
+    const gear = bare ? bare.garments.map((g) => ({ gear: g.name, kind: "worn", slot: "cut from the clothed mesh" })) : state.version.gear || [];
+    bareBtn.hidden = !bareOf(state.version);
     socketsBtn.hidden = !(state.version.sockets || []).length;
     for (const [clip, btn] of Object.entries(clipBtns)) btn.hidden = !state.version[clip];
     clipBtns.hero.textContent = state.version.hero_mixed ? "Hero: our poses" : "Hero";
-    gearRow.hidden = !hasGear;
+    gearRow.hidden = !hasGear && !bare;
     if (!gear.length) {
       gearRow.replaceChildren(h("span", { class: "hint" }, "Gear comes off in the Low poly and Mid poly versions."));
       return;
     }
     gearRow.replaceChildren(
-      h("span", { class: "hint" }, "Wearing"),
+      h("span", { class: "hint" }, bare ? "Put back on" : "Wearing"),
       ...gear.map((g) => {
         const chip = h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(!state.off.has(g.gear)), title: `${g.kind}, ${g.slot}`, onclick: () => {
           if (state.off.has(g.gear)) state.off.delete(g.gear); else state.off.add(g.gear);
@@ -135,7 +149,7 @@ function objectPage(run, wanted) {
         } }, g.gear);
         return chip;
       }),
-      h("span", { class: "hint" }, "Tap a piece to take it off."),
+      h("span", { class: "hint" }, bare ? "This is the real body, made from a second picture. Tap a piece to put it on." : "Tap a piece to take it off."),
     );
   }
 
@@ -151,14 +165,23 @@ function objectPage(run, wanted) {
     const raw = versions.find((x) => x.name === "raw");
     const panes = state.compare && raw && v !== raw ? [raw, v] : [v];
     viewer?.dispose();
-    viewer = new Viewer(stage, panes.map((x) => ({
+    viewer = new Viewer(stage, panes.map((x) => {
+      const bare = state.bare ? bareOf(x) : null;
+      if (bare) return {
+        label: `${x === raw ? "Raw" : VERSION_NAMES[x.name]} · the body underneath`,
+        glb: file(run, bare.body),
+        pieces: bare.garments.map((g) => ({ gear: g.name, glb: file(run, g.glb) })),
+        walk: null, follow: false, edges: null, onTriangles: null,
+      };
+      return {
       label: panes.length > 1 ? (x === raw ? "Before" : `After · ${VERSION_NAMES[x.name]}`) : VERSION_NAMES[x.name],
       glb: file(run, x.glb),
       walk: playing(x) ? file(run, x[playing(x)]) : null,
       follow: Boolean(playing(x)) && playing(x) !== "walk" && playing(x) !== "run",
       edges: x.edges ? file(run, x.edges) : null,
       onTriangles: x === raw ? (n) => { raw.triangles = n; if (state.version === raw) showFacts(); } : null,
-    })), state.wire, state.off, state.sockets);
+      };
+    }), state.wire, state.off, state.sockets);
     showFacts();
     showGear();
   }
@@ -168,6 +191,10 @@ function objectPage(run, wanted) {
     factsBox.replaceChildren(...facts(run, v).map(([k, val, small]) =>
       h("div", { class: "fact clay-surface" }, h("div", { class: "k" }, k), h("div", { class: "v" }, String(val), small ? h("br") : null, small ? h("small", {}, small) : null)),
     ));
+    if (state.bare && bareOf(v)) {
+      about.textContent = `The body under the ${run.base.garments.join(" and ")}, made for real instead of guessed: Codex drew the same picture again without ${run.base.garments.length > 1 ? "them" : "it"}, TRELLIS.2 built that, and the ${run.base.garments.join(" and ")} ${run.base.garments.length > 1 ? "were" : "was"} cut out of the clothed mesh to go back on.${run.base.apart_pct !== null && run.base.apart_pct !== undefined ? ` Where nothing covers it, the two bodies sit ${run.base.apart_pct}% of the height apart.` : ""}`;
+      return;
+    }
     about.textContent = v.about || (v.name === "raw" ? "Straight from TRELLIS.2: an even soup of triangles with no edge loops." : "");
   }
 
@@ -176,7 +203,7 @@ function objectPage(run, wanted) {
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn)),
+    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, run.base ? bareBtn : null, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn)),
     gearRow,
     stage,
     factsBox,
@@ -191,6 +218,8 @@ function making(run) {
   const pictures = [
     run.picture && ["The picture Codex drew", run.picture],
     run.render && [`Claude's finished render${run.score ? ` · matches the picture ${run.score}/5` : ""}`, run.render],
+    run.base?.picture && [`The same picture with the ${run.base.garments.join(" and ")} off, for the body underneath`, run.base.picture],
+    run.base?.sheet && ["The body, the clothes cut for it, and both; below, which clues picked each face", run.base.sheet],
   ].filter(Boolean);
   return h("section", { class: "making" },
     h("h2", {}, "How it was made"),
@@ -252,6 +281,13 @@ class Viewer {
       if (!this.panes.includes(pane)) return;
       // A model with a skeleton needs its bones copied along with it.
       const model = spec.walk ? cloneSkinned(gltf.scene) : gltf.scene.clone(true);
+      // Clothes cut for a base body come in files of their own; each joins the model under its gear name.
+      for (const piece of spec.pieces || []) {
+        const cloth = (await load(piece.glb)).scene.clone(true);
+        cloth.userData.gear = piece.gear;
+        model.add(cloth);
+      }
+      if (!this.panes.includes(pane)) return;
       let triangles = 0;
       model.traverse((o) => {
         if (!o.isMesh) return;
