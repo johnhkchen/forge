@@ -244,10 +244,29 @@ an animation made for one fits all:
   shoe, 0.9 cm sideways); a long piece running out
   behind the hips is a tail and gets 2 to 5 bones. `found_by` in the result
   says which rule placed each.
-- **Elbows and knees sit on the straight line** from shoulder to wrist and
-  hip to ankle, so they are true one-way hinges. A knee is never placed
-  outside the middle of the leg (44-56%): the troll's knee rings are lower
+- **Every joint sits in the middle of its limb.** Each is put at the middle
+  of the limb piece's own cross-section there (the arm itself, not the box
+  around the arm and the hand, which a thumb pulls off-center). An elbow or
+  knee may leave the straight line from shoulder to wrist or hip to ankle
+  only front to back, the way it folds, and only a little (3 to 4% of the
+  arm, 2.5% of the leg: further, and tights came off the knee), so the two bones still share one hinge axis and it is a
+  true one-way hinge. `built_bent_deg` says how far each is folded as the
+  character stands; a hinge can't open past how it was built, so an elbow
+  goes back by 3% of the arm at most (under 7 degrees of fold, less than
+  the easiest walk asks of an elbow). A knee is never placed outside
+  the middle of the leg's length (44-56%): the troll's knee rings are lower
   than that, and a leg that lopsided can't take a stride.
+- **The neck starts at the collar; the head turns inside the skull.** The
+  neck's base is just above the line of the shoulders (2% of the height),
+  and the head's pivot is a third of the way from chin to crown, level with
+  the ears. Both stand on the neck piece's own center line, front to back.
+  Before, the neck started 64 to 127% of the way from the shoulders to the
+  chin (under the jaw, or in it) and was 5% of the height long, so a nod
+  folded the throat in two. Now it starts 32 to 45% of the way up on most
+  characters and is 8 to 9% long. A neck is never longer than 9% of the
+  height, so on a character with low shoulders (the ninja) it still starts
+  higher (71 to 90%); a head sunk between the shoulders (the troll) gets a
+  short neck under the head.
 - **Binding.** It tries Blender's automatic weights first and keeps them
   only if every point got a weight. On block-outs they don't hold: the
   pieces overlap and hide each other, and Blender left every point of all
@@ -258,6 +277,11 @@ an animation made for one fits all:
   belt around both legs stays half with the hips. The sole is all foot
   behind the ball and all toe ahead of it. At most four bones a point.
   `weights` and `why_not_automatic` in the result say what happened.
+- **A capsule for each bone.** Every bone with body around it carries
+  `capsule_m` [radius, length]: a rod from the bone's head along it, as
+  thick as four fifths of the body's points around it. It rides in the .glb
+  as the bone's extras next to `limit_deg`, for a physics engine to build a
+  ragdoll from. Nothing here simulates one.
 - **Limits** go on as Limit Rotation constraints and ride on each bone as
   `limit_deg` (in the .glb too, as glTF extras): knee 0-150 and elbow 0-150
   one way only; hip 120 forward, 30 back, 40 out and 40 of twist; shoulder,
@@ -300,18 +324,47 @@ planted, and how far each bone has turned from the T-pose, in units of the
 hip height. animate.py is what plays any such motion on a character:
 
 1. **Fit**: scale by this character's hip height, turn each bone from its
-   own rest pose.
+   own rest pose. The arm bones are turned from where a true T-pose would
+   have them (straight out to the sides), so they point where the motion's
+   arms point even on a character built with its arms sloping or bowed. The
+   spine, neck and head are turned from the character's own rest, so it
+   keeps its own carriage.
 2. **Plant the feet**: each leg is solved exactly from hip joint to foot
    (two bones and a hinge), so a planted foot's ball stays where it was put
    and moves back at exactly walking speed. If a planted foot is out of
-   reach, the hips come down for the whole loop. If an ankle hits its limit
-   the heel lifts and the leg is solved again.
+   reach, the hips come down for the whole loop. The knee points where the
+   motion's own knee pointed when the motion says (`"knees"`, which
+   `soma_to_plain.py` writes); otherwise where the hips face, part of the
+   way to the foot. If the hip can't turn that far, the knee comes round by
+   the least that it can. If an ankle hits its limit the heel lifts by the
+   least that brings it back inside, found by halving, and starts to lift
+   four frames before it must.
 3. **Contact**: the real shoes, feet and shins are kept out of the floor
    (see "Contact" below).
 4. **Limits**: every turn is clamped to the bone's `limit_deg`; `clamped`
    lists what needed it.
 5. **Bake** one key a frame into an action named for the motion, then play
-   it back and measure it (`check`).
+   it back and measure it (`check`). Besides the feet, the floor, the limits
+   and the seam, `check` says how far the trunk ended up from what the
+   motion wrote (`off_the_motion`: each bone's turn in degrees and the hips'
+   place in cm; all zero on a walk or a run), and the most a knee's hinge
+   turns about its thigh in one frame (`knee_axis_swing_deg`).
+
+**What the squirming was.** Measured as shake: the part of a point's
+acceleration that changes from frame to frame, in mm per frame squared
+(`scripts/rig_check.py`). The trunk, head and arms shook exactly as much as
+the motion did; the legs shook two to seven times as much. Three causes:
+
+| What | Where | Before | Now |
+|---|---|---|---|
+| A foot pointing nearly straight down has no "which way it faces", and reading one anyway spun it half a turn in three frames; the knee was aimed by it and went out sideways | every run, the hero shot | a knee's hinge swung 21 to 57 degrees in a frame (120 in the shot); the ninja's knee shook 86 against the motion's 18 | 5 to 7 degrees (13 in the shot); 20 against 18 |
+| At an ankle's limit the heel was found by solving round and round from the clamped foot, which could land far from the last frame's answer | the troll's walk and run, deep stances | the troll's knee shook 3.9 times what its foot did (walk) | 2.3 times |
+| The hips' rise out of the floor and their shift toward a pinned hand were worked out a frame at a time | the shots | the ninja's head shook 9.2 against the motion's 3.9 | 4.1 |
+
+A fourth, found on the way: the upper arm and forearm were each rolled to
+the nearest "up", so on an arm that slopes they did not share a hinge axis,
+and the forearm was clamped by a fraction of a degree on every frame of
+every run. They now share the elbow's own axis.
 
 So the walk is one source of motion among others. A clip from a motion
 model on NVIDIA's SOMA skeleton is the second. Two models write it, both on
@@ -360,15 +413,47 @@ the ninja's, thighs 0.4 m thick, arms longer than its legs); the ninja is
 narrow, low and quiet mostly because of what Opus said about it. The
 lizardkin's tail has five bones.
 
+**Measuring the fit: `just rig-check <file.glb>...`** (`scripts/rig_check.py`)
+reads a walking or running file and says, with no reference to how it was
+made: how far each joint sits from the middle of the body's cross-section
+there (0 is dead center, 100 is on the skin); where the neck starts between
+the shoulders and the chin, and where the head turns between chin and crown;
+how much volume each part of the body keeps over the clip against standing
+in the T-pose; and how much each part shakes. `just walk-strip <file> <out>
+front --bones --rest` draws the skeleton inside a see-through body, a bead on
+every joint.
+
 What is weak, most visible first:
 
-- **Bending is by nearest bone.** No twist bones, no corrective shapes:
-  an elbow or knee folds like a paper tube. (Skin through clothes on a
-  stride, and kilts that followed the thighs in facets, were the top of
-  this list: see "Clothes that sit on the body and move with it".)
+- **Bending is by nearest bone, and it squeezes the trunk.** No twist
+  bones, no corrective shapes: an elbow or knee folds like a paper tube.
+  Measured as volume against standing in the T-pose, a torso loses 5 to 10%
+  of itself over a walk and 12 to 16% over a run (the dancer 16%, Lincoln
+  12%), a thigh piece up to 30% at the hip on the low-poly Lincoln, the
+  pirate's boot tops 45%. Most of the trunk's loss is its bottom ring going
+  half with each thigh and its shoulders coming down with the arms. Holding
+  the trunk's points to the trunk's own bones above the hip joints and
+  inside the shoulders was tried: it kept the dancer's loss to 7% and
+  Lincoln's to 8%, and the thighs and upper arms then came through the
+  clothes over them (5.8 cm of skin through Lincoln's shirt, 3.1 cm through
+  the ninja's suit at the groin), because clothes take the weights of the
+  body under them. Letting the crease and the shoulder cap fold with the
+  limb again cured the clothes and gave the volume back. So it is as it
+  was; the cure is weights that blend over a ring's width at the hip and
+  shoulder with the clothes weighted to match, or a second "twist" bone
+  there. (Skin through clothes on a stride, and kilts that followed the
+  thighs in facets, were the top of this list: see "Clothes that sit on the
+  body and move with it".)
+- **A knee still shakes more than its foot in a walk** (1.4 to 1.6 times,
+  the troll 2.3; it was 1.5 to 1.9, the troll 3.9): a leg near straight turns a small move of the foot into a
+  large one of the knee, and the walk's feet leave and land with a corner in
+  their path. In the runs it is level (0.8 to 1.0).
 - **The troll's ankles run out.** Its shins are short, so in late stance
   the ankle hits its limit and the heel comes up as much as 42 degrees;
-  on one frame a foot and its toes are clamped (0.04 cm of slide).
+  it now comes up smoothly (0.02 cm of slide).
+- **The troll's head is not found.** With no block-out to name it, its head
+  is "the top of the trunk", and its neck and head pivot sit behind the
+  face it really has: 51% off the middle of the cut there.
 - **Joint finding is rules of thumb.** It expects a T-pose facing -y, two
   legs, arms held out, and pieces built along the axes. A head is "the
   lowest sizeable piece above the arms"; a cape that hangs behind the hips
@@ -1542,7 +1627,11 @@ copies of the troll, lizardkin, pirate and ninja runs (the last three from
 their recorded block-outs in `scripts/test_blockouts.json`); and the walk: each of the four
 rigged, walked and exported, with the foot slide, floor, limits, loop and
 weights checked both in Blender and in the written file; the run profile, skipped with no clip
-and made for real from a stick-figure clip (troll, lizardkin); the contact step, each time
+and made for real from a stick-figure clip (troll, lizardkin); the fit of the skeleton
+(`rig_check.py` on the troll, Lincoln, the dancer and the ninja walking and running, made by
+the real runner: where the neck starts and the head turns, joints in the middle of their
+limbs, the trunk's volume over each clip, how much a knee shakes against its foot and how far
+its hinge swings in a frame); the contact step, each time
 against the same motion with it off (the dancer's heels, the troll's real run, and a made-up
 wall and post: the leg must clear the wall and the hand land on the post); and the clothes:
 drape.py on the troll, then Lincoln, the ninja, Roosevelt, the troll and

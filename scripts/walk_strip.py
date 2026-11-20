@@ -1,6 +1,6 @@
 """Picture a rigged character's animation as a strip of poses, in a background Blender.
 
-    blender -b --factory-startup -P scripts/walk_strip.py -- FILE OUT.png [--view side|front|quarter] [--frames 8] [--at 165,180,258] [--bones] [--undressed] [--size 420]
+    blender -b --factory-startup -P scripts/walk_strip.py -- FILE OUT.png [--view side|front|quarter] [--frames 8] [--at 165,180,258] [--bones] [--rest] [--undressed] [--size 420]
 
 FILE is a .glb with a skeleton and an animation (profiles/lowpoly-walk.glb),
 or a .blend saved after rig.py. The character is stood side by side `--frames`
@@ -8,7 +8,8 @@ times, each copy frozen at the next moment of the loop, and the row is
 rendered once, straight on: from the side (looking at its left), the front,
 or a three-quarter view. `--bones` draws the skeleton as red sticks inside a
 see-through body, to check where the joints landed. With no animation in the
-file it draws the rest pose once. A character is drawn dressed, without the
+file, or with `--rest`, it draws the rest pose once (the T-pose the skeleton
+was fitted in). A character is drawn dressed, without the
 body faces its gear hides; `--undressed` draws the whole body and no gear.
 `--at` picks the frames by number instead of spreading them over the clip. A
 clip that travels (a shot) is drawn on the spot: each pose stands where its
@@ -40,6 +41,9 @@ chosen = option("--at", "")
 bones = "--bones" in args
 if bones:
     args.remove("--bones")
+rest_only = "--rest" in args
+if rest_only:
+    args.remove("--rest")
 undressed = "--undressed" in args
 if undressed:
     args.remove("--undressed")
@@ -56,6 +60,9 @@ rig = next((o for o in scene.objects if o.type == "ARMATURE"), None)
 # Dressed, as a game draws it: body faces that worn gear hides ("body under: ...") are left out. --undressed draws the body alone, whole.
 meshes = [o for o in scene.objects if o.type == "MESH" and o.visible_get() and not (o.get("forge") == "gear" if undressed else o.get("under"))]
 action = rig.animation_data.action if rig and rig.animation_data and rig.animation_data.action else None
+if rest_only and rig:
+    rig.data.pose_position = "REST"
+    action = None
 if action and chosen:
     frames = [float(f) for f in chosen.split(",")]
 elif action:
@@ -77,7 +84,7 @@ def paint(mesh, see_through):
         color = mat.node_tree.nodes.new("ShaderNodeVertexColor")
         mat.node_tree.links.new(color.outputs["Color"], shader.inputs["Base Color"])
     if see_through:
-        shader.inputs["Alpha"].default_value = 0.3
+        shader.inputs["Alpha"].default_value = 0.35
         mat.surface_render_method = "BLENDED"
     mesh.materials.clear()
     mesh.materials.append(mat)
@@ -86,6 +93,7 @@ def paint(mesh, see_through):
 def sticks(rig, name):
     """The skeleton as thin four-sided spindles, one per bone."""
     verts, faces = [], []
+    reach = max((rig.matrix_world @ bone.tail).z for bone in rig.pose.bones) - min((rig.matrix_world @ bone.tail).z for bone in rig.pose.bones)
     for bone in rig.pose.bones:
         a, b = rig.matrix_world @ bone.head, rig.matrix_world @ bone.tail
         along = b - a
@@ -95,6 +103,10 @@ def sticks(rig, name):
         n = len(verts)
         verts += [a, waist + side, waist + up, waist - side, waist - up, b]
         faces += [(n, n + 1 + i, n + 1 + (i + 1) % 4) for i in range(4)] + [(n + 5, n + 1 + (i + 1) % 4, n + 1 + i) for i in range(4)]
+        # and a bead on the joint itself, so where a bone starts can be read against the body around it
+        n, r = len(verts), max(0.011 * reach, 0.004)
+        verts += [a + Vector(c) * r for c in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))]
+        faces += [(n + i, n + j, n + k) for i, j, k in ((0, 2, 4), (2, 1, 4), (1, 3, 4), (3, 0, 4), (2, 0, 5), (1, 2, 5), (3, 1, 5), (0, 3, 5))]
     me = bpy.data.meshes.new(name)
     me.from_pydata([tuple(v) for v in verts], [], faces)
     red = bpy.data.materials.new("sticks")

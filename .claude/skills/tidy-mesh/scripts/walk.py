@@ -172,7 +172,7 @@ ankle = Vector(bone["foot_l"].head_local)
 ball = Vector(bone["toe_l"].head_local)
 hip = Vector(bone["thigh_l"].head_local)
 middle = hip.y + (ball.y - ankle.y) - Vector(bone["hips"].head_local).y  # the ball of the foot, front to back from the hips, when the ankle is under the hip joint
-hinge = {tag: Vector(bone["forearm_" + tag].matrix_local.col[2][:3]) for tag in ("l", "r")}  # each elbow's own axis
+hinge = {"l": Z, "r": Z}  # each elbow's axis with the arm straight out to the side: animate.py turns arm bones from a true T-pose
 hips_track, feet, turns = [], {"l": [], "r": []}, {}
 names = ["hips", "spine", "chest", "neck", "head", "upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r"] + ["tail_%d" % (i + 1) for i in range(tail_count)]
 for name in names:
