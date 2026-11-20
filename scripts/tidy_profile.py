@@ -88,7 +88,7 @@ def remesh_file(mesh_in, work, tag, want, params):
     adaptivity = params.get("adaptivity", 1.0)
     target = want * (5 if adaptivity > 0.5 else 2.5)
     ceiling = want * 40  # past this AutoRemesher can grind for hours on one part
-    tries, best, starved = [], None, 0
+    tries, made, starved = [], [], 0
     for attempt in range(4):
         out = os.path.join(work, "%s-%d.obj" % (tag, attempt))
         report = out + ".txt"
@@ -108,8 +108,8 @@ def remesh_file(mesh_in, work, tag, want, params):
         with open(report) as f:
             got = int(next(l for l in f if l.strip().startswith("Quads:")).split(":")[1])
         tries.append({"target": int(target), "quads": got})
-        if got and (best is None or abs(got - want) < abs(best[1] - want)):
-            best = (out, got)
+        if got:
+            made.append((out, got))
         if not got or abs(got - want) <= want * 0.1:
             break
         # A part AutoRemesher can barely mesh (a thin skirt, a shell) answers a
@@ -121,6 +121,18 @@ def remesh_file(mesh_in, work, tag, want, params):
             if starved >= 2:
                 break
         target = min(target * min(want / got, 4.0), ceiling)
+    # AutoRemesher's answers swing (Roosevelt's boots: 1121, 4, 1560, 20
+    # quads for one budget). Nearest to the budget among the usable ones; a
+    # starved answer (under half the budget) only when nothing else came back,
+    # and then the fullest: a part that collapses costs more than one that runs
+    # over its budget.
+    usable = [m for m in made if m[1] >= want * 0.5]
+    if usable:
+        best = min(usable, key=lambda m: abs(m[1] - want))
+    elif made:
+        best = max(made, key=lambda m: m[1])
+    else:
+        best = None
     return best, tries
 
 

@@ -42,9 +42,17 @@ def find(name, suffix_match):
         if obj is None or obj.type != "MESH":
             raise ValueError("no mesh object named %r" % name)
         return obj
-    for o in bpy.data.objects:
+    # The open scene first: a saved file can hold other scenes with their own
+    # "(light)" meshes (a block-out's "Low poly" scene), and a mesh outside
+    # the open scene can't be measured.
+    here = list(bpy.context.scene.objects)
+    for o in here + [o for o in bpy.data.objects if o not in here]:
         if o.type == "MESH" and o.name.endswith((" (quads)", " (light)")):
-            return o if suffix_match else bpy.data.objects.get(o.name.rsplit(" (", 1)[0])
+            if suffix_match:
+                return o
+            full = bpy.data.objects.get(o.name.rsplit(" (", 1)[0])
+            if full is not None and full.type == "MESH":
+                return full
     raise ValueError("name the meshes: no '(quads)' or '(light)' mesh found")
 
 
