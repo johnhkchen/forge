@@ -50,6 +50,26 @@ endpoint:
 health:
     curl -sS "https://api.runpod.ai/v2/$TRELLIS_ENDPOINT_ID/health" -H "Authorization: Bearer $RUNPOD_API_KEY"; echo
 
+# Create the MotionBricks serverless endpoint on RunPod (one time)
+motion-endpoint:
+    scripts/create-motion-endpoint.sh
+
+# Is the MotionBricks endpoint up? (workers, queue)
+motion-health:
+    curl -sS "https://api.runpod.ai/v2/$MOTIONBRICKS_ENDPOINT_ID/health" -H "Authorization: Bearer $RUNPOD_API_KEY"; echo
+
+# Which MotionBricks worker answers, and how long it took to boot (starts one if none is up)
+motion-info:
+    baml run motion_info
+
+# Prove the endpoint end to end: MotionBricks' own generate_once example, run on the worker
+motion-selftest:
+    baml run motion_selftest
+
+# Fetch the SOMA skeleton from the worker into motion/soma_skeleton.json (one time)
+motion-skeleton:
+    baml run motion_skeleton
+
 blender_bin := env_var_or_default("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 
 # Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile)
