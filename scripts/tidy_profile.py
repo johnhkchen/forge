@@ -68,11 +68,96 @@ def largest_mesh():
     return max(meshes, key=lambda o: len(o.data.polygons))
 
 
+def remesh_file(mesh_in, work, tag, want, params):
+    """Run AutoRemesher on one OBJ until its quad count is within 10% of
+    `want` (its own target is only a starting point). Returns (obj, quads, tries)."""
+    adaptivity = params.get("adaptivity", 1.0)
+    target = want * (5 if adaptivity > 0.5 else 2.5)
+    tries, best = [], None
+    for attempt in range(4):
+        out = os.path.join(work, "%s-%d.obj" % (tag, attempt))
+        report = out + ".txt"
+        done = subprocess.run([
+            AUTOREMESHER, "-i", mesh_in, "-o", out, "--report", report,
+            "--target-quads", str(max(int(target), 50)),
+            "--adaptivity", str(adaptivity),
+            "--anisotropy", str(params.get("anisotropy", 1.0)),
+            "--sharp-edge", str(params.get("sharp_edge", 90)),
+        ], capture_output=True, timeout=600)
+        if done.returncode != 0 or not os.path.exists(report):
+            break
+        with open(report) as f:
+            got = int(next(l for l in f if l.strip().startswith("Quads:")).split(":")[1])
+        tries.append({"target": int(target), "quads": got})
+        if got and (best is None or abs(got - want) < abs(best[1] - want)):
+            best = (out, got)
+        if not got or abs(got - want) <= want * 0.1:
+            break
+        target *= want / got
+    return best, tries
+
+
+def export_obj(obj, path):
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    obj.hide_set(False)
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.wm.obj_export(filepath=path, export_selected_objects=True, apply_modifiers=True,
+                          export_materials=False, export_uv=False, export_normals=False,
+                          export_triangulated_mesh=True, forward_axis="Y", up_axis="Z")
+
+
+def import_obj(path):
+    before = set(bpy.data.objects)
+    bpy.ops.wm.obj_import(filepath=path, forward_axis="Y", up_axis="Z")
+    return next(o for o in bpy.data.objects if o not in before and o.type == "MESH")
+
+
+def split_parts(source):
+    """The object's separate pieces (handle, pins, body...) as their own
+    objects, welded first so texture seams don't count as gaps."""
+    import bmesh
+    copy = source.copy()
+    copy.data = source.data.copy()
+    copy.modifiers.clear()
+    for c in source.users_collection:
+        c.objects.link(copy)
+    bm = bmesh.new()
+    bm.from_mesh(copy.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=max(source.dimensions) * 1e-6)
+    bm.to_mesh(copy.data)
+    bm.free()
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    copy.select_set(True)
+    bpy.context.view_layer.objects.active = copy
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.separate(type="LOOSE")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return list(bpy.context.selected_objects)
+
+
+def area(obj):
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    total = sum(f.calc_area() for f in bm.faces)
+    bm.free()
+    return total
+
+
 def autoremesh(params):
     """Adaptive quad remesh with AutoRemesher: denser quads where the shape
-    curves, larger ones on flat areas, in regular loops. Its quad target is a
-    starting point, not a promise, so this re-runs (a few seconds each) until
-    the result lands within 10% of the wanted count."""
+    curves, larger ones on flat areas, in regular loops.
+
+    With "per_part", each separate piece of the object (body, handle,
+    pins...) is remeshed on its own with a share of the quads in proportion
+    to its area, never fewer than "min_part_quads". Off by default: on the
+    kettle the pieces TRELLIS keeps separate are only the handle bits (the
+    lid, knob and spout are fused into the body), so it changed little at
+    web/game size and starved the thin handle brackets at mobile size."""
     want = params["quads"]
     if not os.access(AUTOREMESHER, os.X_OK):
         result = run_script("retopo.py", {"target_quads": want})
@@ -81,43 +166,51 @@ def autoremesh(params):
     source = largest_mesh()
     work = tempfile.mkdtemp(prefix="autoremesher-")
     try:
+        if params.get("per_part", False):
+            parts = split_parts(source)
+            areas = {p.name: area(p) for p in parts}
+            total = sum(areas.values()) or 1.0
+            floor = params.get("min_part_quads", 60)
+        else:
+            parts, areas, total, floor = [source], {source.name: 1.0}, 1.0, 0
+        results, made = [], []
+        for i, part in enumerate(parts):
+            budget = max(floor, int(want * areas[part.name] / total))
+            mesh_in = os.path.join(work, "part%d.obj" % i)
+            export_obj(part, mesh_in)
+            best, tries = remesh_file(mesh_in, work, "part%d" % i, budget, params)
+            if best:
+                made.append(import_obj(best[0]))
+                kind = "remeshed"
+            elif part is not source:
+                # AutoRemesher gave nothing (tiny or degenerate piece): keep it,
+                # reduced, rather than lose it.
+                mod = part.modifiers.new("Decimate", "DECIMATE")
+                mod.ratio = min(1.0, budget * 2 / max(len(part.data.polygons), 1))
+                for o in bpy.context.selected_objects:
+                    o.select_set(False)
+                part.select_set(True)
+                bpy.context.view_layer.objects.active = part
+                bpy.ops.object.modifier_apply(modifier=mod.name)
+                made.append(part)
+                kind = "kept (reduced)"
+            else:
+                raise RuntimeError("AutoRemesher produced nothing for %s" % source.name)
+            results.append({"share": round(areas[part.name] / total, 4), "budget": budget, "result": kind, "tries": tries})
+        for p in parts:
+            if p is not source and p not in made:
+                bpy.data.objects.remove(p, do_unlink=True)
         for o in bpy.context.selected_objects:
             o.select_set(False)
-        source.select_set(True)
-        bpy.context.view_layer.objects.active = source
-        mesh_in = os.path.join(work, "in.obj")
-        bpy.ops.wm.obj_export(filepath=mesh_in, export_selected_objects=True, apply_modifiers=True,
-                              export_materials=False, export_uv=False, export_normals=False,
-                              export_triangulated_mesh=True, forward_axis="Y", up_axis="Z")
-        adaptivity = params.get("adaptivity", 1.0)
-        target = want * (5 if adaptivity > 0.5 else 2.5)
-        tries, best = [], None
-        for attempt in range(4):
-            out = os.path.join(work, "out%d.obj" % attempt)
-            report = out + ".txt"
-            subprocess.run([
-                AUTOREMESHER, "-i", mesh_in, "-o", out, "--report", report,
-                "--target-quads", str(int(target)),
-                "--adaptivity", str(adaptivity),
-                "--anisotropy", str(params.get("anisotropy", 1.0)),
-                "--sharp-edge", str(params.get("sharp_edge", 90)),
-            ], check=True, capture_output=True, timeout=600)
-            with open(report) as f:
-                got = int(next(l for l in f if l.strip().startswith("Quads:")).split(":")[1])
-            tries.append({"target": int(target), "quads": got})
-            if best is None or abs(got - want) < abs(best[1] - want):
-                best = (out, got)
-            if abs(got - want) <= want * 0.1 or got == 0:
-                break
-            target *= want / max(got, 1)
-        before = set(bpy.data.objects)
-        bpy.ops.wm.obj_import(filepath=best[0], forward_axis="Y", up_axis="Z")
-        new = next(o for o in bpy.data.objects if o not in before and o.type == "MESH")
+        for o in made:
+            o.hide_set(False)
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = made[0]
+        if len(made) > 1:
+            bpy.ops.object.join()
+        new = bpy.context.view_layer.objects.active
         new.name = source.name + " (quads)"
-        for o in bpy.context.selected_objects:
-            o.select_set(False)
-        new.select_set(True)
-        bpy.context.view_layer.objects.active = new
+        new.data.materials.clear()
         bpy.ops.object.shade_smooth_by_angle(angle=0.61)
         source.hide_set(True)
         source.hide_render = True
@@ -126,8 +219,8 @@ def autoremesh(params):
             "object": new.name,
             "faces": len(faces),
             "quads": sum(1 for p in faces if len(p.vertices) == 4),
-            "tries": tries,
-            "settings": {"adaptivity": adaptivity, "sharp_edge": params.get("sharp_edge", 90)},
+            "parts": results,
+            "settings": {k: params.get(k) for k in ("adaptivity", "anisotropy", "sharp_edge", "per_part")},
         }
     finally:
         shutil.rmtree(work, ignore_errors=True)

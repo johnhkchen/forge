@@ -145,9 +145,9 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8028)
     args = parser.parse_args()
     server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
-    print("Forge gallery")
+    print("Forge gallery", flush=True)
     print("  on this Mac:   http://localhost:%d" % args.port)
-    print("  on your phone: http://%s:%d   (same Wi-Fi)" % (lan_address(), args.port))
+    print("  on your phone: http://%s:%d   (same Wi-Fi)" % (lan_address(), args.port), flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
