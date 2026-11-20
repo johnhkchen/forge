@@ -3,3 +3,4 @@ runs/
 *.blend1
 .baml/
 tools/
+.claude/worktrees/

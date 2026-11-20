@@ -86,3 +86,20 @@ mesh idea:
 # Show the Blender code Claude ran in a run's step (polish, parts, lowpoly)
 transcript run step:
     python3 scripts/transcript.py "{{run}}" "{{step}}"
+
+blender_startup := env_var("HOME") + "/Library/Application Support/Blender/5.2/scripts/startup"
+
+# Install the Forge tools into Blender (restart Blender afterwards)
+forge-addon:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="{{blender_startup}}"
+    mkdir -p "$dir/forge_tools"
+    cp blender/forge_tools.py "$dir/forge_tools.py"
+    rm -f "$dir/forge_tools/"*.py
+    cp .claude/skills/tidy-mesh/scripts/*.py "$dir/forge_tools/"
+    echo "Installed $(ls "$dir/forge_tools" | wc -l | tr -d ' ') tools into $dir. Restart Blender to load them."
+
+# Remove the Forge tools from Blender
+forge-addon-remove:
+    rm -rf "{{blender_startup}}/forge_tools.py" "{{blender_startup}}/forge_tools"
