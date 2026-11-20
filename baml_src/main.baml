@@ -6,6 +6,7 @@
 //   4. Claude finishes it in Blender over MCP        (4_polish)
 //      finds its parts (lid, knob, spout...) and blocks out a low-poly version
 //   5. Sized versions: web, game, ...               (5_profiles)
+//      a character also gets a skeleton and a walk   (7_walk)
 //   6. Only when asked: a character's props, each a small run of its own (6_props)
 //
 // Each step writes its result into the run folder, and a step whose result is
@@ -79,8 +80,13 @@ function finish(run: Run, brief: ObjectBrief, props: string = "none") -> string 
         let low = block_out(brief, run);
         log.info(`lowpoly: ${low.triangles} triangles, ${low.shape_typical}% off typically`);
     }
-    //# 5. Sized versions for the web, games, ...
-    shape(run, wanted = profiles_for(brief, run));
+    //# 5. Sized versions for the web, games, ...; a character also gets a walk
+    let versions = profiles_for(brief, run);
+    if (versions.includes(WALK) && !run.has(GAIT_FILE)) {
+        let traits = gait(brief, run);
+        log.info(`walk: ${traits.why}`);
+    }
+    shape(run, wanted = versions);
     //# 6. Props: each held thing as a small run of its own (off unless asked)
     if (wanted != "none") {
         make_props(brief, run, wanted);
