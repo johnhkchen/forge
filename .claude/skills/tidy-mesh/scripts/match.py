@@ -10,6 +10,13 @@
 #
 # "box" scores one spot alone (a head, a hand): only the surface of each
 # mesh that lies inside it is compared, still against the whole other mesh.
+# It also compares outlines there ("outline" in the result): each mesh's
+# shadow on the box, seen from the front ("facing") and from the side, 40
+# cells each way. "overlap_%" is how much of the two shadows is shared (100
+# = the same outline), "edge_off_cm" how far apart their edges are, row by
+# row, on average, and "relief_off_cm" how far apart the two surfaces are
+# toward the viewer where both are there (cheeks, brow, jaw: the contours
+# inside the outline). These are the numbers for "follows the contours".
 #
 # Safe-mode compatible: bpy, bmesh, mathutils, math and json only.
 
@@ -19,6 +26,7 @@ PARAMS = {
     "samples": 20000,
     "worst": 5,      # how many worst spots to describe
     "box": None,     # {"min": [x, y, z], "max": [x, y, z]} in world meters: score only what is inside
+    "facing": "-y",  # with "box": which way the boxed thing faces ("-y", "+y", "-x", "+x")
 }
 
 import bpy
@@ -97,6 +105,59 @@ def summarize(pairs, size):
     return {"mean_%": round(100 * sum(d) / len(d) / size, 3), "p95_%": pct(0.95), "max_%": pct(1.0)}
 
 
+CELLS = 40
+
+def shadow(obj, axis, forward):
+    """What the box holds of the object, seen along `axis` from the `forward` end: for each cell (rows
+    going up) how far along `axis` the first surface inside the box is, or None."""
+    low, high = PARAMS["box"]["min"], PARAMS["box"]["max"]
+    across = 1 - axis
+    world, inverse = obj.matrix_world, obj.matrix_world.inverted()
+    step = [0.0, 0.0, 0.0]
+    step[axis] = -forward
+    aim = (inverse.to_3x3() @ Vector(step)).normalized()
+    reach = max(obj.dimensions) * 2
+    table = []
+    for row in range(CELLS):
+        cells = []
+        for col in range(CELLS):
+            at = [0.0, 0.0, low[2] + (row + 0.5) / CELLS * (high[2] - low[2])]
+            at[across] = low[across] + (col + 0.5) / CELLS * (high[across] - low[across])
+            at[axis] = (high[axis] if forward > 0 else low[axis]) + forward * reach
+            at = Vector(at)
+            covered = None
+            for _ in range(24):  # past whatever stands in front of the box (an arm, a shoulder)
+                hit, where, _, _ = obj.ray_cast(inverse @ at, aim)
+                if not hit:
+                    break
+                at = world @ where
+                if low[axis] <= at[axis] <= high[axis]:
+                    covered = at[axis]
+                    break
+                if forward * (at[axis] - low[axis]) < 0 and forward * (at[axis] - high[axis]) < 0:
+                    break  # through the box and out the far side
+                at = at + Vector(step) * 1e-4
+            cells.append(covered)
+        table.append(cells)
+    return table
+
+def outline_fit(one, other, cell_cm):
+    """How alike two shadows are: shared area, how far apart their left and right edges are per row,
+    and how far apart the surfaces are in depth where both are there."""
+    depths = [abs(x - y) for a, b in zip(one, other) for x, y in zip(a, b) if x is not None and y is not None]
+    both = len(depths)
+    either = sum(1 for a, b in zip(one, other) for x, y in zip(a, b) if x is not None or y is not None)
+    gaps = []
+    for a, b in zip(one, other):
+        ends = [[i for i, x in enumerate(row) if x is not None] for row in (a, b)]
+        if ends[0] and ends[1]:
+            gaps.append((abs(ends[0][0] - ends[1][0]) + abs(ends[0][-1] - ends[1][-1])) / 2)
+        elif ends[0] or ends[1]:
+            gaps.append(len(ends[0] or ends[1]) / 2)
+    return {"overlap_%": round(100 * both / max(either, 1), 1), "edge_off_cm": round(sum(gaps) / max(len(gaps), 1) * cell_cm, 2),
+            "relief_off_cm": round(100 * sum(depths) / max(both, 1), 2)}
+
+
 full = find(PARAMS["full"], False)
 light = find(PARAMS["light"], True)
 size = max(full.dimensions)
@@ -125,10 +186,19 @@ for dist, p in sorted(lost + added, key=farthest_first):
     if len(worst) == PARAMS["worst"]:
         break
 
-print("RESULT " + json.dumps({
+result = {
     "full": full.name,
     "light": light.name,
     "shape_lost": summarize(lost, size),
     "shape_added": summarize(added, size),
     "worst_spots": worst,
-}))
+}
+if PARAMS["box"]:
+    bpy.context.view_layer.update()
+    axis, forward = {"-y": (1, -1.0), "+y": (1, 1.0), "-x": (0, -1.0), "+x": (0, 1.0)}[PARAMS["facing"]]
+    spans = [PARAMS["box"]["max"][i] - PARAMS["box"]["min"][i] for i in range(3)]
+    result["outline"] = {
+        "front": outline_fit(shadow(full, axis, forward), shadow(light, axis, forward), 100 * spans[1 - axis] / CELLS),
+        "side": outline_fit(shadow(full, 1 - axis, 1.0), shadow(light, 1 - axis, 1.0), 100 * spans[axis] / CELLS),
+    }
+print("RESULT " + json.dumps(result))

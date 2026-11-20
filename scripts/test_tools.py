@@ -319,7 +319,7 @@ def test_polish(ctx):
     check("final.glb holds only the troll", exported["only_this_object"] is True and read_glb(out)["meshes"] == 1)
 
 
-HEAD_BOX = {"min": [-0.22, -0.7, 1.93], "max": [0.22, -0.33, 2.37]}   # the troll's head, snug
+HEAD_BOX = {"min": [-0.24, -0.7, 1.93], "max": [0.24, -0.25, 2.42]}   # the troll's head: chin to the top of the skull, ears in, back where it sinks into the hump
 LOOSE_BOX = {"min": [-0.3, -0.66, 1.9], "max": [0.3, -0.12, 2.42]}    # the size of the head Claude built: chest and shoulders are inside too
 # Where the troll's features are, read by eye off the detailed mesh: [height, give or take].
 TROLL_FACE = {"chin": [1.96, 0.02], "mouth": [2.09, 0.03], "nose": [2.18, 0.02], "eyes": [2.24, 0.02], "brow": [2.28, 0.02]}
@@ -362,46 +362,80 @@ def test_face(ctx):
     check("the piece names its six rows, climbing", [head["rows"][k][0] for k in ("chin", "mouth", "nose", "eyes", "brow", "top")]
           == sorted(head["rows"][k][0] for k in head["rows"]) and len(head["rows"]) == 6)
 
-    # The same body twice: with the old head and tusks, then with the measured head (its skin set to the body's).
+    # The same body three times: with the hand-built head and tusks, with a plain head from the rows
+    # alone (the first version of this tool), and with the head laid on the reference's surface.
     body = [p for p in TROLL_PIECES if p["name"] not in ("head", "tusks")]
-    views = {name: os.path.join(ctx["out"], "troll-head-%s.png" % name) for name in
-             ("reference-front", "reference-side", "before-front", "before-side", "after-front", "after-side")}
-    close = {"min": [-0.45, -0.85, 1.75], "max": [0.45, 0.05, 2.55]}
-    def shots(who, obj):
-        return [("preview.py", {"object": obj, "path": views["%s-%s" % (who, view)], "view": view, "box": close, "size": 480}) for view in ("front", "side")]
-    steps = ([("build.py", {"parts": TROLL_PIECES, "name": "Before (light)"}),
-              ("match.py", {"full": "Cave Troll", "light": "Before (light)", "box": HEAD_BOX})]
-             # this run's final.glb uses its color picture as its metal and roughness maps too, which renders as chrome
-             + [("retouch.py", {"object": "Cave Troll", "overall": {"metallic": 0, "roughness": 0.9}})]
-             + shots("reference", "Cave Troll") + shots("before", "Before (light)")
-             + [("build.py", {"parts": body + [dict(head, color=SKIN)], "name": "After (light)"}),
-                ("match.py", {"full": "Cave Troll", "light": "After (light)", "box": HEAD_BOX})]
-             + shots("after", "After (light)")
-             + [("face.py", {"object": "After (light)", "box": HEAD_BOX, "show": False})])
-    results = blender(final, steps, save=os.path.join(ctx["out"], "troll-head.blend"))
-    again = results[-1]["found"]
-    check("the built head, measured again with no texture to go by, has its features within 2 cm of the reference's",
-          not results[-1]["textured"] and all(abs(again[k]["z"] - found[k]["z"]) <= 0.02 and again[k]["by"] == "shape" for k in TROLL_FACE),
-          {k: again[k]["z"] for k in TROLL_FACE})
-    before, before_fit, after, after_fit = results[0], results[1], results[7], results[8]
-    old = {p["name"]: p["triangles"] for p in before["pieces"]}
-    new = {p["name"]: p["triangles"] for p in after["pieces"]}
-    check("the hand-built head is 54 triangles plus 16 of tusks: %.0f%% of the model's %d" % (100 * 70 / before["triangles"], before["triangles"]),
-          (old["head"], old["tusks"]) == (54, 16))
-    check("the measured head is %d triangles, tusks included: %.0f%% of %d" % (new["head"], 100 * new["head"] / after["triangles"], after["triangles"]),
-          120 <= new["head"] <= 250)
-    check("the whole troll stays inside its budget (1,200, give or take a quarter)", 900 <= after["triangles"] <= 1500, after["triangles"])
-    was, now = before_fit["shape_lost"], after_fit["shape_lost"]
-    check("inside the head box the reference strays from the model %.2f%% typically, %.2f%% at worst (hand-built head: %.2f / %.2f)"
-          % (now["p95_%"], now["max_%"], was["p95_%"], was["max_%"]), now["p95_%"] < was["p95_%"] and now["max_%"] < was["max_%"])
-    was, now = before_fit["shape_added"], after_fit["shape_added"]
-    check("and the model strays from the reference %.2f%% / %.2f%% (hand-built: %.2f / %.2f)" % (now["p95_%"], now["max_%"], was["p95_%"], was["max_%"]),
-          now["p95_%"] < 3.0)
-    check("the whole-object score barely moves: %.2f%% typical (was %.2f)" % (after["shape_lost"]["p95_%"], before["shape_lost"]["p95_%"]),
-          after["shape_lost"]["p95_%"] < before["shape_lost"]["p95_%"] + 0.4)
-    grid = [[views["%s-%s" % (who, view)] for view in ("front", "side")] for who in ("reference", "before", "after")]
-    sheet = sheet_of(ctx, "troll-head-before-after", grid)
-    check("front and side views, reference / before / after, top to bottom: %s" % sheet, os.path.exists(sheet))
+    fitted = dict(head, color=SKIN)
+    plain = {key: value for key, value in fitted.items() if key not in ("scan", "ears")}
+    got, sheet, again = compare_heads(ctx, final, "Cave Troll", "troll", HEAD_BOX, {"min": [-0.45, -0.85, 1.75], "max": [0.45, 0.05, 2.55]},
+                                      [("hand-built", TROLL_PIECES), ("plain", body + [plain]), ("fitted", body + [fitted])],
+                                      # this run's final.glb uses its color picture as its metal and roughness maps too, which renders as chrome
+                                      before_shots=[("retouch.py", {"object": "Cave Troll", "overall": {"metallic": 0, "roughness": 0.9}})])
+    check("face.py also runs on the built head, which has no texture, and finds its chin by shape within 2 cm",
+          not again["textured"] and abs(again["found"]["chin"]["z"] - found["chin"]["z"]) <= 0.02, again["found"])
+    old = {p["name"]: p["triangles"] for p in got["hand-built"][0]["pieces"]}
+    new = {p["name"]: p["triangles"] for p in got["fitted"][0]["pieces"]}
+    total = got["fitted"][0]["triangles"]
+    check("the hand-built head is 54 triangles plus 16 of tusks", (old["head"], old["tusks"]) == (54, 16))
+    check("the fitted head is %d triangles, tusks and ears included: %.0f%% of %d" % (new["head"], 100 * new["head"] / total, total), 150 <= new["head"] <= 260)
+    check("the whole troll stays inside its budget (1,200, give or take a quarter)", 900 <= total <= 1500, total)
+    for label in ("hand-built", "plain", "fitted"):
+        print(head_scores(label, got[label]))
+    was, now = got["plain"][2], got["fitted"][2]
+    check("the fitted head shares more of the reference's outline than the plain one, front and side",
+          all(now[v]["overlap_%"] > was[v]["overlap_%"] for v in ("front", "side")))
+    check("its outline's edges sit within 2 cm of the reference's on average, front and side",
+          all(now[v]["edge_off_cm"] < 2.0 for v in ("front", "side")), now)
+    check("its surface sits within 2.5 cm of the reference's on average, seen from the front and from the side (plain: %.1f / %.1f)"
+          % (was["front"]["relief_off_cm"], was["side"]["relief_off_cm"]),
+          all(now[v]["relief_off_cm"] < 2.5 and now[v]["relief_off_cm"] < was[v]["relief_off_cm"] for v in ("front", "side")), now)
+    check("and inside the head box the reference strays from it less than from either other head",
+          all(got["fitted"][1]["shape_lost"]["p95_%"] < got[label][1]["shape_lost"]["p95_%"] for label in ("hand-built", "plain")))
+    check("the whole-object score does not get worse: %.2f%% typical (hand-built head: %.2f)"
+          % (got["fitted"][0]["shape_lost"]["p95_%"], got["hand-built"][0]["shape_lost"]["p95_%"]),
+          got["fitted"][0]["shape_lost"]["p95_%"] < got["hand-built"][0]["shape_lost"]["p95_%"] + 0.2)
+    check("front and side: reference, hand-built, plain, fitted, then the fitted head as wire over the reference: %s" % sheet, os.path.exists(sheet))
+
+
+def head_scores(label, scores):
+    """One line: how well a head follows the reference. The outline numbers are for the head alone;
+    the two 'strays' pairs (typical / worst, % of the object's size) are for the whole model inside the head box."""
+    _, fit, alone = scores
+    return ("          %-10s outline shared front %.0f%%, side %.0f%%; edges off %.1f / %.1f cm; surface off %.1f / %.1f cm; "
+            "reference strays %.2f%% / %.2f%%; model strays %.2f%% / %.2f%%"
+            % (label, alone["front"]["overlap_%"], alone["side"]["overlap_%"], alone["front"]["edge_off_cm"], alone["side"]["edge_off_cm"],
+               alone["front"]["relief_off_cm"], alone["side"]["relief_off_cm"], fit["shape_lost"]["p95_%"], fit["shape_lost"]["max_%"],
+               fit["shape_added"]["p95_%"], fit["shape_added"]["max_%"]))
+
+
+def compare_heads(ctx, final, reference, tag, box, close, versions, before_shots=(), kind="creature"):
+    """In one Blender: measure the head (which stores its surface in the scene), build each version of
+    the model, score each inside the head box, and render the reference, each version, and the last
+    version as wire over the reference, front and side. versions = [(label, pieces)].
+    Returns {label: (build.py's result, match.py's result for the model, the outline scores of its head alone)},
+    the sheet's path, and face.py's result on the last version."""
+    def view_path(who, view):
+        return os.path.join(ctx["out"], "%s-head-%s-%s.png" % (tag, who, view))
+    def shots(who, obj, over=None):
+        return [("preview.py", {"object": obj, "path": view_path(who, view), "view": view, "box": close, "size": 480, "over": over}) for view in ("front", "side")]
+    steps = [("face.py", {"box": box, "kind": kind, "show": False})]
+    for label, pieces in versions:
+        name, alone = "%s (light)" % label, "%s head (light)" % label
+        steps += [("build.py", {"parts": pieces, "name": name}), ("match.py", {"full": reference, "light": name, "box": box}),
+                  # the head and its tusks without the body, to score the head's own surface
+                  ("build.py", {"parts": [p for p in pieces if p["name"] in ("head", "tusks")], "name": alone, "check": 0}),
+                  ("match.py", {"full": reference, "light": alone, "box": box, "samples": 2000})]
+    last = "%s (light)" % versions[-1][0]
+    steps += list(before_shots) + shots("reference", reference)
+    for label, _ in versions:
+        steps += shots(label, "%s (light)" % label)
+    steps += shots("overlay", reference, over="%s head (light)" % versions[-1][0])
+    steps += [("face.py", {"object": last, "box": box, "kind": kind, "show": False, "name": "check"})]
+    results = blender(final, steps, save=os.path.join(ctx["out"], "%s-head.blend" % tag))
+    got = {label: (results[1 + 4 * n], results[2 + 4 * n], results[4 + 4 * n]["outline"]) for n, (label, _) in enumerate(versions)}
+    rows = ["reference"] + [label for label, _ in versions] + ["overlay"]
+    sheet = sheet_of(ctx, "%s-head-compared" % tag, [[view_path(who, view) for view in ("front", "side")] for who in rows])
+    return got, sheet, results[-1]
 
 
 def sheet_of(ctx, name, grid):
@@ -411,7 +445,7 @@ def sheet_of(ctx, name, grid):
     return path
 
 
-PIRATE_BOX = {"min": [-0.17, -0.22, 1.38], "max": [0.17, 0.12, 1.64]}  # beard to hat brim
+PIRATE_BOX = {"min": [-0.17, -0.22, 1.38], "max": [0.17, 0.2, 1.64]}  # beard to hat brim, face to the back of the hair
 
 
 def test_face_human(ctx):
@@ -430,18 +464,19 @@ def test_face_human(ctx):
     check("the beard is found as a color of its own, darker than the skin", sum(head["colors"]["beard"]) < 0.5 * sum(head["color"]), head["colors"])
     check("the skin color comes from the cheeks, not the beard or hat (red over green over blue)", head["color"][0] > head["color"][1] > head["color"][2] > 0.04, head["color"])
     check("the white collar is not taken for tusks", "tusks" not in head)
-    views = {name: os.path.join(ctx["out"], "pirate-head-%s.png" % name) for name in ("reference-front", "reference-side", "after-front", "after-side")}
-    close = {"min": [-0.3, -0.35, 1.3], "max": [0.3, 0.25, 1.9]}
-    def shots(who, obj):
-        return [("preview.py", {"object": obj, "path": views["%s-%s" % (who, view)], "view": view, "box": close, "size": 480}) for view in ("front", "side")]
-    results = blender(runs[-1], [("build.py", {"parts": [head], "name": "Head (light)"}),
-                                 ("match.py", {"full": "Stocky Pirate Deckhand", "light": "Head (light)", "box": PIRATE_BOX})]
-                      + shots("reference", "Stocky Pirate Deckhand") + shots("after", "Head (light)"))
-    check("the head alone is %d triangles" % results[0]["triangles"], 120 <= results[0]["triangles"] <= 250)
-    fit = results[1]["shape_added"]
-    check("it strays from the reference %.2f%% typically, %.2f%% at worst" % (fit["p95_%"], fit["max_%"]), fit["p95_%"] < 3.0)
-    path = sheet_of(ctx, "pirate-head-reference-and-built", [[views["%s-%s" % (who, view)] for view in ("front", "side")] for who in ("reference", "after")])
-    check("front and side views, reference above, built head below: %s" % path, os.path.exists(path))
+    plain = {key: value for key, value in head.items() if key not in ("scan", "ears")}
+    got, sheet, _ = compare_heads(ctx, runs[-1], "Stocky Pirate Deckhand", "pirate", PIRATE_BOX, {"min": [-0.3, -0.35, 1.3], "max": [0.3, 0.25, 1.9]},
+                                  [("plain", [plain]), ("fitted", [head])], kind="human")
+    check("the head alone is %d triangles" % got["fitted"][0]["triangles"], 150 <= got["fitted"][0]["triangles"] <= 260)
+    for label in ("plain", "fitted"):
+        print(head_scores(label, got[label]))
+    was, now = got["plain"][2], got["fitted"][2]
+    check("the fitted head's surface is nearer the reference's than the plain one's, seen from the front and from the side",
+          all(now[v]["relief_off_cm"] < was[v]["relief_off_cm"] for v in ("front", "side")))
+    check("from the side it shares %.0f%% of the reference's outline (plain: %.0f%%); from the front %.0f%% (plain: %.0f%%), where the collar in the box widens the jaw"
+          % (now["side"]["overlap_%"], was["side"]["overlap_%"], now["front"]["overlap_%"], was["front"]["overlap_%"]),
+          now["side"]["overlap_%"] > was["side"]["overlap_%"] and now["front"]["overlap_%"] > 88)
+    check("front and side: reference, plain, fitted, then the fitted head as wire over the reference: %s" % sheet, os.path.exists(sheet))
 
 
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human]

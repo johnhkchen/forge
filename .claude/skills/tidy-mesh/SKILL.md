@@ -121,29 +121,59 @@ for the head and face (15-25%), and `face.py`.
   profile sticks out; tusks are a lane that juts out beside the mouth. It
   prints a whole `"head"` piece: six rows of `[height, front of the face,
   half-width]` (chin, mouth, nose, eyes, brow, top), eye and mouth sizes,
-  the underbite, tusks, and skin, socket, beard and hair colors. `"found"`
-  says whether each came from the texture, the shape, or a guess.
+  the underbite, tusks, ears, and skin, socket, beard and hair colors.
+  `"found"` says whether each came from the texture, the shape, or a guess.
+- **It keeps the head's surface.** The same look, plus one from behind,
+  is stored in the scene under the piece's name: how far forward the front
+  is, how far back the back is, and how wide the head is, row by row. The
+  piece's `"scan"` points at it.
 - **It shows its work.** It draws a wire box with a line at each feature's
   height, `Look: face`. Aim `look` at it: a line that misses its feature
   means that row's height needs setting by hand.
-- **`build.py` builds it.** The `"head"` piece goes into `"parts"` like any
-  loft. It comes out as 150 to 240 triangles, mirrored across the face's
-  center line: a brow ledge, sunk dark sockets with the eye set back in
-  them, a nose with a tip and wings, a mouth band, and optional ears and
-  tusks. `"kind"` is `"creature"` (heavy brow, scowl, broad nose and mouth)
-  or `"human"`. Sizes never drop below what reads at this scale, and
-  `"bold"` pushes brow, nose and sockets out farther.
+- **`build.py` lays the head on that surface, then cuts the face into it.**
+  The `"head"` piece goes into `"parts"` like any loft. Its ten rings sit at
+  the feature heights; each ring's points are put on the stored surface, so
+  the outline, the skull, the cheeks and the jaw are the reference's. Where
+  the head is sunk into the body, its sides run straight back into it.
+  Then the features: sockets set in and painted dark, the nose's tip, the
+  mouth band, tusks and ears where face.py found them. Brow and nose are
+  only pushed out when the reference's own wouldn't read. 150 to 240
+  triangles, mirrored across the face's center line (the two halves of the
+  reference are averaged). Without `"scan"` it builds a plain head from the
+  rows alone, which has the features at the right heights on a box-like
+  shape.
 - **Check it up close.** `preview.py` with `"view": "front"` or `"side"`
-  and a `"box"` renders a close-up straight on; `match.py` with a `"box"`
-  scores that spot alone.
+  and a `"box"` renders a close-up straight on, and `"over"` draws a second
+  object on top as wire. `match.py` with a `"box"` scores that spot alone,
+  and compares outlines and surfaces there: how much of the two shadows is
+  shared, how far apart their edges are, and how far apart the surfaces are
+  toward the viewer.
 
-On the troll, from measurements alone: 188 triangles for the head with its
-tusks (14% of 1,372), and inside the head box the detailed mesh strays
-1.2% from the model typically and 2.0% at worst, against 2.9% and 3.5% for
-the hand-built head. A loose box that takes in the chest and shoulders finds
-the same features within 2 cm. On the pirate (a person, with a beard, an
-eye patch, a hat and a white collar) it finds the eyes under the brim, the
-nose and the beard, and builds a 180-triangle head.
+How well it follows the reference, head alone, front / side (`just
+test-tools`, which also leaves the pictures):
+
+| Troll's head | Triangles | Outline shared | Edges off | Surface off | Reference strays, head box |
+|---|---|---|---|---|---|
+| hand-built loft | 54 + 16 | 80% / 30% | 4.7 / 11.6 cm | 14.4 / 10.9 cm | 2.77% / 3.45% |
+| plain (rows alone) | 188 | 83% / 89% | 3.1 / 1.2 cm | 3.5 / 5.3 cm | 1.75% / 3.23% |
+| laid on the surface | 196 | 91% / 90% | 1.6 / 1.2 cm | 2.2 / 1.5 cm | 1.11% / 1.71% |
+
+The pirate (a person, with a beard, an eye patch, a hat and a white
+collar): 188 triangles; surface off 1.5 / 2.1 cm against 2.7 / 2.5 for the
+plain head; side outline 91% shared against 82%. A loose box that takes in
+the troll's chest and shoulders finds the same features within 2 cm.
+
+What still doesn't follow the reference:
+
+- **Between the rings.** Ten rings and five to seven points a side: warts,
+  lips, nostrils and the curve between two rings are gone. The eye sockets
+  are deliberately deeper than the reference's.
+- **The top of the skull** is one point above the last ring, a low pyramid
+  where the reference is a dome.
+- **Whatever else is in the box.** The pirate's collar sits beside his
+  beard, so the jaw's ring is as wide as the collar. Stop the box above it.
+- **Tusks and ears are simple spikes** at the measured place and length,
+  not the reference's curved ones.
 
 Where it goes wrong, and what to do:
 
@@ -154,14 +184,13 @@ Where it goes wrong, and what to do:
   look at the guide lines and set the rows by hand.
 - **No texture, or eyes no darker than the skin.** It goes by shape alone:
   the nose, chin and tusks are still found, the eyes are placed in the
-  hollow above the nose or, failing that, where eyes usually sit. That
-  works on a head with clear relief (the troll's built head, measured
-  again, lands within 2 cm) and is a guess on a smooth one.
+  hollow above the nose or, failing that, where eyes usually sit: a guess
+  on a smooth head, so check the guide lines.
 - **A head turned or tipped.** It expects a level head looking straight
   along one axis, which is how the pipeline draws characters.
-- **Ears are not found**, only built: add `"ears": True` (or sizes) when the
-  description names them. The same goes for horns, which are separate
-  pieces (a tube each).
+- **Ears hidden by hair, and horns.** Ears are found when they stand out
+  beside the head at eye height; otherwise add `"ears": True` (or sizes)
+  when the description names them. Horns are separate pieces (a tube each).
 - **Colors come from the texture, baked shadows and all.** Use the head's
   `"color"` for the body's skin too, or the head will not match it.
 
@@ -365,6 +394,7 @@ import and cleanup, its part sizes against `parts.json`, both block-outs
 rebuilt, each exported file opened to count what is in it, old part plans
 cut exactly as before, and the troll's face measured and rebuilt next to
 its old head (and the pirate's, if that run is there). With `--keep DIR`
-the face cases leave `troll-head-before-after.png` and
-`pirate-head-reference-and-built.png` to look at. `just check-safe` checks every script against safe
+the face cases leave `troll-head-compared.png` and
+`pirate-head-compared.png`: front and side of the reference, each head, and
+the fitted head as wire over the reference. `just check-safe` checks every script against safe
 mode.

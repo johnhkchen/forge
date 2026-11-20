@@ -18,8 +18,14 @@
 #       "+x"). Don't write this one by hand: face.py measures the
 #       reference's head and prints the whole piece, ready to paste. What it
 #       holds, so you can adjust it after looking:
+#       "scan"   the name face.py stored the head's surface under, in this
+#                scene. With it the head's points are laid on the reference
+#                (outline, skull, cheeks, jaw) and the features are cut into
+#                that. Without it you get a plain head from "rows" alone.
 #       "box"    the head's box. "rows": [height, front of the face there,
-#                half-width] for "chin", "mouth", "nose", "eyes", "brow", "top"
+#                half-width] for "chin", "mouth", "nose", "eyes", "brow",
+#                "top": the heights place the features; front and half-width
+#                only shape a head with no "scan"
 #       "kind"   "creature" (heavy brow, scowl, broad nose and mouth) or "human"
 #       "face"   sizes in meters, all optional: "eye_in" / "eye_out" (inner
 #                and outer eye corner, from the center line), "eye_tall",
@@ -31,8 +37,10 @@
 #       "eyes"   "sunk" (a dark socket, the eye set back in it) or "flat"
 #                (one colored face per eye, 16 triangles fewer)
 #       "tusks"  {"at": from the center line, "z": where it starts, "long": ,
-#                "wide": , "from": "below" or "above"} and "ears": {"long": , "up": 0-1 (0
-#                sticks out, 1 points up), "z": }; True takes the defaults
+#                "wide": , "front": how far forward the tip is, "from":
+#                "below" or "above"} and "ears": {"long": , "tall": , "up":
+#                0-1 (0 sticks out, 1 points up), "z": , "front": }; True
+#                takes the defaults
 #       "colors" {"skin", "socket", "eye", "mouth", "brow", "nose", "tusk",
 #                "ear", "hair", "beard"}: a flat color per region ("hair"
 #                covers the top and back, "beard" the jaw and upper lip).
@@ -215,6 +223,30 @@ def spike(base, tip):
     verts = list(base) + [tip]
     return verts, [(i, (i + 1) % len(base), len(base)) for i in range(len(base))]
 
+def scan_row(zs, z):
+    """Which two stored rows `z` lies between, and how far along."""
+    r = 0
+    while r < len(zs) - 2 and zs[r + 1] < z:
+        r += 1
+    return r, min(1.0, max(0.0, (z - zs[r]) / (zs[r + 1] - zs[r])))
+
+def scan_at(scan, side, s, z):
+    """The measured surface ("front" or "back") at `s` from the center line and height `z`: how far
+    forward it is, or None where face.py saw nothing. Past the head's edge it gives the edge."""
+    r, t = scan_row(scan["zs"], z)
+    lanes = len(scan[side][0])
+    x = min(max(s / scan["half"] * lanes - 0.5, 0.0), lanes - 1.0)
+    found = []
+    for row in (scan[side][r], scan[side][r + 1]):
+        i = int(x)
+        while i > 0 and row[i] is None:
+            i -= 1
+        j = min(i + 1, lanes - 1)
+        found.append(row[i] if i < int(x) or row[i] is None or row[j] is None else mix(row[i], row[j], x - i))
+    if None in found:
+        return found[0] if found[1] is None else found[1]
+    return mix(found[0], found[1], t)
+
 def head(part):
     """A head with a face, from where the features sit (see the notes at the top).
     Built as a grid, rows going up and columns going from the middle of the face
@@ -234,6 +266,13 @@ def head(part):
         raise ValueError("head %r: rows must climb: chin < mouth < nose < eyes < brow < top" % part.get("name"))
     if min(r[1] for r in (chin, mouth, nose, eyes, brow, top)) <= back:
         raise ValueError("head %r: the box must reach behind the face (its back is in front of a row)" % part.get("name"))
+    scan = None
+    if part.get("scan"):
+        stored = bpy.context.scene.get("face: " + part["scan"])
+        if not stored:
+            raise ValueError("head %r: this scene has no measured surface named %r: run face.py first, or drop \"scan\" for a plain head"
+                             % (part.get("name"), part["scan"]))
+        scan = json.loads(stored)
     kind = KINDS[part.get("kind", "creature")]
     face = part.get("face", {})
     tall = max(hi[2], top[0]) - chin[0]
@@ -274,6 +313,9 @@ def head(part):
     ]
     for i in range(1, len(rings)):
         rings[i][0] = max(rings[i][0], rings[i - 1][0] + step)
+        if scan:  # as wide as the reference is at that height
+            r, t = scan_row(scan["zs"], rings[i][0])
+            rings[i][2] = max(mix(scan["wide"][r], scan["wide"][r + 1], t), 0.25 * eyes[2])
     grid = []  # grid[row][column] = Vector((sideways, forward, up))
     for z, front, wide, s1, s2 in rings:
         deep = front - back
@@ -286,11 +328,33 @@ def head(part):
             row.append(Vector((0.72 * wide, back + 0.1 * deep, z)))
         if part.get("back", True):
             row.append(Vector((0, back, z)))
+        if scan and grid:  # lay the ring on the reference: the face as seen from the front, the rest from behind
+            for c in range(4):
+                row[c].y = scan_at(scan, "front", row[c].x, z) or row[c].y
+            edge, behind = scan_at(scan, "front", wide, z), scan_at(scan, "back", wide, z)
+            if edge is not None:
+                row[4].y = edge if behind is None else (edge + behind) / 2
+            for c in range(5, len(row)):
+                if behind is None:  # sunk into the body here: the side runs straight back into it
+                    row[c].x = 0.95 * wide
+                row[c].y = scan_at(scan, "back", row[c].x, z) or row[c].y
         grid.append(row)
-    crown = Vector((0, mix(back, top[1], 0.5), max(hi[2], rings[-1][0] + 0.06 * tall)))
+    if scan:  # under the jaw: the chin's ring, drawn in
+        inside = sum((p.y for p in grid[1]), 0.0) / len(grid[1])
+        grid[0] = [Vector((0.75 * p.x, mix(inside, p.y, 0.6), rings[0][0])) for p in grid[1]]
+    peak = max(hi[2], rings[-1][0] + 0.06 * tall)
+    if scan:
+        peak = max(min(peak, scan["zs"][-1]), rings[-1][0] + step)
+    crown = Vector((0, (grid[-1][0].y + (grid[-1][-1].y if part.get("back", True) else back)) / 2, peak))
     grid.append([crown.copy() for _ in grid[0]])
-    grid[5][0] = Vector((0, nose[1] + nose_out, min(max(nose[0], rings[4][0] + step), rings[6][0] - step)))  # the tip of the nose
-    grid[4][1].y += 0.3 * nose_out  # its wings
+    tip = nose[1] + nose_out
+    if scan:  # the reference's own nose, or what reads, whichever sticks out more
+        tip = max(scan_at(scan, "front", 0, nose[0]) or tip, grid[5][1].y + nose_out)
+        for c in range(4):  # and its own brow, nudged out where it would not overhang the eyes at all
+            grid[6][c].y = max(grid[6][c].y, grid[5][max(c, 1)].y + 0.2 * kind["brow"] * tall * bold)
+    else:
+        grid[4][1].y += 0.3 * nose_out  # the nose's wings
+    grid[5][0] = Vector((0, tip, min(max(nose[0], rings[4][0] + step), rings[6][0] - step)))  # the tip of the nose
     grid[6][0].z -= 0.45 * scowl * eye_tall
     grid[6][1].z -= 0.3 * scowl * eye_tall
     grid[6][2].z = min(grid[6][2].z + 0.15 * scowl * eye_tall, mix(rings[6][0], rings[7][0], 0.5))
@@ -347,8 +411,10 @@ def head(part):
     if ears:
         ears = ears if isinstance(ears, dict) else {}
         size, up = ears.get("long", kind["ear_long"] * tall), ears.get("up", kind["ear_up"])
-        at = Vector((0.9 * eyes[2], cheek - min(0.6 * (cheek - back), 0.65 * eyes[2]), ears.get("z", eyes[0])))
-        half = 0.09 * tall
+        at = Vector((0.9 * rings[5][2], cheek - min(0.6 * (cheek - back), 0.65 * eyes[2]), ears.get("z", eyes[0])))
+        if "front" in ears:
+            at.y = sign * ears["front"]
+        half = ears.get("tall", 0.18 * tall) / 2
         base = [at + Vector((0, half, 0)), at + Vector((0, 0, half)), at + Vector((0, -half, 0)), at + Vector((0, 0, -half))]
         tip = at + Vector((0.1 * eyes[2] + size * (1 - 0.6 * up), -0.35 * size, 0.9 * size * up))
         extra.append((base, tip, paint.get("ear", tone(skin, 0.9))))
@@ -361,6 +427,10 @@ def head(part):
                      tusks.get("z", mouth[0] - (0.25 * size if below else -0.25 * size))))
         base = [at + Vector((r, 0, 0)), at + Vector((0, r, 0)), at + Vector((-r, 0, 0)), at + Vector((0, -r, 0))]
         tip = at + Vector((0.3 * r, 0.25 * size, size if below else -size))
+        if "front" in tusks:  # as far forward as the reference's
+            tip.y = sign * tusks["front"]
+            at.y = max(at.y, tip.y - 0.5 * size)
+            base = [at + Vector((r, 0, 0)), at + Vector((0, r, 0)), at + Vector((-r, 0, 0)), at + Vector((0, -r, 0))]
         extra.append((base, tip, paint.get("tusk", (0.88, 0.84, 0.68))))
     for base, tip, color in extra:
         for flip in (1, -1):

@@ -7,6 +7,8 @@
 # frames one spot, like a head, instead of the whole object: together they
 # make a close-up to hold next to the same view of another object. These
 # views are lit softly from the camera's side, so a face isn't lost in shadow.
+# "over" names a second object to draw on top as orange wire, all of it
+# showing: where its lines leave the shaded shape, the two disagree.
 #
 # EEVEE, small image: a second or two. Safe-mode compatible.
 
@@ -17,6 +19,7 @@ PARAMS = {
     "wireframe": False,  # draw the edges, to judge topology
     "view": "three-quarter",  # or "front", "side", "back"
     "box": None,         # {"min": [x, y, z], "max": [x, y, z]}: frame this spot, not the whole object
+    "over": None,        # another object's name: its wire drawn over this one ("front", "side" or "back" views)
 }
 
 import bpy
@@ -75,6 +78,25 @@ if straight:
 else:
     cam.location = center + Vector((0.55, -0.8, 0.35)) * reach
 cam.rotation_euler = (center - cam.location).to_track_quat("-Z", "Y").to_euler()
+ghost = None
+if PARAMS["over"] and straight:
+    source = bpy.data.objects.get(PARAMS["over"])
+    if source is None or source.type != "MESH":
+        raise ValueError("no mesh object named %r to draw over it" % PARAMS["over"])
+    ghost = bpy.data.objects.new("preview wire", source.data.copy())
+    scene.collection.objects.link(ghost)
+    ghost.matrix_world = source.matrix_world.copy()
+    ghost.location = ghost.location + away * max(obj.dimensions) * 2  # nearer the camera, so nothing hides it; the view has no perspective
+    lines = ghost.modifiers.new("preview wire", "WIREFRAME")
+    lines.thickness = reach * 0.004
+    glow = bpy.data.materials.new("preview wire")
+    glow.use_nodes = True
+    shader = glow.node_tree.nodes["Principled BSDF"]
+    shader.inputs["Base Color"].default_value = (0.0, 0.0, 0.0, 1.0)
+    shader.inputs["Emission Color"].default_value = (1.0, 0.35, 0.0, 1.0)
+    shader.inputs["Emission Strength"].default_value = 1.0
+    ghost.data.materials.clear()
+    ghost.data.materials.append(glow)
 wire = None
 if PARAMS["wireframe"]:
     wire = obj.modifiers.new("preview wire", "WIREFRAME")
@@ -84,7 +106,7 @@ if PARAMS["wireframe"]:
 saved = (scene.camera, scene.render.engine, scene.render.resolution_x,
          scene.render.resolution_y, scene.render.filepath)
 world_was = scene.world
-others = [o for o in scene.objects if o.type == "MESH" and o is not obj and not o.hide_render]
+others = [o for o in scene.objects if o.type == "MESH" and o is not obj and o is not ghost and not o.hide_render]
 try:
     for o in others:
         o.hide_render = True
@@ -103,6 +125,11 @@ finally:
     if sky:
         scene.world = world_was
         bpy.data.worlds.remove(sky)
+    if ghost:
+        spare = ghost.data
+        bpy.data.objects.remove(ghost, do_unlink=True)
+        bpy.data.meshes.remove(spare)
+        bpy.data.materials.remove(glow)
     if wire:
         obj.modifiers.remove(wire)
     for o in (cam, sun):

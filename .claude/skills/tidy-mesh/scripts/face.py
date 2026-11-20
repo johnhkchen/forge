@@ -10,8 +10,14 @@
 # lips and chin stick out; eye sockets and the mouth sink in) and how dark
 # the texture is (eyes and mouth are dark bands). From those it works out
 # how high the chin, mouth, nose, eyes and brow sit, how wide the head is at
-# each, eye and mouth widths, the underbite, tusks, and the skin, socket and
-# mouth colors.
+# each, eye and mouth widths, the underbite, tusks, ears, and the skin,
+# socket and mouth colors.
+#
+# It also keeps the head's surface itself (front, back and width, row by
+# row) in the scene, under the piece's name; the piece's "scan" points at
+# it, and build.py lays the head's points on it, so the built head has the
+# reference's outline, skull, cheeks and jaw, not a box's. Whatever is in
+# the box gets followed: keep a collar, shoulders or a hat out of it.
 #
 # The result's "head" is the piece: paste it into build.py's "parts" as it
 # is, then change what you like (build.py's notes list every setting).
@@ -167,16 +173,40 @@ for j in range(ROWS):
 face_front = middle([row[0] for row in depth])
 if face_front is None:
     raise ValueError("nothing inside the box faces %s: check the box and 'facing'" % PARAMS["facing"])
+flaps = []  # per row: the cells cut off because they face front again behind the head's side: an ear, or the chest
 for j in range(ROWS):
-    turned, ended = False, False
+    turned, ended, flap = False, False, []
     for i in range(LANES):
         if None in (depth[j][0], depth[j][i]):
             continue
         behind = min(depth[j][0], face_front) - depth[j][i]
         turned = turned or (facing[j][i] < 0.45 and i >= 0.4 * LANES)  # nearer the middle it is the side of a nose
-        ended = ended or behind > 0.6 * (hi[2] - lo[2]) or (turned and facing[j][i] > 0.7 and behind > 0.12 * (hi[2] - lo[2]))
+        far = behind > 0.6 * max(hi[2] - lo[2], wall - back)
+        ended = ended or far or (turned and facing[j][i] > 0.7 and behind > 0.12 * (hi[2] - lo[2]))
         if ended:
+            if not far:
+                flap.append((i, depth[j][i]))
             depth[j][i] = light[j][i] = tint[j][i] = None
+    flaps.append(flap)
+
+# The same rows and lanes seen from behind, for the back of a head that stands free of the body.
+# Where the head is sunk into the body there is nothing to see, and the box's back wall stands in.
+rear = []
+far_off = max(obj.dimensions) * 2
+for j in range(ROWS):
+    row = []
+    for i in range(LANES):
+        seen = []
+        for side in (1, -1):
+            if depth[j][i] is None:
+                continue
+            start = [0.0, 0.0, lo[2] + (j + 0.5) * row_step]
+            start[u], start[a] = center + side * (i + 0.5) / LANES * half, sign * (back - far_off)
+            hit, where, _, _ = obj.ray_cast(inverse @ Vector(start), -aim)
+            if hit and back <= sign * (world @ where)[a] <= depth[j][i]:
+                seen.append(sign * (world @ where)[a])
+        row.append(mean(seen))
+    rear.append(row)
 
 # One line per row: where it is, how wide the head is there, how far forward
 # the middle of the face and the eye lanes are, and how dark each is.
@@ -349,7 +379,40 @@ if len(spikes) >= 2 and zs[low] - 0.12 * tall <= mouth_z <= zs[high] + 0.12 * ta
     drop_down = depth[kept[low]][at] - ((depth[kept[low - 1]][at] if low else None) or back)
     rising = drop_up >= drop_down  # the free end is the one with nothing beyond it
     tusks = {"at": r3((at + 0.5) / LANES * half), "from": "below" if rising else "above", "long": r3(zs[high] - zs[low] + row_step),
+             "front": r3(sign * max(depth[kept[r]][i] for i, r in spikes if abs(i - at) <= 1)),
              "z": r3(zs[low] - row_step / 2 if rising else zs[high] + row_step / 2)}
+
+# Ears: a short band of rows, around eye height, with a flap out beyond the side of the head.
+# Flaps on most rows are the chest and shoulders around a sunk head instead.
+ears = None
+flapped = [r for r in range(n) if flaps[kept[r]]]
+band = [r for r in flapped if nose_z <= zs[r] <= eye_z + 0.3 * tall]
+if len(band) >= 2 and len(flapped) <= 0.6 * n:
+    cells = [cell for r in band for cell in flaps[kept[r]]]
+    root = min(i for i, _ in cells) / LANES * half
+    ears = {"z": r3(mean([zs[r] for r in band])), "front": r3(sign * mean([d for _, d in cells])),
+            "long": r3(max((max(i for i, _ in cells) + 1) / LANES * half - root, 0.08 * tall)),
+            "tall": r3((len(band) + 1) * row_step)}
+
+# The surface itself, for build.py to lay the head's points on: the front as seen (tusks smoothed
+# away, since they are built on their own), the back, and the half-width, row by row.
+surface = [list(depth[j]) for j in kept]
+if tusks:
+    for r in range(max(low - 1, 0), min(high + 2, n)):
+        a0, a1 = max(at - 2, 0), min(at + 2, LANES - 1)
+        if None not in (surface[r][a0], surface[r][a1]):
+            for i in range(a0 + 1, a1):
+                surface[r][i] = mix(surface[r][a0], surface[r][a1], (i - a0) / (a1 - a0))
+
+def settled(grid):
+    """Each cell averaged with the ones above and below it, rounded."""
+    return [[None if grid[r][i] is None else round(mean([grid[q][i] for q in range(max(r - 1, 0), min(r + 2, len(grid)))]), 4)
+             for i in range(LANES)] for r in range(len(grid))]
+
+bpy.context.scene["face: " + PARAMS["name"]] = json.dumps({
+    "zs": [round(z, 4) for z in zs], "half": half, "wide": [round(w, 4) for w in wide],
+    "front": settled(surface), "back": settled([rear[j] for j in kept]),
+})
 
 top = row_at(mix(brow_z, top_z, 0.55))
 rows = {
@@ -384,10 +447,13 @@ piece = {
     "kind": PARAMS["kind"],
     "box": {"min": [r3(v) for v in lo], "max": [r3(v) for v in hi]},
     "rows": {k: [r3(v[0]), r3(sign * v[1]), r3(v[2])] for k, v in rows.items()},
+    "scan": PARAMS["name"],
     "face": face,
 }
 if tusks:
     piece["tusks"] = tusks
+if ears:
+    piece["ears"] = ears
 if image:
     # Skin is the cheeks' usual color; a region gets its own color only where it clearly differs.
     face_lanes = range(max(1, int(0.8 * usual)))
