@@ -21,7 +21,8 @@ steps only this runner can do:
   with more sides and more rings: the mid-poly version.
 
 A character's gear stays apart in both: the .glb gets one mesh per group
-("body", "gear: wool singlet"...) and an empty per attachment point.
+("body", "gear: wool singlet"...) and an empty per attachment point. Its
+colors are baked by group (bake.py): gear copies cloth, the body skin.
 
 The "walk" profile is different in kind: it takes the low-poly and mid-poly
 versions already in OUT_DIR and writes each again with a skeleton and a walk,
@@ -615,43 +616,6 @@ def drape(run_dir, name):
     return run_script("drape.py", {"object": name, "pieces": recipe["pieces"] if recipe else None})
 
 
-def skin_under_gear(low):
-    """After a bake, the body under a coat is painted like the coat: the bake
-    copies whatever the detailed mesh shows there. So body faces that gear
-    covers get a plain material in the color Claude gave the piece instead.
-    Take the gear off and there is skin, not a second coat."""
-    from mathutils.bvhtree import BVHTree
-    tags = json.loads(low.get("forge_groups", "[]"))
-    if len(tags) < 2 or tags[0].get("forge") != "body":
-        return None
-    me = low.data
-    marks = [0] * len(me.polygons)
-    me.attributes["forge_group"].data.foreach_get("value", marks)
-    gear = [tuple(p.vertices) for p in me.polygons if marks[p.index]]
-    tree = BVHTree.FromPolygons([tuple(v.co) for v in me.vertices], gear)
-    reach = max(low.dimensions) * 0.04
-    paint = me.color_attributes[0] if me.color_attributes else None
-    slots, covered = {}, 0
-    for p in me.polygons:
-        if marks[p.index] or tree.ray_cast(p.center + p.normal * 1e-4, p.normal, reach)[0] is None:
-            continue
-        color = (0.6, 0.6, 0.6)
-        if paint:
-            at = p.loop_start if paint.domain == "CORNER" else p.vertices[0]
-            color = tuple(round(c, 2) for c in paint.data[at].color[:3])
-        if color not in slots:
-            mat = bpy.data.materials.new("under the gear %d" % (len(slots) + 1))
-            mat.use_nodes = True
-            bsdf = mat.node_tree.nodes["Principled BSDF"]
-            bsdf.inputs["Base Color"].default_value = color + (1.0,)
-            bsdf.inputs["Roughness"].default_value = 0.85
-            me.materials.append(mat)
-            slots[color] = len(me.materials) - 1
-        p.material_index = slots[color]
-        covered += 1
-    return {"body_faces_under_gear": covered, "plain_colors": len(slots)}
-
-
 def read_plan(source):
     """The run's parts.json (Claude's part boxes), if it has one."""
     path = os.path.join(os.path.dirname(source), "parts.json")
@@ -790,6 +754,8 @@ def make(source, out_dir, profile, spec):
                 color_preview_material(bpy.data.objects[result["object"]])
         elif name == "rebuild":
             result = rebuild(os.path.dirname(source), params)
+        elif name == "bake.py" and plan.get("parts"):  # the part boxes say where a kilt or a shirt is on the detailed mesh
+            result = run_script(name, dict(params, parts=plan["parts"]))
         else:
             result = run_script(name, params)
         record["steps"].append({"script": name, "result": result})
@@ -804,8 +770,14 @@ def make(source, out_dir, profile, spec):
         record["shape"] = run_script("match.py", {})
     if built:
         low = largest_mesh()
-        if "bake.py" in light:
-            record["under_gear"] = skin_under_gear(low)
+        baked = next((s["result"] for s in record["steps"] if s["script"] == "bake.py"), None)
+        if baked and baked.get("groups"):
+            # bake.py baked by group: gear copied cloth, the body skin, and the skin under a
+            # piece of gear has the body's own average color (not a copy of the coat over it).
+            record["by_group"] = {k: baked[k] for k in ("groups", "faces_hidden_under_another_piece", "found_by_part_boxes")}
+        # A later step that repaints part of the texture (a face, say) goes here: after the
+        # bake, before the painted colors go and the file is written.
+        if baked and not record.get("flat_colors"):
             # The texture has taken over from the painted colors. Left on the
             # mesh they would go into the .glb, where viewers multiply them
             # into the texture and darken it.

@@ -146,6 +146,10 @@ walk-strip file out view="side":
 cloth-check +files:
     "{{blender_bin}}" -b --factory-startup -P scripts/cloth_check.py -- {{files}} 2>&1 | grep -E '^CLOTH|Error|Traceback'
 
+# Measure a low-poly or mid-poly character's colors against the run's detailed mesh, piece by piece (add --sheet out.png for a picture)
+bake-check run +files:
+    "{{blender_bin}}" -b --factory-startup -P scripts/bake_check.py -- "{{run}}/scene.blend" {{files}} 2>&1 | grep -E '^BAKE|^SHEET|Error|Traceback'
+
 # For a run from before recipes were kept: rebuild its block-out from the transcript in a background Blender and save the recipe, so `just tidy <run> midpoly` works
 recipe run:
     #!/usr/bin/env bash
