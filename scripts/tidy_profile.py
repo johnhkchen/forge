@@ -393,8 +393,12 @@ def export_edges(path):
     import bmesh
     obj = largest_mesh()
     tags = json.loads(obj.get("forge_groups", "[]"))
+    masks = json.loads(obj.get("forge_masks", "[[]]")) if obj.data.attributes.get("forge_under") else [[]]
     made = []
-    for index, tag in enumerate(tags if len(tags) > 1 else [None]):
+    jobs = [(None, None, 0)]
+    if len(tags) > 1:  # the body's lines come apart where drape.py hid faces under gear, like its mesh
+        jobs = [(index, tag, cut) for index, tag in enumerate(tags) for cut in (range(len(masks)) if tag.get("forge") == "body" else [0])]
+    for index, tag, cut in jobs:
         lines = obj.copy()
         lines.data = obj.data.copy()
         lines.modifiers.clear()
@@ -407,11 +411,19 @@ def export_edges(path):
         bm.from_mesh(lines.data)
         if tag:
             mark = bm.faces.layers.int.get("forge_group")
-            bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[mark] != index], context="FACES")
-            lines.name = "lines: " + tag["name"]
+            under = bm.faces.layers.int.get("forge_under")
+            gone = [f for f in bm.faces if f[mark] != index or (under is not None and tag.get("forge") == "body" and f[under] != cut)]
+            if cut and len(gone) == len(bm.faces):
+                bm.free()
+                bpy.data.objects.remove(lines, do_unlink=True)
+                continue
+            bmesh.ops.delete(bm, geom=gone, context="FACES")
+            lines.name = "lines: " + tag["name"] + (" under: " + " + ".join(masks[cut]) if cut else "")
             for key in ("forge", "gear"):
                 if tag.get(key):
                     lines[key] = tag[key]
+            if cut:
+                lines["under"] = "|".join(masks[cut])
         bmesh.ops.delete(bm, geom=list(bm.faces), context="FACES_ONLY")
         bm.to_mesh(lines.data)
         bm.free()
@@ -470,7 +482,7 @@ def color_preview_material(obj):
     obj.data.materials.append(mat)
 
 
-GROUP_KEYS = ("forge", "gear", "kind", "slot", "socket", "socket_of", "forge_build")
+GROUP_KEYS = ("forge", "gear", "kind", "slot", "socket", "socket_of", "forge_build", "under")
 
 
 def blockout(run_dir):
@@ -489,13 +501,16 @@ def blockout(run_dir):
     bpy.ops.import_scene.gltf(filepath=path)
     new = [o for o in bpy.data.objects if o not in before]
     meshes = [o for o in new if o.type == "MESH"]
-    meshes.sort(key=lambda o: o.get("forge") != "body")  # the body first, as build.py lists it
+    meshes.sort(key=lambda o: (o.get("forge") != "body", bool(o.get("under"))))  # the body first, as build.py lists it
     sockets = [o for o in new if o.type == "EMPTY" and o.get("forge") == "socket"]
-    tags = []
-    for index, o in enumerate(meshes):
-        name = blockout_recipe.tag_name(o)
-        if name:
+    tags, named = [], 0
+    for o in meshes:
+        # A draped block-out has its body in several meshes ("body under: wool trousers"): one group again here.
+        name = "body" if o.get("forge") == "body" else blockout_recipe.tag_name(o)
+        named += bool(name)
+        if name and name not in [t["name"] for t in tags]:
             tags.append({k: o[k] for k in ("forge", "gear", "kind", "slot") if k in o} | {"name": name})
+        index = [t["name"] for t in tags].index(name) if name else len(tags)
         mark = o.data.attributes.new("forge_group", "INT", "FACE")
         mark.data.foreach_set("value", [index] * len(o.data.polygons))
     for o in bpy.context.selected_objects:
@@ -514,7 +529,7 @@ def blockout(run_dir):
     low.data.materials.clear()
     for key in [k for k in GROUP_KEYS if k in low]:
         del low[key]
-    if len(tags) == len(meshes):
+    if named == len(meshes):
         low["forge_groups"] = json.dumps(tags)
     for o in sockets:
         o.matrix_world = o.matrix_world.copy()
@@ -581,6 +596,17 @@ def rebuild(run_dir, params):
             "quads": sum(1 for p in faces if len(p.vertices) == 4),
             "pieces": len(recipe["pieces"]),
             "tried": tried, "groups": [g["name"] for g in result.get("groups", [])], "sockets": result.get("sockets")}
+
+
+def drape(run_dir, name):
+    """Lay the block-out's clothes on its body and mark the body faces they hide (drape.py), for a
+    block-out that has gear. The recipe, where there is one, gives each part its piece's name and "fit"."""
+    low = bpy.data.objects[name]
+    tags = json.loads(low.get("forge_groups", "[]"))
+    if len(tags) < 2 or tags[0].get("forge") != "body":
+        return None
+    recipe = read_recipe(run_dir)
+    return run_script("drape.py", {"object": name, "pieces": recipe["pieces"] if recipe else None})
 
 
 def skin_under_gear(low):
@@ -651,12 +677,19 @@ def walk(source, out_dir, profile, spec):
         bpy.ops.import_scene.gltf(filepath=os.path.join(out_dir, version + ".glb"))
         name = version + "-walk"
         record = {"profile": name, "about": spec["about"], "source": os.path.join(out_dir, version + ".glb"), "of": version}
+        dressed = any(o.type == "MESH" and o.get("forge") == "gear" for o in bpy.context.scene.objects)
+        if dressed:  # clothes onto the body (a version draped when it was made is only read), and the faces they hide
+            record["drape"] = run_script("drape.py", {"pieces": recipe["pieces"] if recipe else None, "rings": False})
         try:
             record["rig"] = run_script("rig.py", dict(spec.get("rig", {}), recipe=recipe["pieces"] if recipe else None))
         except ValueError as why:  # not a T-pose character: nothing to fit a skeleton to
             raise Skip(str(why))
+        if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
+            record["cloth"] = run_script("cloth.py", spec.get("cloth", {}))
         record["walk"] = run_script("walk.py", dict(spec.get("walk", {}), traits=traits or None))
         record["animation"] = run_script("animate.py", {})
+        for script in record["animation"].get("then", []):  # what the rig asks for after a bake: swing.py, for cloth bones
+            record[script[:-3]] = run_script(script, spec.get(script[:-3], {}))
         glb = os.path.join(out_dir, name + ".glb")
         record["export"] = run_script("export.py", dict(spec["export"], rig=True, path=glb, materials=not made.get("flat_colors")))
         doc, rest = blockout_recipe.read(glb)
@@ -668,9 +701,10 @@ def walk(source, out_dir, profile, spec):
         with open(os.path.join(out_dir, name + ".json"), "w") as f:
             json.dump(record, f, indent=2)
         gait, check = record["walk"]["gait"], record["animation"]["check"]
-        print("PROFILE %s: %d bones, %s weights, %.2f m/s at %d steps a minute, feet slide %.2f cm a step, %.2f MB, %.0fs -> %s" % (
-            name, len(record["rig"]["bones"]), record["rig"]["weights"], gait["speed_m_s"], gait["cadence_steps_per_min"],
-            check["foot_slide_cm_per_step"], record["bytes"] / 1e6, record["seconds"], glb))
+        cloth = len((record.get("cloth") or {}).get("cloth_bones") or [])
+        print("PROFILE %s: %d bones%s, %s weights, %.2f m/s at %d steps a minute, feet slide %.2f cm a step, %.2f MB, %.0fs -> %s" % (
+            name, len(record["rig"]["bones"]), " and %d for loose cloth" % cloth if cloth else "", record["rig"]["weights"], gait["speed_m_s"],
+            gait["cadence_steps_per_min"], check["foot_slide_cm_per_step"], record["bytes"] / 1e6, record["seconds"], glb))
 
 
 def make(source, out_dir, profile, spec):
@@ -698,6 +732,11 @@ def make(source, out_dir, profile, spec):
         else:
             result = run_script(name, params)
         record["steps"].append({"script": name, "result": result})
+        if name in ("blockout", "rebuild"):  # before the bake, so the texture lands on the clothes where they end up
+            draped = drape(os.path.dirname(source), result["object"])
+            if draped:
+                record["steps"].append({"script": "drape.py", "result": draped})
+                record["drape"] = {k: draped[k] for k in ("gap_where_it_touches_cm", "points_inside_the_body", "rings_added", "triangles", "masks")}
     light = [n for n, _ in spec["steps"]]
     built = {"blockout", "rebuild"} & set(light)
     if {"retopo.py", "autoremesher"} & set(light) or built or any(p.get("as_copy") for _, p in spec["steps"]):

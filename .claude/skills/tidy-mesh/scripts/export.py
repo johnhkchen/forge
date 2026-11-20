@@ -17,6 +17,13 @@
 # ("forge_build"), which the mid-poly profile rebuilds from. "file" in the
 # result lists what was written; "only_this_object" is still the check.
 #
+# After drape.py the body is written in more than one mesh: "body" is what
+# always shows, and each "body under: wool trousers" holds the faces that gear
+# hides completely, tagged "under" with the gear's name (several names when
+# more than one piece each hide them). Show such a mesh only while every gear
+# it names is off: dressed, the skin under the clothes isn't drawn, so it
+# can't show through; undressed, the body is whole. "masks" in the result.
+#
 # A rigged character (rig.py, then animate.py) goes out whole with "rig": the
 # skeleton, every mesh bound to it, the sockets riding on their bones, and
 # the baked action as the file's animation ("walk"). Each joint carries its
@@ -88,28 +95,80 @@ def read_back(path):
     return held
 
 
+def masks_of(obj):
+    """The gear sets drape.py found body faces hidden under ([] first: never hidden), or None."""
+    if obj.data.attributes.get("forge_under") is None or not obj.get("forge_masks"):
+        return None
+    return json.loads(obj["forge_masks"])
+
+def under_name(masks, cut):
+    return "body under: " + " + ".join(masks[cut])
+
 def split_groups(obj, scene):
-    """A block-out's groups as objects of their own for the length of the export, named and tagged for the file."""
+    """A block-out's groups as objects of their own for the length of the export, named and tagged for the file.
+    The body comes apart once more where drape.py marked faces as hidden under gear."""
     made = []
+    masks = masks_of(obj)
     for index, tag in enumerate(json.loads(obj["forge_groups"])):
-        me = obj.data.copy()
-        bm = bmesh.new()
-        bm.from_mesh(me)
-        mark = bm.faces.layers.int.get("forge_group")
-        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[mark] != index], context="FACES")
-        bm.faces.layers.int.remove(mark)
-        bm.to_mesh(me)
-        bm.free()
-        me.name = tag["name"]
-        part = bpy.data.objects.new(tag["name"], me)
-        part.matrix_world = obj.matrix_world.copy()
-        for key, value in tag.items():
-            if key != "name":
-                part[key] = value
-        scene.collection.objects.link(part)
-        made.append(part)
+        for cut in (range(len(masks)) if masks and tag.get("forge") == "body" else [None]):
+            me = obj.data.copy()
+            bm = bmesh.new()
+            bm.from_mesh(me)
+            mark = bm.faces.layers.int.get("forge_group")
+            under = bm.faces.layers.int.get("forge_under")
+            gone = [f for f in bm.faces if f[mark] != index or (cut is not None and f[under] != cut)]
+            if len(gone) == len(bm.faces) and cut:
+                bm.free()
+                bpy.data.meshes.remove(me)
+                continue
+            bmesh.ops.delete(bm, geom=gone, context="FACES")
+            bm.faces.layers.int.remove(mark)
+            bm.to_mesh(me)
+            bm.free()
+            name = under_name(masks, cut) if cut else tag["name"]
+            me.name = name
+            part = bpy.data.objects.new(name, me)
+            part.matrix_world = obj.matrix_world.copy()
+            for key, value in tag.items():
+                if key != "name":
+                    part[key] = value
+            if cut:
+                part["under"] = "|".join(masks[cut])
+            if masks and tag.get("forge") == "body":
+                part["draped"] = 1
+            if tag.get("gear") and obj.get("drape"):  # what drape.py took each part of this gear for, so it is read the same way again
+                part["drape"] = json.dumps({tag["gear"]: json.loads(obj["drape"]).get(tag["gear"], [])})
+            scene.collection.objects.link(part)
+            made.append(part)
     if made and "forge_build" in obj:
         made[0]["forge_build"] = obj["forge_build"]
+    return made
+
+def mask_parts(obj, scene):
+    """A rigged body as one bound mesh per mask, for the length of the export: [] when it has no masks."""
+    masks = masks_of(obj)
+    made = []
+    for cut in range(len(masks or [])):
+        part = obj.copy()
+        part.data = obj.data.copy()
+        bm = bmesh.new()
+        bm.from_mesh(part.data)
+        under = bm.faces.layers.int.get("forge_under")
+        gone = [f for f in bm.faces if f[under] != cut]
+        if len(gone) == len(bm.faces) and cut:
+            bm.free()
+            spare = part.data
+            bpy.data.objects.remove(part)
+            bpy.data.meshes.remove(spare)
+            continue
+        bmesh.ops.delete(bm, geom=gone, context="FACES")
+        bm.to_mesh(part.data)
+        bm.free()
+        part.name = part.data.name = under_name(masks, cut) if cut else "body"
+        if cut:
+            part["under"] = "|".join(masks[cut])
+        scene.collection.objects.link(part)
+        made.append(part)
     return made
 
 
@@ -138,10 +197,19 @@ for o in bpy.context.selected_objects:
 whole = []
 if rig:
     sockets = [o for o in scene.objects if o.type == "EMPTY" and o.parent == rig and o.get("forge") == "socket"]
-    whole = [rig] + bound + sockets
+    apart = {o.name: mask_parts(o, scene) for o in bound if o.get("forge") == "body"}
+    parts = [part for made in apart.values() for part in made]
+    written = [o for o in bound if not apart.get(o.name)] + parts
+    whole = [rig] + written + sockets
+    names = {o: o.name for o in bound if apart.get(o.name)}
+    for o in names:  # the whole body steps aside for its parts, name and all
+        o.name = "whole " + names[o]
+    for part in parts:
+        part.name = part.name.split(".")[0]
 for o in whole or ((parts + sockets) if parts else [obj]):
     o.hide_set(False)
     o.select_set(True)
+masked = [o["under"].split("|") for o in parts if o.get("under")]  # the body meshes that hide with gear, by the gear that hides them
 bpy.context.view_layer.objects.active = rig or (parts[0] if parts else obj)
 options = {
     "filepath": PARAMS["path"],
@@ -175,6 +243,9 @@ finally:
         spare = o.data
         bpy.data.objects.remove(o, do_unlink=True)
         bpy.data.meshes.remove(spare)
+    if rig:
+        for o in names:
+            o.name = names[o]
     for o in sockets + [obj]:
         o.select_set(False)
 
@@ -194,13 +265,15 @@ if PARAMS["check"]:
     held = read_back(PARAMS["path"])
     if held:
         result["file"] = held
-        result["only_this_object"] = (held["meshes"] == (len(bound) if rig else max(len(parts), 1)) and held["triangles"] == triangles
+        result["only_this_object"] = (held["meshes"] == (len(written) if rig else max(len(parts), 1)) and held["triangles"] == triangles
                                       and held["empties"] == (len(sockets) if parts or rig else 0)
                                       and held["bones"] == (len(rig.data.bones) if rig else 0))
 if rig:
-    result["rig"] = {"name": rig.name, "bones": len(rig.data.bones), "meshes": [o.name for o in bound], "sockets": [o["socket"] for o in sockets],
+    result["rig"] = {"name": rig.name, "bones": len(rig.data.bones), "meshes": [o.name for o in bound], "body_in_parts": len(parts), "sockets": [o["socket"] for o in sockets],
                      "animation": rig.animation_data.action.name if rig.animation_data and rig.animation_data.action else None}
-if parts:
+if parts and not rig:
     result["groups"] = [g["name"] for g in groups]
     result["sockets"] = [o["socket"] for o in sockets]
+if masked:
+    result["masks"] = masked
 print("RESULT " + json.dumps(result))

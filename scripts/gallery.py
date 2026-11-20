@@ -67,6 +67,8 @@ def profile_summary(run_dir, name):
         "walk": "profiles/%s-walk.glb" % name if has_walk else None,
         "gait": {k: gait.get(k) for k in ("speed_m_s", "stride_m", "cadence_steps_per_min", "stance_width_m", "bob_cm", "sway_cm")} if has_walk else None,
         "bones": len((walking.get("rig") or {}).get("bones") or []) or None,
+        # Loose cloth (a kilt, a hood) has bones of its own that hang and swing.
+        "cloth_bones": len((walking.get("cloth") or {}).get("cloth_bones") or []) or None,
         "hero": "profiles/%s-hero.glb" % name if has_hero else None,
         "hero_seconds": (hero.get("animation") or {}).get("seconds") if has_hero else None,
         "hero_prop": (hero.get("prop") or {}).get("prop") if has_hero else None,

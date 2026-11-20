@@ -78,6 +78,7 @@ function facts(run, v) {
   ];
   // How it walks, worked out from its own build: pace, then the steps behind it.
   if (v.hero && v.hero_seconds) rows.push(["Hero shot", `${Math.round(v.hero_seconds)} s`, v.hero_prop ? `with its ${v.hero_prop}` : "from poses of our own"]);
+  if (v.walk && v.cloth_bones) rows.push(["Loose cloth", `${v.cloth_bones} bones`, "it hangs and swings as the character moves"]);
   if (v.walk && v.gait?.speed_m_s) rows.push(["Walks at", `${v.gait.speed_m_s} m/s`, `${v.gait.cadence_steps_per_min} steps a minute · ${v.gait.stride_m} m stride`]);
   return rows;
 }
@@ -294,6 +295,7 @@ class Viewer {
           const lines = new THREE.LineSegments(o.geometry, material);
           lines.applyMatrix4(o.matrixWorld);
           lines.userData.gear = o.userData.gear;
+          lines.userData.under = o.userData.under;
           group.add(lines);
         }
       });
@@ -307,6 +309,7 @@ class Viewer {
       const lines = new THREE.LineSegments(new THREE.WireframeGeometry(o.geometry), material);
       lines.applyMatrix4(o.matrixWorld);
       lines.userData.gear = gearOf(o);
+      lines.userData.under = underOf(o);
       group.add(lines);
     });
     return group;
@@ -323,6 +326,7 @@ class Viewer {
       const copy = new THREE.SkinnedMesh(o.geometry, material);
       copy.bind(o.skeleton, o.bindMatrix);
       copy.userData.gear = gearOf(o);
+      copy.userData.under = underOf(o);
       o.parent.add(copy);
       return copy;
     });
@@ -379,12 +383,15 @@ class Viewer {
     return riding ? together(riders) : group;
   }
 
-  // Show or hide each gear piece, by the name its node carries in the file.
+  // Show or hide each gear piece, by the name its node carries in the file. The skin a piece hides
+  // ("body under: wool trousers") is its own mesh: it shows only once every piece over it is off, so
+  // skin can't poke through clothes that are on, and there is a whole body under clothes that are off.
   setGear(off) {
     this.off = off;
+    const shown = (o) => (o.userData.gear ? !off.has(o.userData.gear) : hiddenBy(o).every((g) => off.has(g)));
     this.panes.forEach((p) => {
-      p.model?.traverse((o) => { if (o.userData.gear) o.visible = !off.has(o.userData.gear); });
-      p.wire?.children.forEach((o) => { if (o.userData.gear) o.visible = !off.has(o.userData.gear) && (!o.isSkinnedMesh || p.wire.visible); });
+      p.model?.traverse((o) => { if (o.userData.gear || o.userData.under) o.visible = shown(o); });
+      p.wire?.children.forEach((o) => { if (o.userData.gear || o.userData.under) o.visible = shown(o) && (!o.isSkinnedMesh || p.wire.visible); });
     });
     this.draw();
   }
@@ -454,6 +461,16 @@ function together(children) {
     get visible() { return shown; },
     set visible(on) { shown = on; children.forEach((o) => { o.visible = on; }); },
   };
+}
+
+// The gear that hides a piece of the body, by name: the file lists it on the mesh, joined with "|".
+function hiddenBy(o) {
+  return o.userData.under ? String(o.userData.under).split("|") : [];
+}
+
+function underOf(o) {
+  for (let at = o; at; at = at.parent) if (at.userData.under) return at.userData.under;
+  return undefined;
 }
 
 // The gear piece a mesh belongs to: the tag on it or on the node above it.

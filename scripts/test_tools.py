@@ -507,6 +507,21 @@ def geared(case):
     return pieces
 
 
+def pirate_dressed(case):
+    """The pirate as a case for loose cloth. `geared` makes the body under his coat a thinner copy of the
+    coat, skirts and all, so there would be nothing for the skirts to hang off. Here the body narrows to
+    hips below the belt, as a body does, and the coat's own piece says it is loose (the "fit" Claude is
+    now asked to give such a piece)."""
+    pieces = geared(case)
+    for piece in pieces:
+        if piece["name"] == "torso (body)":
+            piece["rings"] = [[z, x, y, min(rx, 0.21 if z > 0.75 else 0.2), min(ry, 0.155 if z > 0.75 else 0.15)] if z < 0.9 else [z, x, y, rx, ry]
+                              for z, x, y, rx, ry in piece["rings"]]
+        if piece["name"] == "torso":
+            piece["fit"] = "loose"
+    return pieces
+
+
 TROLL_GEAR = [{"name": "hide kilt", "kind": "worn", "slot": "legs"}, {"name": "rope belt", "kind": "worn", "slot": "hip"},
               {"name": "iron wrist band", "kind": "worn", "slot": "arms"}, {"name": "club", "kind": "held", "slot": "hand_right"}]
 TROLL_WEARS = {"kilt": "hide kilt", "belt": "rope belt", "wrist band": "iron wrist band"}
@@ -661,8 +676,12 @@ def midpoly_checks(label, copy, records, built):
     check("%s: the .glb has its three textures and no painted colors left to darken them" % label, held["images"] == 3 and not held["vertex_colors"], held)
     check("%s: %.2f MB with WebP and Draco, made in %.0f s" % (label, mid["bytes"] / 1e6, mid["seconds"]), mid["bytes"] < 1.5e6)
     held = [nodes_of(os.path.join(copy, "profiles", name + ".glb")) for name in ("lowpoly", "midpoly")]
-    check("%s: the same nodes as the low-poly version: %s" % (label, ", ".join(sorted(n for n in held[1] if not n.startswith("socket")))),
-          sorted(held[0]) == sorted(held[1]) and "body" in held[1] and len(held[1]) == len(built["groups"]) + 5)
+    whole = [sorted(n for n in h if not n.startswith("body under: ")) for h in held]  # the skin gear hides is in meshes of its own: see test_drape
+    check("%s: the same nodes as the low-poly version: %s" % (label, ", ".join(n for n in whole[1] if not n.startswith("socket"))),
+          whole[0] == whole[1] and "body" in held[1] and len(whole[1]) == len(built["groups"]) + 5)
+    hidden = {n: held[1][n][0].get("under") for n in held[1] if n.startswith("body under: ")}
+    check("%s: %d more body meshes hold the skin its gear hides, each tagged with the gear that hides it" % (label, len(hidden)),
+          hidden and all(hidden[n] and n == "body under: " + " + ".join(hidden[n].split("|")) for n in hidden), hidden)
     check("%s: the gallery is told the gear and the sockets" % label,
           sorted(g["gear"] for g in mid["gear"]) == sorted(g["gear"] for g in built["groups"] if g.get("gear")) and mid["sockets"] == SOCKETS, mid["gear"])
     check("%s: sockets sit exactly where the block-out's do" % label,
@@ -671,8 +690,9 @@ def midpoly_checks(label, copy, records, built):
     check("%s: %d body faces under gear are plain skin, not a copy of the gear's texture" % (label, under["body_faces_under_gear"]),
           under["body_faces_under_gear"] > 20 and under["plain_colors"] >= 1, under)
     edges = blockout_recipe.read(os.path.join(copy, "profiles", "midpoly-edges.glb"))[0]
-    check("%s: the wireframe file has a set of lines per group, tagged like the group" % label,
-          sorted((n.get("extras") or {}).get("gear", "body") for n in edges["nodes"]) == sorted(g.get("gear", "body") for g in built["groups"]))
+    check("%s: the wireframe file has lines for every group, tagged like the group, the body's split where its mesh is" % label,
+          {(n.get("extras") or {}).get("gear", "body") for n in edges["nodes"]} == {g.get("gear", "body") for g in built["groups"]}
+          and sorted((n.get("extras") or {}).get("under") for n in edges["nodes"] if (n.get("extras") or {}).get("under")) == sorted(hidden.values()))
     return tris, now
 
 
@@ -908,7 +928,8 @@ def test_walk_profile(ctx):
                   and record["walk"]["traits_from"] == ("given" if traits else "the build"))
             check("%s %s: feet slide %.3f cm, %.2f cm through the floor, no limit broken, no bone outside the mesh" % (label, version, c["foot_slide_cm_per_step"], c["through_floor_cm"]),
                   c["foot_slide_cm_per_step"] < 0.3 and c["through_floor_cm"] < 0.5 and c["limit_violations"] == 0 and rig["bones_outside"] == [])
-            doc = walk_file_checks("%s %s" % (label, version), path + ".glb", rig["bones"], rig["measure"]["tail_bones"])
+            cloth_bones = (record.get("cloth") or {}).get("cloth_bones") or []
+            doc = walk_file_checks("%s %s" % (label, version), path + ".glb", rig["bones"] + cloth_bones, rig["measure"]["tail_bones"])
             names = [n.get("name") for n in doc["nodes"]]
             if record["sockets"]:
                 held = {n["name"]: [names[c] for c in n.get("children", [])] for n in doc["nodes"]}
@@ -916,7 +937,7 @@ def test_walk_profile(ctx):
                       "socket: hand_right" in held["hand_r"] and "socket: hand_left" in held["hand_l"] and "socket: head" in held["head"]
                       and "socket: back" in held["chest"] and "socket: hip" in held["hips"])
             if record["gear"]:
-                meshes = sorted(n["name"] for n in doc["nodes"] if "mesh" in n)
+                meshes = sorted(n["name"] for n in doc["nodes"] if "mesh" in n and not n["name"].startswith("body under: "))
                 check("%s %s: the body and each gear piece are still meshes of their own, tagged, on the one skeleton: %s" % (label, version, ", ".join(meshes)),
                       meshes == sorted(["body"] + ["gear: " + g["gear"] for g in record["gear"]])
                       and all((n.get("extras") or {}).get("forge") in ("body", "gear") for n in doc["nodes"] if "mesh" in n))
@@ -925,7 +946,7 @@ def test_walk_profile(ctx):
             for version in versions:
                 with open(os.path.join(copy, "profiles", version + "-walk.json")) as f:
                     both.append(json.load(f))
-            check("%s: the low-poly and mid-poly versions get the same skeleton and the same walk" % label,
+            check("%s: the low-poly and mid-poly versions get the same body skeleton and the same walk" % label,
                   both[0]["rig"]["joints"] == both[1]["rig"]["joints"] and both[0]["walk"]["gait"]["frames"] == both[1]["walk"]["gait"]["frames"])
 
 
@@ -942,8 +963,189 @@ def test_bone_names(ctx):
           and len({b["mixamo"] for b in table["bones"].values()}) == len(BODY_BONES))
 
 
+# ---- clothes that sit on the body and move with it ----
+
+def test_drape(ctx):
+    """drape.py on the troll: the belt goes on the body, the kilt hangs from under it, the skin they hide is marked; export.py writes that skin apart."""
+    out = os.path.join(ctx["out"], "drape", "lowpoly.glb")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    built, draped, again, exported = blender(ctx["troll"] + "/final.glb", [
+        ("build.py", {"parts": troll_with_gear(), "gear": TROLL_GEAR, "sockets": True, "name": "Troll (light)", "check": 0}),
+        ("drape.py", {}),
+        ("drape.py", {}),
+        ("export.py", {"object": "Troll (light)", "path": out, "materials": False}),
+    ])
+    pieces = {p["gear"].split()[-1] if p["gear"] != "iron wrist band" else "wrist band": p for p in draped["pieces"]}
+    check("the kilt is taken for loose cloth, the belt and the wrist band for bands: %s" % {n: (p["fit"], p["why"]) for n, p in pieces.items()},
+          (pieces["kilt"]["fit"], pieces["belt"]["fit"], pieces["wrist band"]["fit"]) == ("loose", "band", "band"))
+    kilt = pieces["kilt"]
+    check("the kilt hangs %.2f m from under the belt (z = %.2f), not from wherever it was built" % (kilt["hangs_m"], kilt["hangs_from_z"]),
+          kilt["belted_at_z"] is not None and abs(kilt["hangs_from_z"] - kilt["belted_at_z"]) < 1e-6 and 0.2 < kilt["hangs_m"] < 0.5, kilt)
+    gap = draped["gap_where_it_touches_cm"]
+    check("where cloth touches the body it sat %.1f cm off (worst %.1f); now %.2f cm, one step, all round" % (gap["before"]["median"], gap["before"]["max"], gap["after"]["median"]),
+          gap["before"]["median"] > 2.5 and abs(gap["after"]["median"] - draped["clearance_cm"]) < 0.05 and gap["after"]["p95"] < 1.6 * draped["clearance_cm"], gap)
+    check("no cloth point is left inside the body, and no skin shows through cloth standing still",
+          draped["points_inside_the_body"]["after"] == 0 and draped["skin_showing_through"]["points"] == 0, draped["skin_showing_through"])
+    check("it stayed inside the budget: %d triangles before, %d after" % (draped["triangles"]["before"], draped["triangles"]["after"]),
+          draped["triangles"]["before"] == built["triangles"] and draped["triangles"]["after"] <= 1.15 * built["triangles"])
+    masks = {" + ".join(m["under"]): m["body_triangles"] for m in draped["masks"]}
+    check("the skin each piece hides is marked: %s" % masks, masks.get("hide kilt", 0) >= 8, masks)
+    check("run again it moves nothing, and takes each piece for what it was", again["moved"] is False
+          and {p["piece"]: p["fit"] for p in again["pieces"]} == {p["piece"]: p["fit"] for p in draped["pieces"]}
+          and [m["under"] for m in again["masks"]] == [m["under"] for m in draped["masks"]], again["pieces"])
+    found = nodes_of(out)
+    under = sorted(n for n in found if n.startswith("body under: "))
+    check("the .glb has the hidden skin as meshes of its own: %s" % ", ".join(under), "body under: hide kilt" in under and "body" in found)
+    check("each tagged with the gear that hides it", found["body under: hide kilt"][0].get("under") == "hide kilt" and found["body under: hide kilt"][0].get("forge") == "body",
+          found["body under: hide kilt"][0])
+    check("body and hidden skin add up to the whole body: %d triangles" % sum(found[n][2] for n in ["body"] + under),
+          sum(found[n][2] for n in ["body"] + under) + sum(found[n][2] for n in found if n.startswith("gear: ")) == draped["triangles"]["after"])
+    check("the file says it was draped, and what each part of the kilt was taken for", found["body"][0].get("draped") == 1
+          and json.loads(found["gear: hide kilt"][0]["drape"])["hide kilt"][0]["fit"] == "loose", found["gear: hide kilt"][0])
+    check("export.py's read-back still says only_this_object", exported["only_this_object"] is True and exported["masks"], exported.get("masks"))
+    # A piece says how it is worn; that wins over what its name suggests.
+    told = blender(ctx["troll"] + "/final.glb", [
+        ("build.py", {"parts": [dict(p, fit="tight") if p["name"] == "kilt" else p for p in troll_with_gear()], "gear": TROLL_GEAR, "name": "Troll (light)", "check": 0}),
+        ("drape.py", {"move": False}),
+    ])[1]
+    check("a piece's own \"fit\" wins over its name", {p["piece"]: (p["fit"], p["why"]) for p in told["pieces"]}["kilt"] == ("tight", "its piece says so"))
+
+
+CLOTH_LIMITS = {  # the most skin that may come through over a walk: (share of covered point-frames %, deepest cm)
+    "lincoln": (6, 4), "ninja": (4, 3), "roosevelt": (2, 1.5), "pirate": (5, 6),
+    "troll": (12, 9),  # low poly: eight cloth chains around thighs 43 cm thick; see SKILL.md, "What is weak"
+}
+CLOTHED = [("lincoln", "*young-lincoln-frontier-wrestler", ["wool trousers", "linen work shirt"], []),
+           ("ninja", "*shadow-ninja", ["cloth suit", "shin wraps"], ["hood and mask"]),
+           ("roosevelt", "*roosevelt-wrestler-1890s", ["wool singlet", "wool tights"], []),
+           ("troll", "*cave-troll", [], ["hide kilt"]),
+           ("pirate", "*stocky-pirate-deckhand", ["striped trousers"], ["navy coat"])]
+
+
+def cloth_numbers(paths):
+    """scripts/cloth_check.py on some .glb files, in one background Blender: one dict a file."""
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "cloth_check.py"), "--"] + list(paths), capture_output=True, text=True)
+    rows = [json.loads(line[6:]) for line in out.stdout.splitlines() if line.startswith("CLOTH ")]
+    if len(rows) != len(paths):
+        raise AssertionError("cloth_check.py measured %d of %d files:\n%s" % (len(rows), len(paths), (out.stdout + out.stderr)[-1500:]))
+    return rows
+
+
+def dressed_run(ctx, label, pattern):
+    """A copy of a character's run with low-poly, mid-poly and walking versions made by the real runner.
+    Lincoln, the ninja and Roosevelt have block-outs with gear and recipes of their own; the troll and the
+    pirate predate gear, so theirs are the recorded block-outs with gear named. Returns (the copy, its run)."""
+    runs = sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), pattern)))
+    if not runs:
+        return None, None
+    run = runs[-1]
+    if label == "troll":
+        copy = profiles(ctx, run, troll_with_gear(), TROLL_GEAR, ["lowpoly", "midpoly"])[0]
+    elif label == "pirate":
+        with open(os.path.join(HERE, "test_blockouts.json")) as f:
+            case = json.load(f)["stocky-pirate-deckhand"]
+        copy = profiles(ctx, run, pirate_dressed(case), case["gear"], ["lowpoly", "midpoly"])[0]
+    else:
+        copy = os.path.join(ctx["out"], "runs", os.path.basename(run))
+        os.makedirs(copy, exist_ok=True)
+        for name in ("scene.blend", "brief.json", "parts.json", "lowpoly.glb", "lowpoly_build.json", "gait.json"):
+            if os.path.exists(os.path.join(run, name)):
+                shutil.copy(os.path.join(run, name), os.path.join(copy, name))
+    with open(os.path.join(HERE, "test_gaits.json")) as f:
+        said = json.load(f)
+    traits = next((v for k, v in said.items() if k in run and k != "about"), None)
+    if traits:
+        with open(os.path.join(copy, "gait.json"), "w") as f:
+            json.dump(traits, f)
+    wanted = ["walk"] if label in ("troll", "pirate") else ["lowpoly", "midpoly", "walk"]
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                          os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles")] + wanted, capture_output=True, text=True)
+    for version in ("lowpoly", "midpoly"):
+        if not os.path.exists(os.path.join(copy, "profiles", version + "-walk.json")):
+            raise AssertionError("no %s-walk for %s:\n%s" % (version, label, (out.stdout + out.stderr)[-1500:]))
+    return copy, run
+
+
+def test_cloth(ctx):
+    """Clothes sit on the body and move with it: five characters, low poly and mid poly, made by the real runner and measured over every frame of their walk."""
+    for label, pattern, tight, loose in CLOTHED:
+        copy, run = dressed_run(ctx, label, pattern)
+        if not copy:
+            print("    skipped: no %s run" % pattern)
+            continue
+        old = [os.path.join(run, "profiles", v + "-walk.glb") for v in ("lowpoly", "midpoly")]
+        old = [p for p in old if os.path.exists(p)] if label not in ("troll", "pirate") else []
+        new = [os.path.join(copy, "profiles", v + "-walk.glb") for v in ("lowpoly", "midpoly")]
+        numbers = cloth_numbers(new + old)
+        for i, version in enumerate(("lowpoly", "midpoly")):
+            who = "%s %s" % (label, version)
+            now = numbers[i]
+            before = numbers[2 + i] if len(old) == 2 else None
+            with open(os.path.join(copy, "profiles", version + ".json")) as f:
+                made = json.load(f)
+            with open(os.path.join(copy, "profiles", version + "-walk.json")) as f:
+                walked = json.load(f)
+            draped = [s["result"] for s in made["steps"] if s["script"] == "drape.py"][0]
+            fits = {(p["gear"], p["fit"]) for p in draped["pieces"]}
+            check("%s: worn tight: %s; loose: %s" % (who, ", ".join(tight) or "nothing", ", ".join(loose) or "nothing"),
+                  all((g, "tight") in fits for g in tight) and all((g, "loose") in fits for g in loose), sorted(fits))
+
+            # the gap: tight clothes lie one step off the body
+            gap = draped["gap_where_it_touches_cm"]
+            check("%s: where clothes touch the body they sat %.2f cm off it (95 in 100 within %.2f); now %.2f cm (%.2f)" % (
+                  who, gap["before"]["median"], gap["before"]["p95"], gap["after"]["median"], gap["after"]["p95"]),
+                  gap["after"]["median"] < gap["before"]["median"] and gap["after"]["median"] <= 2 * draped["clearance_cm"] and gap["after"]["p95"] < gap["before"]["p95"] + 0.5, gap)
+            for g in tight:
+                off = now["gap_cm"][g]
+                check("%s: the %s sits %.2f cm off the body, in the walking file too" % (who, g, off["median"]), off["median"] <= 2.2 * draped["clearance_cm"], off)
+            inside = draped["points_inside_the_body"]
+            check("%s: %d cloth points were inside the body, %d are" % (who, inside["before"], inside["after"]),
+                  inside["after"] <= max(8, inside["before"] // 2), inside)
+
+            # poke-through, over every frame of the walk
+            poke, share, deep = now["poke_through"], CLOTH_LIMITS[label][0], CLOTH_LIMITS[label][1]
+            was = " (before: %d, %.2f%%, %.1f cm)" % (before["poke_through"]["point_frames"], before["poke_through"]["share_%"], before["poke_through"]["deepest_cm"]) if before else ""
+            check("%s: over %d frames of its walk, skin is through its clothes on %d point-frames, %.2f%% of those covered, %.1f cm at the deepest%s" % (
+                  who, now["frames"], poke["point_frames"], poke["share_%"], poke["deepest_cm"], was),
+                  now["frames"] >= 13 and poke["share_%"] <= share and poke["deepest_cm"] <= deep, poke)
+            if before:
+                check("%s: no more than before, give or take" % who, poke["point_frames"] <= 1.25 * before["poke_through"]["point_frames"] + 20,
+                      (poke["point_frames"], before["poke_through"]["point_frames"]))
+            check("%s: %d body triangles are hidden while it is dressed, in %d meshes tagged with the gear that hides them" % (
+                  who, now["triangles"]["body_hidden_when_dressed"], len(now["body_meshes"]) - 1),
+                  now["triangles"]["body_hidden_when_dressed"] > 0 and "body" in now["body_meshes"] and len(now["body_meshes"]) > 1)
+
+            # the budget
+            block = draped["triangles"]["before"]
+            check("%s: %d triangles as built, %d in the file, %d drawn with everything on" % (who, block, now["triangles"]["in_the_file"], now["triangles"]["drawn_dressed"]),
+                  now["triangles"]["in_the_file"] <= 1.25 * block and now["triangles"]["drawn_dressed"] <= 1.1 * block
+                  and (version == "lowpoly" or now["triangles"]["in_the_file"] <= 8000 * 1.2), now["triangles"])  # the new edge loops may add 12%, a last cut a little more, and a .glb counts a few more than build.py does
+
+            # weights from the body; loose cloth on bones of its own, inside their limits, with no seam
+            cloth = walked["cloth"]
+            moved = sum(m["from_the_body_under_it"] + m["spread_in_from_the_cloth_around"] for m in cloth["meshes"])
+            check("%s: %d cloth points take the body's weights (%d of them spread in from the cloth around)" % (
+                  who, moved, sum(m["spread_in_from_the_cloth_around"] for m in cloth["meshes"])), moved > 50)
+            bones = walked["rig"]["bones"] + cloth["cloth_bones"]
+            walk_file_checks(who, new[i], bones, walked["rig"]["measure"]["tail_bones"])
+            check("%s: the walk itself is as it was: feet slide %.3f cm, no limit broken" % (who, walked["animation"]["check"]["foot_slide_cm_per_step"]),
+                  walked["animation"]["check"]["foot_slide_cm_per_step"] < 0.3 and walked["animation"]["check"]["limit_violations"] == 0)
+            if loose:
+                swing = walked["swing"]
+                check("%s: %d cloth bones in %d chains hang from the %s" % (who, len(cloth["cloth_bones"]), swing["chains"], ", ".join(sorted({c["hangs_from"] for c in cloth["loose"]}))),
+                      cloth["cloth_bones"] and all(c["hangs_from"] in ("hips", "spine", "chest", "neck", "head") for c in cloth["loose"]) and walked["animation"]["then"] == ["swing.py"])
+                c = swing["check"]
+                check("%s: they swing up to %.0f degrees and the hem travels %.1f cm, every turn inside its limit, no joint more than %.2f cm into a leg" % (
+                      who, c["most_swing_deg"], c["hem_travels_cm"], c["deepest_in_a_leg_cm"]),
+                      c["limit_violations"] == 0 and c["most_swing_deg"] > 1 and c["deepest_in_a_leg_cm"] < 8 and now["cloth_bones"]["bones"] == len(cloth["cloth_bones"]), c)
+                check("%s: the loop has no seam in the cloth either (eased %.3f degrees onto its start)" % (who, swing["eased_at_the_seam_deg"]),
+                      c["loop_seam"] < 1e-5 and swing["eased_at_the_seam_deg"] < 3)
+            else:
+                check("%s: nothing hangs, so no cloth bones" % who, cloth["cloth_bones"] == [] and walked["animation"]["then"] == [])
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile]
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile, test_drape, test_cloth]
 
 
 def main(argv):

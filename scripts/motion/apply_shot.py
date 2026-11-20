@@ -5,9 +5,11 @@
 
 The shot's motion.json (SOMA, from the motion worker) is turned into the plain
 form by soma_to_plain.py and then goes through the same steps as the walk:
-rig.py puts the skeleton in, animate.py fits the motion to this character,
-keeps planted feet planted, clamps every joint to its limits, bakes it and
-measures it, and export.py writes one .glb. Nothing here is a second way to
+drape.py lays the clothes on the body, rig.py puts the skeleton in, cloth.py
+gives the clothes the body's weights and loose cloth its bones, animate.py
+fits the motion to this character, keeps planted feet planted, clamps every
+joint to its limits, bakes it and measures it, swing.py makes the loose cloth
+hang and swing with it, and export.py writes one .glb. Nothing here is a second way to
 animate a character: this file only feeds animate.py a different motion.
 
 For each version it writes into the shot folder:
@@ -256,8 +258,15 @@ def main():
         bpy.context.scene.render.fps = plain["fps"]
         bpy.ops.import_scene.gltf(filepath=source)
         record = {"version": version, "motion": name, "character": source, "shot": shot, "from_soma": converted}
+        dressed = any(o.type == "MESH" and o.get("forge") == "gear" for o in bpy.context.scene.objects)
+        if dressed:  # clothes onto the body, and the body faces they hide (a version draped when it was made is only read)
+            record["drape"] = run_script("drape.py", {"pieces": recipe["pieces"] if recipe else None, "rings": False})
         record["rig"] = run_script("rig.py", {"recipe": recipe["pieces"] if recipe else None})
+        if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
+            record["cloth"] = run_script("cloth.py", {})
         record["animation"] = run_script("animate.py", {"motion": plain, "action": name, "check": True})
+        for script in record["animation"].get("then", []):  # what the rig asks for after any bake: swing.py, for cloth bones
+            record[script[:-3]] = run_script(script, {})
         rig = bpy.data.objects[record["rig"]["rig"]]
         scale = record["rig"]["measure"]["hip_height"] / converted["soma_hip_height_m"]
         record["size_against_soma"] = round(scale, 4)
