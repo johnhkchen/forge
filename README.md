@@ -11,7 +11,7 @@ just make "a brass diving helmet"
 Each AI does the part it's good at:
 
 1. **Opus writes a short brief.** It picks one object, describes it in a few sentences, and lists its materials and real-world size. (`baml_src/1_describe`)
-2. **Codex draws it.** You get one object, centered, on a plain gray background, which is the kind of picture image-to-3D handles well. (`baml_src/2_picture`)
+2. **Codex draws it.** You get one object, centered, on a plain gray background, which is the kind of picture image-to-3D handles well. A character's head is then drawn again, large, from the front, three-quarter and side, so its face can be painted sharp later. (`baml_src/2_picture`)
 3. **TRELLIS.2 turns the picture into a textured mesh.** It runs on your own RunPod endpoint, which scales to zero, so it costs nothing while idle and has no daily cap. (`baml_src/3_mesh`, `worker/`)
 4. **Claude finishes it in Blender.** It fixes orientation, size, origin and normals, sets the materials, adds a ground plane, lights and a camera, then renders, checking its own work against the picture as it goes. Then it marks out the object's parts (lid, knob, spout...) and builds a low-poly version from simple shapes; a character's face is measured off the detailed head first, so it keeps its brow, eyes, nose and mouth, and its clothes and armor are built as separate pieces over a whole body, so a game can take them off, then laid on that body so they follow its shape. The work that repeats in every run (bringing the mesh in, measuring a part, staging, exporting) is done by ready-made scripts Claude fills in, not rewritten each time. (`baml_src/4_polish`, `.claude/skills/tidy-mesh`)
 5. **Sized versions for wherever it's going.** A background Blender rebuilds the mesh as clean quads and bakes the detail into textures, once per profile (`web`, `game` and `lowpoly` by default; a character also gets `midpoly`). (`baml_src/5_profiles`, `.claude/skills/tidy-mesh`)
@@ -26,6 +26,7 @@ Every run gets its own folder, `runs/<time>-<name>/`:
 |---|---|
 | `brief.json` | step 1 |
 | `image.png` | step 2 |
+| `heads/sheet.png` | step 2, characters: the head again, large, from three sides |
 | `mesh.glb`, `mesh.json` | step 3 (raw TRELLIS.2 output, plus timings) |
 | `render.png`, `final.glb`, `scene.blend`, `polish.json` | step 4 |
 | `parts.json`, `lowpoly.glb`, `lowpoly.json`, `lowpoly_build.json` | step 4 (the parts, the low-poly block-out, and the recipe it was built from) |
@@ -64,6 +65,9 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just health` | is the RunPod endpoint up? |
 | `just tidy <run folder> <profile>…` | make sized versions: `hero`, `quads`, `web`, `game`, `mobile`, `midpoly`, `lowpoly` |
 | `just tidy <run folder> walk` | give a character's low-poly and mid-poly versions a skeleton and a walk |
+| `just head-sheet <run folder>` | only draw a character's head sheet (front, three-quarter, side) from its picture; the next `just tidy` paints the face from it |
+| `just face-sheet <run folder> <out.png>` | a character's face in every version of the run, next to its picture: front, three-quarter and side |
+| `just face-check <out.json>` | measure that sheet: where eyes, nose, mouth and chin sit against the picture, how lopsided, how sharp, and whether a face is found at all |
 | `just gait <run folder>` | only ask Opus how the character walks (weight, stealth, swagger, stiffness) |
 | `just walk-strip <file.glb> <out.png> [side or front]` | a picture of the walk, eight moments side by side |
 | `just cloth-check <file.glb>…` | measure a dressed character: how much skin comes through its clothes over the walk, how far they sit off the body |
@@ -91,9 +95,21 @@ TRELLIS.2 hands back an even soup of ~300k triangles. The `tidy-mesh` skill (`.c
 | `game` | real-time games | ~4k quads, Draco | 1024 WebP + normal map |
 | `mobile` | phones, AR | ~3k quads, Draco | 512 WebP + normal map |
 | `midpoly` | phone games on today's hardware | the low-poly pieces built again rounder and smooth, about 3,000 to 8,000 triangles, Draco | 1024 WebP + normal map |
-| `lowpoly` | old-school real-time look (think early Warcraft or RuneScape) | a few hundred to ~1,500 triangles, built by Claude from simple shapes | one 256 px texture with shading painted in, or flat colors per part when the style asks |
+| `lowpoly` | old-school real-time look (think early Warcraft or RuneScape) | a few hundred to ~1,500 triangles, built by Claude from simple shapes | one 256 px texture with shading painted in (a character's head has a second one), or flat colors per part when the style asks |
 
 The quads come from [AutoRemesher](https://github.com/huxingyi/autoremesher) (MIT): mostly rectangular faces in regular loops, a little denser where the shape curves. Install it once with `just autoremesher`. Each profile records how far it strays from the full mesh (`shape` in `<profile>.json`); typically under 1% of the object's size.
+
+## Faces
+
+A face is the first thing anyone looks at and the first thing this pipeline got wrong. TRELLIS.2 gets a head's shape about right and its texture wrong: eyes come out as dark smudges, lips as a blur, glasses as black discs. The whole-figure picture can't help much, because the face is a tenth of its height. And the quad remesh used to hand a character's head back in shreds. So, for a character:
+
+- **Codex draws the head again** from the first picture: front, three-quarter and side, each several times larger than the face was (`heads/sheet.png`).
+- **The face is painted onto the detailed mesh from the front view**, like a slide projector in front of the head, before any version is baked. The tool finds the head, then slides and scales the picture until it sits on it. If the two don't agree it paints nothing, and falls back to the first picture.
+- **The head is rebuilt whole**: cut off under the chin as one piece, wrapped in one skin, and that skin is remeshed. Every remeshed piece is checked for tears, on characters too, and one that comes back torn is wrapped and tried again.
+- **The head gets a texture of its own** in each sized version, so a face is a few hundred pixels across, not sixty.
+- **In the walk, the head and what sits on it follow the head bone alone**, so the jaw doesn't bend with the neck.
+
+`just face-sheet` draws every version's face next to the picture and `just face-check` measures them. Weak spots: the detailed `final.glb` itself keeps TRELLIS's face (make `hero` for a painted one); the paint is a front view, so ears and temples are still TRELLIS's; glasses and eye patches are painted flat onto the face as well as built; and a head sunk between the shoulders (the troll) isn't found without a block-out to say where it is. More in the skill's notes.
 
 ## Gear comes off
 

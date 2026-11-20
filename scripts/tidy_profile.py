@@ -165,9 +165,10 @@ def export_obj(obj, path):
 # this reach: [reach as % of the object's size, share %]. Small holes all over, or a few big ones. On
 # Lincoln's pieces, sound remeshes lose 0-6% at 0.5% and 0-2% at 1%; his torn head and hair 20-70% and 7-50%.
 TORN = [(0.5, 15.0), (1.0, 4.0)]
+HEAD_TORN = [(0.5, 8.0), (1.0, 1.5)]  # for a character's head: 4% of it at 1% is the chin
 
 
-def remesh_fault(part, result, layered, scale, outside=None):
+def remesh_fault(part, result, layered, scale, outside=None, allowed=None):
     """Why a remeshed piece doesn't stand in for the original, or None, plus
     the measures. Two ways to fail:
 
@@ -194,7 +195,7 @@ def remesh_fault(part, result, layered, scale, outside=None):
         return "original surface %.1f%% of the size away (p95)" % off, measures
     if outside is not None and len(shown) >= 30:
         measures["torn_pct"] = []
-        for reach, most in TORN:
+        for reach, most in allowed or TORN:
             torn = 100.0 * sum(1 for g in shown if g > reach / 100 * scale) / len(shown)
             measures["torn_pct"].append(round(torn, 1))
             if torn > most:
@@ -247,12 +248,12 @@ def drop_object(obj):
     bpy.data.meshes.remove(old)
 
 
-def accept(part, answers, tries, layered, scale, outside):
+def accept(part, answers, tries, layered, scale, outside, allowed=None):
     """The first of AutoRemesher's answers [(file, quads)] that stands in for `part`, brought in as an object, or None.
     A count in range can still be a wreck (the ring's ropes came back in fragments, a character's head with holes in it)."""
     for path, quads in answers:
         result = import_obj(path)
-        fault, measures = remesh_fault(part, result, layered, scale, outside)
+        fault, measures = remesh_fault(part, result, layered, scale, outside, allowed or TORN)
         if not fault:
             if measures:
                 tries.append(measures)
@@ -277,64 +278,11 @@ def reduce(obj, budget):
     apply_modifier(obj, mod)
 
 
-def watertight(obj):
-    """Cut out the faces around edges and points that are not plain two-sided surface, fill the holes that
-    leaves, point every face outward: what QuadriFlow asks for. (retopo.py's repair, for the runner.)"""
-    import bmesh
-    bm = bmesh.new()
-    bm.from_mesh(obj.data)
-    size = max(obj.dimensions)
-    for _ in range(6):
-        # QuadriFlow also wants no zero-area faces and no face twice.
-        bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=size * 1e-6)
-        bm.verts.index_update()
-        met, twins = {}, []
-        for f in bm.faces:
-            key = frozenset(v.index for v in f.verts)
-            if key in met:
-                twins += [f, met[key]]
-            else:
-                met[key] = f
-        if twins:
-            bmesh.ops.delete(bm, geom=list(set(twins)), context="FACES")
-        bad_edges = [e for e in bm.edges if not e.is_manifold]
-        bad_verts = [v for v in bm.verts if not v.is_manifold]
-        if not bad_edges and not bad_verts:
-            break
-        faces = {f for e in bad_edges for f in e.link_faces} | {f for v in bad_verts for f in v.link_faces}
-        bmesh.ops.delete(bm, geom=list(faces), context="FACES")
-        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
-        bmesh.ops.holes_fill(bm, edges=[e for e in bm.edges if e.is_boundary], sides=0)
-        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    bm.to_mesh(obj.data)
-    bm.free()
-
-
-def even_quads(obj, quads):
-    """Rebuild a closed skin as even quads with Blender's QuadriFlow, in place. False if it wouldn't."""
-    watertight(obj)
-    triangles = sum(len(p.vertices) - 2 for p in obj.data.polygons)
-    if triangles > 60000:  # it reads faster from a lighter skin, and loses nothing a few thousand quads could keep
-        mod = obj.modifiers.new("Decimate", "DECIMATE")
-        mod.ratio = 60000 / triangles
-        apply_modifier(obj, mod)
-        watertight(obj)
-    for o in bpy.context.selected_objects:
-        o.select_set(False)
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-    try:
-        done = bpy.ops.object.quadriflow_remesh(use_mesh_symmetry=False, use_preserve_sharp=False, use_preserve_boundary=False,
-                                                mode="FACES", target_faces=max(int(quads), 100), seed=0)
-    except RuntimeError:
-        return False
-    return "FINISHED" in done and len(obj.data.polygons) > 0
-
-
-def wrapped(part, scale, coarser=1.0):
+def wrapped(part, scale):
     """A copy of the piece as one closed skin around everything in it (a voxel remesh, cells 1/150 of the
-    piece's size and never under 0.1% of the object's, times `coarser`), or None if nothing came of it."""
+    piece's size, between 0.1% and 0.5% of the object's), or None if nothing came of it. Larger cells than
+    that round a cut edge off by a centimeter. (Blender's QuadriFlow would make even quads of such a skin,
+    and was tried for heads: on some it never returns, and nothing can stop it from in here.)"""
     wrap = part.copy()
     wrap.data = part.data.copy()
     wrap.modifiers.clear()
@@ -346,9 +294,14 @@ def wrapped(part, scale, coarser=1.0):
     wrap.select_set(True)
     bpy.context.view_layer.objects.active = wrap
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-    wrap.data.remesh_voxel_size = max(max(world_size(part)) / 150, scale * 0.001) * coarser
+    wrap.data.remesh_voxel_size = min(max(max(world_size(part)) / 150, scale * 0.001), scale * 0.005)
     wrap.data.use_remesh_fix_poles = True
     bpy.ops.object.voxel_remesh()
+    triangles = sum(len(p.vertices) - 2 for p in wrap.data.polygons)
+    if triangles > 200000:  # more than a remesher needs to read, and slow for it and for what follows here
+        mod = wrap.modifiers.new("Decimate", "DECIMATE")
+        mod.ratio = 200000 / triangles
+        apply_modifier(wrap, mod)
     # A skin around layers leaves closed pockets inside (behind the lips, under the hair): keep the outer shells.
     import bmesh
     bm = bmesh.new()
@@ -454,8 +407,9 @@ def autoremesh(params):
         # Listed first, so it takes its faces before any other part's box does.
         lo, hi = head["min"], head["max"]
         pad = [0.4 * (hi[0] - lo[0]), 0.4 * (hi[1] - lo[1])]
-        # (the cut sits a little down the neck, under the chin's shadow, not along the jaw)
-        cuts.insert(0, {"name": HEAD_PART, "min": [lo[0] - pad[0], lo[1] - pad[1], lo[2] - 0.1 * (hi[2] - lo[2])],
+        # (the cut sits a quarter of a head down the neck: along the jaw it shows, and a short stump of neck
+        # left on the body is the first thing a coarse remesh rounds away, which leaves the head floating)
+        cuts.insert(0, {"name": HEAD_PART, "min": [lo[0] - pad[0], lo[1] - pad[1], lo[2] - 0.25 * (hi[2] - lo[2])],
                         "max": [hi[0] + pad[0], hi[1] + pad[1], hi[2] + max(world_size(source))]})
     head_piece = None
     try:
@@ -502,40 +456,38 @@ def autoremesh(params):
             mesh_in = os.path.join(work, "part%d.obj" % i)
             size = max(world_size(source))
             layered = params.get("layered", False)
-            best, tries, kind, head_quads = None, [], "remeshed", True
-            if part is not head_piece:  # a head goes straight to the wrap: it is layers all through (hair, lids, lips, teeth)
+            best, tries, kind, answers = None, [], "remeshed", []
+            is_head = part is head_piece
+            if not is_head:  # a head goes straight to the wrap: it is layers all through (hair, lids, lips, teeth)
                 export_obj(part, mesh_in)
                 best, tries, spare = remesh_file(mesh_in, work, "part%d" % i, budget, params)
-                best = accept(part, [best] + spare if best else [], tries, layered, size, outside)
-            if not best and part is not source and (part is head_piece or any("torn" in t.get("rejected", "") for t in tries)):
+                answers = [best] + spare if best else []
+                best = accept(part, answers, tries, layered, size, outside)
+            if not best and part is not source and (is_head or any("torn" in t.get("rejected", "") for t in tries)):
                 # Torn every time: the piece is layers and scraps AutoRemesher can't stitch (hair over a
-                # skull, a face cut open at the hairline). Wrap it in one skin, and remesh that.
+                # skull, a face cut open at the hairline). Wrap it in one skin, and remesh that. A head's
+                # answer is held to less loss (HEAD_TORN): the usual allowance is a chin's worth of a head.
                 wrap = wrapped(part, size)
-                if wrap and part is head_piece and not even_quads(wrap, budget):
-                    # QuadriFlow turns down a skin with a pinched spot in it; cells half again as large pinch less.
-                    drop_object(wrap)
-                    wrap = wrapped(part, size, coarser=1.5)
-                    if wrap and even_quads(wrap, budget):
-                        tries.append({"note": "wrapped a second time, coarser"})
-                    else:
-                        tries.append({"note": "QuadriFlow would not take the wrap"})
-                        wrap = (drop_object(wrap) if wrap else None) or wrapped(part, size)
-                        head_quads = False
-                if wrap and part is head_piece and head_quads:
-                    # One closed skin is what QuadriFlow is sure of, and a head wants even quads anyway.
-                    # AutoRemesher's answers for a head pass every count and still lose the chin one time in two.
-                    fault, measures = remesh_fault(part, wrap, layered, size, outside)
-                    tries.append(dict(measures, note=fault) if fault else measures)
-                    best, kind = wrap, "wrapped, even quads"
-                elif wrap:
+                if wrap:
                     export_obj(wrap, mesh_in)
                     again, more, spare = remesh_file(mesh_in, work, "part%dw" % i, budget, params)
                     tries += more
-                    best = accept(part, [again] + spare if again else [], tries, layered, size, outside)
+                    best = accept(part, [again] + spare if again else [], tries, layered, size, outside, HEAD_TORN if is_head else TORN)
                     kind = "wrapped, remeshed"
-                    if not best:  # the skin itself, reduced: whole, though not quads
+                    if not best:  # the skin itself, reduced and paired into quads where its triangles line up: whole, if less regular
                         reduce(wrap, budget)
+                        bpy.ops.object.mode_set(mode="EDIT")
+                        bpy.ops.mesh.select_all(action="SELECT")
+                        bpy.ops.mesh.tris_convert_to_quads()
+                        bpy.ops.object.mode_set(mode="OBJECT")
                         best, kind = wrap, "wrapped (reduced)"
+                        if not is_head and len(wrap.data.polygons) > 6 * budget and answers:
+                            # A piece that is a cloud of scraps wraps into hundreds of blobs, and no blob reduces
+                            # below a few faces (Lincoln's shirt fringe: 9,400 faces on a budget of 216).
+                            # There a torn remesh is the lesser evil: it is scraps either way.
+                            drop_object(wrap)
+                            best = accept(part, answers[:1], tries, layered, size, None)
+                            kind = "remeshed (torn, but its wrap would not reduce)"
                     else:
                         drop_object(wrap)
             if best:
@@ -560,7 +512,7 @@ def autoremesh(params):
                 result = run_script("retopo.py", {"target_quads": want})
                 result["note"] = "AutoRemesher gave nothing, whole or by piece; used QuadriFlow"
                 return result
-            results.append({"share": round(areas[part.name] / total, 4), "budget": budget, "result": kind, "tries": tries}
+            results.append({"share": round(areas[part.name] / total, 4), "budget": budget, "result": kind, "faces": len(made[-1].data.polygons), "tries": tries}
                            | ({"part": "head"} if part is head_piece else {}))
         for p in parts:
             if p is not source and p not in made:

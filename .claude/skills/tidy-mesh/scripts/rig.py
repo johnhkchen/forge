@@ -602,7 +602,7 @@ def piece_weights(obj):
         # A face must not bend: the head piece, and whatever sits wholly on it (hair, a hat, glasses, a
         # mustache), goes with the head bone alone. Blended with the neck, a nod squashed the jaw
         # (the head's points moved up to 11% of its height against the bone on the low-poly ninja).
-        if home == "trunk" and heads and piece["lo"].z >= head_lo - 0.01 * tall:
+        if home == "trunk" and heads and piece["lo"].z >= head_lo - 0.25 * (head_hi - head_lo) and (piece["lo"].z + piece["hi"].z) / 2 > head_lo:
             for i in piece["verts"]:
                 done[i] = [("head", 1.0)]
             continue

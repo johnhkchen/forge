@@ -1144,7 +1144,108 @@ def test_cloth(ctx):
                 check("%s: nothing hangs, so no cloth bones" % who, cloth["cloth_bones"] == [] and walked["animation"]["then"] == [])
 
 
-TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
+HEAD_SHEET = os.path.join(HERE, "test_heads", "young-lincoln-sheet.jpg")  # Codex's head sheet for Lincoln, made small
+
+
+def lincoln_run(ctx):
+    runs = sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), "*young-lincoln*")))
+    if not runs:
+        print("    (no young-lincoln run in the runs folder: skipped)")
+    return runs[-1] if runs else None
+
+
+def test_face_paint(ctx):
+    """face_paint.py lays a picture of the face over the front of the detailed head. It finds the head and where the
+    picture sits on it by itself, from the whole-figure picture and from a head sheet; a picture that doesn't agree
+    with the mesh changes nothing; and the paint comes off again."""
+    run = lincoln_run(ctx)
+    if not run:
+        return
+    picture = os.path.join(run, "image.png")
+    with open(os.path.join(run, "lowpoly_build.json")) as f:
+        built = next(p["box"] for p in json.load(f)["pieces"] if "head" in p)  # the head box Claude measured
+    shot = os.path.join(ctx["out"], "lincoln-face-%s.png")
+    plain, whole, off, strict, other, sheet, _, _ = blender(run + "/scene.blend", [
+        ("preview.py", {"path": shot % "before", "view": "front", "box": built, "size": 512}),
+        ("face_paint.py", {"picture": picture}),
+        ("face_paint.py", {"remove": True}),
+        ("face_paint.py", {"picture": picture, "least": 0.99}),
+        ("face_paint.py", {"picture": os.path.join(ctx["troll"], "image.png")}),
+        ("face_paint.py", {"picture": HEAD_SHEET, "panel": "front", "box": built}),
+        ("preview.py", {"path": shot % "painted", "view": "front", "box": built, "size": 512}),
+        ("preview.py", {"path": shot % "painted-side", "view": "side", "box": built, "size": 512}),
+    ])
+    found = whole["box"]
+    check("it finds the head by itself: chin at %.2f m and top at %.2f, where Claude's box has %.2f and %.2f" % (
+          found["min"][2], found["max"][2], built["min"][2], built["max"][2]),
+          whole["box_by"] == "found" and abs(found["min"][2] - built["min"][2]) < 0.03 and abs(found["max"][2] - built["max"][2]) < 0.03, found)
+    check("the picture of the whole figure sits on it: light and dark agree %.2f, outlines %.0f%% shared, the head %d pixels tall" % (
+          whole["fit"], 100 * whole["outline_shared"], whole["head_px"]),
+          whole["painted"] and whole["fit"] > 0.5 and whole["outline_shared"] > 0.75 and 90 < whole["head_px"] < 180, whole)
+    check("%d points take the picture's color, toned %s to match the mesh" % (whole["points_painted"], whole["tone"]),
+          whole["points_painted"] > 5000 and all(0.4 <= g <= 1.6 for g in whole["tone"]))
+    check("the paint comes off again (%d nodes)" % off["removed_nodes"], off["removed_nodes"] >= 10 and not off["painted"])
+    check("asked for more agreement than there is, it paints nothing and says why", not strict["painted"] and "nothing painted" in strict["why"], strict)
+    check("another character's picture agrees less (%.2f against %.2f)" % (other["fit"], whole["fit"]), other["fit"] < whole["fit"] - 0.15, other)
+    check("the head sheet's front view sits on it too (%.2f), with the head %d pixels tall: %.1f times the picture's" % (
+          sheet["fit"], sheet["head_px"], sheet["head_px"] / whole["head_px"]),
+          sheet["painted"] and sheet["fit"] > 0.5 and sheet["head_px"] > 1.8 * whole["head_px"] and sheet["panel"][2] < 0.45, sheet)
+    check("close-ups of the head before and after are kept", all(os.path.getsize(shot % tag) > 20000 for tag in ("before", "painted", "painted-side")))
+
+
+def test_face_versions(ctx):
+    """A character's sized versions keep its face. From a copy of Lincoln's run with his picture and head sheet, the
+    real runner makes the game and mid-poly versions and a walk: the face is painted before anything is baked, the
+    head is remeshed as one whole piece (it used to come back in shreds), it gets a texture of its own, and the
+    walk carries it without bending it."""
+    run = lincoln_run(ctx)
+    if not run:
+        return
+    copy = os.path.join(ctx["out"], "faces", os.path.basename(run))
+    os.makedirs(os.path.join(copy, "heads"), exist_ok=True)
+    for name in ("scene.blend", "brief.json", "parts.json", "lowpoly.glb", "lowpoly_build.json", "gait.json", "image.png"):
+        shutil.copy(os.path.join(run, name), os.path.join(copy, name))
+    shutil.copy(HEAD_SHEET, os.path.join(copy, "heads", "sheet.png"))  # Blender reads a picture by what is in it, not by its name
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                          os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles"), "game", "midpoly", "walk"], capture_output=True, text=True)
+    records = {}
+    for name in ("game", "midpoly", "midpoly-walk"):
+        path = os.path.join(copy, "profiles", name + ".json")
+        if not os.path.exists(path):
+            raise AssertionError("no %s profile:\n%s" % (name, (out.stdout + out.stderr)[-1500:]))
+        with open(path) as f:
+            records[name] = json.load(f)
+    for name in ("game", "midpoly"):
+        face = records[name]["face"]
+        check("%s: the face is painted from the head sheet before the bake (agrees %.2f, %d points)" % (name, face["fit"], face["points_painted"]),
+              face["painted"] and face["picture"].endswith("sheet.png") and face["fit"] > 0.5, face)
+        own = face["head_texture"]
+        held = read_glb(os.path.join(copy, "profiles", name + ".glb"))
+        check("%s: the head has a %d px texture of its own (%d faces); the file holds %d materials" % (name, own["texture_size"], own["faces"], held["materials"]),
+              own["made"] and own["texture_size"] == 512 and held["materials"] >= 2, (own, held))
+    remesh = next(s["result"] for s in records["game"]["steps"] if s["script"] == "autoremesher")
+    head = [p for p in remesh["parts"] if p.get("part") == "head"]
+    check("game: the head is cut off whole and wrapped in one skin before it is remeshed (%s, %d quads asked)" % (head[0]["result"] if head else None, head[0]["budget"] if head else 0),
+          len(head) == 1 and head[0]["result"].startswith("wrapped") and head[0]["share"] >= 0.12, remesh["parts"][:3])
+    sheet = os.path.join(ctx["out"], "lincoln-faces.png")
+    drawn = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "face_sheet.py"), "--", run, sheet, "--only", "detailed"]
+                           + [a for name in ("game", "midpoly", "midpoly-walk") for a in ("--also", "%s=%s" % (name, os.path.join(copy, "profiles", name + ".glb")))],
+                           capture_output=True, text=True)
+    if not os.path.exists(os.path.splitext(sheet)[0] + ".json"):
+        raise AssertionError("no face sheet:\n%s" % (drawn.stdout + drawn.stderr)[-1500:])
+    with open(os.path.splitext(sheet)[0] + ".json") as f:
+        seen = {v["label"]: v for v in json.load(f)["versions"]}
+    with open(os.path.join(run, "profiles", "game.json")) as f:
+        was = json.load(f)
+    game = seen["game"]["shape"]
+    check("game: %.0f%% of the head's front is missing or far behind, seen front-on (the run's own game version, made before: in shreds), the rest %.1f%% of the head's height off" % (
+          game["missing_pct"], game["off_typical_pct"]), game["missing_pct"] < 40 and game["off_typical_pct"] < 4, (game, was.get("bytes")))
+    bends = seen["midpoly-walk"]["walk"]["face_bends_pct_of_head"]
+    check("the walk carries the head without bending it: its points move %.2f%% of its height against the head bone" % bends, bends < 0.3, seen["midpoly-walk"]["walk"])
+    check("the face sheet is kept: %s" % os.path.basename(sheet), os.path.getsize(sheet) > 50000)
+
+
+TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile, test_drape, test_cloth]
 
 

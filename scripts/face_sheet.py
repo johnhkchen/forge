@@ -204,7 +204,7 @@ def head_drift(scene, rig, meshes, box):
     base = world_points(meshes, bpy.context.evaluated_depsgraph_get())
     rig.data.pose_position = "POSE"
     pick = np.all((base >= low) & (base <= high), axis=1)
-    pick &= base[:, 2] >= low[2] + 0.25 * (high[2] - low[2])  # the face, not the neck's blend
+    pick &= base[:, 2] >= low[2] + 0.4 * (high[2] - low[2])  # from the nose up: the top of the neck piece reaches inside the jaw
     local = np.c_[base[pick], np.ones(pick.sum())] @ rest_inv.T
     worst = 0.0
     for frame in range(first, last + 1, max(1, (last - first) // 12)):
