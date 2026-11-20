@@ -47,7 +47,7 @@ function Polish(
         shading "rendered" only once, for the final check. Keep \`look\`
         images at max_size 512 unless you need fine detail.
 
-        ${TOOL_RULES}
+        ${tool_rules()}
 
         ${role("user")}
         TRELLIS.2 just turned the attached picture into a raw textured mesh.
@@ -111,15 +111,21 @@ function Polish(
            reference (orientation, materials, lighting, framing), fix it and
            look again, at most 3 rounds. Then one final \`look\` with
            shading "rendered".
-        7. Save. Remove any "Look: ..." boxes first, then:
+        7. Save. Remove any "Look: ..." boxes first, then, in this order:
            - render the camera view to ${files.render} (PNG): set
              scene.render.filepath and call
              bpy.ops.render.render(write_still=True)
+           - save the scene to ${files.blend} with
+             bpy.ops.wm.save_as_mainfile (it keeps your material nodes
+             editable)
+           - bake.py with "object": "${brief.name}", "mode": "materials",
+             "texture_size": 2048: glTF can't carry nodes, so this bakes
+             your color, metal and roughness fixes into plain textures
+             (Blender freezes for up to a minute)
            - export.py with "path": "${files.glb}" and
              "object": "${brief.name}"; its result must say
-             "only_this_object": true
-           - save the scene to ${files.blend} with
-             bpy.ops.wm.save_as_mainfile
+             "only_this_object": true. Don't save the scene again after
+             the bake.
 
         Tools:
 

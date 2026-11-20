@@ -287,6 +287,32 @@ class Skip(Exception):
     pass
 
 
+def wants_flat_colors(run_dir):
+    """The brief's low-poly style asks for flat colors (old-school RuneScape
+    and the like): keep Claude's per-part vertex colors instead of baking a
+    texture, which turns muddy at a few hundred triangles."""
+    path = os.path.join(run_dir, "brief.json")
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        style = (json.load(f).get("lowpoly_style") or "").lower()
+    return ("flat" in style and ("color" in style or "colour" in style)) or "vertex color" in style
+
+
+def color_preview_material(obj):
+    """A material that shows the vertex colors in Blender (previews, .blend).
+    The GLB is exported without materials, so viewers use the colors as-is."""
+    mat = bpy.data.materials.new(obj.name + " flat colors")
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    attr = nodes.new("ShaderNodeVertexColor")
+    bsdf = nodes["Principled BSDF"]
+    mat.node_tree.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.9
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+
+
 def blockout(run_dir):
     """Claude's hand-built low-poly mesh (lowpoly.glb, step 4c), brought in
     as the light mesh to bake onto. Same world space as scene.blend."""
@@ -332,6 +358,10 @@ def make(source, out_dir, profile, spec):
     started = time.time()
     load(source)
     record = {"profile": profile, "about": spec["about"], "source": source, "steps": []}
+    if spec.get("flat_colors") and wants_flat_colors(os.path.dirname(source)):
+        spec = dict(spec, **spec["flat_colors"])
+        record["about"] = spec.get("about", record["about"])
+        record["flat_colors"] = True
     plan = read_plan(source)
     if plan.get("parts"):
         record["parts"] = [p["name"] for p in plan["parts"]]
@@ -340,6 +370,8 @@ def make(source, out_dir, profile, spec):
             result = autoremesh(dict(params, parts_plan=plan))
         elif name == "blockout":
             result = blockout(os.path.dirname(source))
+            if params.get("keep_colors"):
+                color_preview_material(bpy.data.objects[result["object"]])
         else:
             result = run_script(name, params)
         record["steps"].append({"script": name, "result": result})

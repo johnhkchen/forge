@@ -39,7 +39,7 @@ function BlockOut(
         person's screen until it returns, so keep calls light: \`look\` with
         shading "solid" or "material", max_size 512, never "rendered".
 
-        ${TOOL_RULES}
+        ${tool_rules()}
 
         ${role("user")}
         Build a low-poly version of this object: ${brief.name}.

@@ -1,4 +1,4 @@
-const POLISH_TOOLS = ["open", "stand", "retouch", "frame", "stage", "export"];
+const POLISH_TOOLS = ["open", "stand", "retouch", "frame", "stage", "bake", "export"];
 
 /// Finishes the raw mesh in the live Blender session and saves the results
 /// next to it in the run folder.

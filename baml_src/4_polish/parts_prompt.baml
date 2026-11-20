@@ -37,7 +37,7 @@ function FindParts(brief: ObjectBrief, mesh: string, tools: string) -> PartsPlan
         returns, so keep calls light: use \`look\` with shading "material"
         and max_size 512, never "rendered".
 
-        ${TOOL_RULES}
+        ${tool_rules()}
 
         ${role("user")}
         We're about to rebuild this object's mesh with clean quads. The mesh

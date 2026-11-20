@@ -166,6 +166,25 @@
     "export": {
       "image_format": "WEBP",
       "draco": true
+    },
+    "flat_colors": {
+      "about": "Old-school real-time style with flat colors (think old RuneScape): Claude's block-out with one color per part and faceted shading, no texture at all.",
+      "steps": [
+        [
+          "clean.py",
+          {}
+        ],
+        [
+          "blockout",
+          {
+            "keep_colors": true
+          }
+        ]
+      ],
+      "export": {
+        "materials": false,
+        "draco": true
+      }
     }
   }
 }

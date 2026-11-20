@@ -61,6 +61,23 @@ build); Exoside Quad Remesher (licence forbids automated use); open AI
 "artist mesh" models (triangles only, drop small parts); cloud retopology
 (Tencent Smart Topology, Meshy remesh) is a possible future comparison.
 
+## The Forge add-on: tools as one line
+
+The Blender MCP runs every call in a fresh namespace, so without help Claude
+pastes a whole tool script into each call. `just forge-addon` installs
+`blender/forge_tools.py` into Blender's `scripts/startup` folder with copies of
+these scripts (restart Blender once; re-run it after changing a script). Then
+a tool is one line:
+
+    bpy.ops.forge.run(tool="measure", params=json.dumps({...}))
+    print(bpy.context.scene["forge_result"])
+
+It runs only the bundled scripts, by name, with data-only settings. The
+pipeline prompts switch automatically (`baml_src/4_polish/tools.baml`):
+with the add-on installed they carry each tool's instructions and PARAMS
+(about a quarter of the text), otherwise the whole scripts.
+`just forge-addon-remove` uninstalls it.
+
 ## Low poly: built, not reduced
 
 Below ~1,000 triangles every reduction method fails on a real object (on the
@@ -74,6 +91,11 @@ shape), look at it, and export `runs/<run>/lowpoly.glb` (`export.py`). The `lowp
 step) and bakes the detailed mesh's color with its ambient occlusion
 multiplied in (`bake.py` `"ao": true`) into one 256 px texture: no normal,
 metal or roughness maps. Without `lowpoly.glb` the profile is skipped.
+
+If the brief's `lowpoly_style` asks for flat colors (old-school RuneScape
+and the like), the profile keeps Claude's per-part vertex colors and faceted
+shading instead and bakes nothing: the troll is 15 KB with no textures. A
+baked texture turns muddy at a few hundred triangles.
 
 ## Parts: remesh the pieces a modeler would build separately
 
