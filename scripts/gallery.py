@@ -19,7 +19,7 @@ from urllib.parse import unquote, urlparse
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PAGE = os.path.join(ROOT, "gallery")
 RUNS = os.path.join(ROOT, "runs")
-PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile"]
+PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "lowpoly"]
 
 mimetypes.add_type("model/gltf-binary", ".glb")
 mimetypes.add_type("text/javascript", ".js")
@@ -37,7 +37,7 @@ def profile_summary(run_dir, name):
     record = read_json(os.path.join(run_dir, "profiles", name + ".json")) or {}
     shape = record.get("shape") or {}
     steps = {s.get("script"): s.get("result") or {} for s in record.get("steps", [])}
-    light = steps.get("autoremesher") or steps.get("retopo.py") or steps.get("decimate.py") or {}
+    light = steps.get("autoremesher") or steps.get("blockout") or steps.get("retopo.py") or steps.get("decimate.py") or {}
     bake = steps.get("bake.py") or {}
     export = record.get("export") or {}
     return {

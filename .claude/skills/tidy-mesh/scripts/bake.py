@@ -25,8 +25,14 @@ PARAMS = {
     "object": None,          # mesh object name; None = the largest visible mesh
     "mode": "materials",     # "materials" or "onto"
     "target": None,          # "onto" only: the mesh to bake onto; None = the "(quads)" or "(light)" mesh
-    "texture_size": 1024,    # 1024 for web/game, 2048 for close-ups
+    "texture_size": 1024,    # 1024 for web/game, 2048 for close-ups, 256 for low poly
+    "maps": ["color", "roughness", "metallic", "normal"],  # normal: "onto" only
     "metallic": True,        # bake a metallic map (skip for objects with no metal)
+    "roughness": 0.85,       # used when no roughness map is baked
+    # Low-poly style: bake the full mesh's soft shadows (ambient occlusion)
+    # into the color, so one texture carries the shading a normal map would.
+    "ao": False,
+    "ao_strength": 0.8,
 }
 
 import bpy
@@ -177,7 +183,10 @@ def final_material(name, maps):
         return node
 
     tree.links.new(tex(maps["color"], 300).outputs["Color"], bsdf.inputs["Base Color"])
-    tree.links.new(tex(maps["roughness"], 0).outputs["Color"], bsdf.inputs["Roughness"])
+    if "roughness" in maps:
+        tree.links.new(tex(maps["roughness"], 0).outputs["Color"], bsdf.inputs["Roughness"])
+    else:
+        bsdf.inputs["Roughness"].default_value = PARAMS["roughness"]
     if "metallic" in maps:
         tree.links.new(tex(maps["metallic"], -300).outputs["Color"], bsdf.inputs["Metallic"])
     else:
@@ -236,9 +245,11 @@ if selected_to_active:
     reach = max(reach, mean_edge * max(target.scale) * 0.75)
 base = target.name
 
-channels = [("color", "Base Color", False), ("roughness", "Roughness", True)]
-if PARAMS["metallic"]:
-    channels.append(("metallic", "Metallic", True))
+wanted = set(PARAMS["maps"])
+if not PARAMS["metallic"]:
+    wanted.discard("metallic")
+channels = [c for c in (("color", "Base Color", False), ("roughness", "Roughness", True),
+                        ("metallic", "Metallic", True)) if c[0] in wanted]
 
 maps = {}
 try:
@@ -251,18 +262,37 @@ try:
             for u in undo:
                 undo_route(u)
         maps[key] = img
-    if selected_to_active:
+    if selected_to_active and "normal" in wanted:
         scene.cycles.samples = 4
         img = new_image("%s normal" % base, size, True)
         bake_pass("NORMAL", source_mats, target_mats, img, True, reach)
         maps["normal"] = img
+    if PARAMS["ao"]:
+        if scene.world is None:
+            scene.world = bpy.data.worlds.new("bake world")
+        scene.world.light_settings.distance = size_of(obj) * 0.08
+        scene.cycles.samples = 32
+        ao = new_image("%s shadows" % base, size, True)
+        bake_pass("AO", source_mats, target_mats, ao, selected_to_active, reach)
+        color = maps["color"]
+        k = PARAMS["ao_strength"]
+        shade = list(ao.pixels)
+        pixels = list(color.pixels)
+        for i in range(0, len(pixels), 4):
+            f = 1.0 - k + k * shade[i]
+            pixels[i] *= f
+            pixels[i + 1] *= f
+            pixels[i + 2] *= f
+        color.pixels[:] = pixels
+        color.pack()
+        bpy.data.images.remove(ao)
 finally:
     scene.render.engine, scene.cycles.samples = saved
 
 baked = final_material(base + " baked", maps)
 target.data.materials.clear()
 target.data.materials.append(baked)
-done = ["baked %s at %d px" % (", ".join(sorted(maps)), size)]
+done = ["baked %s%s at %d px" % (", ".join(sorted(maps)), " with soft shadows in the color" if PARAMS["ao"] else "", size)]
 if mode == "onto":
     obj.hide_set(True)
     obj.hide_render = True

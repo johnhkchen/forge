@@ -10,6 +10,7 @@ function polish(brief: ObjectBrief, run: Run) -> PolishReport {
     };
     let reference = baml.media.Image.from_file(run.path("image.png"), "image/png");
     let report = Polish(brief, reference, files);
+    keep_transcript(run, "polish");
     run.save("polish.json", report);
     report
 }

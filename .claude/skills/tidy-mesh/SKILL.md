@@ -36,6 +36,7 @@ Measured on a real run (`runs/*-iron-kettle/mesh.glb`):
 | `web` | web pages, product viewers | ~8k adaptive quads, Draco | 1024 WebP + normal map | 0.36% / 2.4% |
 | `game` | real-time games | ~4k adaptive quads, Draco | 1024 WebP + normal map | 0.51% / 2.2% |
 | `mobile` | phones, AR | ~3k adaptive quads, Draco | 512 WebP + normal map | 0.89% / 2.7% |
+| `lowpoly` | old-school real-time look (think early Warcraft) | 300-800 triangles Claude blocks out from simple shapes | one 256 px WebP: color with soft shadows baked in | see `lowpoly.json` |
 
 **What a good result looks like.** Mostly rectangular quads (~99%) in
 regular loops (most vertices with four edges), a little denser where the
@@ -59,6 +60,20 @@ Not used, and why (researched Nov 2026): shape-aware triangle decimation
 build); Exoside Quad Remesher (licence forbids automated use); open AI
 "artist mesh" models (triangles only, drop small parts); cloud retopology
 (Tencent Smart Topology, Meshy remesh) is a possible future comparison.
+
+## Low poly: built, not reduced
+
+Below ~1,000 triangles every reduction method fails on a real object (on the
+kettle: shape-aware reduction crumples it, AutoRemesher drops the handle and
+spout). Early real-time artists didn't reduce, they blocked models out from
+simple shapes and painted the shading into one small texture. So does this
+tier: pipeline step 4c (`BlockOut`, `baml_src/4_polish`) has Claude build the
+object in a "Low poly" scene from 6-12-sided cylinders, cones and boxes sized
+to each part in `parts.json`, check it with `look` and `match.py`, and export
+`runs/<run>/lowpoly.glb`. The `lowpoly` profile brings it in (`blockout`
+step) and bakes the detailed mesh's color with its ambient occlusion
+multiplied in (`bake.py` `"ao": true`) into one 256 px texture: no normal,
+metal or roughness maps. Without `lowpoly.glb` the profile is skipped.
 
 ## Parts: remesh the pieces a modeler would build separately
 

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# The `claude` CLI, with its full stream-json event log kept, so the code
+# Claude runs in Blender can be read back and turned into toolkit scripts.
+# BAML's Claude Code clients call this instead of `claude`; the pipeline
+# files each log into the run's transcripts/ folder after the step.
+set -o pipefail
+dir="${FORGE_TRANSCRIPTS:-runs/.transcripts}"
+mkdir -p "$dir"
+log="$dir/$(date -u +%Y-%m-%dT%H-%M-%S)-$$.jsonl"
+claude "$@" | tee "$log"

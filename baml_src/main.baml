@@ -4,7 +4,7 @@
 //   2. Codex draws the object                        (2_picture)
 //   3. TRELLIS.2 on RunPod lifts it into a mesh      (3_mesh)
 //   4. Claude finishes it in Blender over MCP        (4_polish)
-//      and finds its parts (lid, knob, spout...)
+//      finds its parts (lid, knob, spout...) and blocks out a low-poly version
 //   5. Sized versions: web, game, ...               (5_profiles)
 //
 // Each step writes its result into the run folder, and a step whose result is
@@ -67,6 +67,12 @@ function finish(run: Run, brief: ObjectBrief) -> string {
         log.info("parts: Claude is finding the parts");
         let plan = find_parts(brief, run);
         log.info(`parts: ${plan.parts.map((p) -> { p.name }).join(", ")}`);
+    }
+    //# 4c. Claude blocks out a low-poly version from simple shapes
+    if (run.has("final.glb") && !run.has("lowpoly.glb")) {
+        log.info("lowpoly: Claude is blocking out a low-poly version");
+        let low = block_out(brief, run);
+        log.info(`lowpoly: ${low.triangles} triangles, ${low.shape_typical}% off typically`);
     }
     //# 5. Sized versions for the web, games, ...
     shape(run);

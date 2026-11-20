@@ -5,6 +5,7 @@ const SPLIT_SCRIPT = ".claude/skills/tidy-mesh/scripts/split.py";
 function find_parts(brief: ObjectBrief, run: Run) -> PartsPlan {
     //# Claude places and checks one box per part
     let plan = FindParts(brief, run.absolute("final.glb"), baml.fs.read(SPLIT_SCRIPT));
+    keep_transcript(run, "parts");
     run.save("parts.json", plan);
     plan
 }

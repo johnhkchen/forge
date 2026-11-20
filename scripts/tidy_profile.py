@@ -283,6 +283,42 @@ def export_edges(path):
         bpy.data.objects.remove(lines, do_unlink=True)
 
 
+class Skip(Exception):
+    pass
+
+
+def blockout(run_dir):
+    """Claude's hand-built low-poly mesh (lowpoly.glb, step 4c), brought in
+    as the light mesh to bake onto. Same world space as scene.blend."""
+    path = os.path.join(run_dir, "lowpoly.glb")
+    if not os.path.exists(path):
+        raise Skip("no lowpoly.glb yet (just resume asks Claude to block it out)")
+    full = largest_mesh()
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    meshes = [o for o in bpy.data.objects if o not in before and o.type == "MESH"]
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    for o in meshes:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
+    if len(meshes) > 1:
+        bpy.ops.object.join()
+    low = bpy.context.view_layer.objects.active
+    bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for o in [o for o in bpy.data.objects if o not in before and o is not low]:
+        bpy.data.objects.remove(o, do_unlink=True)
+    low.name = full.name + " (light)"
+    low.data.materials.clear()
+    full.hide_set(True)
+    full.hide_render = True
+    faces = low.data.polygons
+    return {"object": low.name, "faces": len(faces),
+            "triangles": sum(len(p.vertices) - 2 for p in faces),
+            "quads": sum(1 for p in faces if len(p.vertices) == 4)}
+
+
 def read_plan(source):
     """The run's parts.json (Claude's part boxes), if it has one."""
     path = os.path.join(os.path.dirname(source), "parts.json")
@@ -300,14 +336,19 @@ def make(source, out_dir, profile, spec):
     if plan.get("parts"):
         record["parts"] = [p["name"] for p in plan["parts"]]
     for name, params in spec["steps"]:
-        result = autoremesh(dict(params, parts_plan=plan)) if name == "autoremesher" else run_script(name, params)
+        if name == "autoremesher":
+            result = autoremesh(dict(params, parts_plan=plan))
+        elif name == "blockout":
+            result = blockout(os.path.dirname(source))
+        else:
+            result = run_script(name, params)
         record["steps"].append({"script": name, "result": result})
     light = [n for n, _ in spec["steps"]]
-    if {"retopo.py", "autoremesher"} & set(light) or any(p.get("as_copy") for _, p in spec["steps"]):
+    if {"retopo.py", "autoremesher", "blockout"} & set(light) or any(p.get("as_copy") for _, p in spec["steps"]):
         record["shape"] = run_script("match.py", {})
     glb = os.path.join(out_dir, profile + ".glb")
     record["export"] = run_script("export.py", dict(spec["export"], path=glb))
-    if {"autoremesher", "retopo.py"} & set(light):
+    if {"autoremesher", "retopo.py", "blockout"} & set(light):
         export_edges(os.path.join(out_dir, profile + "-edges.glb"))
     # GLB can only store triangles; the .blend keeps the real quads for
     # anyone who will keep modeling it.
@@ -341,4 +382,7 @@ if not os.path.exists(raw):
     load(source)
     run_script("export.py", {"path": raw, "image_format": "WEBP", "draco": False})
 for profile in wanted:
-    make(source, out_dir, profile, profiles[profile])
+    try:
+        make(source, out_dir, profile, profiles[profile])
+    except Skip as why:
+        print("PROFILE %s: skipped, %s" % (profile, why))

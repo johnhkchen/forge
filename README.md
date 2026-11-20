@@ -13,7 +13,7 @@ Each AI does the part it's good at:
 1. **Opus writes a short brief.** It picks one object, describes it in a few sentences, and lists its materials and real-world size. (`baml_src/1_describe`)
 2. **Codex draws it.** You get one object, centered, on a plain gray background, which is the kind of picture image-to-3D handles well. (`baml_src/2_picture`)
 3. **TRELLIS.2 turns the picture into a textured mesh.** It runs on your own RunPod endpoint, which scales to zero, so it costs nothing while idle and has no daily cap. (`baml_src/3_mesh`, `worker/`)
-4. **Claude finishes it in Blender.** It fixes orientation, size, origin and normals, sets the materials, adds a ground plane, lights and a camera, then renders. It checks its own work against the picture as it goes. (`baml_src/4_polish`)
+4. **Claude finishes it in Blender.** It fixes orientation, size, origin and normals, sets the materials, adds a ground plane, lights and a camera, then renders, checking its own work against the picture as it goes. Then it marks out the object's parts (lid, knob, spout...) and builds a low-poly version from simple shapes. (`baml_src/4_polish`)
 5. **Sized versions for wherever it's going.** A background Blender rebuilds the mesh as clean quads and bakes the detail into textures, once per profile (`web` and `game` by default). (`baml_src/5_profiles`, `.claude/skills/tidy-mesh`)
 
 The whole pipeline is BAML (the new language, toolchain pinned in `baml.toml`). Steps 1 and 4 go through the `claude` CLI and step 2 through the `codex` CLI, so they use your subscriptions, not metered API keys.
@@ -67,6 +67,7 @@ TRELLIS.2 hands back an even soup of ~300k triangles. The `tidy-mesh` skill (`.c
 | `web` | web pages, product viewers | ~8k quads, Draco | 1024 WebP + normal map |
 | `game` | real-time games | ~4k quads, Draco | 1024 WebP + normal map |
 | `mobile` | phones, AR | ~3k quads, Draco | 512 WebP + normal map |
+| `lowpoly` | old-school real-time look (think early Warcraft) | 300-800 triangles, built by Claude from simple shapes | one 256 px texture with shading painted in |
 
 The quads come from [AutoRemesher](https://github.com/huxingyi/autoremesher) (MIT): mostly rectangular faces in regular loops, a little denser where the shape curves. Install it once with `just autoremesher`. Each profile records how far it strays from the full mesh (`shape` in `<profile>.json`); typically under 1% of the object's size.
 

@@ -3,7 +3,7 @@
 // Blender). Each profile lands in profiles/<name>.glb with previews; see
 // .claude/skills/tidy-mesh/SKILL.md for what each one is for.
 
-const DEFAULT_PROFILES: string[] = ["web", "game"];
+const DEFAULT_PROFILES: string[] = ["web", "game", "lowpoly"];
 const BLENDER_APP = "/Applications/Blender.app/Contents/MacOS/Blender";
 const PROFILE_TIMEOUT_MINUTES = 15;
 

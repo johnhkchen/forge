@@ -74,3 +74,7 @@ gallery port="8028":
 # Only brief, picture and mesh (leaves Blender alone); finish with `just resume`
 mesh idea:
     baml run make_mesh -- --idea "{{idea}}"
+
+# Show the Blender code Claude ran in a run's step (polish, parts, lowpoly)
+transcript run step:
+    python3 scripts/transcript.py "{{run}}" "{{step}}"

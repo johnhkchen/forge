@@ -136,5 +136,34 @@
       "image_format": "WEBP",
       "draco": true
     }
+  },
+  "lowpoly": {
+    "about": "Old-school real-time style, like early Warcraft: a few hundred triangles Claude blocks out from simple shapes, with the detail's color and soft shadows painted into one small texture.",
+    "steps": [
+      [
+        "clean.py",
+        {}
+      ],
+      [
+        "blockout",
+        {}
+      ],
+      [
+        "bake.py",
+        {
+          "mode": "onto",
+          "texture_size": 256,
+          "maps": [
+            "color"
+          ],
+          "ao": true,
+          "roughness": 0.85
+        }
+      ]
+    ],
+    "export": {
+      "image_format": "WEBP",
+      "draco": true
+    }
   }
 }

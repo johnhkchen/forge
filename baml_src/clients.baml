@@ -12,8 +12,11 @@ client Writer = claude_code.ClaudeCodeClient.new(model = "opus", timeout_ms = 18
 // Python it runs to bpy, bmesh and mathutils, with no file or network access
 // outside Blender's own import, export, render and save operators. That is
 // enough for this job and keeps an unattended session inside Blender.
+// It runs through scripts/claude-logged, which keeps the full event log
+// (every script Claude sends to Blender); see keep_transcript in run.baml.
 client Finisher = claude_code.ClaudeCodeClient.new(
     model = "opus",
+    executable = "scripts/claude-logged",
     timeout_ms = 1800000,
     mcp_servers = {
         "blender": {
