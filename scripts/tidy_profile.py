@@ -32,6 +32,7 @@ import tempfile
 import time
 
 import bpy
+from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import blockout_recipe  # noqa: E402
@@ -80,6 +81,8 @@ def largest_mesh():
 
 
 REMESH_TIMEOUT_S = 120  # per AutoRemesher attempt
+RETRY_PARTS_OFF = 10.0  # worst-spot % at which a whole remesh gets a part-by-part try
+REMESH_GAP_PCT = 3.0  # p95 gap, % of the object's size: good pieces stay under ~2.5 (kettle, baguette, ring posts' tops); the ring's shredded ropes 4-58
 
 
 def remesh_file(mesh_in, work, tag, want, params):
@@ -145,6 +148,62 @@ def export_obj(obj, path):
     bpy.ops.wm.obj_export(filepath=path, export_selected_objects=True, apply_modifiers=True,
                           export_materials=False, export_uv=False, export_normals=False,
                           export_triangulated_mesh=True, forward_axis="Y", up_axis="Z")
+
+
+def remesh_fault(part, result, layered, scale):
+    """Why a remeshed piece doesn't stand in for the original, or None, plus
+    the measure: how far the original's surface lies from the remesh (p95,
+    as % of the whole object's size `scale`). A piece that shredded or
+    collapsed leaves original surface far from anything (the ring's ropes
+    and posts: 4-58%); a smoothed one stays close (the kettle, the baguette
+    crust, under 2.5%). A small tear slips under it (the ring's mat in
+    "web"): it covers too little of the surface. Not for a
+    `layered` object (a character): its cut pieces hold inner layers and
+    stray scraps that a remesh rightly drops."""
+    if layered:
+        return None, None
+    off = surface_gap(part, result) / scale * 100
+    if off > REMESH_GAP_PCT:
+        return "original surface %.1f%% of the size away (p95)" % off, off
+    return None, off
+
+
+def surface_gap(part, result, samples=600):
+    """p95 distance from points spread over `part` to the surface of `result`."""
+    import bmesh
+    import random
+    from mathutils.bvhtree import BVHTree
+    bm = bmesh.new()
+    bm.from_mesh(result.data)
+    bm.transform(result.matrix_world)
+    tree = BVHTree.FromBMesh(bm)
+    bm.free()
+    src = bmesh.new()
+    src.from_mesh(part.data)
+    src.transform(part.matrix_world)
+    tris = src.calc_loop_triangles()
+    weights = [t[0].face.calc_area() / max(len(t[0].face.verts) - 2, 1) for t in tris]
+    rng = random.Random(7)
+    gaps = []
+    if tris:
+        for t in rng.choices(tris, weights=weights, k=samples):
+            a, b = rng.random(), rng.random()
+            if a + b > 1:
+                a, b = 1 - a, 1 - b
+            v0, v1, v2 = (l.vert.co for l in t)
+            point = v0 + (v1 - v0) * a + (v2 - v0) * b
+            hit = tree.find_nearest(point)
+            gaps.append(hit[3] if hit[0] is not None else float("inf"))
+    src.free()
+    if not gaps:
+        return 0.0
+    gaps.sort()
+    return gaps[int(0.95 * (len(gaps) - 1))]
+
+
+def world_size(obj):
+    corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+    return [max(c[i] for c in corners) - min(c[i] for c in corners) for i in range(3)]
 
 
 def import_obj(path):
@@ -245,8 +304,23 @@ def autoremesh(params):
             export_obj(part, mesh_in)
             best, tries = remesh_file(mesh_in, work, "part%d" % i, budget, params)
             if best:
-                made.append(import_obj(best[0]))
-                kind = "remeshed"
+                result_obj = import_obj(best[0])
+                fault, gap = remesh_fault(part, result_obj, params.get("layered", False), max(world_size(source)))
+                if fault:
+                    # A count in range can still be a wreck (the ring's ropes
+                    # came back in fragments): reduce the piece instead.
+                    tries.append({"rejected": fault})
+                    spare = result_obj.data
+                    bpy.data.objects.remove(result_obj, do_unlink=True)
+                    bpy.data.meshes.remove(spare)
+                    best = None
+                else:
+                    made.append(result_obj)
+                    kind = "remeshed"
+                    if gap is not None:
+                        tries.append({"gap_pct": round(gap, 2)})
+            if best:
+                pass
             elif part is not source:
                 # AutoRemesher gave nothing (tiny or degenerate piece): keep it,
                 # reduced, rather than lose it.
@@ -353,6 +427,14 @@ def export_edges(path):
 
 class Skip(Exception):
     pass
+
+
+def is_character(run_dir):
+    path = os.path.join(run_dir, "brief.json")
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        return bool(json.load(f).get("character"))
 
 
 def wants_flat_colors(run_dir):
@@ -553,7 +635,7 @@ def make(source, out_dir, profile, spec):
         record["parts"] = [p["name"] for p in plan["parts"]]
     for name, params in spec["steps"]:
         if name == "autoremesher":
-            result = autoremesh(dict(params, parts_plan=plan))
+            result = autoremesh(dict(params, parts_plan=plan, layered=is_character(os.path.dirname(source))))
         elif name == "blockout":
             result = blockout(os.path.dirname(source))
             if params.get("keep_colors"):
@@ -602,6 +684,7 @@ def make(source, out_dir, profile, spec):
     off = " worst %.2f%% off" % shape["shape_lost"]["max_%"] if shape else ""
     print("PROFILE %s: %d faces,%s %.1f MB, %.0fs -> %s" % (
         profile, record["export"]["faces"], off, record["bytes"] / 1e6, record["seconds"], glb))
+    return record
 
 
 args = sys.argv[sys.argv.index("--") + 1:]
@@ -620,8 +703,43 @@ raw = os.path.join(out_dir, "raw.glb")
 if not os.path.exists(raw):
     load(source)
     run_script("export.py", {"path": raw, "image_format": "WEBP", "draco": False})
+def worst_off(record):
+    return ((record or {}).get("shape") or {}).get("shape_lost", {}).get("max_%", 0.0)
+
+
+def make_best(source, out_dir, profile, spec):
+    """Make the profile; when a profile that remeshes whole (use_parts false)
+    comes out badly off and Claude cut the object into parts, build it part
+    by part too and keep whichever is closer. Whole is usually better at a
+    few thousand quads (the kettle), but it dissolves thin separate pieces
+    (the wrestling ring's ropes: 23% off)."""
+    record = make(source, out_dir, profile, spec)
+    whole = [p for n, p in spec["steps"] if n == "autoremesher" and p.get("use_parts") is False]
+    if not whole or worst_off(record) <= RETRY_PARTS_OFF or not read_plan(source).get("parts"):
+        return record
+    print("PROFILE %s: %.1f%% off remeshed whole; trying part by part" % (profile, worst_off(record)))
+    trial = tempfile.mkdtemp(prefix="forge-%s-parts-" % profile)
+    try:
+        steps = [[n, dict(p, use_parts=True) if n == "autoremesher" else p] for n, p in spec["steps"]]
+        other = make(source, trial, profile, dict(spec, steps=steps))
+        keep = worst_off(other) < worst_off(record)
+        if keep:
+            for name in os.listdir(trial):
+                os.replace(os.path.join(trial, name), os.path.join(out_dir, name))
+        kept = other if keep else record
+        kept["tried"] = {"whole": worst_off(record), "part by part": worst_off(other),
+                         "kept": "part by part" if keep else "whole"}
+        with open(os.path.join(out_dir, profile + ".json"), "w") as f:
+            json.dump(kept, f, indent=2)
+        print("PROFILE %s: kept %s (whole %.1f%%, part by part %.1f%% off)" % (
+            profile, kept["tried"]["kept"], worst_off(record), worst_off(other)))
+        return kept
+    finally:
+        shutil.rmtree(trial, ignore_errors=True)
+
+
 for profile in wanted:
     try:
-        make(source, out_dir, profile, profiles[profile])
+        make_best(source, out_dir, profile, profiles[profile])
     except Skip as why:
         print("PROFILE %s: skipped, %s" % (profile, why))
