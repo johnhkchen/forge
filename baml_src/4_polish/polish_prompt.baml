@@ -63,7 +63,8 @@ function Polish(
 
         Do this, in order:
         1. Bring it in: open.py with "mesh": "${files.mesh}",
-           "name": "${brief.name}" and "empty_first": True. Report its
+           "name": "${brief.name}" and "scene": "Finish" (a scene of its
+           own, so nothing else in the file is touched). Report its
            triangle count.
         ${if (brief.character ?? false) { "This is a character in a T-pose: keep the pose exactly, feet flat on the ground, facing -Y." } else { "" }}
         2. Stand it up. Compare against the reference with \`look\` (mode

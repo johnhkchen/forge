@@ -3,7 +3,9 @@
 # With "scene" set it works in a scene of its own, so nothing else in the
 # file is touched: a new one, or the one an earlier open.py made by that
 # name (emptied first). If someone else's scene already has the name, Blender
-# adds ".001": read "scene" in the result. Joins the file's meshes into one
+# adds ".001": read "scene" in the result. It never empties a scene it didn't
+# make: "empty_first" on someone else's scene opens a fresh "Forge" scene
+# instead (see "kept_scene" in the result). Joins the file's meshes into one
 # object, drops the empties glTF adds, and keeps it where the file put it.
 #
 # Send this whole file through the blender MCP `execute_blender_code` tool
@@ -15,7 +17,7 @@ PARAMS = {
     "mesh": None,          # absolute path of the .glb (required)
     "scene": None,         # a scene to put it in, like "Parts"; None = the open scene
     "name": "Reference",   # what to call the object
-    "empty_first": False,  # with no "scene": remove everything in the open scene first
+    "empty_first": False,  # with no "scene": empty the open scene first, if open.py made it
 }
 
 import bpy
@@ -29,6 +31,15 @@ if PARAMS["scene"]:
     ours = [s for s in bpy.data.scenes if s.get("opened_as") == PARAMS["scene"]]
     scene = ours[0] if ours else bpy.data.scenes.new(PARAMS["scene"])
     scene["opened_as"] = PARAMS["scene"]
+    if bpy.context.window:
+        bpy.context.window.scene = scene
+kept = None
+if PARAMS["empty_first"] and not PARAMS["scene"] and not scene.get("opened_as"):
+    # Not ours (the person's own scene, or one this tool didn't make):
+    # leave it whole and work in a fresh scene instead.
+    kept = scene.name
+    scene = bpy.data.scenes.new("Forge")
+    scene["opened_as"] = "Forge"
     if bpy.context.window:
         bpy.context.window.scene = scene
 removed = 0
@@ -78,6 +89,7 @@ print("RESULT " + json.dumps({
     "object": obj.name,  # may get a .001 suffix if the name is taken in another scene
     "scene": scene.name,
     "removed_first": removed,
+    "kept_scene": kept,  # set when the open scene wasn't ours and was left alone
     "joined": len(meshes),
     "triangles": sum(len(p.vertices) - 2 for p in obj.data.polygons),
     "vertices": len(obj.data.vertices),
