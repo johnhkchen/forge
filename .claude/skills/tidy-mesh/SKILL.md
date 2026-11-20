@@ -302,10 +302,18 @@ hip height. animate.py is what plays any such motion on a character:
 4. **Bake** one key a frame into an action named for the motion, then play
    it back and measure it (`check`).
 
-So the walk is one source of motion among others to come. A clip from a
-motion model (NVIDIA MotionBricks writes its 30-joint SOMA skeleton) or
-from Mixamo would be renamed with `bones.json`, turned into the same plain
-form, and go through the same four steps. That importer is not built.
+So the walk is one source of motion among others. A clip from a motion
+model on NVIDIA's SOMA skeleton (MotionBricks writes 30 joints) is the
+second: `scripts/motion/soma_to_plain.py` renames it with `bones.json`,
+turns it into the same plain form, and `scripts/motion/apply_shot.py` sends
+it through the same four steps (`just cast <shot> <run> [prop run]`; README,
+"Shots"). It looks joints up by name, so a skeleton with more joints than
+the table needs is fine. Three things it does that the walk has no need of:
+our elbows are one-way hinges, so the two arm bones are set from where the
+shoulder, elbow and wrist are rather than from the model's own share of
+twist; a foot the model calls down is pinned to one spot for as long as it
+is (nearly) still; and a prop gets a bone of its own, `prop`, keyed to sit
+on whichever socket holds it. A Mixamo importer is still not built.
 
 `export.py` with `"rig": true` writes the skeleton, its meshes, the sockets
 on their bones and the action as one .glb (not Draco-packed: at this size

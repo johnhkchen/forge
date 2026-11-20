@@ -80,9 +80,23 @@ class Move {
     ),
 }
 
+// A shot is a row of segments, one per beat, and each says where its motion
+// comes from. Today every beat is "poses": our own poses, with MotionBricks
+// filling in between them. The other two are named so a shot list can already
+// say them: "text" (a sentence for a text-to-motion model such as NVIDIA
+// Kimodo) and "walk" (the procedural walk in walk.py). Where two segments
+// meet is a seam, and plan_shot.py writes each seam down (plan.json): the
+// last four frames of the one, the first poses of the other, and the tween
+// MotionBricks makes across it. So redoing one segment only redoes the tween
+// at each of its ends.
+type MotionSource = "poses" | "text" | "walk";
+
 class ShotBeat {
     name: string @description("The beat, in two to five plain words"),
     seconds: float @description("How long the beat lasts"),
+    source: MotionSource @description(
+        "Where the beat's motion comes from. Always \"poses\" for now: library poses with the motion model filling in between them",
+    ),
     moves: Move[] @description("One or more moves, played in order. Their lengths add up to the beat's seconds"),
 }
 
@@ -116,8 +130,12 @@ class ShotList {
     camera: CameraCue[],
 }
 
+// Opus again, through the Claude Code CLI, but with room to think: laying out
+// a dozen moves so their lengths add up takes it several minutes.
+client Choreographer = claude_code.ClaudeCodeClient.new(model = "opus", timeout_ms = 900000);
+
 function Choreograph(brief: string, beats: BeatPlan[]) -> ShotList {
-    client: Writer
+    client: Choreographer
     prompt: `
         You are planning one continuous shot for an animated character. A motion model will
         fill in the movement between key poses; your job is to say which poses, where, and

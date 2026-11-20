@@ -18,13 +18,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import os
 import struct
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from soma import REPO, Skeleton, X, Y, Z, add, cross, dot, frame, length, qconj, qmul, qrot, scale, sub, unit, yaw  # noqa: E402
+from soma import REPO, Skeleton, X, Y, Z, add, dot, frame, length, qconj, qrot, scale, sub, unit, yaw  # noqa: E402
 
 FPS = 30
 # Box thickness (metres) by bone, chosen to read as a body, not to be anatomy.

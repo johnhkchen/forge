@@ -1,0 +1,307 @@
+{
+  "title": "Rooftop Vault and Draw",
+  "start_pose": "crouch",
+  "path": [
+    {
+      "x": 0.0,
+      "z": 0.0
+    },
+    {
+      "x": 0.071,
+      "z": 0.649
+    },
+    {
+      "x": 0.281,
+      "z": 1.268
+    },
+    {
+      "x": 0.62,
+      "z": 1.826
+    },
+    {
+      "x": 1.072,
+      "z": 2.298
+    },
+    {
+      "x": 2.896,
+      "z": 3.829
+    },
+    {
+      "x": 5.654,
+      "z": 6.143
+    },
+    {
+      "x": 6.726,
+      "z": 7.043
+    },
+    {
+      "x": 7.966,
+      "z": 8.083
+    }
+  ],
+  "beats": [
+    {
+      "name": "Crouch and look",
+      "seconds": 2.0,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "crouch_look_left",
+          "at_m": 0.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 9,
+          "early_frames": 0,
+          "pins": [],
+          "hold_pins_frames": 0
+        },
+        {
+          "pose": "crouch_look_right",
+          "at_m": 0.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 10,
+          "early_frames": 0,
+          "pins": [],
+          "hold_pins_frames": 0
+        }
+      ]
+    },
+    {
+      "name": "Sneak along ledge",
+      "seconds": 3.0,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "sneak_right",
+          "at_m": 0.45,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.6,
+          "tokens": 8,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        },
+        {
+          "pose": "sneak_left",
+          "at_m": 0.9,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.8,
+          "tokens": 7,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        },
+        {
+          "pose": "sneak_right",
+          "at_m": 1.35,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.8,
+          "tokens": 7,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        },
+        {
+          "pose": "sneak_left",
+          "at_m": 1.8,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.8,
+          "tokens": 7,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        },
+        {
+          "pose": "sneak_right",
+          "at_m": 2.25,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.8,
+          "tokens": 7,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        }
+      ]
+    },
+    {
+      "name": "Break into sprint",
+      "seconds": 2.0,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "sprint_left",
+          "at_m": 3.85,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 1.7,
+          "tokens": 10,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        },
+        {
+          "pose": "sprint_right",
+          "at_m": 5.65,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 1.9,
+          "tokens": 10,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        }
+      ]
+    },
+    {
+      "name": "Vault the wall",
+      "seconds": 1.5,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "vault_takeoff",
+          "at_m": 7.5,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 1.9,
+          "tokens": 10,
+          "early_frames": 4,
+          "pins": [],
+          "hold_pins_frames": 0
+        },
+        {
+          "pose": "vault_over",
+          "at_m": 8.6,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 1.9,
+          "tokens": 6,
+          "early_frames": 0,
+          "pins": [
+            "right_hand"
+          ],
+          "hold_pins_frames": 0
+        }
+      ]
+    },
+    {
+      "name": "Three-point landing",
+      "seconds": 1.5,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "land_three_point",
+          "at_m": 10.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 6,
+          "early_frames": 0,
+          "pins": [
+            "left_hand",
+            "left_foot",
+            "right_foot"
+          ],
+          "hold_pins_frames": 4
+        },
+        {
+          "pose": "land_three_point",
+          "at_m": 10.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 9,
+          "early_frames": 0,
+          "pins": [
+            "left_hand",
+            "left_foot",
+            "right_foot"
+          ],
+          "hold_pins_frames": 29
+        }
+      ]
+    },
+    {
+      "name": "Rise and draw",
+      "seconds": 2.0,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "rise",
+          "at_m": 10.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 6,
+          "early_frames": 0,
+          "pins": [
+            "left_foot",
+            "right_foot"
+          ],
+          "hold_pins_frames": 6
+        },
+        {
+          "pose": "draw",
+          "at_m": 10.0,
+          "side_m": 0.0,
+          "facing_deg": -20.0,
+          "speed_mps": 0.0,
+          "tokens": 7,
+          "early_frames": 0,
+          "pins": [
+            "left_foot",
+            "right_foot"
+          ],
+          "hold_pins_frames": 21
+        },
+        {
+          "pose": "hero_stance",
+          "at_m": 10.0,
+          "side_m": 0.0,
+          "facing_deg": -45.0,
+          "speed_mps": 0.0,
+          "tokens": 7,
+          "early_frames": 0,
+          "pins": [],
+          "hold_pins_frames": 6
+        }
+      ]
+    }
+  ],
+  "props": [
+    {
+      "prop": "katana",
+      "socket": "back",
+      "from_seconds": 0.0
+    },
+    {
+      "prop": "katana",
+      "socket": "hand_right",
+      "from_seconds": 11.3
+    }
+  ],
+  "camera": [
+    {
+      "from_seconds": 0.0,
+      "view": "three_quarter_tracking",
+      "distance_m": 5.5
+    },
+    {
+      "from_seconds": 7.8,
+      "view": "low_three_quarter",
+      "distance_m": 5.5
+    },
+    {
+      "from_seconds": 10.0,
+      "view": "three_quarter_tracking",
+      "distance_m": 5.5
+    }
+  ]
+}

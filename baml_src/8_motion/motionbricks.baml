@@ -223,7 +223,7 @@ const SKELETON_FILE = "motion/soma_skeleton.json";
 /// Asks the worker for the SOMA skeleton (joints, parents, rest pose) and
 /// keeps it in the repo, so poses can be written and checked with no GPU.
 function motion_skeleton() -> string {
-    let reply = MotionBricks.from_env().call("skeleton", `{"action": "skeleton"}`);
+    let reply = MotionBricks.from_env().call("skeleton", `{"kind": "skeleton"}`);
     baml.fs.write(SKELETON_FILE, baml.json.stringify(baml.json.parse(reply.text), indent = 1));
     log.info(`motion: skeleton saved to ${SKELETON_FILE} (${baml.json.stringify(reply.record)})`);
     SKELETON_FILE
@@ -232,13 +232,13 @@ function motion_skeleton() -> string {
 /// MotionBricks' own generate_once example, run on the worker: proof the
 /// endpoint works end to end. Prints what it made and what it cost in time.
 function motion_selftest() -> string {
-    let reply = MotionBricks.from_env().call("selftest", `{"action": "selftest"}`);
+    let reply = MotionBricks.from_env().call("selftest", `{"kind": "selftest"}`);
     `${reply.text}\n${baml.json.stringify(reply.record, indent = 2)}`
 }
 
 /// Which worker answers, and how long it took to boot.
 function motion_info() -> string {
-    let reply = MotionBricks.from_env().call("info", `{"action": "info"}`);
+    let reply = MotionBricks.from_env().call("info", `{"kind": "info"}`);
     baml.json.stringify(reply.record, indent = 2)
 }
 

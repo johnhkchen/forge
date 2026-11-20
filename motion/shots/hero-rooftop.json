@@ -1,0 +1,17 @@
+{
+  "name": "hero-rooftop",
+  "brief": "A ninja's hero shot on a flat rooftop, about 12 seconds, one continuous take.\n\nThe set, in metres. The character starts at x 0, z 0, facing +z; +x is to its left. Distances 'along the route' are measured from that start.\n- A curved ledge runs from the start for 2.6 m. It begins heading +z and bends steadily to the LEFT, so that where it ends the route points 50 degrees left of +z. (An arc of radius 3 m: after turning by an angle a, a point on it is at x = 3 * (1 - cos a), z = 3 * sin a.)\n- From the end of the ledge the roof runs dead straight, in that same direction, for 9 m.\n- A wall stands across the route 8.6 m along it: 0.75 m high, 0.3 m thick. The character's hips pass over the wall exactly at 8.6 m, and the hand that vaults is planted on the wall's top there.\n- It lands 1.4 m past the wall, at 10.0 m, and stays there to the end.\n\nThe character carries a katana in a scabbard on its back, grip over the right shoulder. It draws with the right hand in the last beat.\n\nThe camera tracks from ahead of the character and 45 degrees to its right, at three-quarter view, about 5.5 m away. It drops low for the landing, then comes back up. For the last pose the character turns to face that camera: 45 degrees to the RIGHT of the route.",
+  "beats": [
+    { "time": "0-2 s", "action": "crouched on the roof edge, looks left, then right", "driven_by": "crouch, crouch_look_left, crouch_look_right" },
+    { "time": "2-5 s", "action": "sneaks along the curved ledge, low", "driven_by": "sneak_left and sneak_right, placed along the curve" },
+    { "time": "5-7 s", "action": "breaks into a sprint", "driven_by": "sprint_left and sprint_right, spaced wider and wider, leaning" },
+    { "time": "7-8.5 s", "action": "vaults the 0.75 m wall, one hand on top", "driven_by": "vault_takeoff, then vault_over with the right hand pinned to the wall top" },
+    { "time": "8.5-10 s", "action": "lands in a three-point crouch", "driven_by": "land_three_point, both feet and the left hand pinned" },
+    { "time": "10-12 s", "action": "rises, draws the katana, ends facing the camera", "driven_by": "rise, draw, hero_stance; the sword goes from the back to the right hand" }
+  ],
+  "set": {
+    "ledge": { "from_m": 0.0, "to_m": 2.6, "width_m": 0.5 },
+    "roof": { "from_m": 2.3, "past_the_end_m": 2.5, "width_m": 5.0 },
+    "wall": { "at_m": 8.6, "height_m": 0.75, "thickness_m": 0.3, "width_m": 3.2 }
+  }
+}

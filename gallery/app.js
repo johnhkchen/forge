@@ -77,6 +77,7 @@ function facts(run, v) {
     ["Textures", v.maps ? v.maps.length : "—", v.maps ? v.maps.join(", ") : ""],
   ];
   // How it walks, worked out from its own build: pace, then the steps behind it.
+  if (v.hero && v.hero_seconds) rows.push(["Hero shot", `${Math.round(v.hero_seconds)} s`, v.hero_prop ? `with its ${v.hero_prop}` : "from poses of our own"]);
   if (v.walk && v.gait?.speed_m_s) rows.push(["Walks at", `${v.gait.speed_m_s} m/s`, `${v.gait.cadence_steps_per_min} steps a minute · ${v.gait.stride_m} m stride`]);
   return rows;
 }
@@ -85,7 +86,7 @@ function objectPage(run, wanted) {
   const versions = versionsOf(run);
   const start = versions.find((v) => v.name === wanted) || versions.find((v) => v.name === "web") || versions[versions.length - 1];
   // `off` holds the gear the visitor took off; it carries over between the versions that have gear.
-  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, walk: true };
+  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, walk: true, hero: false };
   const hasGear = versions.some((v) => v.gear?.length);
 
   const stage = h("div", { class: "stage clay-well" });
@@ -99,7 +100,13 @@ function objectPage(run, wanted) {
 
   const socketsBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => { state.sockets = !state.sockets; socketsBtn.setAttribute("aria-pressed", String(state.sockets)); viewer?.setSockets(state.sockets); } }, "Where props go");
   // Pressed in, the character walks on the spot; let go, it stands still in its T-pose.
-  const walkBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.walk), onclick: () => { state.walk = !state.walk; walkBtn.setAttribute("aria-pressed", String(state.walk)); render(); } }, "Walk");
+  const walkBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.walk), onclick: () => { state.walk = !state.walk; if (state.walk) state.hero = false; showClips(); render(); } }, "Walk");
+  // Pressed in, it plays its hero shot from start to end, over and over, and the view follows it. One clip at a time.
+  const heroBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.hero), onclick: () => { state.hero = !state.hero; if (state.hero) state.walk = false; showClips(); render(); } }, "Hero");
+  function showClips() {
+    walkBtn.setAttribute("aria-pressed", String(state.walk));
+    heroBtn.setAttribute("aria-pressed", String(state.hero));
+  }
   const gearRow = h("div", { class: "gear", role: "group", "aria-label": "Gear" });
 
   // One chip per piece of gear: pressed in means it's on. Only the low-poly and mid-poly versions have gear that comes off.
@@ -107,6 +114,7 @@ function objectPage(run, wanted) {
     const gear = state.version.gear || [];
     socketsBtn.hidden = !(state.version.sockets || []).length;
     walkBtn.hidden = !state.version.walk;
+    heroBtn.hidden = !state.version.hero;
     gearRow.hidden = !hasGear;
     if (!gear.length) {
       gearRow.replaceChildren(h("span", { class: "hint" }, "Gear comes off in the Low poly and Mid poly versions."));
@@ -141,7 +149,8 @@ function objectPage(run, wanted) {
     viewer = new Viewer(stage, panes.map((x) => ({
       label: panes.length > 1 ? (x === raw ? "Before" : `After · ${VERSION_NAMES[x.name]}`) : VERSION_NAMES[x.name],
       glb: file(run, x.glb),
-      walk: x.walk && state.walk ? file(run, x.walk) : null,
+      walk: x.hero && state.hero ? file(run, x.hero) : x.walk && state.walk ? file(run, x.walk) : null,
+      follow: Boolean(x.hero && state.hero),
       edges: x.edges ? file(run, x.edges) : null,
       onTriangles: x === raw ? (n) => { raw.triangles = n; if (state.version === raw) showFacts(); } : null,
     })), state.wire, state.off, state.sockets);
@@ -162,7 +171,7 @@ function objectPage(run, wanted) {
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, walkBtn, socketsBtn)),
+    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, walkBtn, heroBtn, socketsBtn)),
     gearRow,
     stage,
     factsBox,
@@ -256,6 +265,8 @@ class Viewer {
       if (spec.walk && gltf.animations.length) {
         pane.mixer = new THREE.AnimationMixer(model);
         pane.mixer.clipAction(gltf.animations[0]).play();
+        // A clip that travels (the hero shot) is kept on the stage: see play().
+        if (spec.follow) model.traverse((o) => { if (o.isBone && o.name === "hips") pane.follow = { bone: o, was: null }; });
         this.play();
       }
       this.setGear(this.off);
@@ -326,7 +337,16 @@ class Viewer {
     const step = (now) => {
       const moving = this.panes.filter((p) => p.mixer);
       if (!moving.length) { this.playing = false; return; }
-      moving.forEach((p) => p.mixer.update(Math.min((now - last) / 1000, 0.1)));
+      moving.forEach((p) => {
+        p.mixer.update(Math.min((now - last) / 1000, 0.1));
+        if (!p.follow) return;
+        // Slide the whole model back by however far the hips have gone over the ground, so the
+        // character stays on the stage (it still rises and drops: only the travel is taken out).
+        const at = p.follow.bone.getWorldPosition(new THREE.Vector3());
+        if (!p.follow.was) p.follow.was = at.clone();
+        p.model.position.x += p.follow.was.x - at.x;
+        p.model.position.z += p.follow.was.z - at.z;
+      });
       last = now;
       this.draw();
       requestAnimationFrame(step);

@@ -5,4 +5,4 @@ runs/
 tools/
 .claude/worktrees/
 __pycache__/
-shots/
+/shots/

@@ -1,11 +1,16 @@
-"""Renders a shot's raw motion in a background Blender: a short film and a strip of stills.
+"""Renders a shot in a background Blender: a short film and a strip of stills.
 
     Blender -b --factory-startup -P scripts/motion/render_shot.py -- <shot folder> [--strip-only] [--size 960x540]
+        [--character <version>-<name>.glb --scale <size against SOMA> --out <version>-<name>]
 
 Opens <shot>/motion.glb (the box mannequin and the set, from to_gltf.py),
 lights it, and flies a camera by the shot list's camera cues. Writes
     <shot>/motion.mp4   the whole shot at 30 frames a second
     <shot>/strip.png    twelve stills, in order, as one picture
+
+With --character, one of our own characters (from apply_shot.py) stands in for
+the mannequin: the set is shrunk or grown to its size, and the film and strip
+are named for --out (<shot>/<out>.mp4, <shot>/<out>-strip.png).
 
 Never touches an open Blender: it starts from factory settings and exits.
 """
@@ -46,7 +51,7 @@ def smooth(points, reach):
     return out
 
 
-def camera_track(roots, cues, direction):
+def camera_track(roots, cues, direction, size=1.0):
     """Camera position and look-at point for every frame, in glTF coordinates."""
     forward = (math.sin(direction), 0.0, math.cos(direction))
     right = (-math.cos(direction), 0.0, math.sin(direction))
@@ -55,7 +60,7 @@ def camera_track(roots, cues, direction):
 
     def offset(cue):
         ahead, side, up = VIEWS[cue["view"]]
-        d = float(cue["distance_m"])
+        d = float(cue["distance_m"]) * size
         return tuple(forward[a] * ahead * d + right[a] * side * d for a in range(3)), max(0.12, up * d)
 
     track = []
@@ -90,12 +95,30 @@ def main() -> None:
     if os.path.exists(os.path.join(shot, "shotlist.json")):
         with open(os.path.join(shot, "shotlist.json")) as f:
             cues = json.load(f).get("camera") or []
-    roots = motion["root"]
+    character = args[args.index("--character") + 1] if "--character" in args else None
+    size = float(args[args.index("--scale") + 1]) if "--scale" in args else 1.0
+    out_name = args[args.index("--out") + 1] if "--out" in args else "motion"
+    roots = [[c * size for c in r] for r in motion["root"]]
     frames = len(roots)
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.context.scene.render.fps = 30  # before the import, so its keys land one per frame
     bpy.ops.import_scene.gltf(filepath=os.path.join(shot, "motion.glb"))
     scene = bpy.context.scene
+    if character:
+        # Keep the set, at the character's size; the mannequin makes way.
+        blocks = {block["name"] for block in plan.get("set", [])}
+        for o in list(scene.objects):
+            if o.name not in blocks:
+                bpy.data.objects.remove(o)
+        for o in scene.objects:
+            if o.parent is None:
+                o.location = o.location * size
+                o.scale = o.scale * size
+        bpy.ops.import_scene.gltf(filepath=os.path.join(shot, character) if not os.path.isabs(character) else character)
+        for o in scene.objects:  # the bones' display shapes are not part of the picture
+            if o.type == "MESH" and not o.find_armature() and o.name.startswith("Icosphere"):
+                o.hide_render = True
     scene.render.fps = 30
     scene.frame_start, scene.frame_end = 0, frames - 1
 
@@ -107,28 +130,29 @@ def main() -> None:
     cam = bpy.data.objects.new("shot camera", cam_data)
     scene.collection.objects.link(cam)
     scene.camera = cam
-    for f, (eye, look) in enumerate(camera_track(roots, cues, direction)):
+    for f, (eye, look) in enumerate(camera_track(roots, cues, direction, size)):
         cam.location = to_blender(eye)
         cam.rotation_euler = (to_blender(look) - to_blender(eye)).to_track_quat("-Z", "Y").to_euler()
         cam.keyframe_insert("location", frame=f)
         cam.keyframe_insert("rotation_euler", frame=f)
 
     sun_data = bpy.data.lights.new("sun", "SUN")
-    sun_data.energy, sun_data.angle = 3.2, math.radians(4)
+    sun_data.energy, sun_data.angle = 1.7, math.radians(4)
     sun = bpy.data.objects.new("sun", sun_data)
     sun.rotation_euler = (math.radians(52), 0.0, direction + math.radians(140))
     scene.collection.objects.link(sun)
     world = bpy.data.worlds.new("sky")
     world.use_nodes = True
     background = world.node_tree.nodes["Background"]
-    background.inputs[0].default_value = (0.86, 0.87, 0.9, 1.0)
-    background.inputs[1].default_value = 0.9
+    background.inputs[0].default_value = (0.36, 0.42, 0.55, 1.0)
+    background.inputs[1].default_value = 0.8
     scene.world = world
 
     scene.render.engine = "BLENDER_EEVEE"
     scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = wide, tall, 100
     scene.view_settings.view_transform = "Standard"
 
+    strip_name = "strip.png" if out_name == "motion" else out_name + "-strip.png"
     # The strip: stills spread evenly over the shot, tiled left to right, top to bottom.
     count = STRIP[0] * STRIP[1]
     stills = [round(i * (frames - 1) / (count - 1)) for i in range(count)]
@@ -152,9 +176,9 @@ def main() -> None:
     os.remove(temp)
     out = bpy.data.images.new("strip", cell[0] * STRIP[0], cell[1] * STRIP[1], alpha=True)
     out.pixels.foreach_set(sheet.ravel())
-    out.filepath_raw, out.file_format = os.path.join(shot, "strip.png"), "PNG"
+    out.filepath_raw, out.file_format = os.path.join(shot, strip_name), "PNG"
     out.save()
-    print("RENDER strip", os.path.join(shot, "strip.png"), "frames", stills)
+    print("RENDER strip", os.path.join(shot, strip_name), "frames", stills)
 
     if not strip_only:
         scene.render.resolution_x, scene.render.resolution_y = wide, tall
@@ -162,9 +186,9 @@ def main() -> None:
         scene.render.ffmpeg.format = "MPEG4"
         scene.render.ffmpeg.codec = "H264"
         scene.render.ffmpeg.constant_rate_factor = "MEDIUM"
-        scene.render.filepath = os.path.join(shot, "motion.mp4")
+        scene.render.filepath = os.path.join(shot, out_name + ".mp4")
         bpy.ops.render.render(animation=True)
-        print("RENDER film", os.path.join(shot, "motion.mp4"), frames, "frames")
+        print("RENDER film", os.path.join(shot, out_name + ".mp4"), frames, "frames")
 
 
 main()

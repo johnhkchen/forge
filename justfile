@@ -25,6 +25,7 @@ brief idea:
 check:
     baml check
     baml test
+    python3 scripts/motion/author_poses.py --check | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -69,6 +70,38 @@ motion-selftest:
 # Fetch the SOMA skeleton from the worker into motion/soma_skeleton.json (one time)
 motion-skeleton:
     baml run motion_skeleton
+
+# Make a shot from its plan in motion/shots/<shot>.json: choreograph, place our poses, generate the motion, measure it, film it
+shoot shot="hero-rooftop":
+    baml run shoot -- --shot "{{shot}}"
+
+# Put a character in a finished shot: its skeleton, limits and planted feet, plus a prop on its sockets (writes into shots/<shot>/)
+cast shot character prop="":
+    baml run cast -- --shot "{{shot}}" --character "{{character}}" --prop "{{prop}}"
+
+# Copy a shot's clips into the character's own folder, so the gallery shows a Hero button for it
+clip-to-gallery shot character:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for version in lowpoly midpoly; do
+        for kind in glb json; do
+            [ -f "shots/{{shot}}/$version-hero.$kind" ] && cp "shots/{{shot}}/$version-hero.$kind" "{{character}}/profiles/$version-hero.$kind"
+        done
+    done
+    ls "{{character}}/profiles" | grep -- '-hero\.'
+
+# Point the MotionBricks endpoint at another image tag (after the worker image is rebuilt)
+motion-image tag:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    image="${MOTIONBRICKS_IMAGE%:*}:{{tag}}"
+    curl -sS -X PATCH "https://api.runpod.io/v2/serverless/$MOTIONBRICKS_ENDPOINT_ID" \
+      -H "Authorization: Bearer $RUNPOD_API_KEY" -H "Content-Type: application/json" \
+      -d "{\"image\": \"$image\"}" | python3 -c "import sys, json; d = json.load(sys.stdin); print(d.get('id'), d.get('image'), 'version', d.get('version'))"
+
+# Build the pose library (motion/poses.json) from scripts/motion/author_poses.py, checking every pose as a body
+poses:
+    python3 scripts/motion/author_poses.py
 
 blender_bin := env_var_or_default("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 

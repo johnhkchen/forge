@@ -46,6 +46,7 @@ You need the `baml`, `claude`, `codex`, `uv`, `gh` and `just` CLIs, and Blender.
    - Add a RunPod secret `hf_token`. The DINOv3 image encoder is gated on Hugging Face, so your account needs access to it.
    - Run `just endpoint` and put the new endpoint's ID in `.env`.
 4. Run `just check`, then `just make "…"`.
+5. **Only for shots** (see "Shots" below): the same push builds `motionbricks_worker/` into `ghcr.io/<you>/motionbricks-worker`. Run `just motion-endpoint`, put the new endpoint's ID in `.env` as `MOTIONBRICKS_ENDPOINT_ID`, then `just motion-selftest`. The first job waits a few minutes while the worker fetches NVIDIA's model onto your volume and gets it ready for the GPU; after that a job takes a couple of seconds.
 
 The first job on a fresh endpoint downloads whichever weights the volume doesn't already have, about 17 GB at most. After that, a job takes about a minute on an RTX 4090.
 
@@ -64,6 +65,11 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just tidy <run folder> walk` | give a character's low-poly and mid-poly versions a skeleton and a walk |
 | `just gait <run folder>` | only ask Opus how the character walks (weight, stealth, swagger, stiffness) |
 | `just walk-strip <file.glb> <out.png> [side or front]` | a picture of the walk, eight moments side by side |
+| `just shoot [shot]` | make a shot from its plan in `motion/shots/`: Opus lays it out, our poses are placed, MotionBricks fills in the movement, it is measured and filmed |
+| `just cast <shot> <character run> [prop run]` | put a character (and what it carries) in a finished shot |
+| `just clip-to-gallery <shot> <character run>` | copy the shot's clips into the character's folder, so the gallery shows a "Hero" button |
+| `just poses` | rebuild the pose library from `scripts/motion/author_poses.py`, checking each pose as a body |
+| `just motion-health`, `just motion-info`, `just motion-selftest` | is the MotionBricks endpoint up, what is it running, and does it work end to end |
 | `just recipe <run folder>` | for a run from before recipes were kept: get its block-out's recipe back from the transcript, so `midpoly` can be made |
 | `just gallery` | look at every object, raw vs cleaned-up, on this Mac or a phone on the same Wi-Fi |
 | `just transcript <run folder> <step>` | read the Blender code Claude ran in a step (`polish`, `parts`, `lowpoly`) |
@@ -100,7 +106,35 @@ In the gallery, a character's Low poly and Mid poly versions have a row of its g
 
 ## Walking
 
-Those two versions also come with a skeleton and a walk (`profiles/lowpoly-walk.glb`, `midpoly-walk.glb`): 21 bones with plain names (`hips`, `thigh_l`, `forearm_r`...), a few more for a tail, each joint with its limits written in the file. Gear pieces follow the same bones and the prop points ride on them. The walk is worked out from the model, not drawn by hand, so each character gets its own. In the gallery, press "Walk" to see it on the spot. `.claude/skills/tidy-mesh/bones.json` says what each bone is called in SOMA (NVIDIA MotionBricks) and Mixamo, for bringing in motion from elsewhere later.
+Those two versions also come with a skeleton and a walk (`profiles/lowpoly-walk.glb`, `midpoly-walk.glb`): 21 bones with plain names (`hips`, `thigh_l`, `forearm_r`...), a few more for a tail, each joint with its limits written in the file. Gear pieces follow the same bones and the prop points ride on them. The walk is worked out from the model, not drawn by hand, so each character gets its own. In the gallery, press "Walk" to see it on the spot. `.claude/skills/tidy-mesh/bones.json` says what each bone is called in SOMA (NVIDIA MotionBricks) and Mixamo, so motion from elsewhere fits the same bones; see Shots.
+
+## Shots
+
+A walk is one loop. A shot is a few seconds of something happening: the ninja waits on a roof edge, sneaks along a ledge, sprints, vaults a wall, lands, and draws its sword.
+
+```
+just shoot hero-rooftop
+just cast hero-rooftop runs/<the ninja> runs/<its katana>
+```
+
+How a shot gets made:
+
+1. **You write the plan in words**, in `motion/shots/<name>.json`: what happens when, and where the walls and ledges are.
+2. **Opus lays it out.** It turns the plan into a shot list: which pose, where along the path, how fast, for how long. It never writes a joint angle. (`Choreograph` in `baml_src/8_motion`)
+3. **The poses are ours.** `motion/poses.json` holds thirteen of them (crouch, look left, sneak step, sprint stride, vault, landing, draw, hero stance...), each written by hand in `scripts/motion/author_poses.py` as "hips here, this foot there, that hand on the wall". Each is checked as a body before it is saved: no limb overstretched, no knee bending backwards, feet flat where they stand, weight over the feet. `just poses` rebuilds them.
+4. **MotionBricks fills in the movement between the poses.** That is NVIDIA's motion model, running on a second RunPod endpoint of your own (`motionbricks_worker/`). It also scales to zero.
+5. **The result is measured and filmed** on a plain box figure: how far the feet slide, whether anything goes through the floor or the wall, whether the hand is on the wall top, how far each beat ends from where it was planned (`checks.json`, `motion.mp4`, `strip.png`).
+6. **`just cast` puts a real character in it.** The motion goes through the same skeleton, joint limits and planted feet as the walk, and the sword rides on the character's back until the draw, then in its hand. `just clip-to-gallery` adds a "Hero" button for it in the gallery.
+
+Everything a shot makes lands in `shots/<name>/`. A step whose file is already there is skipped, so you can delete `motion.mp4` to film again without making the motion again.
+
+**What is ours and what is NVIDIA's.** The poses, the plan and the path are ours. The model that moves between them is NVIDIA's MotionBricks (code Apache-2.0, model under the NVIDIA Open Model Agreement, which allows commercial use). The worker image holds none of NVIDIA's files: on its first boot the worker fetches the pinned release (v0.2.0) onto your network volume. NVIDIA also ships sample motion clips under an evaluation-only license. The worker fetches one of them for `just motion-selftest` and for nothing else; no clip is ever read when a shot is made, and none is in this repo.
+
+**One motion format.** Whatever makes a motion, it is kept the same way (`motion.json`): 30 frames a second, joints by their SOMA names, and for each frame where the hips are, how each joint is turned, and which feet are down. `scripts/motion/soma_to_plain.py` turns that into what `animate.py` plays on our characters. It looks joints up by name, so a file with more joints than it needs (fingers, say) works too.
+
+**Room for more.** The worker sorts jobs by kind (`inbetween` today), and each model gets its own Python setup inside the image, so a second model can sit beside the first. In a shot list each beat says where its motion comes from (`poses` today; `text` and `walk` are named for later), and `plan.json` writes down each seam between two beats: the last four frames of one, the first pose of the next, and the stretch MotionBricks fills in between.
+
+**What is weak.** MotionBricks cannot see the set, so a shin can still clip the wall and a foot can dip under the roof; the checks say by how much. Its feet drift while planted; casting a character pins them. Our hand-written poses are not what the model learned from, so the motion between them is stiffer than motion capture. A "sprint" that has to fit the roof is closer to a run.
 
 The detailed versions (`hero`, `quads`, `web`, `game`, `mobile`) still have the clothes as part of the body. They come from the picture, and the picture shows the character dressed.
 

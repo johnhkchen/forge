@@ -30,7 +30,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from soma import REPO, Skeleton, add, qmul, qrot, qslerp, yaw  # noqa: E402
+from soma import REPO, Skeleton, add, heading_of, qconj, qmul, qrot, qslerp, yaw  # noqa: E402
 
 FPS = 30
 STEP_M = 0.02  # spacing of the points the curve is measured with
@@ -110,7 +110,7 @@ def blend(a: dict, b: dict, t: float) -> dict:
     }
 
 
-def plan(shot: dict, library: dict, set_card: dict = None, sk: Skeleton = None) -> tuple:
+def plan(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> tuple:
     poses = library["poses"]
     path = Path(shot["path"])
 
@@ -139,19 +139,20 @@ def plan(shot: dict, library: dict, set_card: dict = None, sk: Skeleton = None) 
             out.append(stand(body, x + xk - x0, z + zk - z0, heading))
         return out
 
-    def pin_points(move: dict, placed_pose: dict) -> dict:
-        """Where the placed pose puts each pinned hand or foot, in the scene."""
-        if not move.get("pins") or sk is None:
-            return {}
+    def body_of(placed_pose: dict):
+        """Joint positions and rotations of a placed pose, in the scene."""
         turn = yaw(placed_pose["heading"])
         rotations = sk.rotation_list(placed_pose["rotations"])
         rotations[0] = qmul(turn, rotations[0])
-        pos, _ = sk.fk(add(tuple(placed_pose["at"]), qrot(turn, tuple(placed_pose["root"]))), rotations)
-        return {pin: [round(v, 4) for v in pos[sk.index[PIN_JOINT[pin]]]] for pin in move["pins"]}
+        return sk.fk(add(tuple(placed_pose["at"]), qrot(turn, tuple(placed_pose["root"]))), rotations)
+
+    def pin_points(move: dict, pos) -> dict:
+        """Where the placed pose puts each pinned hand or foot, in the scene."""
+        return {pin: [round(v, 4) for v in pos[sk.index[PIN_JOINT[pin]]]] for pin in move.get("pins") or []}
 
     start = dict(at_m=0.0, side_m=0.0, facing_deg=float(shot.get("start_facing_deg", 0.0)))
     sx, sz, _, sheading = placed(start)
-    request = {"action": "generate", "positions": True, "seed": stand(poses[shot["start_pose"]], sx, sz, sheading), "targets": []}
+    request = {"kind": "inbetween", "positions": True, "seed": stand(poses[shot["start_pose"]], sx, sz, sheading), "targets": []}
     marks, beats = [], []
     frame = 0
     for beat in shot["beats"]:
@@ -169,25 +170,30 @@ def plan(shot: dict, library: dict, set_card: dict = None, sk: Skeleton = None) 
             if move.get("hold_pins_frames"):
                 target["hold_pins"] = int(move["hold_pins_frames"])
             request["targets"].append(target)
+            pos, rot = body_of(target["poses"][0])
             marks.append(
                 {
                     "name": name,
                     "beat": beat["name"],
                     "pose": move["pose"],
                     "frame": frame,
-                    "x": round(x, 4),
-                    "z": round(z, 4),
-                    "heading": round(heading, 2),
+                    # Where the hips themselves should be, and which way the pelvis should face:
+                    # the pose's own offset and turn, on top of where it stands.
+                    "x": round(pos[0][0], 4),
+                    "z": round(pos[0][2], 4),
+                    "heading": round(heading_of(qmul(rot[0], qconj(sk.rest_rot[0]))), 2),
+                    "stands_at": [round(x, 4), round(z, 4)],
                     "speed_mps": float(move.get("speed_mps", 0.0)),
                     "early_frames": early,
                     "pins": move.get("pins") or [],
-                    "pin_points": pin_points(move, target["poses"][0]),
+                    "pin_points": pin_points(move, pos),
                     "hold_pins_frames": int(move.get("hold_pins_frames", 0)),
                 }
             )
         beats.append(
             {
                 "name": beat["name"],
+                "source": beat.get("source", "poses"),
                 "first_frame": first,
                 "last_frame": frame,
                 "planned_seconds": float(beat["seconds"]),
@@ -204,10 +210,46 @@ def plan(shot: dict, library: dict, set_card: dict = None, sk: Skeleton = None) 
         "path": [[round(p[0], 3), round(p[1], 3)] for p in path.points[::5]] + [[round(v, 3) for v in path.points[-1]]],
         "path_length_m": round(path.length, 3),
     }
+    record["seams"] = seams(beats, marks)
     if set_card:
         end_m = max(float(m["at_m"]) for b in shot["beats"] for m in b["moves"])
         record["set"], record["wall"] = set_blocks(path, set_card, end_m)
     return request, record
+
+
+def seams(beats: list, marks: list) -> list:
+    """Where one beat's motion meets the next, written down so a seam can be redone alone.
+
+    A seam is tweened by MotionBricks from the four frames that end beat A
+    (its `context_frames`) toward the first pose of beat B. For a "poses" beat
+    that tween is the beat's own first move; a beat from another source (text,
+    walk) would bring frames of its own, and the tween would end where those begin."""
+    out = []
+    for a, b in zip(beats, beats[1:]):
+        first_move = next(m for m in marks if m["beat"] == b["name"])
+        last = a["last_frame"]
+        out.append(
+            {
+                "from": a["name"],
+                "to": b["name"],
+                "context_frames": [last - 3, last - 2, last - 1, last],
+                "tween_frames": [last, first_move["frame"]],
+                "target": first_move["name"],
+                "made_by": "MotionBricks inbetween",
+            }
+        )
+    return out
+
+
+def context_from(motion: dict, last_frame: int) -> list:
+    """The four frames of a motion that end at last_frame, as the worker's `context`:
+    what an inbetween needs to carry on from the middle of any motion in the repo's format."""
+    poses = []
+    for f in range(last_frame - 3, last_frame + 1):
+        f = max(0, f)
+        row = motion["rotations"][f]
+        poses.append({"root": motion["root"][f], "rotations": {name: row[4 * j : 4 * j + 4] for j, name in enumerate(motion["joints"])}})
+    return poses
 
 
 def set_blocks(path: Path, card: dict, end_m: float) -> tuple:
@@ -254,7 +296,7 @@ def main() -> None:
     if args.brief:
         with open(args.brief) as f:
             set_card = json.load(f).get("set")
-    request, record = plan(shot, library, set_card, Skeleton.load())
+    request, record = plan(shot, library, Skeleton.load(), set_card)
     with open(os.path.join(args.shot, "request.json"), "w") as f:
         json.dump(request, f, separators=(",", ":"))
     with open(os.path.join(args.shot, "plan.json"), "w") as f:

@@ -68,6 +68,11 @@ function shot_problems(shot: ShotList) -> string[] {
         problems.push("there are no moves");
     }
     for (let beat in shot.beats) {
+        if (beat.source != "poses") {
+            problems.push(
+                `beat "${beat.name}": only "poses" beats can be made so far, not "${beat.source}"`,
+            );
+        }
         let seconds = beat_seconds(beat);
         if ((seconds - beat.seconds).abs() > BEAT_SLACK_SECONDS) {
             problems.push(
@@ -205,7 +210,7 @@ function shoot(shot: string) -> string {
     //# 3. MotionBricks fills in the movement
     if (!run.has("motion.json")) {
         log.info("motion: sending the poses to MotionBricks on RunPod");
-        let reply = MotionBricks.from_env().call("generate", baml.fs.read(run.path("request.json")));
+        let reply = MotionBricks.from_env().call("inbetween", baml.fs.read(run.path("request.json")));
         baml.fs.write(run.path("motion.json"), reply.text);
         run.save("motion-record.json", reply.record);
     }
@@ -242,6 +247,7 @@ const TEST_REPLY = `
       "beats": [
         {
           "name": "look left",
+          "source": "poses",
           "seconds": 1.0,
           "moves": [
             { "pose": "crouch_look_left", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0,
@@ -250,6 +256,7 @@ const TEST_REPLY = `
         },
         {
           "name": "sneak forward",
+          "source": "poses",
           "seconds": 1.5,
           "moves": [
             { "pose": "sneak_left", "at_m": 0.5, "side_m": 0, "facing_deg": 0, "speed_mps": 0.8,
@@ -305,4 +312,39 @@ test "an unsound shot list is told what is wrong with it" {
     assert.contains(problems, "should last 1.0 s but its moves add up to");
     assert.contains(problems, "tokens must be 6 to 16, not 17");
     assert.contains(problems, "sneak_right at 0.2 m is behind the move before it (0.5 m)")
+}
+
+/// The names in motion/poses.json.
+class PoseLibrary {
+    poses: map<string, json>,
+}
+
+test "the pose names match the library" {
+    let library = baml.json.decode<PoseLibrary>(baml.fs.read(POSE_LIBRARY));
+    let names = library.poses.keys();
+    // Every pose in the library is one Opus may name, and is on the card it reads...
+    for (let name in names) {
+        let _ = baml.json.decode<PoseName>(baml.json.stringify(name));
+        assert.contains(POSE_CARD, name);
+    }
+    // ...and there are no names on offer that the library lacks.
+    assert.equal(names.length(), 13)
+}
+
+test "the hero shot list kept with its plan is sound" {
+    let shot = baml.json.decode<ShotList>(baml.fs.read(`${SHOT_PLANS}/hero-rooftop.shotlist.json`));
+    assert.equal(shot_problems(shot), []);
+    assert.equal(shot.beats.length(), 6);
+    let frames = shot.beats
+        .flat_map((b) -> {
+            b.moves
+        })
+        .reduce(
+            (total, m) -> {
+                total + move_frames(m)
+            },
+            0,
+        );
+    // Twelve seconds at 30 frames a second.
+    assert.equal(frames, 360)
 }
