@@ -16,8 +16,12 @@
 #   - without one, from the mesh: a block-out is separate pieces laid over each
 #     other, so each connected piece is found and its points gathered back into
 #     rings, then the same reading as above.
-# Elbows and knees sit on the straight line from shoulder to wrist and hip to
-# ankle, so they bend as true hinges.
+# Every joint sits in the middle of its limb's own cross-section. Elbows and
+# knees may leave the straight line from shoulder to wrist and hip to ankle
+# only front to back, the way they fold, so they still bend as true hinges.
+# The neck starts at the collar, just above the shoulders; the head turns
+# about a point a third of the way up it from the chin; both stand on the
+# neck's own center line.
 #
 # Bones (the same names on every character, so one animation fits all):
 #   hips > spine > chest > neck > head
@@ -41,6 +45,11 @@
 # a slim one looser ("flexibility": None works it out; 1.0 is an average
 # person). The same numbers ride on each bone as "limit_deg" [x-, x+, y-, y+,
 # z-, z+], which the animation tools clamp to.
+#
+# Each bone that has body around it also carries "capsule_m" [radius, length]: a
+# rod from the bone's head along it, as thick as the body there, for a physics
+# engine to stand in for the body (a ragdoll). It rides in the .glb as the
+# bone's extras, next to "limit_deg".
 #
 # The result also measures the build (leg and arm length, widths, bulk), which
 # walk.py turns into a gait.
@@ -289,6 +298,32 @@ def envelope(segs, axis, pos):
     mid[axis], half[axis] = pos, 0.0
     return mid, half
 
+def core_at(segs, axis, pos, narrowest, least):
+    """One piece's own middle and half-size where the axis reads `pos`, not the box around every piece there:
+    the longest piece (the limb itself, not the hand or a lump on it), or with `narrowest` the thinnest one
+    wider than `least` (the neck, not the chest it stands on). None where no piece has rings."""
+    best = None
+    for seg in segs:
+        if seg["axis"] != axis or seg["kind"] == "band" or len(seg["rows"]) < 2:
+            continue
+        hit = at_row(seg, pos)
+        if hit is None:
+            continue
+        sizes = [hit[1][k] for k in range(3) if k != axis]
+        if narrowest and min(sizes) < least:
+            continue
+        key = sizes[0] * sizes[1] if narrowest else seg["lo"][axis] - seg["hi"][axis]
+        if best is None or key < best[0]:
+            best = (key, hit)
+    return best[1] if best else None
+
+def toward(line, middle, most):
+    """A joint moved from the straight line between its neighbours to the middle of its limb, by `most` at most."""
+    off = middle - line
+    if off.length > most:
+        off = off * (most / off.length)
+    return line + off
+
 def rings_of(segs, axis, flip):
     """[position along the limb, cross-section area] for every ring of the segments, nearest the body first."""
     out, groups = [], []
@@ -449,11 +484,22 @@ rings = rings_of(arm_segs, 0, 1.0)
 wrist_x, notes["wrist"] = find_joint(rings, shoulder_x + 0.6 * arm_long, shoulder_x + 0.9 * arm_long, shoulder_x + 0.8 * arm_long, ["narrowest ring"])
 elbow_x, notes["elbow"] = find_joint(rings, lerp(shoulder_x, wrist_x, 0.38), lerp(shoulder_x, wrist_x, 0.68),
                                      lerp(shoulder_x, wrist_x, 0.54), ["close rings", "narrowest ring", "nearest ring"])
-arm_mid = envelope(arm_segs, 0, clamp(shoulder_x + 0.15 * arm_long, arm_in + 1e-4, far))
-wrist_mid = envelope(arm_segs, 0, wrist_x)
+# Each joint sits in the middle of the arm's own cross-section there (the arm piece itself, not the box around
+# the arm and the hand together, which a thumb or a cuff pulls off-center).
+arm_at = clamp(shoulder_x + 0.15 * arm_long, arm_in + 1e-4, far)
+arm_mid = core_at(arm_segs, 0, arm_at, False, 0.0) or envelope(arm_segs, 0, arm_at)
+wrist_mid = core_at(arm_segs, 0, wrist_x, False, 0.0) or envelope(arm_segs, 0, wrist_x)
 shoulder = Vector((shoulder_x, arm_mid[0].y, arm_mid[0].z))
 wrist = Vector((wrist_x, wrist_mid[0].y, wrist_mid[0].z))
 elbow = shoulder.lerp(wrist, (elbow_x - shoulder_x) / (wrist_x - shoulder_x))
+elbow_mid = core_at(arm_segs, 0, elbow_x, False, 0.0)
+if elbow_mid is not None:
+    # An arm that bows forward or back: the elbow goes to the middle of it, a little off the straight line. Only
+    # forward or back, the way the elbow folds, so the upper arm and forearm still share one hinge axis and it
+    # bends as a true hinge. And only a little when it goes back: an elbow behind the line is an arm built a
+    # little folded, and a hinge can't open past how it was built, so it stays under what the easiest walk asks
+    # of an elbow (8 degrees). (animate.py aims arm bones by where they point, so a bowed arm still hangs straight.)
+    elbow = toward(elbow, Vector((elbow.x, elbow_mid[0].y, elbow.z)), (0.03 if elbow_mid[0].y > elbow.y else 0.04) * (wrist_x - shoulder_x))
 tip_mid = envelope(arm_segs, 0, far - 1e-4) or wrist_mid
 hand_tip = wrist.lerp(Vector((far, tip_mid[0].y, tip_mid[0].z)), 0.9)
 arm_thick = wrist_mid[1].z
@@ -468,14 +514,21 @@ top = envelope(leg_segs, 2, leg_top - 1e-4)
 foot_top = max([s["hi"].z for s in foot_segs] or [floor + 0.075 * tall]) - floor
 ankle_z = floor + clamp(0.6 * foot_top, 0.03 * tall, 0.09 * tall)
 hip_z = max(leg_top - 0.25 * top[1].x, ankle_z + 0.55 * (leg_top - ankle_z))
-hip_mid = envelope(leg_segs, 2, hip_z)
-ankle_mid = envelope(leg_segs, 2, max(ankle_z, leg_low + 1e-4))
+hip_mid = core_at(leg_segs, 2, hip_z, False, 0.0) or envelope(leg_segs, 2, hip_z)
+ankle_mid = core_at(leg_segs, 2, max(ankle_z, leg_low + 1e-4), False, 0.0) or envelope(leg_segs, 2, max(ankle_z, leg_low + 1e-4))
 hip = Vector((hip_mid[0].x, hip_mid[0].y, hip_z))
 ankle = Vector((ankle_mid[0].x, ankle_mid[0].y, ankle_z))
 rings = rings_of(leg_segs, 2, -1.0)
 leg_long = hip_z - ankle_z
 knee_at, notes["knee"] = find_joint(rings, -(hip_z - 0.38 * leg_long), -(hip_z - 0.68 * leg_long), -(hip_z - 0.5 * leg_long), ["close rings", "nearest ring"])
 knee = hip.lerp(ankle, clamp((hip_z + knee_at) / leg_long, 0.44, 0.56))  # never so lopsided that the leg can't stride
+knee_mid = core_at(leg_segs, 2, knee.z, False, 0.0)
+if knee_mid is not None:
+    # The knee in the middle of the leg there, front to back: a leg is rarely a straight pipe from hip to ankle.
+    # Only front to back (the way a knee folds, so thigh and shin still share one hinge axis), and by little
+    # enough that a leg built a little folded can still open as far as a stride ever asks (a planted leg is
+    # never straighter than about 20 degrees of fold).
+    knee = toward(knee, Vector((knee.x, knee_mid[0].y, knee.z)), 0.025 * leg_long)
 leg_thick = envelope(leg_segs, 2, (hip_z + knee.z) / 2)[1].x
 toe_y = min([s["lo"].y for s in foot_segs] or [ankle.y - 0.12 * tall])
 foot_x = (min(s["lo"].x for s in foot_segs) + max(s["hi"].x for s in foot_segs)) / 2 if foot_segs else ankle.x
@@ -502,16 +555,32 @@ else:  # no piece to call a head: the top of the trunk stands in
     head_lo, head_hi, head_y = lerp(arm_z, high.z, 0.35), high.z, trunk_at(high.z - 1e-3)[0].y
 notes["head"] = "a head piece" if heads else "the top of the trunk"
 hips_z = hip_z + 0.02 * tall
-skull_z = max(head_lo + 0.2 * (head_hi - head_lo), hips_z + 0.2 * tall)
-neck_z = max(skull_z - 0.05 * tall, lerp(hips_z, skull_z, 0.75))
-spine_z, chest_z = lerp(hips_z, neck_z, 0.3), lerp(hips_z, neck_z, 0.62)
+# The head turns about a point inside the skull, about a third of the way up from the chin (where the spine
+# meets it, level with the ears), not at the chin. The neck starts at the collar, just above the line of the
+# shoulders, not halfway up the throat: a neck that hinges under the jaw folds the throat in two when it nods.
+# A head sunk between the shoulders (a troll) still gets a neck: short, and under the head.
+skull_z = max(head_lo + 0.3 * (head_hi - head_lo), hips_z + 0.2 * tall)
+neck_z = clamp(shoulder.z + 0.02 * tall, max(lerp(hips_z, skull_z, 0.62), skull_z - 0.09 * tall), skull_z - 0.04 * tall)
+spine_z, chest_z = lerp(hips_z, neck_z, 0.3), lerp(hips_z, neck_z, 0.6)
 
 def spine_point(z, toward_head):
     return Vector((0.0, lerp(trunk_at(z)[0].y, head_y, toward_head), z))
 
+# Front to back, the neck and the head's pivot sit on the neck's own center line: the thinnest piece on the
+# center line between the collar and the skull, if there is one. (The box around every piece at that height
+# is the shoulders', and its middle can be well off the neck's.)
+throat = [s for s in trunk if s not in heads and s["kind"] not in ("head", "tube") and s is not tail]
+neck_mid = core_at(throat, 2, (neck_z + skull_z) / 2, True, 0.015 * tall)
+if neck_mid is not None and neck_mid[1].x < 0.7 * chest_wide:
+    neck_y = neck_mid[0].y
+    notes["neck"] = "a neck piece"
+else:
+    neck_y = lerp(trunk_at(neck_z)[0].y, head_y, 0.25)
+    notes["neck"] = "between the chest and the head"
+skull_y = lerp(neck_y, head_y, 0.35)
 joints = {"hips": spine_point(hips_z, 0), "spine": spine_point(spine_z, 0), "chest": spine_point(chest_z, 0),
-          "neck": spine_point(neck_z, 0.25), "head": spine_point(skull_z, 0.6),
-          "head_top": Vector((0.0, lerp(trunk_at(skull_z)[0].y, head_y, 0.8), lerp(skull_z, head_hi, 0.85)))}
+          "neck": Vector((0.0, lerp(trunk_at(neck_z)[0].y, neck_y, 0.5), neck_z)), "head": Vector((0.0, skull_y, skull_z)),
+          "head_top": Vector((0.0, lerp(skull_y, head_y, 0.8), lerp(skull_z, head_hi, 0.85)))}
 collar = Vector((0.3 * shoulder_x, lerp(joints["chest"].y, shoulder.y, 0.7), lerp(joints["neck"].z, shoulder.z, 0.7)))
 
 tail_points = []
@@ -552,6 +621,15 @@ for tag, flip in (("_l", 1.0), ("_r", -1.0)):
 for i in range(len(tail_points) - 1):
     plan.append(("tail_%d" % (i + 1), tail_points[i], tail_points[i + 1], "tail_%d" % i if i else "hips", "tail"))
 
+# The elbow's axis: square to the plane the shoulder, elbow and wrist lie in (straight up, for a straight level arm).
+elbow_axis = (elbow - shoulder).cross(wrist - elbow)
+if elbow_axis.length < 1e-4 * arm_long * arm_long:
+    along_arm = (wrist - shoulder).normalized()
+    elbow_axis = Vector((0, 0, 1)) - along_arm * along_arm.z
+elbow_axis.normalize()
+if elbow_axis.z < 0:
+    elbow_axis = -elbow_axis
+
 data = bpy.data.armatures.new(PARAMS["name"])
 rig = bpy.data.objects.new(PARAMS["name"], data)
 scene.collection.objects.link(rig)
@@ -567,6 +645,8 @@ for name, start, end, parent, kind in plan:
         bone.parent = data.edit_bones[parent]
         bone.use_connect = (bone.parent.tail - bone.head).length < 1e-5
     bone.align_roll(Vector(UP[kind]))
+    if name.startswith(("upper_arm", "forearm")):  # both turn about the elbow's one axis, so the elbow is a true hinge even on an arm built a little bent
+        bone.align_roll(Vector((-elbow_axis.x, elbow_axis.y, elbow_axis.z)) if name.endswith("_r") else elbow_axis)
 bpy.ops.object.mode_set(mode="OBJECT")
 data.display_type = "STICK"
 rig.show_in_front = True
@@ -714,6 +794,11 @@ for obj in meshes:
     skin[obj.name]["unweighted"] = bare
 
 # ---- limits ----
+# How far the elbow and the knee are folded as the character stands (a joint moved to the middle of a bowed limb; less than 0 is opened past straight).
+upper_way, fore_way = (elbow - shoulder).normalized(), (wrist - elbow).normalized()
+thigh_way, shin_way = (knee - hip).normalized(), (ankle - knee).normalized()
+built_bent = {"forearm": round(-math.degrees(math.asin(clamp(upper_way.cross(fore_way).z, -1.0, 1.0))), 2),
+              "shin": round(math.degrees(math.asin(clamp(thigh_way.cross(shin_way).x, -1.0, 1.0))), 2)}
 limits = {}
 for bone in rig.pose.bones:
     bone.rotation_mode = "QUATERNION"
@@ -728,6 +813,24 @@ for bone in rig.pose.bones:
     rule.use_limit_x = rule.use_limit_y = rule.use_limit_z = True
     rule.min_x, rule.max_x, rule.min_y, rule.max_y, rule.min_z, rule.max_z = [math.radians(v) for v in lim]
     data.bones[bone.name]["limit_deg"] = lim
+
+# ---- a capsule for each bone, for a physics engine: a rod along the bone, as thick as the body is around it ----
+# (the body's own points that mostly follow the bone; four in five of them lie inside the radius, so a stray tusk doesn't fatten it)
+around = {name: [] for name, start, end, chain in bones}
+for obj in meshes:
+    if obj.get("forge") == "gear":
+        continue
+    names = [g.name for g in obj.vertex_groups]
+    for v in obj.data.vertices:
+        most = max([(g.weight, names[g.group]) for g in v.groups] or [(0.0, "")])
+        if most[0] >= 0.5 and most[1] in around:
+            around[most[1]].append(worlds[obj.name][v.index])
+capsules = {}
+for name, start, end, chain in bones:
+    far_off = sorted(nearest_on(start, end, p) for p in around[name])
+    if len(far_off) >= 4:
+        capsules[name] = [round(far_off[int(0.8 * (len(far_off) - 1))], 4), round((end - start).length, 4)]
+        data.bones[name]["capsule_m"] = capsules[name]  # [radius, length]: the rod runs from the bone's head along its own y axis
 
 # ---- sockets follow their bones ----
 hung = {}
@@ -794,6 +897,6 @@ result = {
     "joints": {name: [round(c, 3) for c in start] for name, start, end, chain in bones},
     "skin": skin, "meshes": [o.name for o in meshes], "sockets": hung,
     "weights": "automatic" if why is None else "pieces", "why_not_automatic": why,
-    "limits": limits, "measure": measure, "bones_outside": outside,
+    "limits": limits, "built_bent_deg": built_bent, "capsules": capsules, "measure": measure, "bones_outside": outside,
 }
 print("RESULT " + json.dumps(result))

@@ -84,6 +84,7 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just tidy <run folder> run` | only the Blender part of a run, once its clip is there |
 | `just walk-strip <file.glb> <out.png> [side or front]` | a picture of the walk (or the run), eight moments side by side |
 | `just bake-check <run folder> <file.glb>…` | measure a dressed character's colors against the detailed mesh: does each piece show its own cloth, and the body skin |
+| `just rig-check <file.glb>…` | measure a walking or running character: where each joint sits in the body around it, how much volume each part keeps over the clip, how much each part shakes |
 | `just cloth-check <file.glb>…` | measure a dressed character: how much skin comes through its clothes over the walk, how far they sit off the body |
 | `just shoot [shot]` | make a shot from its plan in `motion/shots/`: Opus lays it out, our poses are placed, MotionBricks fills in the movement (and Kimodo makes any beat that is a sentence), it is measured and filmed |
 | `just cast <shot> <character run> [prop run] [clip]` | put a character (and what it carries) in a finished shot; `clip` names the cut (`hero`, or `hero-mixed` for a second one) |
@@ -92,11 +93,17 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just set-from-run <set> <run folder>` | use an object you already made as a set's geometry |
 | `just shoot <take>`, then `just cast <take> runs "" <clip>` | a take on a set with several people in it (`studio-guest-entrance`): every role's motion, then the cast, filmed from every camera of the set |
 | `just clip-to-gallery <shot> <character run> [clip]` | copy the shot's clips into the character's folder, so the gallery shows a "Hero" button; a second cut gets a button of its own |
+| `just comic "<premise>" [strip or scroll] ["<cast>"] ["<places>"] [name]` | make a comic: Opus writes it, one background Blender draws it, code letters it and lays out the page |
+| `just comic-again <name>` | draw and letter `comics/<name>/comic.json` again after editing it by hand; asks no model |
+| `just comic-kit` | what a comic can be made from right now: cast, poses, clip moments, expressions, places |
+| `just expressions <who>` | give a cast member its eight drawn faces (one Codex image), cut and fitted to its head |
+| `just comic-style <out folder> <file.glb>…` | a character before and after the comic style, side by side |
+| `just comic-poses <file.glb> <out.png>` | every comic pose on one character, to check a new pose |
 | `just poses` | rebuild the pose library from `scripts/motion/author_poses.py`, checking each pose as a body |
 | `just motion-health`, `just motion-info`, `just motion-selftest` | is the motion endpoint up, what is it running, and does it work end to end |
 | `just text-info` | what the sentence-to-motion model has fetched and loaded (the first call fetches it) |
 | `just recipe <run folder>` | for a run from before recipes were kept: get its block-out's recipe back from the transcript, so `midpoly` can be made |
-| `just gallery` | look at every object, raw vs cleaned-up, on this Mac or a phone on the same Wi-Fi |
+| `just gallery` | look at every object, raw vs cleaned-up, and read the comics, on this Mac or a phone on the same Wi-Fi |
 | `just transcript <run folder> <step>` | read the Blender code Claude ran in a step (`polish`, `parts`, `lowpoly`) |
 | `just test-tools` | try the Blender scripts on real runs in a background Blender (your open Blender is left alone) |
 | `just check-safe` | check that the Blender scripts will get past the add-on's safe mode |
@@ -175,6 +182,8 @@ Claude says how each piece is worn when it builds it (`"fit": "tight"`, `"loose"
 ## Walking
 
 Those two versions also come with a skeleton and a walk (`profiles/lowpoly-walk.glb`, `midpoly-walk.glb`): 21 bones with plain names (`hips`, `thigh_l`, `forearm_r`...), a few more for a tail, each joint with its limits written in the file. Gear pieces follow the same bones (loose cloth has a few of its own, `cloth_...`) and the prop points ride on them. The walk is worked out from the model, not drawn by hand, so each character gets its own. In the gallery, press "Walk" to see it on the spot. `.claude/skills/tidy-mesh/bones.json` says what each bone is called in SOMA (NVIDIA MotionBricks) and Mixamo, so motion from elsewhere fits the same bones; see Running and Shots.
+
+**The skeleton fits the body.** Every joint is put in the middle of its limb's own cross-section. The neck starts at the collar, just above the shoulders, and the head turns about a point inside the skull, level with the ears, so a nod doesn't fold the throat. A knee points where the motion's knee pointed, and a heel that has to lift to spare an ankle lifts smoothly, so the legs don't squirm. Each bone also carries a simple capsule sized from the body around it, for a physics engine to make a ragdoll from. `just rig-check <file.glb>` measures all of it on a finished file: where each joint sits, how much volume each part keeps over the clip, and how much each part shakes.
 
 ## Running
 
@@ -272,6 +281,35 @@ A take can also swap a sentence (`"sentences": {"guest_walks_on": "A person stri
 In the gallery, **Sets** has a page per set: the set in 3D with its marks and cameras labelled, a row to look through each fixed camera, its dressing as chips, and a button for each shot filmed there that brings the cast on and plays it.
 
 **What is weak.** Everyone on a set is brought to the same hip height, which is how they all land on the same marks; so short-legged Roosevelt comes out bigger than long-legged Lincoln, who was the taller man. The handshake only puts two wrists near one spot: the hands lie flat the way a hand rests on a wall, nobody grips, nothing pumps, and a short arm comes up short. A seat is a box, solid down to the floor: a body is kept out of it and can float a few centimetres above it, nothing pulls it down onto the cushion, and nothing knows about the chair's back. The floor is flat, so the ring's steps are a mark at mat height and its ropes have a gap where people come in. Where a walk meets a turn (leaving the handshake) the join is the roughest part of the motion. Nothing keeps two people out of each other, only out of the set. The cameras never move and nobody picks the cut: you get three films. Only the template has been shot; Opus has been shown how to block by marks but has not yet laid out a set shot for real. Filming is slow, about four minutes a camera.
+## Comics
+
+Webcomics got cheap by a few habits: one drawing "hand" used on everything, the same poses and framings again and again, plain backgrounds, a sheet of faces to swap, and words doing the work. We have 3D characters that can already stand, walk and vault a wall, so a panel is a frozen moment of one of them, drawn in one style. A panel takes about a quarter of a second to draw.
+
+```
+just comic "Roosevelt challenges patient young Lincoln to a friendly bout" strip "lincoln, roosevelt" ring
+just comic "A very serious ninja crosses a rooftop, less quietly than planned" scroll ninja rooftop
+```
+
+How a comic gets made:
+
+1. **Opus writes it as data, not pictures.** A list of panels: the framing, the place, who stands where facing which way, each one's pose and expression, the lines and who says them, a caption, a sound effect. It can only pick from what is on the disk (`just comic-kit` shows it). Code checks every name and that the words fit the room a framing leaves, and asks once more if not. (`baml_src/10_comic`)
+2. **One background Blender draws every panel.** Each character is brought in once, frozen in a pose, stood on its spot, given its face, and drawn. (`scripts/comic/render_panels.py`)
+3. **Code letters it.** Balloons, tails, captions and sound effects are laid over the picture as real text, not pixels. A tail points at its speaker's head and stops short of the face; no balloon covers a face. (`scripts/comic/lettering.py`)
+4. **Code lays out the page.** `comics/<name>/page.html` is one file you can send to someone: a strip on a wide screen, one panel under another on a phone. `strip.png` (or `scroll.png`) is the same thing as a picture.
+
+What a comic is made from:
+
+- **The hand** is `toon.py` in the skill: flat color in three tones of light, each texture simplified to a few steps, and an ink line that stays the same width on screen near and far. The same on every character, prop and set, so low-poly roughness reads as a style. `just comic-style` shows any character before and after.
+- **Poses** come from three places: thirteen written by hand for talking (`motion/comic_poses.json`: stand, talk, point, flex, shrug...), any moment of a walk, a run or a shot (`run@0.4`), and the named poses a shot was built from (`hero:vault_over`), which stay where the shot had them.
+- **Expressions.** Codex draws each cast member's head eight times (neutral, happy, angry, surprised, sad, smug, talking, shouting), working from the head sheet and from our own comic-style picture of the 3D head, so the drawing has our look and that head's shape. One image per character. A panel projects the face it wants onto the front of the head. A masked character gets only its eyes. `just expressions <who>`.
+- **Four framings**: wide, two-shot, single, close-up. The camera is fitted to the characters each time, with room left at the top for balloons.
+- **Places**: the wrestling ring and the shot's rooftop stand in as backdrops, each with a painted picture behind it (one Codex image, reused in every panel); or a flat color for a talk panel.
+
+`comics/<name>/comic.json` is the whole comic. Change a pose or a line by hand and run `just comic-again <name>`: nothing is asked of any model. The gallery has a Comics shelf; open one to read it.
+
+**Sets.** A panel names a place, and optionally one of the place's cameras and marks. Today the places are stand-ins listed in `scripts/comic/kit.py`. When a `sets/<name>/set.json` exists it is used instead, through one function there (`from_set_json`); nothing else in the comics code reads a set file.
+
+**What is weak.** A drawn face is a flat picture on a 3D head: fine from the front and three-quarter, wrong in a true profile, and it sits on top of real glasses or a mustache. The hand-written poses are stiff, with mitten hands and no fingers. Nobody holds anything except the ninja's sword in its shot. The lettering measures text by letter widths, not by a browser, so a line can come out a few pixels wider than planned. Two characters are never checked for standing inside each other. More in the skill's "Comics" section.
 
 The detailed versions (`hero`, `quads`, `web`, `game`, `mobile`) still have the clothes as part of the body. They come from the picture, and the picture shows the character dressed.
 

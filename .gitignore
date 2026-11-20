@@ -9,3 +9,8 @@ __pycache__/
 
 # The picture Codex paints for a backdrop, full size; the smaller backdrop.png is what is kept
 sets/*/backdrop-full.png
+comics/_*/
+comics/kit.json
+comics/*/panels/*.png
+comics/style/
+comics/cast/*/faces.png

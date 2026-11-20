@@ -1,0 +1,151 @@
+{
+  "title": "Long Reach",
+  "premise": "Roosevelt, bursting with energy, challenges patient young Lincoln to a friendly wrestling match in the ring; Lincoln wins it without seeming to do anything at all",
+  "layout": "strip",
+  "panels": [
+    {
+      "framing": "wide",
+      "place": "ring",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "roosevelt",
+          "at": "left",
+          "facing": "right",
+          "pose": "flex",
+          "expression": "shouting"
+        },
+        {
+          "who": "lincoln",
+          "at": "right",
+          "facing": "left",
+          "pose": "stand",
+          "expression": "neutral"
+        }
+      ],
+      "lines": [
+        {
+          "who": "roosevelt",
+          "says": "Lincoln! A bully morning for a friendly bout!",
+          "how": "shout"
+        },
+        {
+          "who": "lincoln",
+          "says": "Morning, Theodore.",
+          "how": "say"
+        }
+      ],
+      "caption": null,
+      "sfx": null
+    },
+    {
+      "framing": "two-shot",
+      "place": "ring",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "roosevelt",
+          "at": "left",
+          "facing": "right",
+          "pose": "guard",
+          "expression": "happy"
+        },
+        {
+          "who": "lincoln",
+          "at": "right",
+          "facing": "left",
+          "pose": "stand",
+          "expression": "talking"
+        }
+      ],
+      "lines": [
+        {
+          "who": "roosevelt",
+          "says": "I've boxed, ranched, rowed and climbed! Brace yourself!",
+          "how": "say"
+        },
+        {
+          "who": "lincoln",
+          "says": "I'll try my best to stand here.",
+          "how": "say"
+        }
+      ],
+      "caption": null,
+      "sfx": null
+    },
+    {
+      "framing": "two-shot",
+      "place": "ring",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "roosevelt",
+          "at": "left",
+          "facing": "right",
+          "pose": "guard",
+          "expression": "surprised"
+        },
+        {
+          "who": "lincoln",
+          "at": "right",
+          "facing": "left",
+          "pose": "point",
+          "expression": "neutral"
+        }
+      ],
+      "lines": [
+        {
+          "who": "roosevelt",
+          "says": "Your arms... just... keep... going!",
+          "how": "shout"
+        },
+        {
+          "who": "lincoln",
+          "says": "Take your time.",
+          "how": "say"
+        }
+      ],
+      "caption": null,
+      "sfx": "SHOVE"
+    },
+    {
+      "framing": "wide",
+      "place": "ring",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "roosevelt",
+          "at": "left",
+          "facing": "right",
+          "pose": "slump",
+          "expression": "happy"
+        },
+        {
+          "who": "lincoln",
+          "at": "right",
+          "facing": "left",
+          "pose": "stand",
+          "expression": "smug"
+        }
+      ],
+      "lines": [
+        {
+          "who": "roosevelt",
+          "says": "Bully... I concede... Rematch tomorrow?",
+          "how": "say"
+        },
+        {
+          "who": "lincoln",
+          "says": "I'll be right here. Same spot.",
+          "how": "say"
+        }
+      ],
+      "caption": "Forty minutes later.",
+      "sfx": null
+    }
+  ]
+}

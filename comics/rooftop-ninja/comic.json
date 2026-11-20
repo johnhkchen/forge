@@ -1,0 +1,193 @@
+{
+  "title": "Silent as a Shadow",
+  "premise": "A very serious ninja crosses a rooftop at night, certain that nobody can see or hear a thing, while everything about the trip is a little louder and clumsier than planned; the last panel is the triumphant sword pose",
+  "layout": "scroll",
+  "panels": [
+    {
+      "framing": "wide",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "wide",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "left",
+          "pose": "hero:crouch_look_left",
+          "expression": "neutral"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "Silent. Invisible. A whisper in the dark.",
+          "how": "think"
+        }
+      ],
+      "caption": "Midnight. The city sleeps.",
+      "sfx": null
+    },
+    {
+      "framing": "wide",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "right",
+          "pose": "hero:sneak_right",
+          "expression": "surprised"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "That was the roof. Ninjas do not creak.",
+          "how": "think"
+        }
+      ],
+      "caption": null,
+      "sfx": "CREEEAK"
+    },
+    {
+      "framing": "close-up",
+      "place": "dusk",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "center",
+          "facing": "camera",
+          "pose": "startled",
+          "expression": "surprised"
+        }
+      ],
+      "lines": [],
+      "caption": null,
+      "sfx": "ACHOO!"
+    },
+    {
+      "framing": "single",
+      "place": "dusk",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "center",
+          "facing": "camera",
+          "pose": "hands_on_hips",
+          "expression": "smug"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "A ninja sneeze. Technically a whisper.",
+          "how": "think"
+        }
+      ],
+      "caption": null,
+      "sfx": null
+    },
+    {
+      "framing": "wide",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "wide",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "right",
+          "pose": "hero:sprint_right",
+          "expression": "angry"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "Swift as the wind. Light as the wind.",
+          "how": "think"
+        }
+      ],
+      "caption": null,
+      "sfx": "CLOMP CLOMP"
+    },
+    {
+      "framing": "wide",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "tall",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "right",
+          "pose": "hero:vault_over",
+          "expression": "neutral"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "Graceful.",
+          "how": "think"
+        }
+      ],
+      "caption": null,
+      "sfx": "SCRAAAPE"
+    },
+    {
+      "framing": "wide",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "wide",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "right",
+          "pose": "hero:land_three_point",
+          "expression": "smug"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "Like a falling leaf.",
+          "how": "think"
+        }
+      ],
+      "caption": null,
+      "sfx": "THUD!"
+    },
+    {
+      "framing": "wide",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "tall",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "camera",
+          "pose": "hero:hero_stance",
+          "expression": "happy"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "UNSEEN! UNHEARD! UNSTOPPABLE!",
+          "how": "shout"
+        }
+      ],
+      "caption": "Three streets away, every dog woke up.",
+      "sfx": null
+    }
+  ]
+}

@@ -2,10 +2,11 @@
 
     python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR]
 
-Read-only. Serves gallery/ (the page), runs/ (the files), sets/ (the standing
-sets) and shots/ (what was filmed on them), plus /api/runs, /api/sets and
-/api/takes, lists built from the folders on each request, so a new run or
-take shows up on reload. Binds to all interfaces so a phone on the same Wi-Fi
+Read-only. Serves gallery/ (the page), runs/ and comics/ (the files), sets/
+(the standing sets) and shots/ (what was filmed on them), plus /api/runs,
+/api/comics, /api/sets and /api/takes, lists built from the folders on each
+request, so a new run, comic or take shows up on reload. Binds to all
+interfaces so a phone on the same Wi-Fi
 can open it; nothing here is meant for the internet.
 """
 import argparse
@@ -22,6 +23,7 @@ PAGE = os.path.join(ROOT, "gallery")
 RUNS = os.path.join(ROOT, "runs")
 SETS = os.path.join(ROOT, "sets")
 SHOTS = os.path.join(ROOT, "shots")
+COMICS = os.path.join(ROOT, "comics")
 PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 
 mimetypes.add_type("model/gltf-binary", ".glb")
@@ -131,6 +133,7 @@ def run_summary(folder):
         "name": brief.get("name") or folder[20:].replace("-", " ").title(),
         "description": brief.get("description"),
         "size_m": brief.get("size_m"),
+        "character": bool(brief.get("character")),
         "picture": "image.png" if has("image.png") else None,
         "render": "render.png" if has("render.png") else None,
         "raw": "profiles/raw.glb" if has("profiles/raw.glb") else ("mesh.glb" if has("mesh.glb") else None),
@@ -203,6 +206,16 @@ def all_takes():
                 "handshakes": cast.get("handshakes") or [],
             })
     return out
+def all_comics():
+    """Every lettered comic in comics/: what its reader.json holds (scripts/comic/layout.py writes it)."""
+    if not os.path.isdir(COMICS):
+        return []
+    found = []
+    for name in sorted(os.listdir(COMICS)):
+        reader = read_json(os.path.join(COMICS, name, "reader.json"))
+        if reader and reader.get("panels") and not name.startswith(("_", ".")):
+            found.append((os.path.getmtime(os.path.join(COMICS, name, "reader.json")), dict(reader, name=name)))
+    return [comic for _, comic in sorted(found, key=lambda pair: pair[0], reverse=True)]
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -242,6 +255,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(all_sets())
         if path == "/api/takes":
             return self.send_json(all_takes())
+        if path == "/api/comics":
+            return self.send_json(all_comics())
+        if path.startswith("/comics/"):
+            return self.send_file(COMICS, path[len("/comics/"):])
         if path.startswith("/runs/"):
             return self.send_file(RUNS, path[len("/runs/"):])
         if path.startswith("/sets/"):

@@ -26,7 +26,7 @@
 
 const SETS_DIR = "sets";
 const SET_SCRIPTS = "scripts/sets";
-const BACKDROP_WIDTH_PX = 1024;
+const SET_BACKDROP_WIDTH_PX = 1024;
 
 /// A named spot on a set (the part of it that blocking needs to know).
 class SetMark {
@@ -226,19 +226,19 @@ function cast_take(run: Run, runs: string, clip: string) -> string {
     run.dir
 }
 
-const BACKDROP_RULES = `
+const SET_BACKDROP_RULES = `
     Use your built-in image_gen tool to generate exactly one landscape image
     (3:2, wide), then reply with the single word: done. Do not run shell
     commands and do not edit files.
 `;
 
 /// What Codex is asked for: the rules above, then the set's own words for its backdrop (sets/<name>/backdrop.txt).
-function backdrop_request(words: string) -> string {
+function set_backdrop_request(words: string) -> string {
     if (words.includes("image_gen")) {
         return words;
     }
     `
-        ${BACKDROP_RULES}
+        ${SET_BACKDROP_RULES}
 
         Image: a painted theatre backdrop, painted flat like a scenic artist's
         backcloth, filling the whole frame edge to edge with no border, no
@@ -251,15 +251,15 @@ function backdrop_request(words: string) -> string {
 /// Has Codex paint a set's backdrop from sets/<name>/backdrop.txt. Keeps the
 /// picture as it came (backdrop-full.png, not committed) and a smaller one
 /// the films and the gallery use (backdrop.png).
-function paint_backdrop(name: string) -> string {
+function paint_set_backdrop(name: string) -> string {
     let dir = `${SETS_DIR}/${name}`;
     let words = baml.fs.read(`${dir}/backdrop.txt`);
     log.info("backdrop: codex is painting");
-    let full = codex_picture(dir, backdrop_request(words), [], `${dir}/backdrop-full.png`);
+    let full = codex_picture(dir, set_backdrop_request(words), [], `${dir}/backdrop-full.png`);
     let small = `${dir}/backdrop.png`;
     let out = baml.sys.run(
         "sips",
-        args = ["-Z", `${BACKDROP_WIDTH_PX}`, full, "--out", small],
+        args = ["-Z", `${SET_BACKDROP_WIDTH_PX}`, full, "--out", small],
         capture_output = true,
     );
     if (!out.ok()) {
@@ -392,10 +392,10 @@ test "a take names its set, its segment and who plays whom" {
 }
 
 test "a backdrop is asked for as one wide painted picture" {
-    let asked = backdrop_request("A city skyline at dusk in steel blue and cream.");
+    let asked = set_backdrop_request("A city skyline at dusk in steel blue and cream.");
     assert.contains(asked, "exactly one landscape image");
     assert.contains(asked, "A city skyline at dusk");
     // A backdrop.txt that already holds the whole request is sent as it is.
     let whole = baml.fs.read("sets/studio/backdrop.txt");
-    assert.equal(backdrop_request(whole), whole)
+    assert.equal(set_backdrop_request(whole), whole)
 }

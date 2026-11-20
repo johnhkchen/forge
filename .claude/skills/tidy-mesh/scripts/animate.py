@@ -16,6 +16,11 @@
 #             from the T-pose, in the character's own axes (x left, y back, z
 #             up). Bones the motion leaves out follow their parent; bones the
 #             character lacks (a tail on a person) are skipped.
+#   "knees":  optional, {"l": per frame [x, y, z], "r": ...}: which way each
+#             knee's hinge points (to the character's left when it stands
+#             straight). A motion that has legs of its own says so here, and
+#             the knee points where its knee did; without it the knee points
+#             where the hips face, part of the way to where the foot points.
 #   "travel": how fast the ground slides back under a planted foot
 #   lengths are in units of the hip height, so one motion fits any size.
 # and two things only a shot has (both optional):
@@ -28,7 +33,10 @@
 #
 # What happens to it here, in order:
 #   1. Fit. Lengths are scaled by this character's hip height; each bone is
-#      turned from its own rest pose by the motion's amount.
+#      turned from its own rest pose by the motion's amount. Arm bones are
+#      turned from where a true T-pose has them (straight out to the sides):
+#      a character built with its arms sloping or bowed still hangs them
+#      where the motion does.
 #   2. Hands. A hand with a spot is put on it: the arm is solved from shoulder
 #      to wrist (two bones and a one-way elbow), and the hand is laid flat,
 #      palm down. A character's arms are not the motion's: where they are a
@@ -40,7 +48,10 @@
 #   3. Plant the feet. Each leg is solved from the hip joint to where the foot
 #      must be (two bones and a hinge: exact, no iteration), so the ball of a
 #      planted foot stays where it was put and moves back at exactly "travel".
-#      If an ankle would bend past its limit the heel lifts. Only if a planted
+#      If an ankle would bend past its limit the heel lifts, by the least
+#      that spares the ankle, and starts to a few frames early. If the hip
+#      can't turn a knee as far out as the motion's knee points, the knee
+#      comes round by the least the hip can do. Only if a planted
 #      foot is out of the leg's reach do the hips come down (for a whole loop;
 #      in a shot, only around the frames that need it). A foot in the air that
 #      is out of reach just comes up short.
@@ -59,7 +70,9 @@
 #          in the floor in a deep crouch on thicker legs, a leg folded as far
 #          as it goes and still under the top of a wall it is passing over.
 #      Each correction comes on and goes off over a few frames, and the leg is
-#      solved again with it, so limits still hold and a loop still closes.
+#      solved again with it, so limits still hold and a loop still closes. What
+#      is added to the hips (a rise, a shift toward a pinned hand) is evened
+#      out over the frames, so it adds no shake of its own.
 #   5. Limits. Every bone's turn is clamped to its "limit_deg" (the same
 #      numbers as its Limit Rotation constraint). "clamped" says which bones
 #      needed it and how often; a clamp on a leg can let a foot slide, and the
@@ -75,7 +88,10 @@
 # furthest it got from where it landed), how far anything went through the
 # floor and which bone's part it was, how deep anything is inside the set and
 # which part, how far a hand is from its spot while held there, turns outside
-# a limit, and whether the last frame equals the first. `"contact": False`
+# a limit, whether the last frame equals the first, how far the trunk's
+# bones ended up from what the motion wrote ("off_the_motion"), and the most
+# a knee's hinge turns about its thigh in one frame ("knee_axis_swing_deg":
+# a knee flung out sideways for a frame reads 20 and more). `"contact": False`
 # plays the motion as it was written, to measure against.
 #
 # Send through the blender MCP `execute_blender_code` tool from PARAMS down.
@@ -98,6 +114,7 @@ STRAIGHT = 0.985  # a leg never opens past this share of its full length: a lock
 TOUCH = 0.0002    # metres: nearer the floor or a block than this counts as touching, not through
 CLEAR = 0.004     # metres: how far out of a block a leg is moved
 EASE_FRAMES = 3   # a correction comes on and goes off over this many frames each side
+HEEL_FRAMES = 4   # a heel lifted to spare the ankle comes up and goes down over this many frames each side
 SET_FRAMES = 8    # and over this many where there is a set to get over
 DROP_FRAMES = 12  # the hips come down (in a shot) or rise, and go back, over this many frames each side
 RISE_ROUNDS = 5    # how many times the hips may be raised and everything solved again
@@ -164,6 +181,20 @@ def spread(values, reach, around):
         out.append(best)
     return out
 
+def gentle(values, around):
+    """Values evened out over neighbouring frames (weights 1 4 6 4 1, twice), so what is added to a motion has no corners in it."""
+    n = len(values)
+    out = list(values)
+    for again in range(2):
+        was = list(out)
+        for i in range(n):
+            total = 0.0
+            for k, w in ((-2, 1.0), (-1, 4.0), (0, 6.0), (1, 4.0), (2, 1.0)):
+                j = (i + k) % n if around else clamp(i + k, 0, n - 1)
+                total += w * was[j]
+            out[i] = total / 16.0
+    return out
+
 def outline(points, most):
     """The outermost of some points: the furthest one along each of `most` directions. What can touch a flat floor or wall first."""
     seen, kept = set(), []
@@ -211,6 +242,16 @@ for name in ("hips", "thigh_l", "shin_l", "foot_l", "toe_l", "thigh_r", "shin_r"
     if name not in rest:
         raise ValueError("the rig has no %r bone: it was not made by rig.py" % name)
 unrest = {name: rest[name].inverted() for name in rest}
+# A motion's turns are counted from a true T-pose: arms straight out to the sides. A character's own arms may
+# slope or bow a little as it was built, and turned from there by the motion's amount they would end up that
+# much off: an arm meant to hang straight down hangs out, or in through the hip. So the arm bones are turned
+# from where a true T-pose would have them, and point where the motion's arms point. (The spine, neck and head
+# are turned from the character's own rest, so it keeps its own carriage: a stoop stays a stoop.)
+aim = dict(rest)
+for name in rest:
+    if name[:-2] in ("upper_arm", "forearm", "hand"):
+        out = 1.0 if name.endswith("_l") else -1.0
+        aim[name] = Matrix(((0.0, out, 0.0), (-out, 0.0, 0.0), (0.0, 0.0, 1.0)))  # along the arm is straight out to the side; the elbow's axis is straight up
 scale = head["thigh_l"].z - floor  # this character's hip height: the motion's unit
 frames, fps = motion["frames"], motion["fps"]
 count = frames + 1
@@ -305,7 +346,7 @@ def body(f, off, tally):
         follow = rest[name] if up is None else faces[up] @ unrest[up] @ rest[name]
         want = follow
         if name in motion["turns"]:
-            want = Quaternion(motion["turns"][name][f]).to_matrix() @ rest[name]
+            want = Quaternion(motion["turns"][name][f]).to_matrix() @ aim[name]
         basis[name], changed = held(follow.inverted() @ want, limits.get(name))
         if changed:
             tally[name] = tally.get(name, 0) + 1
@@ -449,49 +490,130 @@ def pitch_of(turned):
     """How far a foot's toes point down, in degrees."""
     return math.degrees(math.asin(clamp(-(turned @ Vector((0, -1, 0))).z, -1.0, 1.0)))
 
+def knee_rule(faces, yaw):
+    """Which way a knee's hinge points when the motion doesn't say: where the hips face, and part of the way to where the foot points."""
+    ahead = faces["hips"] @ (unrest["hips"] @ Vector((0, -1, 0)))
+    facing = math.degrees(math.atan2(ahead.x, -ahead.y))
+    return spin(UP, facing + 0.6 * near_turn(yaw - facing)) @ Vector((1, 0, 0))
+
+def knee_side(tag, f, faces, yaw):
+    """Which way a knee's hinge points on a frame (toward the character's left when it stands straight).
+    Returns (the way, the way to fall back toward if this character's hip can't turn that far; None if there is none)."""
+    given = (motion.get("knees") or {}).get(tag)
+    if given:  # the motion says which way its own knee pointed: keep that
+        side = Vector(given[f])
+        if side.length > 1e-6:
+            return side.normalized(), knee_rule(faces, yaw)
+    return knee_rule(faces, yaw), None
+
+def leg_at(tag, hip, ball, turned, aside, faces, basis):
+    """One leg solved once, hip to ankle, with the foot turned as given: two bones and a hinge. Returns
+    (thigh was clamped, shin was clamped, foot was clamped, how far the ankle's bend is outside its limit in degrees, how far out of reach)."""
+    thigh, shin, foot = "thigh_" + tag, "shin_" + tag, "foot_" + tag
+    l1, l2 = legs[tag]["thigh"], legs[tag]["shin"]
+    ankle = ball - turned @ legs[tag]["sole"]
+    gap = ankle - hip
+    far = clamp(gap.length, abs(l1 - l2) + 1e-4, STRAIGHT * (l1 + l2))
+    short_by = max(0.0, gap.length - STRAIGHT * (l1 + l2))
+    along = gap.normalized()
+    side = aside - along * aside.dot(along)
+    if side.length < 1e-4:
+        side = Vector((1, 0, 0)) - along * along.x
+    side.normalize()
+    open_by = math.acos(clamp((l1 * l1 + far * far - l2 * l2) / (2 * l1 * far), -1.0, 1.0))
+    upper = Quaternion(side, -open_by) @ along  # the knee goes forward
+    knee = hip + upper * l1
+    follow = faces["hips"] @ unrest["hips"] @ rest[thigh]
+    basis[thigh], bent = held(follow.inverted() @ frame_of(side, upper), limits.get(thigh))
+    faces[thigh] = follow @ basis[thigh]
+    if bent:
+        knee = hip + faces[thigh].col[1] * l1
+    follow = faces[thigh] @ unrest[thigh] @ rest[shin]
+    lower = hip + along * far - knee if not bent else ankle - knee
+    basis[shin], hinge = held(follow.inverted() @ frame_of(faces[thigh].col[0], lower), limits.get(shin))
+    faces[shin] = follow @ basis[shin]
+    follow = faces[shin] @ unrest[shin] @ rest[foot]
+    asked = follow.inverted() @ (turned @ rest[foot])
+    basis[foot], changed = held(asked, limits.get(foot))
+    faces[foot] = follow @ basis[foot]
+    past, lim = 0.0, limits.get(foot)
+    if changed and lim is not None:
+        bend = math.degrees(asked.to_euler("XYZ")[0])
+        past = bend - clamp(bend, lim[0], lim[1])
+    return bent, hinge, changed, past, short_by
+
+def ball_miss(tag, hip, ball, faces):
+    """How far the ball of the foot is from where it should be, as the leg now stands."""
+    thigh, shin, foot = "thigh_" + tag, "shin_" + tag, "foot_" + tag
+    knee = hip + faces[thigh] @ (unrest[thigh] @ (head[shin] - head[thigh]))
+    ankle = knee + faces[shin] @ (unrest[shin] @ (head[foot] - head[shin]))
+    return (ankle + faces[foot] @ (unrest[foot] @ legs[tag]["sole"]) - ball).length
+
 def leg(tag, f, faces, at, basis, fix, tally):
     """One leg on one frame: hip to ankle by two bones and a hinge, then the foot and toes. `fix` is what the
-    contact step asks for: "ease" (0 to 1: how much of the heel's lift is kept) and "move" (the foot, moved).
+    contact step asks for: "ease" (0 to 1: how much of the heel's lift is kept), "move" (the foot, moved) and
+    "heel" (degrees the heel is lifted, or lowered, to keep the ankle inside its limit; more is added if it takes more).
     Returns what came of it: how deep the foot's mesh is in the floor, how to get the leg out of a block, and so on."""
     thigh, shin, foot, toe = "thigh_" + tag, "shin_" + tag, "foot_" + tag, "toe_" + tag
     l1, l2 = legs[tag]["thigh"], legs[tag]["shin"]
     hip = hip_of(tag, faces, at)
     target, asked, yaw, planted = foot_target(tag, f)
     ball = target + fix["move"]
-    turned = spin(UP, yaw) @ spin(Vector((1, 0, 0)), asked * fix["ease"] if asked > 0 else asked)
-    # The knee points where the hips face, and part of the way to where the foot points.
-    ahead = faces["hips"] @ (unrest["hips"] @ Vector((0, -1, 0)))
-    facing = math.degrees(math.atan2(ahead.x, -ahead.y))
-    knee_yaw = facing + 0.6 * near_turn(yaw - facing)
-    short_by, bent, hinge = 0.0, False, False
-    for attempt in range(10):
-        ankle = ball - turned @ legs[tag]["sole"]
-        gap = ankle - hip
-        far = clamp(gap.length, abs(l1 - l2) + 1e-4, STRAIGHT * (l1 + l2))
-        short_by = max(0.0, gap.length - STRAIGHT * (l1 + l2))
-        along = gap.normalized()
-        side = spin(UP, knee_yaw) @ Vector((1, 0, 0))
-        side = (side - along * side.dot(along)).normalized()
-        open_by = math.acos(clamp((l1 * l1 + far * far - l2 * l2) / (2 * l1 * far), -1.0, 1.0))
-        upper = Quaternion(side, -open_by) @ along  # the knee goes forward
-        knee = hip + upper * l1
-        follow = faces["hips"] @ unrest["hips"] @ rest[thigh]
-        basis[thigh], bent = held(follow.inverted() @ frame_of(side, upper), limits.get(thigh))
-        faces[thigh] = follow @ basis[thigh]
-        if bent:
-            knee = hip + faces[thigh].col[1] * l1
-        follow = faces[thigh] @ unrest[thigh] @ rest[shin]
-        lower = hip + along * far - knee if not bent else ankle - knee
-        basis[shin], hinge = held(follow.inverted() @ frame_of(faces[thigh].col[0], lower), limits.get(shin))
-        faces[shin] = follow @ basis[shin]
-        follow = faces[shin] @ unrest[shin] @ rest[foot]
-        basis[foot], changed = held(follow.inverted() @ (turned @ rest[foot]), limits.get(foot))
-        faces[foot] = follow @ basis[foot]
+    aside, other = knee_side(tag, f, faces, yaw)
+    level = spin(UP, yaw)
+    tilt = (asked * fix["ease"] if asked > 0 else asked) + fix.get("heel", 0.0)
+    turned = level @ spin(Vector((1, 0, 0)), tilt)
+    bent, hinge, changed, past, short_by = leg_at(tag, hip, ball, turned, aside, faces, basis)
+    if bent and other is not None:
+        # The motion's knee points further out or in than this character's hip can turn (a deep crouch with the
+        # knees wide), and a clamped thigh would drag the foot off its spot. The knee comes round toward where
+        # the hips face by the least that the hip can do; if the hip can't do that either, whichever of the two
+        # leaves the foot nearer its spot.
+        missed = ball_miss(tag, hip, ball, faces)
+        if not leg_at(tag, hip, ball, turned, other, faces, basis)[0]:
+            near, far_off = 0.0, 1.0
+            for step in range(7):
+                mid = (near + far_off) / 2.0
+                if leg_at(tag, hip, ball, turned, aside.lerp(other, mid), faces, basis)[0]:
+                    near = mid
+                else:
+                    far_off = mid
+            aside = aside.lerp(other, far_off)
+        elif ball_miss(tag, hip, ball, faces) < missed:
+            aside = other
+        bent, hinge, changed, past, short_by = leg_at(tag, hip, ball, turned, aside, faces, basis)
+    if changed and abs(past) > 0.02:
+        # The ankle is at the end of its bend. The heel lifts (or drops) by the least that brings the ankle back
+        # inside its limit, with the ball of the foot where it was planted: found by halving, so the same pose a
+        # frame later gives nearly the same answer. (Solving round and round from the clamped foot instead could
+        # land far from the last frame's answer, and the knee jumped.)
+        way = 1.0 if past < 0 else -1.0
+        near, far_off = 0.0, None
+        for reach_to in (8.0, 20.0, 40.0, 70.0, 100.0):
+            got = leg_at(tag, hip, ball, level @ spin(Vector((1, 0, 0)), tilt + way * reach_to), aside, faces, basis)
+            if abs(got[3]) <= 0.02 or got[3] * past < 0:
+                far_off = reach_to
+                break
+            near = reach_to
+        if far_off is not None:
+            for step in range(9):
+                mid = (near + far_off) / 2.0
+                got = leg_at(tag, hip, ball, level @ spin(Vector((1, 0, 0)), tilt + way * mid), aside, faces, basis)
+                if abs(got[3]) <= 0.02 or got[3] * past < 0:
+                    far_off = mid
+                else:
+                    near = mid
+            tilt += way * far_off
+        turned = level @ spin(Vector((1, 0, 0)), tilt)
+        bent, hinge, changed, past, short_by = leg_at(tag, hip, ball, turned, aside, faces, basis)
+    for attempt in range(9):
         if not changed:
             break
-        # The ankle is at a limit. The foot goes where the ankle lets it (the heel lifts, the foot
-        # rolls), and the leg is solved again so the ball of the foot stays where it was planted.
+        # Still at a limit (the ankle's roll or turn, which lifting the heel can't cure). The foot goes where the
+        # ankle lets it, and the leg is solved again so the ball of the foot stays where it was planted.
         turned = faces[foot] @ unrest[foot]
+        bent, hinge, changed, past, short_by = leg_at(tag, hip, ball, turned, aside, faces, basis)
+    heel = tilt - (asked * fix["ease"] if asked > 0 else asked)
     for name, was in ((thigh, bent), (shin, hinge)):
         if was:
             tally[name] = tally.get(name, 0) + 1
@@ -526,7 +648,7 @@ def leg(tag, f, faces, at, basis, fix, tally):
     if changed:
         tally[toe] = tally.get(toe, 0) + 1
     faces[toe] = follow @ basis[toe]
-    out = {"planted": planted, "asked": asked, "pitch": pitch, "short": short_by, "off": Vector((off.x, off.y, 0.0)).length, "deep": 0.0, "sunk": 0.0, "out": None, "in_set": 0.0, "under": 0.0}
+    out = {"planted": planted, "asked": asked, "pitch": pitch, "heel": heel, "short": short_by, "off": Vector((off.x, off.y, 0.0)).length, "deep": 0.0, "sunk": 0.0, "out": None, "in_set": 0.0, "under": 0.0}
     if not careful:
         return out
     toe_turn = faces[toe] @ unrest[toe]
@@ -654,6 +776,12 @@ for attempt in range(RISE_ROUNDS):
                 if over.length > HIPS_FOR_A_HAND * scale:
                     over = over * (HIPS_FOR_A_HAND * scale / over.length)
         shift.append(over)
+    if any(v.length > 0 for v in shift):  # worked out a frame at a time, the hips' shift toward a hand's spot would shake: it is evened out over the frames
+        evened = [gentle([v[axis] for v in shift], looped) for axis in range(3)]
+        shift = [Vector((evened[0][g], evened[1][g], evened[2][g])) for g in range(span)]
+    for g in range(span):
+        off = UP * (rise[g] - drops[g])
+        over = shift[g]
         basis, faces, at, miss = posed(g, off + over, clamped, True)
         solved.append((basis, faces, at))
         low = 0.0
@@ -664,7 +792,7 @@ for attempt in range(RISE_ROUNDS):
         sunk.append(low if low > TOUCH else 0.0)
     if not careful or max(sunk) <= TOUCH or attempt == RISE_ROUNDS - 1:
         break
-    rise = [min(a + 1.2 * b, MOST_RISE * scale) for a, b in zip(rise, spread(sunk, DROP_FRAMES, looped))]  # a knee comes up by less than the hips do
+    rise = [min(a + 1.2 * b, MOST_RISE * scale) for a, b in zip(rise, gentle(spread(sunk, DROP_FRAMES, looped), looped))]  # a knee comes up by less than the hips do; evened out, so the rise has no corners
 did = {"lifted": 0.0, "lifted_frames": 0, "heel_lowered": 0.0, "heel_lowered_frames": 0, "moved_clear": 0.0, "moved_clear_frames": 0,
        "left_in_floor": 0.0, "left_in_set": 0.0, "planted_off": 0.0, "short": 0.0, "air_short": 0.0, "hand_off": 0.0}
 heel_help = 0.0
@@ -676,11 +804,25 @@ for tag in ("l", "r"):
         more = spread([max(0.0, fix["move"][axis]) for fix, got in wants[tag]], ahead, looped)
         less = spread([max(0.0, -fix["move"][axis]) for fix, got in wants[tag]], ahead, looped)
         moves.append([a - b for a, b in zip(more, less)])
+    # A heel lifted to spare the ankle starts to lift a few frames before it must, and settles as gently.
+    heels = [a - b for a, b in zip(spread([max(0.0, got["heel"]) for fix, got in wants[tag]], HEEL_FRAMES, looped),
+                                   spread([max(0.0, -got["heel"]) for fix, got in wants[tag]], HEEL_FRAMES, looped))]
     for g in range(span):
         basis, faces, at = solved[g]
         own, alone = wants[tag][g]
         across = own["move"] if alone["planted"] else Vector((moves[0][g], moves[1][g], 0.0))  # a planted foot is not pushed sideways for a neighbouring frame's sake
-        fix, got = settle(tag, g, faces, at, basis, {"ease": eased[g], "move": Vector((across.x, across.y, moves[2][g]))})
+        asked_for = {"ease": eased[g], "move": Vector((across.x, across.y, moves[2][g])), "heel": heels[g]}
+        fix, got = settle(tag, g, faces, at, basis, asked_for)
+        if got["deep"] > max(alone["deep"], 0.0) + TOUCH and abs(heels[g]) > 1e-6:
+            # A heel lifted early pushed the toes into the floor: it lifts by as much of that as the floor allows.
+            lo, hi = 0.0, 1.0
+            for step in range(6):
+                mid = (lo + hi) / 2.0
+                if settle(tag, g, faces, at, basis, dict(asked_for, heel=heels[g] * mid))[1]["deep"] > max(alone["deep"], 0.0) + TOUCH:
+                    hi = mid
+                else:
+                    lo = mid
+            fix, got = settle(tag, g, faces, at, basis, dict(asked_for, heel=heels[g] * lo))
         if got["short"] > alone["short"] + 0.001 or got["off"] > alone["off"] + 0.001:
             fix = own  # eased toward its neighbours it no longer reaches: this frame keeps what it worked out alone
         got = leg(tag, g, faces, at, basis, fix, clamped)
@@ -779,6 +921,8 @@ if PARAMS["check"]:
     landed, drift = {}, 0.0
     in_set = {"cm": 0.0, "part": "", "frame": -1, "block": "", "frames": 0, "by_part": {}}
     hand_miss = {}
+    strayed = {name: 0.0 for name in ("hips", "spine", "chest", "neck", "head") if name in motion["turns"] and name in rest}  # how far the trunk's bones end up from what the motion wrote
+    hips_off, knee_was, knee_swing = 0.0, {}, 0.0
     reach_all = max((v.co.length for obj in meshes for v in obj.data.vertices), default=1.0)
     for f in range(count):
         scene.frame_set(f)
@@ -805,6 +949,20 @@ if PARAMS["check"]:
                 wrist = shown.matrix_world @ shown.pose.bones["hand_" + tag].head
                 hand_miss[tag] = max(hand_miss.get(tag, 0.0), (wrist - rig.matrix_world @ spot).length)
         hips_now = shown.matrix_world @ shown.pose.bones["hips"].head
+        for name in strayed:
+            wrote = Quaternion(motion["turns"][name][f % span]).to_matrix() @ rest[name]
+            strayed[name] = max(strayed[name], math.degrees(shown.pose.bones[name].matrix.to_3x3().to_quaternion().rotation_difference(wrote.to_quaternion()).angle))
+        hips_off = max(hips_off, (shown.pose.bones["hips"].head - head["hips"] - Vector(motion["hips"][f % span]) * scale).length)
+        for tag in ("l", "r"):  # how far a knee's hinge turns about its thigh in one frame, as the hips see it: a knee flung sideways for a frame shows here
+            inward = shown.pose.bones["hips"].matrix.to_3x3().inverted()
+            thigh_now = shown.pose.bones["thigh_" + tag].matrix.to_3x3()
+            axis, along = inward @ thigh_now.col[0], inward @ thigh_now.col[1]
+            if tag in knee_was:
+                a = knee_was[tag] - along * knee_was[tag].dot(along)
+                b = axis - along * axis.dot(along)
+                if a.length > 1e-6 and b.length > 1e-6:
+                    knee_swing = max(knee_swing, math.degrees(a.angle(b)))
+            knee_was[tag] = axis
         near_set = [block for block in blocks if (hips_now - block["mid"]).length < reach_all + max(block["half"])]
         cut = False
         for obj in meshes:
@@ -848,6 +1006,10 @@ if PARAMS["check"]:
         "through_floor_cm": round(100 * max(0.0, floor - lowest_z), 2), "lowest_frame": lowest_frame, "lowest_part": lowest_part,
         "limit_violations": sum(outside.values()), "outside": outside,
         "loop_seam": round(seam, 6), "meshes": len(meshes),
+        # How far the trunk ends up from what the motion wrote: each bone's turn (degrees, the most on any frame) and the
+        # hips' place (cm). 0 means the posture is the motion's own; limits, pinned hands and the floor are what move it.
+        "off_the_motion": {"turn_deg": {name: round(v, 2) for name, v in strayed.items()}, "hips_cm": round(100 * hips_off, 2)},
+        "knee_axis_swing_deg": round(knee_swing, 1),  # the most a knee's hinge turns about its thigh in one frame
     }
     if blocks:
         result["check"]["in_the_set"] = {"deepest_cm": round(100 * in_set["cm"], 2), "part": in_set["part"], "frame": in_set["frame"], "block": in_set["block"],

@@ -22,6 +22,7 @@ const load = (url) => {
 let runs = [];
 let sets = [];
 let takes = [];
+let comics = [];
 let viewer = null;
 
 const h = (tag, attrs = {}, ...kids) => {
@@ -452,7 +453,7 @@ function objectPage(run, wanted) {
   // is finished, where the finished one does. The low-poly and mid-poly versions have their own gear.
   const bareOf = (v) => (v.gear?.length || !run.base ? null : v.name === "raw" ? run.base.raw : run.base.finished);
 
-  const stage = h("div", { class: "stage clay-well" });
+  const stage = h("div", { class: run.character ? "stage clay-well" : "stage stage--object clay-well" });
   const factsBox = h("div", { class: "facts" });
   const about = h("p", { class: "about" });
   const chips = versions.map((v) =>
@@ -559,8 +560,14 @@ function objectPage(run, wanted) {
     h("a", { class: "back", href: "#/" }, "← All objects"),
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
-    h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, run.base ? bareBtn : null, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn)),
+    // An object (a camera, a ring, a kettle) has nothing to play or put on: its few controls share the
+    // versions' row, and its stage is a landscape one that fits a thing on a table, not a standing figure.
+    run.character
+      ? h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips)
+      : h("div", { class: "versions object-row", role: "group", "aria-label": "Version" }, chips, h("span", { class: "row-gap" }), compareBtn, wireBtn),
+    run.character
+      ? h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, run.base ? bareBtn : null, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn))
+      : null,
     gearRow,
     stage,
     factsBox,
@@ -910,11 +917,82 @@ function labelSprite(text) {
   return sprite;
 }
 
+// ---------- comics ----------
+// A comic is a row of drawn panels with its lettering laid over each as SVG, so the words stay text.
+
+function panelFigure(comic, panel) {
+  const figure = h("figure", { class: "panel" });
+  const [wide, tall] = panel.size;
+  figure.style.aspectRatio = `${wide} / ${tall}`;
+  const sky = panel.sky || ["#f2efe9", "#e9e2d4"];
+  figure.style.backgroundColor = sky[sky.length - 1];
+  if (panel.sky_image) {
+    figure.style.backgroundImage = `url("comics/${panel.sky_image}")`;
+    figure.style.backgroundSize = `auto ${panel.sky_zoom || 100}%`;
+    figure.style.backgroundPosition = "center 42%";
+    figure.style.backgroundRepeat = "no-repeat";
+  } else {
+    figure.style.backgroundImage = `linear-gradient(${sky[0]}, ${sky[sky.length - 1]})`;
+  }
+  figure.append(h("img", { src: `comics/${encodeURIComponent(comic.name)}/${panel.file}`, alt: panel.alt, loading: "lazy", width: wide, height: tall }));
+  // The lettering is SVG our own layout step wrote (scripts/comic/layout.py), read from this same server.
+  const holder = document.createElement("div");
+  holder.innerHTML = panel.svg;
+  if (holder.firstElementChild) figure.append(holder.firstElementChild);
+  return figure;
+}
+
+function comicShelf() {
+  if (!comics.length) return null;
+  return h("section", { class: "comics" },
+    h("h2", { class: "shelf-heading" }, "Comics"),
+    h("div", { class: "shelf" }, comics.map((comic) =>
+      h("a", { class: "card clay-surface comic-card", href: `#/comic/${encodeURIComponent(comic.name)}` },
+        h("div", { class: "cover" }, panelFigure(comic, comic.panels[0])),
+        h("div", { class: "label" },
+          h("h2", {}, comic.title),
+          h("p", {}, `Read it · ${comic.layout === "strip" ? "a four-panel strip" : `${comic.panels.length} panels, top to bottom`}`),
+        ),
+      ),
+    )),
+  );
+}
+
+function shelfHeading() {
+  return comics.length && runs.length ? h("h2", { class: "shelf-heading" }, "Objects") : null;
+}
+
+function comicPage(comic) {
+  return h("article", { class: "object comic-reader" },
+    h("a", { class: "back", href: "#/" }, "← Everything"),
+    h("p", { class: "kicker" }, comic.layout === "strip" ? "A four-panel strip" : `A scroll episode · ${comic.panels.length} panels`),
+    h("h1", {}, comic.title),
+    h("div", { class: "comic-sheet clay-surface" },
+      h("div", { class: `comic ${comic.layout}` }, comic.panels.map((panel) => panelFigure(comic, panel))),
+    ),
+    h("p", { class: "about" },
+      comic.html ? h("a", { href: `comics/${encodeURIComponent(comic.name)}/${comic.html}` }, "Open it as a page of its own") : null,
+      comic.html && comic.png ? " · " : null,
+      comic.png ? h("a", { href: `comics/${encodeURIComponent(comic.name)}/${comic.png}` }, "Save it as a picture") : null,
+    ),
+  );
+}
+
 // ---------- routing ----------
 
 async function route() {
   if (!runs.length) {
     [runs, sets, takes] = await Promise.all(["api/runs", "api/sets", "api/takes"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
+  }
+  comics = await fetch("api/comics").then((r) => r.json()).catch(() => []);
+  const reading = location.hash.match(/^#\/comic\/([^/]+)$/);
+  const comic = reading && comics.find((c) => c.name === decodeURIComponent(reading[1]));
+  if (comic) {
+    viewer?.dispose();
+    viewer = null;
+    app.replaceChildren(comicPage(comic));
+    window.scrollTo(0, 0);
+    return;
   }
   // #/run/<run id>[/<version>]: a link can open a given version. #/set/<set name>[/<shot>[/<camera>]]: a standing set.
   const match = location.hash.match(/^#\/run\/([^/]+)(?:\/([a-z]+))?$/);
@@ -923,7 +1001,8 @@ async function route() {
   viewer = null;
   const run = match && runs.find((r) => r.id === decodeURIComponent(match[1]));
   const set = onSet && sets.find((x) => x.id === decodeURIComponent(onSet[1]));
-  app.replaceChildren(set ? setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3]) : run ? objectPage(run, match[2]) : shelf());
+  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [comicShelf(), shelfHeading(), shelf()];
+  app.replaceChildren(...page.filter(Boolean));
   window.scrollTo(0, 0);
 }
 

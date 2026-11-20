@@ -44,6 +44,17 @@ html, body { overflow-x: hidden; }
 .card p { margin: 2px 0 0; color: var(--clay-ink-soft); font-size: 0.9rem; }
 .empty { margin-top: 40px; color: var(--clay-ink-soft); }
 
+/* ---- comics (panels and lettering are in comic.css) ---- */
+@font-face { font-family: "Comic Neue"; font-weight: 700; font-display: swap; src: url(vendor/fonts/ComicNeue-Bold.woff2) format("woff2"); }
+@font-face { font-family: "Bangers"; font-weight: 400; font-display: swap; src: url(vendor/fonts/Bangers-Regular.woff2) format("woff2"); }
+.shelf-heading { margin: 28px 0 -8px; font-size: 1.3rem; }
+.comic-card .cover { padding: 10px 10px 0; }
+.comic-card .cover .panel { aspect-ratio: 1 !important; border-width: 2px; }
+.comic-card .cover img { aspect-ratio: auto; object-fit: cover; background: none; }
+.comic-reader .kicker { margin-top: 6px; }
+.comic-reader .comic-sheet { margin: 12px 0 0; max-width: none; }
+.comic-reader .comic-sheet:has(.scroll) { max-width: 628px; }
+
 /* ---- one object ---- */
 .back { display: inline-block; margin: 16px 0 4px; text-decoration: none; font-weight: 600; }
 .object h1 { margin: 4px 0 4px; font-size: 1.8rem; line-height: 1.2; }
@@ -119,3 +130,9 @@ html, body { overflow-x: hidden; }
 .film figcaption, .notes .hint { padding: 8px 4px 2px; font-size: 0.9rem; color: var(--clay-ink-soft); }
 .pictures img.backdrop { aspect-ratio: 3 / 2; }
 @media (max-width: 720px) { .set-stage .pane { aspect-ratio: 4 / 3; } }
+/* Objects: one row of controls, and a landscape stage that fits a thing on a table. */
+.object-row { align-items: center; flex-wrap: wrap; overflow-x: visible; }
+.object-row > * { flex-shrink: 0; white-space: nowrap; }
+.object-row .row-gap { flex: 0 0 4px; }
+.stage--object .pane { aspect-ratio: 4 / 3; max-height: 68vh; }
+.stage--object.compare .pane { aspect-ratio: 4 / 3; }

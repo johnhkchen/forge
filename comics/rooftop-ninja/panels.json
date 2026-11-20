@@ -1,0 +1,417 @@
+{
+ "panels": [
+  {
+   "file": "panels/01.png",
+   "size": [
+    900,
+    558
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      515.0,
+      211.8
+     ],
+     "radius": 47.1,
+     "mouth": [
+      547.9,
+      223.2
+     ],
+     "top": [
+      519.6,
+      178.8
+     ],
+     "depth": 2.787
+    }
+   },
+   "bodies": {
+    "ninja": [
+     356.6,
+     165.6,
+     587.1,
+     504.8
+    ]
+   },
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "wide",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 0.967,
+     "of_seconds": 12.0,
+     "moment": "hero:crouch_look_left",
+     "who": "ninja",
+     "at": "there",
+     "expression": "neutral"
+    }
+   ],
+   "seconds": 0.74
+  },
+  {
+   "file": "panels/02.png",
+   "size": [
+    900,
+    900
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      489.5,
+      321.0
+     ],
+     "radius": 58.0,
+     "mouth": [
+      504.9,
+      356.6
+     ],
+     "top": [
+      497.2,
+      268.8
+     ],
+     "depth": 2.266
+    }
+   },
+   "bodies": {
+    "ninja": [
+     271.4,
+     266.2,
+     579.8,
+     824.8
+    ]
+   },
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "wide",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 2.767,
+     "of_seconds": 12.0,
+     "moment": "hero:sneak_right",
+     "who": "ninja",
+     "at": "there",
+     "expression": "surprised"
+    }
+   ],
+   "seconds": 0.28
+  },
+  {
+   "file": "panels/03.png",
+   "size": [
+    900,
+    900
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      450.0,
+      477.0
+     ],
+     "radius": 272.9,
+     "mouth": [
+      450.0,
+      527.3
+     ],
+     "top": [
+      450.0,
+      256.1
+     ],
+     "depth": 1.1
+    }
+   },
+   "bodies": {
+    "ninja": [
+     -767.1,
+     233.8,
+     1678.6,
+     4836.9
+    ]
+   },
+   "sky": [
+    "#2a3a66",
+    "#7a6a96"
+   ],
+   "sky_image": null,
+   "place": "dusk",
+   "framing": "close-up",
+   "cast": [
+    {
+     "pose": "startled",
+     "who": "ninja",
+     "at": "center",
+     "expression": "surprised"
+    }
+   ],
+   "seconds": 0.22
+  },
+  {
+   "file": "panels/04.png",
+   "size": [
+    900,
+    900
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      450.0,
+      442.7
+     ],
+     "radius": 146.6,
+     "mouth": [
+      450.0,
+      517.8
+     ],
+     "top": [
+      450.0,
+      311.5
+     ],
+     "depth": 1.588
+    }
+   },
+   "bodies": {
+    "ninja": [
+     47.7,
+     315.2,
+     855.6,
+     2230.5
+    ]
+   },
+   "sky": [
+    "#2a3a66",
+    "#7a6a96"
+   ],
+   "sky_image": null,
+   "place": "dusk",
+   "framing": "single",
+   "cast": [
+    {
+     "pose": "hands_on_hips",
+     "who": "ninja",
+     "at": "center",
+     "expression": "smug"
+    }
+   ],
+   "seconds": 0.14
+  },
+  {
+   "file": "panels/05.png",
+   "size": [
+    900,
+    558
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      494.0,
+      204.5
+     ],
+     "radius": 28.9,
+     "mouth": [
+      499.2,
+      224.8
+     ],
+     "top": [
+      497.5,
+      179.7
+     ],
+     "depth": 4.547
+    }
+   },
+   "bodies": {
+    "ninja": [
+     378.4,
+     176.5,
+     561.5,
+     506.8
+    ]
+   },
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "wide",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 6.967,
+     "of_seconds": 12.0,
+     "moment": "hero:sprint_right",
+     "who": "ninja",
+     "at": "there",
+     "expression": "angry"
+    }
+   ],
+   "seconds": 0.17
+  },
+  {
+   "file": "panels/06.png",
+   "size": [
+    900,
+    1170
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      245.3,
+      552.5
+     ],
+     "radius": 85.7,
+     "mouth": [
+      299.1,
+      596.4
+     ],
+     "top": [
+      212.3,
+      487.9
+     ],
+     "depth": 1.994
+    }
+   },
+   "bodies": {
+    "ninja": [
+     103.8,
+     464.5,
+     794.6,
+     903.2
+    ]
+   },
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "wide",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 8.5,
+     "of_seconds": 12.0,
+     "moment": "hero:vault_over",
+     "who": "ninja",
+     "at": "there",
+     "expression": "neutral"
+    }
+   ],
+   "seconds": 0.22
+  },
+  {
+   "file": "panels/07.png",
+   "size": [
+    900,
+    558
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      527.6,
+      218.2
+     ],
+     "radius": 49.2,
+     "mouth": [
+      540.1,
+      259.4
+     ],
+     "top": [
+      543.1,
+      180.7
+     ],
+     "depth": 2.671
+    }
+   },
+   "bodies": {
+    "ninja": [
+     253.0,
+     168.7,
+     602.3,
+     510.2
+    ]
+   },
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "wide",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 9.067,
+     "of_seconds": 12.0,
+     "moment": "hero:land_three_point",
+     "who": "ninja",
+     "at": "there",
+     "expression": "smug"
+    }
+   ],
+   "seconds": 0.18
+  },
+  {
+   "file": "panels/08.png",
+   "size": [
+    900,
+    1170
+   ],
+   "heads": {
+    "ninja": {
+     "center": [
+      411.2,
+      358.5
+     ],
+     "radius": 66.0,
+     "mouth": [
+      432.7,
+      373.5
+     ],
+     "top": [
+      404.9,
+      301.0
+     ],
+     "depth": 2.589
+    }
+   },
+   "bodies": {
+    "ninja": [
+     198.9,
+     298.2,
+     673.6,
+     1035.2
+    ]
+   },
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "wide",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 12.0,
+     "of_seconds": 12.0,
+     "moment": "hero:hero_stance",
+     "who": "ninja",
+     "at": "there",
+     "expression": "happy"
+    }
+   ],
+   "seconds": 0.2
+  }
+ ],
+ "seconds": 2.18,
+ "width": 900,
+ "runs": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs"
+}

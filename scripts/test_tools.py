@@ -916,6 +916,10 @@ def test_walk_profile(ctx):
             if os.path.exists(os.path.join(run, name)):
                 shutil.copy(os.path.join(run, name), os.path.join(copy, name))
         traits = next((v for k, v in said.items() if k in run and k != "about"), None)
+        if traits is None and os.path.exists(os.path.join(run, "gait.json")):
+            # A run made after these recorded answers has its own (the pipeline always writes one).
+            with open(os.path.join(run, "gait.json")) as f:
+                traits = json.load(f)
         if traits:
             with open(os.path.join(copy, "gait.json"), "w") as f:
                 json.dump(traits, f)
@@ -1090,6 +1094,85 @@ def test_contact(ctx):
     c = careful["check"]
     check("a wall: the planted foot strays %.2f cm, nothing goes more than %.2f cm through the floor, and no joint is past its limit" % (c["planted_foot_strays_cm"], c["through_floor_cm"]),
           c["planted_foot_strays_cm"] < 2.0 and c["through_floor_cm"] < 0.5 and c["limit_violations"] == 0, c)
+
+
+def rig_numbers(paths):
+    """scripts/rig_check.py on some walking or running .glb files: {path: what it measured}."""
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "rig_check.py"), "--"] + list(paths), capture_output=True, text=True)
+    rows = [json.loads(line[4:]) for line in out.stdout.splitlines() if line.startswith("RIG ")]
+    if len(rows) != len(paths):
+        raise AssertionError("rig_check.py measured %d of %d files:\n%s" % (len(rows), len(paths), (out.stdout + out.stderr)[-1500:]))
+    return dict(zip(paths, rows))
+
+
+def test_rig_fit(ctx):
+    """Where the joints sit, how much of itself the body keeps, and how much it shakes, measured on files the real runner makes (scripts/rig_check.py): the neck starts at the collar and the head turns about a point inside the skull; elbows and knees sit in the middle of their limbs; the trunk loses no more volume over a walk and a run than it did, and a head none; a knee shakes no more than the foot that moves it and never swings out sideways for a frame. Uses each character's real run clip when its run folder has one."""
+    with open(os.path.join(HERE, "test_gaits.json")) as f:
+        said = json.load(f)
+    runs = os.path.dirname(ctx["troll"])
+    found = [ctx["troll"]] + [sorted(glob.glob(os.path.join(runs, pattern)))[-1] for pattern in ("*young-lincoln*", "*flamenco-dancer", "*shadow-ninja") if glob.glob(os.path.join(runs, pattern))]
+    made = []
+    for run in found:
+        copy = os.path.join(ctx["out"], "rigfit", os.path.basename(run))
+        os.makedirs(os.path.join(copy, "profiles"), exist_ok=True)
+        versions = [v for v in ("lowpoly", "midpoly") if os.path.exists(os.path.join(run, "profiles", v + ".glb"))]
+        for name in ["brief.json", "lowpoly_build.json", "gait.json", "run/loop.json", "run/ask.json"] + ["profiles/%s%s" % (v, end) for v in versions for end in (".glb", ".json")]:
+            if os.path.exists(os.path.join(run, name)):
+                os.makedirs(os.path.dirname(os.path.join(copy, name)), exist_ok=True)
+                shutil.copy(os.path.join(run, name), os.path.join(copy, name))
+        traits = next((v for k, v in said.items() if k in run and k != "about"), None)
+        if traits:
+            with open(os.path.join(copy, "gait.json"), "w") as f:
+                json.dump(traits, f)
+        clips = ["walk"] + (["run"] if os.path.exists(os.path.join(copy, "run", "loop.json")) else [])
+        out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                              os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles")] + clips, capture_output=True, text=True)
+        for version in versions:
+            for clip in clips:
+                path = os.path.join(copy, "profiles", "%s-%s.glb" % (version, clip))
+                if not os.path.exists(path):
+                    raise AssertionError("no %s-%s for %s:\n%s" % (version, clip, os.path.basename(run)[20:], (out.stdout + out.stderr)[-1500:]))
+                made.append((os.path.basename(run)[20:], version, clip, path, os.path.exists(os.path.join(copy, "lowpoly_build.json"))))
+    numbers = rig_numbers([row[3] for row in made])
+    for label, version, clip, path, has_recipe in made:
+        n = numbers[path]
+        who = "%s %s %s" % (label, version, clip)
+        with open(path[:-4] + ".json") as f:
+            record = json.load(f)
+        c = record["animation"]["check"]
+        if clip == "walk":
+            j, h = n["joints"], n["heights"]
+            check("%s: the spine runs up the middle of the trunk (hips %.0f%%, spine %.0f%%, chest %.0f%% of the way from the middle to the skin)" % (who, j["hips"]["off_%"], j["spine"]["off_%"], j["chest"]["off_%"]),
+                  max(j[k]["off_%"] for k in ("hips", "spine", "chest")) < 15 and all(j[k]["inside"] for k in ("hips", "spine", "chest")), j)
+            check("%s: the elbow and the knee sit in the middle of their limbs (%.0f%% and %.0f%% off; a quarter of the way down the forearm and shin %.0f%% and %.0f%%)" % (
+                  who, j["forearm_l"]["off_%"], j["shin_l"]["off_%"], j["forearm_l@25"]["off_%"], j["shin_l@25"]["off_%"]),
+                  j["forearm_l"]["off_%"] < 30 and j["shin_l"]["off_%"] < 30 and j["forearm_l@25"]["off_%"] < 40 and j["shin_l@25"]["off_%"] < 40, j)
+            check("%s: the neck bone is %.1f%% of the height long, and stands in the middle of the neck (%.0f%% off)" % (who, h["neck_long_%"], j["neck"]["off_%"]),
+                  h["neck_long_%"] >= 7.0 and j["neck"]["off_%"] < 45 and j["neck"]["inside"], h)
+            if has_recipe:  # a head the block-out names: its chin and crown are known
+                check("%s: the neck starts %.2f of the way from the shoulders to the chin (it was 0.64 to 1.27: under the jaw), and the head turns about a point %.2f of the way from chin to crown (it was 0.21 to 0.31)" % (
+                      who, h["neck_base_between_shoulders_and_chin"], h["head_pivot_between_chin_and_crown"]),
+                      -0.1 <= h["neck_base_between_shoulders_and_chin"] <= (0.95 if "ninja" in label else 0.6) and 0.28 <= h["head_pivot_between_chin_and_crown"] <= 0.5, h)
+            check("%s: the elbow and knee still bend as true hinges, every joint inside its limits, and no more than a few turns were held back (%s)" % (who, record["animation"]["clamped"] or "none"),
+                  c["limit_violations"] == 0 and not any(k.startswith(("forearm", "shin")) for k in record["animation"]["clamped"]), record["animation"]["clamped"])
+            check("%s: every bone the block-out gives a body has a capsule for a physics engine (thigh %.0f cm thick, %.0f cm long)" % (
+                  who, 200 * record["rig"]["capsules"]["thigh_l"][0], 100 * record["rig"]["capsules"]["thigh_l"][1]),
+                  all(k in record["rig"]["capsules"] for k in ("thigh_l", "shin_l", "upper_arm_l", "forearm_l", "head")) and 0.02 < record["rig"]["capsules"]["thigh_l"][0] < 0.2 * n["height"])
+        trunk = (n["volume"].get("trunk") or {}).get("least_%")
+        if trunk is not None:
+            check("%s: the trunk loses no more of its volume than it did (%.1f%% at its least; 21%% was the most, the dancer's run. Not cured: see SKILL.md, Walking, \"What is weak\")" % (who, trunk), trunk > -22.0, n["volume"])
+        check("%s: the head and what sits on it keep their volume to the last drop (%.2f%%)" % (who, n["volume"]["head"]["least_%"]), abs(n["volume"]["head"]["least_%"]) < 0.5 and abs(n["volume"]["head"]["most_%"]) < 0.5)
+        shake = n["jitter"]
+        check("%s: a knee shakes %.2f times what the ball of its foot does (%s) and its hinge turns %.0f degrees in a frame at most (a knee flung sideways read 21 to 57 in the runs)" % (
+              who, shake["knee_to_foot"], "under 1.25: it was 1.3 to 2.9 in the runs" if clip == "run" else "under 2.6: the troll's was 3.9", n["knee_axis_swing_deg"]),
+              shake["knee_to_foot"] < (1.25 if clip == "run" else 2.6) and n["knee_axis_swing_deg"] < 16 and abs(n["knee_axis_swing_deg"] - c["knee_axis_swing_deg"]) < 3, shake)
+        check("%s: the trunk's skin shakes no more than the head does (%.1f against %.1f mm a frame squared): nothing added to the motion on its way to the body" % (who, shake["skin"]["trunk"]["middle"], shake["points"]["head"]),
+              shake["skin"]["trunk"]["middle"] < 1.3 * shake["points"]["head"] + 0.5, shake)
+        off = c["off_the_motion"]
+        check("%s: the spine, neck and head are turned as the motion wrote them (%s degrees off at most) and the hips are %.1f cm from where it put them" % (who, off["turn_deg"], off["hips_cm"]),
+              max(off["turn_deg"].values()) < (6.0 if "troll" in label else 0.5) and off["hips_cm"] < 5.0, off)
+        check("%s: and the old promises hold: feet slide %.3f cm a step, %.2f cm through the floor, no limit broken, the last frame is the first" % (who, c["foot_slide_cm_per_step"], c["through_floor_cm"]),
+              c["foot_slide_cm_per_step"] < 0.3 and c["through_floor_cm"] < 0.5 and c["limit_violations"] == 0 and c["loop_seam"] < 1e-4, c)
 
 
 def test_bone_names(ctx):
@@ -1667,9 +1750,240 @@ def test_set_build(ctx):
     check("dressing is its own small file (the mug: %d triangles), so it can be swapped without building the set again" % mug["triangles"], 10 < mug["triangles"] < 200)
 
 
+
+def read_png(path):
+    """An 8-bit RGB or RGBA .png as (wide, tall, rows of (r, g, b, a) tuples), read with nothing but zlib."""
+    import zlib
+    with open(path, "rb") as f:
+        data = f.read()
+    at, chunks, packed = 8, {}, b""
+    while at < len(data):
+        size, kind = struct.unpack(">I4s", data[at:at + 8])
+        if kind == b"IDAT":
+            packed += data[at + 8:at + 8 + size]
+        else:
+            chunks[kind] = data[at + 8:at + 8 + size]
+        at += 12 + size
+    wide, tall, depth, color = struct.unpack(">IIBB", chunks[b"IHDR"][:10])
+    if depth != 8 or color not in (2, 6):
+        raise AssertionError("%s is not an 8-bit RGB(A) png" % path)
+    step = 4 if color == 6 else 3
+    raw = zlib.decompress(packed)
+    line = wide * step
+    rows, before = [], bytearray(line)
+    for y in range(tall):
+        kind = raw[y * (line + 1)]
+        row = bytearray(raw[y * (line + 1) + 1:(y + 1) * (line + 1)])
+        for i in range(line):
+            left = row[i - step] if i >= step else 0
+            up = before[i]
+            corner = before[i - step] if i >= step else 0
+            if kind == 1:
+                row[i] = (row[i] + left) & 255
+            elif kind == 2:
+                row[i] = (row[i] + up) & 255
+            elif kind == 3:
+                row[i] = (row[i] + (left + up) // 2) & 255
+            elif kind == 4:
+                guess = left + up - corner
+                a, b, c = abs(guess - left), abs(guess - up), abs(guess - corner)
+                row[i] = (row[i] + (left if a <= b and a <= c else up if b <= c else corner)) & 255
+        rows.append([tuple(row[i:i + 3]) + ((row[i + 3],) if step == 4 else (255,)) for i in range(0, line, step)])
+        before = row
+    return wide, tall, rows
+
+
+def ink_and_palette(path, paper=(255, 255, 255)):
+    """What a comic-style picture is made of: how wide its ink lines run, and how few colors paint the rest."""
+    wide, tall, rows = read_png(path)
+    runs, colors, figure = [], {}, 0
+    for row in rows[::2]:
+        run = 0
+        for r, g, b, _a in row:
+            dark = r + g + b < 150
+            if dark:
+                run += 1
+            else:
+                if run:
+                    runs.append(run)
+                run = 0
+                if abs(r - paper[0]) + abs(g - paper[1]) + abs(b - paper[2]) > 24:
+                    figure += 1
+                    key = (r >> 4, g >> 4, b >> 4)
+                    colors[key] = colors.get(key, 0) + 1
+    runs.sort()
+    counts = sorted(colors.values(), reverse=True)
+    covered, needed = 0, 0
+    for count in counts:
+        if covered >= figure * 0.9:
+            break
+        covered += count
+        needed += 1
+    return {"line_px": runs[len(runs) // 2] if runs else 0, "lines": len(runs), "colors_for_90pct": needed, "figure_px": figure}
+
+
+def test_comic_style(ctx):
+    """toon.py draws a rigged troll the comic way: a few flat colors, an ink line that stays as wide on screen from twice as far, and it comes off again."""
+    out = ctx["out"]
+    walk = ctx["troll"] + "/profiles/lowpoly-walk.glb"
+    near, far, plain = (os.path.join(out, "comic-style-%s.png" % n) for n in ("near", "far", "plain"))
+    look = {"size": [480, 480], "background": [1.0, 1.0, 1.0], "line_px": 4.0}
+    results = blender(walk, [
+        ("stage.py", {"floor": None, "size": [480, 480], "margin": 1.15}),
+        ("toon.py", dict(look, path=near)),
+        ("stage.py", {"floor": None, "size": [480, 480], "margin": 2.3}),
+        ("toon.py", dict(look, path=far)),
+        ("toon.py", {"undo": True}),
+        ("preview.py", {"path": plain, "size": 480}),
+    ])
+    first, again, undone = results[1], results[3], results[4]
+    check("every material gets the comic paint, every mesh an ink line (%d materials, %d meshes)" % (first["materials"]["painted"], first["materials"]["lines"]),
+          first["materials"]["painted"] >= 1 and first["materials"]["lines"] == first["meshes"] and first["materials"]["skipped"] == 0, first["materials"])
+    check("a second run reuses the paint instead of stacking it", again["materials"]["painted"] == 0 and again["materials"]["kept"] >= 1, again["materials"])
+    check("the line is given in pixels and worked out per unit of distance, so it is the same width near and far",
+          first["line"]["per_distance"] > 0 and abs(first["line"]["per_distance"] - again["line"]["per_distance"]) < 1e-9, (first["line"], again["line"]))
+    a, b, c = ink_and_palette(near), ink_and_palette(far), ink_and_palette(plain)
+    check("the ink line is about the %.0f px asked for (%d px across, measured on %d crossings)" % (look["line_px"], a["line_px"], a["lines"]),
+          a["lines"] > 150 and 2 <= a["line_px"] <= 8, a)
+    check("from twice as far the figure is a quarter the size (%d to %d px) and the line is still %d px" % (a["figure_px"], b["figure_px"], b["line_px"]),
+          b["figure_px"] < a["figure_px"] * 0.45 and abs(b["line_px"] - a["line_px"]) <= 2 and b["lines"] > 60, (a, b))
+    check("a few flat colors paint 90%% of it: %d, where the plain render needs %d" % (a["colors_for_90pct"], c["colors_for_90pct"]),
+          a["colors_for_90pct"] <= 12 and a["colors_for_90pct"] * 2 <= c["colors_for_90pct"], (a, c))
+    check("the plain render has no ink line at all, and undo put the materials back (%d)" % undone["undone_materials"],
+          c["lines"] < a["lines"] * 0.5 and undone["undone_materials"] >= 1, (c, undone))
+
+
+def comic_folder(ctx, name, panels, layout="scroll"):
+    folder = os.path.join(ctx["out"], name)
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, "comic.json"), "w") as f:
+        json.dump({"title": name, "premise": "a test", "layout": layout, "panels": panels}, f)
+    return folder
+
+
+def draw_comic(ctx, folder, width=600):
+    runs = os.path.dirname(ctx["troll"])
+    drawn = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "comic", "render_panels.py"), "--", folder,
+                            "--runs", runs, "--width", str(width)], capture_output=True, text=True)
+    if not os.path.exists(os.path.join(folder, "panels.json")):
+        raise AssertionError("the panels were not drawn:\n%s" % (drawn.stdout + drawn.stderr)[-1500:])
+    paged = subprocess.run([sys.executable, os.path.join(HERE, "comic", "layout.py"), folder, "--no-png"], capture_output=True, text=True)
+    if not os.path.exists(os.path.join(folder, "reader.json")):
+        raise AssertionError("the page was not laid out:\n%s" % (paged.stdout + paged.stderr)[-1500:])
+    with open(os.path.join(folder, "panels.json")) as f:
+        panels = json.load(f)
+    with open(os.path.join(folder, "reader.json")) as f:
+        reader = json.load(f)
+    return panels, reader
+
+
+def test_comic_panels(ctx):
+    """A comic drawn for real: two characters posed and placed in the ring, the same panel again with one face swapped, and the lettering laid over what was drawn (tails at heads, faces clear)."""
+    sys.path.insert(0, os.path.join(HERE, "comic"))
+    import kit as comic_kit
+    import lettering
+    import test_comic
+    runs = os.path.dirname(ctx["troll"])
+    have = comic_kit.kit(runs)
+    cast = {m["id"]: m for m in have["cast"]}
+    if not {"lincoln", "roosevelt"} <= set(cast) or "ring" not in {p["name"] for p in have["places"]} or not cast["lincoln"]["expressions"]:
+        print("    skipped: needs the Lincoln, Roosevelt and wrestling-ring runs, and Lincoln's expression sheet in comics/cast")
+        return
+
+    def two(lincoln_face, lines, framing="two-shot"):
+        return {"framing": framing, "place": "ring", "camera": None, "shape": "square",
+                "cast": [{"who": "lincoln", "at": "left", "facing": "right", "pose": "stand", "expression": lincoln_face},
+                         {"who": "roosevelt", "at": "right", "facing": "left", "pose": "flex", "expression": "happy"}],
+                "lines": lines, "caption": None, "sfx": None}
+
+    talk = [{"who": "roosevelt", "says": "Observe the arms, Abe!", "how": "shout"}, {"who": "lincoln", "says": "I am observing.", "how": "say"}]
+    panels = [two("neutral", talk), two("shouting", talk), two("neutral", [{"who": "lincoln", "says": "Hm.", "how": "think"}], "wide"),
+              {"framing": "close-up", "place": "plain", "camera": None, "shape": "wide",
+               "cast": [{"who": "roosevelt", "at": "center", "facing": "camera", "pose": "run@0.3", "expression": "shouting"}],
+               "lines": [{"who": "roosevelt", "says": "Bully!", "how": "shout"}], "caption": "Later.", "sfx": "THUD!"}]
+    check("the comic's panels pass the checks against what the runs hold", comic_kit.problems({"panels": panels}, have) == [])
+    folder = comic_folder(ctx, "comic-panels", panels)
+    drawn, reader = draw_comic(ctx, folder)
+    seconds = [p["seconds"] for p in drawn["panels"]]
+    check("four panels drawn in one Blender in %.1f s; after the first (%.1f s, with loading) a panel takes %.2f s" % (
+          drawn["seconds"], seconds[0], max(seconds[1:])), len(seconds) == 4 and max(seconds[1:]) < 5.0, seconds)
+    first = drawn["panels"][0]
+    wide, tall = first["size"]
+    heads = first["heads"]
+    check("both heads land inside the picture, Lincoln at the left and Roosevelt at the right as asked",
+          all(0 < h["center"][0] < wide and 0 < h["center"][1] < tall for h in heads.values()) and heads["lincoln"]["center"][0] < heads["roosevelt"]["center"][0], heads)
+    check("the taller man's head is the higher one, and both are the size of a head (%.0f and %.0f px across)" % (heads["lincoln"]["radius"] * 2, heads["roosevelt"]["radius"] * 2),
+          heads["lincoln"]["center"][1] < heads["roosevelt"]["center"][1] and all(wide * 0.025 < h["radius"] < wide * 0.2 for h in heads.values()), heads)  # a sanity range; a wide two-shot of the rebuilt characters draws a head 35 px across in 1,200
+    check("each was frozen as asked: a hand-written pose, a clip moment, the face that was named",
+          [c.get("pose") for c in first["cast"]] == ["stand", "flex"] and drawn["panels"][3]["cast"][0].get("clip") == "run"
+          and first["cast"][0]["expression"] == "neutral" and drawn["panels"][1]["cast"][0]["expression"] == "shouting", (first["cast"], drawn["panels"][3]["cast"]))
+
+    # The same body and pose, one face swapped: the pictures differ on Lincoln's head and hardly anywhere else.
+    _w, _h, one = read_png(os.path.join(folder, "panels", "01.png"))
+    _w, _h, two_ = read_png(os.path.join(folder, "panels", "02.png"))
+    cx, cy, r = heads["lincoln"]["center"][0], heads["lincoln"]["center"][1], heads["lincoln"]["radius"]
+    on_head = off_head = changed_on = changed_off = 0
+    for y in range(0, tall, 2):
+        for x in range(0, wide, 2):
+            a, b = one[y][x], two_[y][x]
+            differs = abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) > 60
+            if (x - cx) ** 2 + (y - cy) ** 2 < r * r:
+                on_head += 1
+                changed_on += differs
+            else:
+                off_head += 1
+                changed_off += differs
+    # A 243-pixel head moves few pixels; `just expressions-fit lincoln` shows all eight faces landing.
+    check("swapping Lincoln's face changes %.0f%% of his head and %.2f%% of the rest of the picture" % (100.0 * changed_on / on_head, 100.0 * changed_off / off_head),
+          changed_on > on_head * 0.02 and changed_off < off_head * 0.002, (changed_on, on_head, changed_off, off_head))
+
+    for number, (panel, meta) in enumerate(zip(panels, drawn["panels"]), 1):
+        layout = lettering.letter(meta, panel)
+        before = len(test_comic.FAILED)
+        with contextlib.redirect_stdout(io.StringIO()) as said:
+            test_comic.lettering_rules(meta, panel, layout, "panel %d" % number)
+        failed = test_comic.FAILED[before:]
+        check("panel %d (%s): %d balloon(s) on the real picture; tails end at their speakers' heads, no face is covered, all inside the panel" % (
+              number, panel["framing"], len(layout["balloons"])), not failed and len(layout["balloons"]) == len(panel["lines"]), failed)
+    check("the page keeps the words as text over the pictures (%d panels, %d text elements)" % (len(reader["panels"]), sum(p["svg"].count("<text") for p in reader["panels"])),
+          len(reader["panels"]) == 4 and all("<svg" in p["svg"] for p in reader["panels"]) and "Observe" in reader["panels"][0]["svg"]
+          and os.path.getsize(os.path.join(folder, "page.html")) > 20000 and not reader["problems"], reader["problems"])
+    with open(os.path.join(folder, "page.html")) as f:
+        page = f.read()
+    check("page.html stands alone: the pictures and the comic font are inside it, on the clay page",
+          page.count("data:image/") >= 4 and "data:font/woff2" in page and "Comic Neue" in page and "--clay-bg" in page and "<script" not in page)
+
+
+def test_comic_script(ctx):
+    """The script step with no model: a saved Opus reply parses into panels and passes the checks; the two demo comics still fit what the runs hold."""
+    sys.path.insert(0, os.path.join(HERE, "comic"))
+    import kit as comic_kit
+    root = os.path.join(HERE, "..")
+    tried = subprocess.run([sys.executable, os.path.join(HERE, "comic", "test_comic.py")], capture_output=True, text=True)
+    check("the lettering, panel checks and set adapter pass with no Blender (%s)" % tried.stdout.strip().splitlines()[-1], tried.returncode == 0, "" if tried.returncode == 0 else tried.stdout[-600:])
+    names = ["WriteComic parses a saved script into panels, and it passes every check", "a script that names what the kit does not have is told so, panel by panel",
+             "dialogue has to fit the balloon space its framing leaves", "a strip is four square panels; a scroll episode is six to ten"]
+    cmd = ["baml", "test"]
+    for name in names:
+        cmd += ["-i", "root::" + name]
+    ran = subprocess.run(cmd, capture_output=True, text=True, cwd=root)
+    passed = [n for n in names if ("PASS root::" + n) in ran.stdout + ran.stderr]
+    check("a saved reply parses into typed panels and the checks catch a bad pose, face, place and too many words (%d of %d baml tests)" % (len(passed), len(names)),
+          len(passed) == len(names), "" if len(passed) == len(names) else (ran.stdout + ran.stderr)[-600:])
+    have = comic_kit.kit(os.path.dirname(ctx["troll"]))
+    for name in ("ring-strip", "rooftop-ninja"):
+        path = os.path.join(root, "comics", name, "comic.json")
+        if not os.path.exists(path):
+            continue
+        with open(path) as f:
+            comic = json.load(f)
+        wrong = comic_kit.problems(comic, have)
+        check("%s (%d panels, written by Opus) names only poses, faces and places the runs have" % (name, len(comic["panels"])), not wrong, wrong)
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_contact, test_drape, test_cloth,
-         test_garment_made_up, test_garment_dancer, test_follow, test_open_add,
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
+         test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_script,
          test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build]
 
 

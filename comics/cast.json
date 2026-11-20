@@ -1,0 +1,57 @@
+{
+  "about": "Who can be in a comic. `run` is the end of a run folder's name (the part after its date). `version` is the rigged file to draw: profiles/<version>-walk.glb for hand-written poses, profiles/<version>-<clip>.glb for a moment of a clip. `face` says how a drawn expression goes on the head: `whole` covers the face, `eyes` only the strip a mask leaves open; `region` is that area as fractions of the head seen from the front (left, top, right, bottom); `lighten` brightens the drawn face when it comes out darker than the head around it. `clips` lists the clips whose moments a panel may freeze; one made from a shot names the shot, and its poses become named moments.",
+  "cast": {
+    "lincoln": {
+      "name": "Lincoln",
+      "run": "young-lincoln-frontier-wrestler",
+      "version": "midpoly",
+      "about": "young Abraham Lincoln as a tall, lanky frontier wrestler in a linen shirt and rolled trousers; dry, patient, kind",
+      "face": {"kind": "whole", "region": [0.2, 0.4, 0.82, 0.94], "lighten": 1.25},
+      "clips": {"walk": {}, "run": {}}
+    },
+    "roosevelt": {
+      "name": "Roosevelt",
+      "run": "roosevelt-wrestler-1890s",
+      "version": "midpoly",
+      "about": "Theodore Roosevelt as a stocky 1890s wrestler in a navy singlet, round glasses and a big mustache; loud, cheerful, tireless",
+      "face": {"kind": "whole", "region": [0.12, 0.2, 0.88, 0.88]},
+      "clips": {"walk": {}, "run": {}}
+    },
+    "ninja": {
+      "name": "Ninja",
+      "run": "shadow-ninja",
+      "version": "midpoly",
+      "about": "a stocky ninja in a dark hooded suit and mask, only the eyes showing, a katana on the back; very serious about being stealthy",
+      "face": {"kind": "eyes", "region": [0.1, 0.46, 0.9, 0.7]},
+      "clips": {"walk": {}, "run": {}, "hero": {"shot": "hero-rooftop"}}
+    },
+    "troll": {
+      "name": "Troll",
+      "run": "cave-troll",
+      "version": "lowpoly",
+      "about": "a huge, heavy cave troll with a small head sunk between massive shoulders; slow and gentle",
+      "clips": {"walk": {}, "run": {}}
+    },
+    "pirate": {
+      "name": "Pirate",
+      "run": "stocky-pirate-deckhand",
+      "version": "lowpoly",
+      "about": "a stocky pirate deckhand in a tricorn hat and a short navy coat; boastful",
+      "clips": {"walk": {}, "run": {}}
+    },
+    "lizardkin": {
+      "name": "Lizardkin",
+      "run": "lizardkin-warrior",
+      "version": "lowpoly",
+      "about": "an upright lizard-folk warrior with green scales and a heavy tail; proud and literal-minded",
+      "clips": {"walk": {}, "run": {}}
+    },
+    "dancer": {
+      "name": "Dancer",
+      "run": "flamenco-dancer",
+      "version": "midpoly",
+      "about": "a flamenco dancer in a black top and a long red ruffled skirt; dramatic",
+      "clips": {"walk": {}, "run": {}}
+    }
+  }
+}

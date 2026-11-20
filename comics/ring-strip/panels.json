@@ -1,0 +1,315 @@
+{
+ "panels": [
+  {
+   "file": "panels/01.png",
+   "size": [
+    900,
+    900
+   ],
+   "heads": {
+    "roosevelt": {
+     "center": [
+      217.3,
+      351.0
+     ],
+     "radius": 23.8,
+     "mouth": [
+      232.2,
+      358.3
+     ],
+     "top": [
+      213.4,
+      329.8
+     ],
+     "depth": 2.25
+    },
+    "lincoln": {
+     "center": [
+      699.2,
+      311.8
+     ],
+     "radius": 22.9,
+     "mouth": [
+      686.0,
+      321.8
+     ],
+     "top": [
+      700.7,
+      290.7
+     ],
+     "depth": 2.2
+    }
+   },
+   "bodies": {
+    "roosevelt": [
+     106.6,
+     317.6,
+     332.1,
+     786.7
+    ],
+    "lincoln": [
+     585.1,
+     287.6,
+     760.7,
+     777.1
+    ]
+   },
+   "sky": [
+    "#f3e3c3",
+    "#e2c492"
+   ],
+   "sky_image": "backdrops/ring.png",
+   "place": "ring",
+   "framing": "wide",
+   "cast": [
+    {
+     "pose": "flex",
+     "who": "roosevelt",
+     "at": "left",
+     "expression": "shouting"
+    },
+    {
+     "pose": "stand",
+     "who": "lincoln",
+     "at": "right",
+     "expression": "neutral"
+    }
+   ],
+   "seconds": 0.41
+  },
+  {
+   "file": "panels/02.png",
+   "size": [
+    900,
+    900
+   ],
+   "heads": {
+    "roosevelt": {
+     "center": [
+      174.0,
+      469.3
+     ],
+     "radius": 33.3,
+     "mouth": [
+      192.7,
+      488.2
+     ],
+     "top": [
+      175.5,
+      439.8
+     ],
+     "depth": 2.387
+    },
+    "lincoln": {
+     "center": [
+      746.0,
+      366.7
+     ],
+     "radius": 30.3,
+     "mouth": [
+      728.1,
+      380.2
+     ],
+     "top": [
+      746.7,
+      339.5
+     ],
+     "depth": 2.472
+    }
+   },
+   "bodies": {
+    "roosevelt": [
+     45.1,
+     441.7,
+     278.0,
+     1017.3
+    ],
+    "lincoln": [
+     607.5,
+     336.1,
+     829.3,
+     1017.1
+    ]
+   },
+   "sky": [
+    "#f3e3c3",
+    "#e2c492"
+   ],
+   "sky_image": "backdrops/ring.png",
+   "place": "ring",
+   "framing": "two-shot",
+   "cast": [
+    {
+     "pose": "guard",
+     "who": "roosevelt",
+     "at": "left",
+     "expression": "happy"
+    },
+    {
+     "pose": "stand",
+     "who": "lincoln",
+     "at": "right",
+     "expression": "talking"
+    }
+   ],
+   "seconds": 0.19
+  },
+  {
+   "file": "panels/03.png",
+   "size": [
+    900,
+    900
+   ],
+   "heads": {
+    "roosevelt": {
+     "center": [
+      173.7,
+      465.7
+     ],
+     "radius": 33.2,
+     "mouth": [
+      192.3,
+      484.5
+     ],
+     "top": [
+      175.2,
+      436.3
+     ],
+     "depth": 2.394
+    },
+    "lincoln": {
+     "center": [
+      736.3,
+      364.0
+     ],
+     "radius": 30.4,
+     "mouth": [
+      718.9,
+      379.2
+     ],
+     "top": [
+      735.6,
+      336.7
+     ],
+     "depth": 2.463
+    }
+   },
+   "bodies": {
+    "roosevelt": [
+     45.2,
+     438.3,
+     277.4,
+     1011.9
+    ],
+    "lincoln": [
+     488.6,
+     332.7,
+     826.9,
+     1011.8
+    ]
+   },
+   "sky": [
+    "#f3e3c3",
+    "#e2c492"
+   ],
+   "sky_image": "backdrops/ring.png",
+   "place": "ring",
+   "framing": "two-shot",
+   "cast": [
+    {
+     "pose": "guard",
+     "who": "roosevelt",
+     "at": "left",
+     "expression": "surprised"
+    },
+    {
+     "pose": "point",
+     "who": "lincoln",
+     "at": "right",
+     "expression": "neutral"
+    }
+   ],
+   "seconds": 0.19
+  },
+  {
+   "file": "panels/04.png",
+   "size": [
+    900,
+    900
+   ],
+   "heads": {
+    "roosevelt": {
+     "center": [
+      241.9,
+      337.0
+     ],
+     "radius": 28.9,
+     "mouth": [
+      246.8,
+      363.4
+     ],
+     "top": [
+      255.9,
+      319.8
+     ],
+     "depth": 2.213
+    },
+    "lincoln": {
+     "center": [
+      727.0,
+      274.6
+     ],
+     "radius": 26.2,
+     "mouth": [
+      711.6,
+      285.8
+     ],
+     "top": [
+      728.5,
+      250.3
+     ],
+     "depth": 2.302
+    }
+   },
+   "bodies": {
+    "roosevelt": [
+     116.2,
+     300.1,
+     307.2,
+     816.9
+    ],
+    "lincoln": [
+     598.6,
+     246.3,
+     795.9,
+     806.8
+    ]
+   },
+   "sky": [
+    "#f3e3c3",
+    "#e2c492"
+   ],
+   "sky_image": "backdrops/ring.png",
+   "place": "ring",
+   "framing": "wide",
+   "cast": [
+    {
+     "pose": "slump",
+     "who": "roosevelt",
+     "at": "left",
+     "expression": "happy"
+    },
+    {
+     "pose": "stand",
+     "who": "lincoln",
+     "at": "right",
+     "expression": "smug"
+    }
+   ],
+   "seconds": 0.21
+  }
+ ],
+ "seconds": 1.03,
+ "width": 900,
+ "runs": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs"
+}
