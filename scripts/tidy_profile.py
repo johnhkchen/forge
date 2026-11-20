@@ -631,7 +631,14 @@ def wants_flat_colors(run_dir):
         return False
     with open(path) as f:
         style = (json.load(f).get("lowpoly_style") or "").lower()
-    return ("flat" in style and ("color" in style or "colour" in style)) or "vertex color" in style
+    # Asked for in so many words, and no texture wanted. "Flat-shaded ... soft
+    # colors ... face painted into a small texture" (the villager) is a
+    # textured style: matching "flat" and "color" anywhere left its face blank.
+    explicit = any(p in style for p in ("flat color", "flat colour", "flat painted", "vertex color", "vertex colour",
+                                        "painted per face", "per-face color", "per-face colour", "painted in flat",
+                                        "painted flat", "no texture"))
+    textured = "texture" in style.replace("no texture", "")
+    return explicit and not textured
 
 
 def color_preview_material(obj):
