@@ -1186,7 +1186,8 @@ def test_face_paint(ctx):
           whole["points_painted"] > 5000 and all(0.4 <= g <= 1.6 for g in whole["tone"]))
     check("the paint comes off again (%d nodes)" % off["removed_nodes"], off["removed_nodes"] >= 10 and not off["painted"])
     check("asked for more agreement than there is, it paints nothing and says why", not strict["painted"] and "nothing painted" in strict["why"], strict)
-    check("another character's picture agrees less (%.2f against %.2f)" % (other["fit"], whole["fit"]), other["fit"] < whole["fit"] - 0.15, other)
+    check("another character's picture agrees less (%.2f against %.2f), and is not painted on" % (other["fit"], whole["fit"]),
+          other["fit"] < whole["fit"] - 0.15 and not other["painted"], other)
     check("the head sheet's front view sits on it too (%.2f), with the head %d pixels tall: %.1f times the picture's" % (
           sheet["fit"], sheet["head_px"], sheet["head_px"] / whole["head_px"]),
           sheet["painted"] and sheet["fit"] > 0.5 and sheet["head_px"] > 1.8 * whole["head_px"] and sheet["panel"][2] < 0.45, sheet)

@@ -630,6 +630,143 @@ Where it goes wrong, and what to do:
 - **Colors come from the texture, baked shadows and all.** Use the head's
   `"color"` for the body's skin too, or the head will not match it.
 
+## Faces in every version: a head sheet, paint, a whole head
+
+"The faces are distorted" turned out to be four different faults, found by
+drawing every character's face in every version next to its picture
+(`scripts/face_sheet.py`) and measuring it (`scripts/face_check.py`):
+
+| What was wrong | How much (six characters) | Which versions |
+|---|---|---|
+| **The head came back from the remesh in shreds**: holes where the hair, brow and cheeks were | 27% to 95% of the head's front missing; not one whole head | `web`, `game` (and `quads`, `mobile`) |
+| **TRELLIS.2's own face is a smudge**: the shape is about right, the texture is not. Eyes are dark blobs, lips a blur, glasses black discs | laid out like the picture (features within 1-2.4% of the head's height), but the eyes look only 0.33 to 0.79 like the picture's | every version, since all are baked from it |
+| **Too few pixels**: one texture for a whole character leaves a face about 60 pixels across at 1024, 15 at 256 | the head is 3-4% of a character's surface, so of its texture | every baked version |
+| **The block-out's head is a coarse stand-in** with dark pockets cut for eyes, which fight a baked texture | 5.7% to 11.5% of the head's height off the detailed head; a face detector finds a face on one low-poly head in six | `lowpoly`, `midpoly` |
+| The walk bent the jaw: the head piece was blended with the neck bone | the head's points moved 1-3% of its height against the head bone, 11% on the low-poly ninja | the walk clips |
+
+What is done about each, in the tools:
+
+- **A head sheet (pipeline step 2b, `baml_src/2_picture/head_sheet.baml`).**
+  For a character, Codex is shown `image.png` and asked for the same head
+  again, large, three times side by side: front, three-quarter, side. It is
+  saved as `heads/sheet.png`. The face in it is three to four times the
+  size it has in the whole-figure picture. `just head-sheet <run>` draws
+  one for a run that has none. Nothing waits on it: without one the picture
+  itself is used.
+- **`face_paint.py` paints the face onto the detailed mesh.** Like a slide
+  projector in front of the head: every point that faces front with nothing
+  in the way takes the picture's color there, fading out toward the sides,
+  under the jaw and behind anything. It finds the head by itself (or takes
+  its box), then finds where the picture sits: first by the outline (how
+  wide the head is, row by row from the top), then by sliding and scaling
+  until the picture's light and dark agree best with the mesh's own
+  texture; a smudged eye is still a dark spot in the right place. `"fit"`
+  says how well they agree; under 0.45 it paints nothing (the right picture agrees 0.60 to 0.78 on five characters, a wrong one 0.25 to 0.39). The picture's
+  colors are toned to the mesh's, so the face doesn't end at a line under
+  the chin. The paint is shader nodes (`face paint: ...`) and a point
+  attribute, so it reaches a file only through a bake.
+- **The runner paints before it bakes.** `scripts/tidy_profile.py` runs
+  `face_paint.py` on every character as soon as the scene is open: the head
+  sheet's front view if the run has one and it fits, else `image.png`. So
+  `hero`, `web`, `game`, `midpoly` and `lowpoly` all bake the painted face.
+  `"face"` in `<profile>.json` says what was used and how well it fitted.
+- **The head gets a texture of its own.** After the bake, the faces in the
+  head's box are taken off as an object, baked onto again by the same
+  `bake.py` with the same settings at half the size (512 for a 1024
+  profile, 256 for `lowpoly`), and joined back: one mesh, one more
+  material. That is five times or more the pixels across a face.
+  (`head_texture` in the runner; `bake.py` itself is untouched.)
+- **The head is remeshed whole.** On a character, everything from a quarter
+  of a head below the chin up (hair and hat with it) is cut off as one
+  piece, whatever other parts were marked, and wrapped in one closed skin
+  (a voxel remesh: TRELLIS builds hair, lids, lips and teeth in layers that
+  no remesher stitches). AutoRemesher remeshes the skin, with at least 12%
+  of the profile's quads. And every remeshed piece is now checked for
+  tears: if too much of what shows of the original has no remeshed surface
+  near it (15% at half a percent of the object's size, or 4% at one
+  percent; for a head 8% and 1.5%, since 4% of a head is its chin), the
+  next of AutoRemesher's answers is tried, then a wrap of the piece, then
+  the wrap itself, reduced and paired into quads where its triangles line
+  up. `"parts"` in `<profile>.json` says which way each piece went.
+  (Blender's QuadriFlow makes even quads of such a skin and was tried for
+  heads: on some it never returns, and a run can't stop it.)
+- **The head rides the head bone alone** (`rig.py`): the head piece, and
+  what sits wholly on it (hair, a hat, glasses, a mustache), is no longer
+  blended with the neck.
+- **The block-out's head is told about the texture** (the head and face
+  part of `CHARACTER_STEPS`): unless the style is flat colors, `"eyes":
+  "flat"`, no eyes, brows or lips as pieces, and glasses or a mustache kept
+  as thin and small as on the reference.
+
+Measured (`just face-sheet <run> out.png`, then `just face-check
+out.json`). "Missing" is the share of the head's front, seen straight on,
+where a version has a hole or sits more than 8% of the head's height
+behind the detailed mesh. "Eyes" and "mouth" are how like the picture
+those spots look once the face is laid over the picture's (1 is the same
+picture). "Face found" is whether a face detector (MediaPipe) sees a face
+at all.
+
+| | Head missing, `web` / `game`: before | after | Eyes like the picture: detailed | `web` | `game` | `midpoly` | `lowpoly` | Face found on `lowpoly` | Head bends in the walk, mid / low: before | after |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Young Lincoln | 82% / 65% | 20% / 5% | 0.60 | 0.22 -> 0.80 | 0.06 -> 0.85 | 0.51 -> 0.75 | none -> 0.64 | no -> yes | 1.0% / 1.0% | 0 / 0 |
+| Roosevelt | 27% / 69% | 10% / 1% | 0.33 | 0.30 -> 0.48 | 0.17 -> 0.41 | none -> 0.42 | 0.21 (flat colors, unchanged) | yes | 2.0% / 1.6% | 0 / 0 |
+| Flamenco dancer (raw mesh only) | not made | 1% / 2% | 0.61 | 0.85 | 0.82 | | | | | |
+| Pirate | 41% / 30% | 23% / 15% | 0.79 | 0.39 -> 0.86 | 0.78 -> 0.88 | | (old block-out, no face) | no | - / 3.8% | - / 0 |
+| Shadow ninja (masked) | 43% / 41% | 7% / 1% | 0.51 | 0.49 -> 0.76 | 0.67 -> 0.54 | | | no | 3.0% / 10.8% | 0.1% / 5.3% |
+| Cave troll | 45% / 49% | 8% / 21% | | | | | (old block-out, no face) | no | - / 1.3% | - / 0 |
+| Lizardkin | 73% / 95% | 1% / 9% | | | | | (old block-out, no face) | no | - / 3.0% | - / 0 |
+
+"none" is a version the detector found no face on. Lincoln, Roosevelt, the
+dancer and the ninja were painted from their head sheets (they agree with
+the mesh 0.66, 0.67, 0.78 and 0.69); the pirate's sheet did not sit on his
+head (0.25: the hat) and he was painted from his first picture (0.61); the
+troll and the lizardkin were not painted (no head box, or no agreement) and
+gain only from the tear check. The sharpness column of `face-check` says
+little at the sheet's size (256 px tiles) and is left out here. The sized
+versions run over their quad budget where torn answers were passed over:
+`game` came to 4,700 to 9,400 faces for a budget of 4,000.
+
+To look at a run:
+
+    just face-sheet runs/<run> faces.png        # every version, front / three-quarter / side, next to the picture
+    just face-check faces.json                  # where eyes, nose, mouth and chin sit, how lopsided, how sharp
+
+What is still weak, most visible first:
+
+- **The detailed `final.glb` keeps its smudged face.** It is exported in
+  step 4, before any of this runs; only the versions the runner bakes get
+  the paint. `just tidy <run> hero` gives a painted detailed version.
+- **It is a front view on a 3D head.** Past about 60 degrees to the side
+  the mesh's own texture takes over: ears, temples and the side of the
+  nose are still TRELLIS's. The sheet's side view is not used yet.
+- **Nostrils and the underside of the nose.** The picture sees a little
+  under the nose; straight on, the mesh's nose hides that, so nostrils land
+  on the tip.
+- **What stands in front of the face is painted flat on it.** Glasses and
+  an eye patch are part of the picture, so a mid-poly Roosevelt has glasses
+  painted on his face and glasses as a piece in front of them: right from
+  the front, doubled from the side, and still painted on when the gear
+  comes off. A sheet of the bare head would fix it.
+- **The seam under the chin.** The head and the body are remeshed apart
+  and meet a quarter of a head down the neck: a line there, and at `game`
+  size sometimes a gap of a few millimeters.
+- **A head sunk between the shoulders** (the troll) has no neck to find.
+  Without a block-out recipe to give its box, nothing is painted and the
+  head is not cut off whole.
+- **Light streaks at the temples.** Where the sheet's hairline or highlight
+  doesn't match the mesh's, a pale stripe is painted at the edge of the
+  face (Roosevelt, from the side).
+- **Heavier files.** A wrapped piece and a second-choice answer both run
+  over budget, and the head's own texture adds 100-150 KB.
+- **A drawn sheet is a second drawing.** Codex keeps the face well and
+  changes small things: a collar, how far the ears stand out, a closed
+  mouth where the picture grins. Where the sheet's outline doesn't sit on
+  the mesh's, hair is painted onto forehead or the other way round.
+- **The face detector only knows people.** For the troll, the lizardkin
+  and the masked ninja, `face-check` has little to say; look at the sheet.
+- **Low poly at 256 px** reads as a face now, no more: 0.1 to 0.2 of the
+  picture's detail.
+
 ## Parts: remesh the pieces a modeler would build separately
 
 TRELLIS.2 fuses touching parts into one surface: the kettle's lid, knob and
@@ -673,6 +810,7 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `measure.py` | size a part without its neighbors, and slice it into rows of middle and half-width | parts, low poly |
 | `split.py` | paint or cut the parts from boxes: several boxes per part, tilted boxes, parts that wrap around | parts |
 | `face.py` | find the brow, eyes, nose, mouth and chin on a character's head and print it as a `"head"` piece for `build.py` | low poly (characters) |
+| `face_paint.py` | lay a picture of the face (the head sheet's front view, or the first picture) over the front of the detailed head, as shader nodes a bake picks up | profiles (characters) |
 | `rig.py` | give a T-pose character bones placed from its own build, bind every mesh, set each joint's limits, hang the sockets on bones | walk |
 | `walk.py` | work out a walk from the measured build and four traits; leaves it on the rig as a motion | walk |
 | `animate.py` | play a motion on the rig: fit it, plant the feet, clamp to the limits, bake keyframes, measure the result | walk |
@@ -855,7 +993,10 @@ the pirate made low poly, mid poly and walking by the real runner and
 measured with `scripts/cloth_check.py` over every frame (skin through
 cloth, the gap, the cloth bones' limits and seam, triangles). About ten
 minutes in all. With `--keep DIR`
-the face cases leave `troll-head-compared.png` and
+the face cases leave `lincoln-face-before.png`, `lincoln-face-painted.png`
+and `lincoln-faces.png` (Lincoln's face painted from his head sheet, and his
+head in the game and mid-poly versions made from a copy of his run, with the
+walk), `troll-head-compared.png` and
 `pirate-head-compared.png`: front and side of the reference, each head, and
 the fitted head as wire over the reference. `just check-safe` checks every script against safe
 mode.

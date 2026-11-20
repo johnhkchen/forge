@@ -19,8 +19,10 @@
 # and scaling the picture until its light and dark agree best with the
 # mesh's own texture (a smudged eye is still a dark spot in the right place).
 # "fit" in the result says how well they agree (0-1) and "painted" is False
-# when they don't ("least": 0.3), so a picture that doesn't match (another
-# pose, a head turned away) changes nothing.
+# when they don't ("least": 0.45), so a picture that doesn't match (another
+# pose, a head turned away) changes nothing. Measured: the right picture on
+# five characters agrees 0.60 to 0.78; another character's picture, or a
+# head whose box was found wrong, 0.25 to 0.39.
 #
 # The paint is shader nodes named "face paint: ..." on the object's
 # material, mixed in by a point attribute "face_paint" (0 = the mesh's own
@@ -44,7 +46,7 @@ PARAMS = {
     "box": None,        # the head: {"min": [x, y, z], "max": [x, y, z]} in world meters; None = find it
     "facing": "-y",     # which way the face looks: "-y", "+y", "-x" or "+x"
     "strength": 1.0,    # how much of the picture's color to take where it is painted
-    "least": 0.3,       # paint only if the picture and the mesh agree at least this well (0-1)
+    "least": 0.45,      # paint only if the picture and the mesh agree at least this well (0-1)
     "remove": False,    # True = take the paint off again
 }
 
@@ -405,6 +407,10 @@ else:
         for v in me.vertices:
             p = world @ v.co
             if not (lo[2] - 0.02 * tall <= p.z <= hi[2] + 0.05 * tall and abs(p[u] - middle) <= 0.6 * wide):
+                continue
+            # The front half of the head and a little more, never the back: through a hole in the mesh (TRELLIS
+            # leaves some at the eyes) the picture would otherwise land on the inside of the back of the skull.
+            if sign * p[a] < front - 0.6 * deep:
                 continue
             # TRELLIS winds some faces backwards (lips, eyelids), so a point that looks away but has nothing in front of it counts too.
             facing = abs((turn @ v.normal).normalized().dot(toward))
