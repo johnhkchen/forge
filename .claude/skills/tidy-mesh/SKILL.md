@@ -1334,9 +1334,13 @@ rest is in `scripts/comic/` and `baml_src/10_comic/`.
   and wherever one piece passes in front of another. The push grows with
   each point's distance from the camera, so the line is the same width on
   screen near and far; measured on the troll, 3 px at one distance and 3 px
-  from twice as far. Freestyle gives a cleaner line and catches creases,
-  but it runs after the render, on one core, and took seconds where the
-  hull adds nothing measurable; a comic is drawn by the dozen.
+  from twice as far. It costs almost nothing: two mid-poly characters at
+  900 px render in 0.13 s with no line and 0.14 to 0.18 s with it.
+  Freestyle is the other way to get a line of steady width, and it also
+  draws creases inside a piece. It was not compared: set up the plain way
+  in a background EEVEE render it drew nothing here ("strokes set empty"),
+  and the hull was already good and nearly free, so that is what a comic
+  uses. Worth another look if crease lines are wanted.
 - **It comes off.** `"undo": True` plugs the old shader back in and removes
   the lines. The old nodes are never deleted.
 - Colors in PARAMS (`ink`, `background`) are as you see them on screen.
