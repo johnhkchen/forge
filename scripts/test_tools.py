@@ -1624,6 +1624,7 @@ def test_face_versions(ctx):
 def test_set_check(ctx):
     """Standing sets: every set in sets/ is sound (marks on the floor and clear of what is in the way, seats the right height, paths clear), and a broken one is told what is wrong."""
     test_sets.test_set_check()
+    test_sets.test_placing()
 
 
 def test_set_marks(ctx):

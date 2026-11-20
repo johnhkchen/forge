@@ -4,6 +4,36 @@
  "title": "The studio",
  "about": "A small talk-show stage: a desk and chair for the host, a couch for two guests, a way on from the wings, a spot to stand and talk, a riser for a band, and a painted skyline out the window.",
  "stage": "shallow",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is on the floor under the middle of the window wall's line; the front is where the cameras are"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -7.5,
+    -1.5
+   ],
+   [
+    6.5,
+    -1.5
+   ],
+   [
+    6.5,
+    10.8
+   ],
+   [
+    -7.5,
+    10.8
+   ]
+  ],
+  "about": "the walls, the backdrop behind them, the stage, and the floor out front where the cameras stand"
+ },
  "units": "metres. y is up. The cameras are out front, at +z: a heading of 0 faces them, 90 faces +x (the desk's side of the picture).",
  "floor": {
   "areas": [

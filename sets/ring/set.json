@@ -4,6 +4,37 @@
  "title": "The ring",
  "about": "The 1890s wrestling ring: a canvas mat a man's chest above the hall floor, three ropes a side between four oak posts, and wooden steps up to it.",
  "stage": "open",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is the middle of the mat, on the mat; the front is the side the steps are on. The hall floor is 1.36 m below"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -5.6,
+    -5.7
+   ],
+   [
+    3.4,
+    -5.7
+   ],
+   [
+    3.4,
+    8.8
+   ],
+   [
+    -5.6,
+    8.8
+   ]
+  ],
+  "open_toward_deg": 90.0,
+  "about": "the ring, the backdrop wall behind it and the floor its cameras stand on. The +x side is kept clear, close to the ring: that is where the hall can grow, toward what is outside"
+ },
  "units": "metres. y is up and 0 is the mat. The steps are at +z, and so are the cameras.",
  "from_run": "2026-11-20T14-02-42-1890s-wrestling-ring",
  "floor": {
@@ -482,10 +513,15 @@
   "glb": "set.glb",
   "move": [
    0.0,
+   0.0,
+   0.0
+  ],
+  "turn_deg": 0.0,
+  "moved_onto_the_origin_by": [
+   0.0,
    -1.36,
    0.485
   ],
-  "turn_deg": 0.0,
-  "built_by": "a copy of the run's profiles/game.glb (just set-from-run ring <runs>)"
+  "built_by": "the run's profiles/game.glb, moved so the mat's middle is the origin (just set-from-run ring <run folder> game 0 -1.36 0.485)"
  }
 }

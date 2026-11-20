@@ -1,11 +1,19 @@
 """Standing sets: a place of our own, built once and shot many times.
 
     python3 scripts/sets/standing.py check <set>        # is the set sound? (`just set-check <set>`)
+    python3 scripts/sets/standing.py adopt <set> <file.glb> <x> <y> <z>   # use a .glb as the geometry, moved onto the set's origin
     python3 scripts/sets/standing.py blocks-glb <set>   # write set.glb as plain boxes, from the set's blocks
     python3 scripts/sets/standing.py list
 
 A set is a folder, sets/<name>/, with a set.json:
 
+    frame      the set's own frame: {origin [x, y, z], front_deg}. Everything
+               else in the file is measured from that origin, so the whole
+               set can be picked up and put down as one piece. `front_deg` is
+               the heading its front faces (0: +z, where a stage's cameras are)
+    footprint  the ground the set takes up, cameras and all, as an outline
+               [[x, z], ...] in metres, going round once. `open_toward_deg`,
+               if there, is a side kept clear for the set to grow on
     floor      where people can stand: rectangles on the ground, [[x0, z0], [x1, z1]]
     blocks     what is in the way, as boxes: {name, kind, center [x, y, z],
                size [across, tall, through], heading}. The same form a shot's
@@ -35,6 +43,15 @@ A set is a folder, sets/<name>/, with a set.json:
 Everything is in metres, in the shot's own axes: y is up, the ground is x and
 z, a heading of 0 faces +z and turns toward +x as it grows. A talk-show stage
 faces +z: that is where the cameras are.
+
+Placing a set in a world. A set.json never says where the set is: that is for
+a world file to say (a future world.json: {"sets": {"studio": {"at": [x, z],
+"facing_deg": 90}}}), one line per set, on one shared ground at true scale.
+`placed` is the whole of the arithmetic: turn about the set's origin until its
+front faces `facing_deg`, then slide the origin to `at`. Marks, cameras,
+blocks, lights, the backdrop, the footprint and the .glb all move together,
+because all of them are in the set's frame. A shot is planned and filmed in
+that frame too, so moving a set never changes a shot made on it.
 
 Blocking names marks, never coordinates. `stage_marks` turns a shot list
 whose beats say `from`, `to` or `at` a mark into the path, distances, facings
@@ -98,6 +115,37 @@ def load(name: str) -> dict:
         st = json.load(f)
     st["dir"] = where
     return st
+
+
+def placed(st: dict, at=(0.0, 0.0), facing_deg=None):
+    """How a set stands in a world: returns (point, heading), two functions that take a ground point [x, z] (or
+    [x, y, z]) and a heading from the set's frame to the world's, with the set's origin at `at` and its front
+    facing `facing_deg` (None: the way it already faces)."""
+    frame = st.get("frame") or {}
+    origin, front = frame.get("origin", [0.0, 0.0, 0.0]), float(frame.get("front_deg", 0.0))
+    turn = 0.0 if facing_deg is None else float(facing_deg) - front
+    c, s = math.cos(math.radians(turn)), math.sin(math.radians(turn))
+
+    def point(p):
+        x, z = p[0] - origin[0], p[-1] - origin[2]
+        wx, wz = x * c + z * s + at[0], -x * s + z * c + at[1]
+        return [round(wx, 4), round(wz, 4)] if len(p) == 2 else [round(wx, 4), round(p[1] - origin[1], 4), round(wz, 4)]
+
+    def heading(h):
+        return round(wrap(h + turn), 3)
+
+    return point, heading
+
+
+def inside(outline: list, x: float, z: float) -> bool:
+    """Is a ground point inside an outline [[x, z], ...] (or on its edge)?"""
+    hit = False
+    for (x0, z0), (x1, z1) in zip(outline, outline[1:] + outline[:1]):
+        if abs((x1 - x0) * (z - z0) - (z1 - z0) * (x - x0)) < 1e-9 and min(x0, x1) - 1e-9 <= x <= max(x0, x1) + 1e-9 and min(z0, z1) - 1e-9 <= z <= max(z0, z1) + 1e-9:
+            return True
+        if (z0 > z) != (z1 > z) and x < x0 + (x1 - x0) * (z - z0) / (z1 - z0):
+            hit = not hit
+    return hit
 
 
 def plan_blocks(st: dict) -> list:
@@ -340,7 +388,7 @@ def check(st: dict) -> tuple:
     say = problems.append
     if st.get("format") != FORMAT:
         say(f"format is {st.get('format')!r}, not {FORMAT!r}")
-    for key in ("name", "floor", "blocks", "marks", "cameras", "lights", "geometry"):
+    for key in ("name", "frame", "footprint", "floor", "blocks", "marks", "cameras", "lights", "geometry"):
         if key not in st:
             say(f"set.json has no \"{key}\"")
     if problems:
@@ -356,6 +404,28 @@ def check(st: dict) -> tuple:
     if not (st["floor"].get("areas") or []):
         say("the floor has no areas to stand on")
     seen["blocks"], seen["in_the_way"] = len(blocks), len(tall)
+
+    # The set's own frame and footprint: what lets it be put down in a world as one piece.
+    frame, outline = st["frame"], (st["footprint"] or {}).get("outline") or []
+    if len(frame.get("origin") or []) != 3 or "front_deg" not in frame:
+        say("frame needs origin [x, y, z] and front_deg")
+    if len(outline) < 3:
+        say("the footprint needs an outline of at least 3 ground points")
+    else:
+        if not inside(outline, frame.get("origin", [0, 0, 0])[0], frame.get("origin", [0, 0, 0])[-1]):
+            say("the set's origin is outside its own footprint")
+        out = [f"mark \"{n}\"" for n, m in marks.items() if "at" in m and not inside(outline, *m["at"])]
+        out += [f"block \"{b['name']}\"" for b in tall if not inside(outline, b["center"][0], b["center"][2])]
+        out += [f"camera \"{n}\"" for n, c in cameras.items() if "at" in c and not inside(outline, c["at"][0], c["at"][2])]
+        for (x0, z0), (x1, z1) in st["floor"].get("areas") or []:
+            if not all(inside(outline, x, z) for x in (x0, x1) for z in (z0, z1)):
+                out.append("part of the floor")
+        if out:
+            say(f"outside the set's footprint: {', '.join(out)}")
+        xs, zs = [p[0] for p in outline], [p[1] for p in outline]
+        seen["footprint"] = {"across_m": round(max(xs) - min(xs), 2), "deep_m": round(max(zs) - min(zs), 2), "open_toward_deg": st["footprint"].get("open_toward_deg")}
+    if any(abs(v) > 1e-9 for v in (st["geometry"].get("move") or [0, 0, 0])) or abs(st["geometry"].get("turn_deg", 0.0)) > 1e-9:
+        say("the geometry is not built around the set's origin: its move and turn should be 0 (`standing.py adopt` bakes them into the .glb)")
 
     # Marks: on the floor, clear of what is in the way, seats the right height, hands in reach.
     for name, m in marks.items():
@@ -744,8 +814,29 @@ def blocks_glb(st: dict, out: str) -> str:
     return out
 
 
+def adopt(st: dict, source: str, move, turn_deg: float = 0.0) -> str:
+    """Take a .glb made somewhere else (a finished run's object) as the set's geometry, around the set's origin:
+    the file is copied with one node added above everything in it, carrying the move and the turn."""
+    sys.path.insert(0, os.path.join(REPO, "scripts"))
+    import blockout_recipe
+
+    doc, rest = blockout_recipe.read(source)
+    half = math.radians(turn_deg) / 2.0
+    for scene in doc.get("scenes") or []:
+        doc["nodes"].append({"name": "set: " + st["name"], "children": list(scene["nodes"]), "translation": [float(v) for v in move],
+                             "rotation": [0.0, math.sin(half), 0.0, math.cos(half)]})
+        scene["nodes"] = [len(doc["nodes"]) - 1]
+    out = os.path.join(st["dir"], (st.get("geometry") or {}).get("glb", "set.glb"))
+    blockout_recipe.write(out, doc, rest)
+    return out
+
+
 def main() -> None:
     args = sys.argv[1:]
+    if args and args[0] == "adopt":  # adopt <set> <file.glb> <x> <y> <z> [turn]: see `adopt`
+        st = load(args[1])
+        print("SET wrote", os.path.relpath(adopt(st, args[2], [float(v) for v in args[3:6]], float(args[6]) if len(args) > 6 else 0.0), REPO))
+        return
     if not args or args[0] not in ("check", "blocks-glb", "list"):
         sys.exit(__doc__.split("\n\n")[1])
     if args[0] == "list":
@@ -768,6 +859,8 @@ def main() -> None:
             print(f"SET {st.get('name')}: camera {camera} holds {', '.join(held) or 'nothing'}")
         for line in problems:
             print(f"SET {st.get('name')}: PROBLEM {line}")
+        if seen.get("footprint"):
+            print(f"SET {st.get('name')}: footprint {seen['footprint']['across_m']} m across, {seen['footprint']['deep_m']} m deep" + (f", open toward {seen['footprint']['open_toward_deg']} degrees" if seen["footprint"]["open_toward_deg"] is not None else ""))
         print(f"SET {st.get('name')}: " + ("sound" if not problems else f"{len(problems)} problems"))
         failed += bool(problems)
     sys.exit(1 if failed else 0)

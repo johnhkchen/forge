@@ -94,9 +94,9 @@ set-build set:
 set-backdrop set:
     baml run paint_backdrop -- --name "{{set}}"
 
-# Use a finished run's object as a set's geometry: copies one of its versions to sets/<set>/set.glb (the run is only read)
-set-from-run set run profile="game":
-    cp "{{run}}/profiles/{{profile}}.glb" "sets/{{set}}/set.glb"
+# Use a finished run's object as a set's geometry: copies one of its versions to sets/<set>/set.glb, moved by x y z so the set's origin is where you want it (the ring: 0 -1.36 0.485 puts the middle of the mat at 0). The run is only read
+set-from-run set run profile="game" x="0" y="0" z="0":
+    python3 scripts/sets/standing.py adopt "{{set}}" "{{run}}/profiles/{{profile}}.glb" {{x}} {{y}} {{z}}
     python3 scripts/sets/standing.py check "{{set}}" | tail -1
 
 # One picture of an empty set through one of its own cameras, for its card in the gallery (sets/<set>/card.png)

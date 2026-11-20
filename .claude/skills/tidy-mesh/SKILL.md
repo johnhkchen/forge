@@ -680,6 +680,8 @@ its cameras are.
 ### What set.json holds
 
 ```json
+"frame": { "origin": [0.0, 0.0, 0.0], "front_deg": 0.0 },
+"footprint": { "outline": [[-7.5, -1.5], [6.5, -1.5], [6.5, 10.8], [-7.5, 10.8]] },
 "blocks": [{ "name": "desk", "kind": "desk", "center": [2.2, 0.375, 2.1], "size": [1.6, 0.75, 0.7], "heading": 0.0 }],
 "marks": {
   "wings":      { "kind": "stand", "at": [-4.7, 2.75], "facing_deg": 90.0, "offstage": true },
@@ -696,6 +698,17 @@ its cameras are.
 "dressing": [{ "prop": "mug", "slot": "desk_right", "glb": "dressing/mug.glb" }]
 ```
 
+- **A set is written in its own frame.** `frame` gives its origin and which
+  way its front faces; marks, cameras, blocks, lights and the backdrop are
+  all measured from that origin, and `set.glb` is built around it
+  (`geometry.move` is 0; `standing.py adopt` bakes a move into a .glb that
+  came from a run). `footprint` is the ground it takes up, cameras and all.
+  A set.json never says where the set is. A world file can, later: one line
+  per set, `{"at": [x, z], "facing_deg": 90}`, and `standing.placed(set, at,
+  facing_deg)` turns any point or heading of the set into the world's. A
+  shot is planned and filmed in the set's frame, so moving a set changes no
+  shot. The ring's footprint has `"open_toward_deg": 90`: its +x side ends
+  close to the ropes and is kept clear, for the hall to grow on.
 - **Blocks** are written the way a shot's `plan.json` has always carried its
   `set` (name, kind, center, size as across, tall, through, heading), which
   is what `apply_shot.py` hands to `animate.py`'s contact step. So a set's
@@ -704,8 +717,8 @@ its cameras are.
   a box, not a table top; keep a seated person's feet out of its footprint.
   `"see_through": true` (ropes) stops a body but not a camera.
 - **The floor is y = 0**, always. The ring's floor is its mat, so its
-  geometry is moved down by the mat's height (`"geometry": {"move": [0,
-  -1.36, 0.485]}`) and `"ground": {"y": -1.36}` says where the hall floor is.
+  geometry was moved down by the mat's height when it was taken from the
+  run, and `"ground": {"y": -1.36}` says where the hall floor is.
 - **A seat mark** names the block sat on and has two spots: `at`, where the
   hips are when seated, and `stand_at`, in front of it. Its own seat and
   whatever is `beside` it (a chair's back, a couch's arm) do not count as in
@@ -726,7 +739,9 @@ every mark it says it `sees`, with no block between; that on a stage
 (`"stage": "shallow"`) the floor is at most 5 m deep, every camera is out
 front and every mark is seen by one; that the backdrop is behind everyone
 and fills each camera's view (or a wall does); that dressing stands on slots
-that exist; and that every block is inside the set's geometry.
+that exist; that every block is inside the set's geometry; and that the set
+has a frame and a footprint that holds its marks, blocks, floor and cameras,
+with its geometry built around its origin.
 
 ### Blocking: a shot list names marks
 
@@ -815,8 +830,8 @@ apart, more than his arms could cover; they are 66 cm apart now.
 
 1. Write `sets/<name>/set.json`. Start from the studio's.
 2. Geometry: `just set-build <name>` (boxes from the blocks, plus
-   `build.json`), or `just set-from-run <name> runs/<an object>` to use
-   something already made, or `python3 scripts/sets/standing.py blocks-glb
+   `build.json`), or `just set-from-run <name> runs/<an object> game <x> <y>
+   <z>` to use something already made, moved onto the set's origin, or `python3 scripts/sets/standing.py blocks-glb
    <name>` for plain boxes.
 3. `just set-backdrop <name>` paints `backdrop.png` from `backdrop.txt`.
 4. `just set-check <name>` until it says sound, then `just set-card <name>`.

@@ -9,6 +9,7 @@ What it shows:
   cameras          every camera holds the marks it says it sees; turn one away and the check says so
   rooftop parity   the two hero shots, now filmed on the rooftop set, plan to the very requests they
                    did when the roof was written inside each shot
+  placing          every set has an origin, a front and a footprint, and can be put down anywhere as one piece
   segment          the guest-entrance template: both roles the same length, the handshake on the same
                    frames, the two wrists planned a palm's length either side of one spot
 
@@ -74,8 +75,8 @@ def test_set_check():
         check("a broken set is told: %s" % told, told in problems, problems[:400])
     ring = standing.load("ring")
     mat = standing.placed_bounds(ring)
-    check("the ring's floor is its mat: the geometry sits %.2f m lower, so the mat's top is at 0 (its highest post reaches %.2f m)" % (-ring["geometry"]["move"][1], mat[1][1]),
-          abs(ring["geometry"]["move"][1] + 1.36) < 0.01 and 1.3 < mat[1][1] < 1.7 and mat[0][1] < -1.3, mat)
+    check("the ring's floor is its mat: its geometry is built around the set's origin, the mat's top at 0, the hall floor %.2f m below, the highest post %.2f m up" % (-mat[0][1], mat[1][1]),
+          ring["geometry"]["move"] == [0.0, 0.0, 0.0] and 1.3 < mat[1][1] < 1.7 and -1.45 < mat[0][1] < -1.3 and abs(mat[0][0] + mat[1][0]) < 0.1, mat)
     in_the_way = {b["kind"] for b in standing.in_the_way(ring)}
     check("the ring's ropes and posts are in the way, and its steps are a mark to come in by", in_the_way == {"rope", "post"} and ring["marks"]["steps"]["kind"] == "stand")
     blocks = standing.plan_blocks(studio)
@@ -218,7 +219,34 @@ def test_segment():
               all(os.path.exists(os.path.join(folder, role, "shotlist.json")) for role in ("host", "guest")) and made["take"]["roles"]["guest"]["character"] == "roosevelt-wrestler-1890s")
 
 
-TESTS = [test_set_check, test_marks, test_cameras, test_rooftop_parity, test_segment]
+def test_placing():
+    """a set is written in its own frame, with a footprint, so it can be put down anywhere in a world as one piece."""
+    for name in standing.names():
+        st = standing.load(name)
+        outline = st["footprint"]["outline"]
+        held = all(standing.inside(outline, *m["at"]) for m in st["marks"].values()) and all(standing.inside(outline, c["at"][0], c["at"][2]) for c in st["cameras"].values())
+        check("%s: an origin, a front, and a footprint that holds its marks and cameras; its geometry is built around the origin" % name,
+              st["frame"]["origin"] == [0.0, 0.0, 0.0] and held and st["geometry"]["move"] == [0.0, 0.0, 0.0] and st["geometry"]["turn_deg"] == 0.0)
+    studio = standing.load("studio")
+    point, heading = standing.placed(studio, at=(100.0, -40.0), facing_deg=90.0)
+    desk, couch = studio["marks"]["desk_chair"], studio["marks"]["couch_1"]
+    moved = math.dist(point(desk["at"]), point(couch["at"]))
+    check("put down 100 m east, turned a quarter: the origin lands there, the front faces 90, and nothing inside moves against anything else (desk chair to couch still %.2f m)" % moved,
+          point([0.0, 0.0]) == [100.0, -40.0] and heading(0.0) == 90.0 and abs(moved - math.dist(desk["at"], couch["at"])) < 1e-3 and point([0.0, 1.0, 2.0]) == [102.0, 1.0, -40.0], (point([0.0, 0.0]), heading(0.0), point([0.0, 1.0, 2.0])))
+    same, _ = standing.placed(studio)
+    check("left where it is, a set's points are unchanged", same(desk["at"]) == desk["at"])
+    ring = standing.load("ring")
+    xs = [p[0] for p in ring["footprint"]["outline"]]
+    check("the ring keeps one side clear to grow on (toward %.0f degrees): its footprint ends %.1f m from the ropes there, %.1f m on the other side" % (ring["footprint"]["open_toward_deg"], max(xs) - 1.97, -min(xs) - 1.97),
+          ring["footprint"]["open_toward_deg"] == 90.0 and max(xs) - 1.97 < -min(xs) - 1.97)
+    broken = copy.deepcopy(studio)
+    broken["footprint"]["outline"] = [[-2.0, 0.0], [2.0, 0.0], [2.0, 3.0], [-2.0, 3.0]]
+    broken["geometry"]["move"] = [1.0, 0.0, 0.0]
+    problems = "\n".join(standing.check(broken)[0])
+    check("a footprint too small for the set, or geometry off the origin, is told", "outside the set's footprint: mark \"wings\"" in problems and "not built around the set's origin" in problems, problems[:300])
+
+
+TESTS = [test_set_check, test_marks, test_cameras, test_rooftop_parity, test_segment, test_placing]
 
 
 def cases():

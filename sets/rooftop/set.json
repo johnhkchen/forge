@@ -4,6 +4,36 @@
  "title": "The rooftop",
  "about": "A flat roof at night: a curved ledge to creep along, a long straight run, and a waist-high wall to vault. The hero shots are filmed here.",
  "stage": "open",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is where the hero shots start, on the roof edge; the front is the way the ledge sets off"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -4.5,
+    -1.5
+   ],
+   [
+    12.0,
+    -1.5
+   ],
+   [
+    12.0,
+    12.5
+   ],
+   [
+    -4.5,
+    12.5
+   ]
+  ],
+  "about": "the roof, the ledge and room to land past the wall"
+ },
  "floor": {
   "areas": [
    [
