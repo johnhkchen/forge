@@ -767,7 +767,7 @@ def make_best(source, out_dir, profile, spec):
     few thousand quads (the kettle), but it dissolves thin separate pieces
     (the wrestling ring's ropes: 23% off)."""
     record = make(source, out_dir, profile, spec)
-    whole = [p for n, p in spec["steps"] if n == "autoremesher" and p.get("use_parts") is False]
+    whole = [p for n, p in spec.get("steps", []) if n == "autoremesher" and p.get("use_parts") is False]
     if not whole or worst_off(record) <= RETRY_PARTS_OFF or not read_plan(source).get("parts"):
         return record
     print("PROFILE %s: %.1f%% off remeshed whole; trying part by part" % (profile, worst_off(record)))
