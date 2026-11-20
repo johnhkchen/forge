@@ -29,13 +29,21 @@ Measured on a real run (`runs/*-iron-kettle/mesh.glb`):
 
 ## Profiles: pick by what the object is for
 
-| Profile | For | Mesh | Textures |
-|---|---|---|---|
-| `hero` | close-up renders, printing | cleaned, 200k triangles | 2048, materials baked |
-| `quads` | keep modeling it | ~20k quads, follows the form | 2048 + normal map |
-| `web` | web pages, product viewers | ~8k quads, Draco-compressed | 1024 WebP + normal map |
-| `game` | real-time games | ~4k quads | 1024 + normal map |
-| `mobile` | phones, AR | ~2.5k quads, Draco | 512 WebP + normal map |
+| Profile | For | Mesh | Textures | Worst shape error (kettle) |
+|---|---|---|---|---|
+| `hero` | close-up renders, printing | cleaned, 200k triangles | 2048, materials baked | — |
+| `quads` | keep modeling it | ~20k quads that follow the form | 2048 + normal map | ~2.4%, at the spout tip |
+| `web` | web pages, product viewers | 16k triangles, shape-aware, Draco | 1024 WebP + normal map | 0.25% |
+| `game` | real-time games | 8k triangles, shape-aware | 1024 + normal map | 0.6% |
+| `mobile` | phones, AR | 5k triangles, shape-aware, Draco | 512 WebP + normal map | 0.5% |
+
+**Why the light profiles aren't quads.** QuadriFlow makes every quad the
+same size, so a thin tip (a spout, a knob) ends up about one quad short. At
+4k quads that was 2.5% off on the kettle, 3.6% at 2.5k, visible in the
+silhouette. Shape-aware reduction (decimate.py) puts faces where the shape
+changes and few on flat areas: 0.3–0.6% at the same budgets. Game engines
+draw triangles anyway; the usual practice is a clean quad base for editing
+and shape-aware reductions for delivery, which is what these profiles do.
 
 Profiles are defined in `profiles.json` (steps and their PARAMS); edit or add
 one there rather than hand-running a different recipe each time.
@@ -50,6 +58,9 @@ person's open session:
 just tidy runs/<run folder> web game        # one or more profiles
 just tidy runs/<run folder> hero quads web game mobile
 ```
+
+Each profile's `<profile>.json` records `shape` (from match.py): how far the
+light mesh strays from the full one. Read it, not just the previews.
 
 This reads the run's `scene.blend` (with Claude's material fixes; falls back
 to `mesh.glb`) and writes into `runs/<run>/profiles/`: `<profile>.glb`,
@@ -73,8 +84,9 @@ add-on's safe mode.
 |---|---|---|
 | `inspect.py` | measures everything below, changes nothing | instant |
 | `clean.py` | welds seams, deletes specks and loose bits, closes small holes, fixes normals, smooth shading with sharp edges | ~2 s |
-| `decimate.py` | reduces to a triangle budget, keeping UVs and textures | a few s |
-| `retopo.py` | rebuilds each part as quads (voxel remesh, QuadriFlow, shrinkwrap back onto the original) | 5–20 s, freezes Blender |
+| `decimate.py` | shape-aware reduction to a triangle budget, keeping UVs; `as_copy` + `quadify` make a light "(light)" copy to bake onto | a few s |
+| `match.py` | how far a light mesh strays from the full one, and where (both directions, % of size) | ~2 s |
+| `retopo.py` | rebuilds each part as quads with QuadriFlow, on the part's own repaired surface when it can (voxel remesh only as a fallback for big parts), shrinkwrapped back onto the original; `routes` says which way each part went | 5–30 s, freezes Blender |
 | `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one | 5–60 s, freezes Blender |
 | `export.py` | writes one object as GLB (WebP, Draco optional) | ~1 s |
 | `preview.py` | renders a quick three-quarter PNG, optionally with wireframe | ~2 s |
@@ -86,8 +98,10 @@ Rules for the live session:
   `retopo.py` or `bake.py`, or run them in the background instead.
 - Check with `look` using shading `"material"` or `"solid"`; `"rendered"`
   runs Cycles and is slow.
-- Order: `inspect` → `clean` → (`decimate` or `retopo`) → `bake` → `export`.
-  Run `inspect` again after each step and compare.
+- Order: `inspect` → `clean` → (`decimate` or `retopo`) → `match` → `bake`
+  → `export`. Run `inspect` again after each step and compare.
+- Judge shape with `match.py`: under ~0.5% worst error is invisible at
+  normal distance; over ~1.5% shows in the silhouette.
 - Keep the full mesh: `retopo.py` and `bake.py` hide it rather than delete it.
 
 ## Reading inspect.py
@@ -104,16 +118,18 @@ Rules for the live session:
 
 ## Known limits
 
-- QuadriFlow spreads quads evenly. Small features on a big part (a lid knob
-  on the body) get few quads and turn faceted below ~5k quads. Raise
-  `target_quads` or `detail` if that matters.
-- Thin rims and lips (a spout's mouth) can tear; retopo.py closes the tears
-  and reports `tears_closed`. Check the wireframe preview there.
+- Evenly sized quads lose thin tips: the `quads` profile is ~2.4% off at the
+  kettle's spout tip (typical error 0.2%). Raise `target_quads` if that
+  matters, or sharpen the tip by hand; it is a base for editing.
+- QuadriFlow refuses some parts that pass every manifold check we can run;
+  retopo.py then falls back to a fine voxel remesh (big parts) or plain
+  reduction (small parts) and says so in `routes`. The voxel route's error
+  varies with `detail`; 450 measured steadiest.
 - At very low budgets a bake can miss parts of the surface, which shows as
   black patches. bake.py widens its reach for coarse meshes; if patches
-  remain, raise the quad budget.
-- For close-up renders, `hero` (the cleaned dense mesh) stays more faithful
-  than any retopology.
+  remain, raise the budget.
+- For close-up renders, `hero` (the cleaned dense mesh) stays the most
+  faithful.
 
 ## Testing a script change
 

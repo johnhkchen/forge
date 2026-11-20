@@ -1,7 +1,7 @@
 """Run tidy-mesh skill scripts in a background Blender, for testing them
 without a live Blender session or MCP.
 
-    blender -b --factory-startup -P scripts/tidy_headless.py -- MESH.glb SCRIPT.py [SCRIPT.py ...] [--params '{"script.py": {...}}'] [--save OUT.blend]
+    blender -b --factory-startup -P scripts/tidy_headless.py -- MESH.glb|SCENE.blend SCRIPT.py [SCRIPT.py ...] [--params '{"script.py": {...}}'] [--save OUT.blend]
 
 Each script's PARAMS dict is updated from --params before it runs, the same
 edit Claude makes before sending a script over MCP.
@@ -25,8 +25,11 @@ if "--params" in args:
     del args[i : i + 2]
 mesh, scripts = args[0], args[1:]
 
-bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.gltf(filepath=os.path.abspath(mesh))
+if mesh.endswith(".blend"):
+    bpy.ops.wm.open_mainfile(filepath=os.path.abspath(mesh))
+else:
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=os.path.abspath(mesh))
 
 for path in scripts:
     with open(path) as f:

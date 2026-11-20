@@ -62,9 +62,11 @@ TRELLIS.2 hands back an even soup of ~300k triangles. The `tidy-mesh` skill (`.c
 | Profile | For | Mesh | Textures |
 |---|---|---|---|
 | `hero` | close-up renders, printing | 200k triangles, cleaned | 2048 |
-| `quads` | keep modeling it | ~20k quads | 2048 + normal map |
-| `web` | web pages, product viewers | ~8k quads, Draco | 1024 WebP + normal map |
-| `game` | real-time games | ~4k quads | 1024 + normal map |
-| `mobile` | phones, AR | ~2.5k quads, Draco | 512 WebP + normal map |
+| `quads` | keep modeling it | ~20k quads that follow the form | 2048 + normal map |
+| `web` | web pages, product viewers | 16k triangles, shape-aware, Draco | 1024 WebP + normal map |
+| `game` | real-time games | 8k triangles, shape-aware | 1024 + normal map |
+| `mobile` | phones, AR | 5k triangles, shape-aware, Draco | 512 WebP + normal map |
+
+Each profile records how far it strays from the full mesh (`shape` in `<profile>.json`). The light ones stay within about half a percent of the object's size.
 
 In a Claude Code session here, ask for any of these ("make a game version of the kettle") and Claude uses the skill, either in the background or step by step in your open Blender.

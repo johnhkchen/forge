@@ -59,6 +59,9 @@ def make(source, out_dir, profile, spec):
     record = {"profile": profile, "about": spec["about"], "source": source, "steps": []}
     for name, params in spec["steps"]:
         record["steps"].append({"script": name, "result": run_script(name, params)})
+    light = [n for n, _ in spec["steps"]]
+    if "retopo.py" in light or "decimate.py" in light and any(p.get("as_copy") for _, p in spec["steps"]):
+        record["shape"] = run_script("match.py", {})
     glb = os.path.join(out_dir, profile + ".glb")
     record["export"] = run_script("export.py", dict(spec["export"], path=glb))
     # GLB can only store triangles; the .blend keeps the real quads for
@@ -70,8 +73,10 @@ def make(source, out_dir, profile, spec):
     record["seconds"] = round(time.time() - started, 1)
     with open(os.path.join(out_dir, profile + ".json"), "w") as f:
         json.dump(record, f, indent=2)
-    print("PROFILE %s: %d faces, %.1f MB, %.0fs -> %s" % (
-        profile, record["export"]["faces"], record["bytes"] / 1e6, record["seconds"], glb))
+    shape = record.get("shape")
+    off = " worst %.2f%% off" % shape["shape_lost"]["max_%"] if shape else ""
+    print("PROFILE %s: %d faces,%s %.1f MB, %.0fs -> %s" % (
+        profile, record["export"]["faces"], off, record["bytes"] / 1e6, record["seconds"], glb))
 
 
 args = sys.argv[sys.argv.index("--") + 1:]

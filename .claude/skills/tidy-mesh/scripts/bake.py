@@ -24,7 +24,7 @@
 PARAMS = {
     "object": None,          # mesh object name; None = the largest visible mesh
     "mode": "materials",     # "materials" or "onto"
-    "target": None,          # "onto" only: the mesh to bake onto; None = "<object> (quads)"
+    "target": None,          # "onto" only: the mesh to bake onto; None = the "(quads)" or "(light)" mesh
     "texture_size": 1024,    # 1024 for web/game, 2048 for close-ups
     "metallic": True,        # bake a metallic map (skip for objects with no metal)
 }
@@ -191,13 +191,15 @@ if mode not in ("materials", "onto"):
     raise ValueError("mode must be 'materials' or 'onto'")
 obj = pick_object(PARAMS["object"]) if mode == "materials" or PARAMS["object"] else None
 if obj is None:
-    # "onto" with no source named: the hidden full mesh retopo.py left behind.
-    quads = [o for o in bpy.context.scene.objects if o.type == "MESH" and o.name.endswith(" (quads)")]
-    if not quads:
-        raise ValueError("name the source object, or run retopo.py first")
-    obj = bpy.data.objects.get(quads[0].name[: -len(" (quads)")])
+    # "onto" with no source named: the hidden full mesh retopo.py or
+    # decimate.py (as_copy) left behind next to the light one.
+    lights = [o for o in bpy.context.scene.objects if o.type == "MESH" and o.name.endswith((" (quads)", " (light)"))]
+    if not lights:
+        raise ValueError("name the source object, or run retopo.py or decimate.py (as_copy) first")
+    PARAMS["target"] = PARAMS["target"] or lights[0].name
+    obj = bpy.data.objects.get(lights[0].name.rsplit(" (", 1)[0])
     if obj is None:
-        raise ValueError("cannot find the full mesh for %r" % quads[0].name)
+        raise ValueError("cannot find the full mesh for %r" % lights[0].name)
 source_mats = [s.material for s in obj.material_slots if principled(s.material)]
 if not source_mats:
     raise ValueError("%s has no Principled BSDF material to bake from" % obj.name)
@@ -210,7 +212,7 @@ size = PARAMS["texture_size"]
 reach = size_of(obj) * 0.01
 
 if mode == "onto":
-    target = bpy.data.objects.get(PARAMS["target"] or obj.name + " (quads)")
+    target = bpy.data.objects.get(PARAMS["target"] or obj.name + " (quads)") or bpy.data.objects.get(obj.name + " (light)")
     if target is None or target.type != "MESH":
         raise ValueError("no mesh to bake onto: %r" % (PARAMS["target"] or obj.name + " (quads)"))
     prepare_target(target)

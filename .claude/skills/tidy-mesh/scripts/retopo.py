@@ -2,9 +2,18 @@
 #
 # TRELLIS.2 builds its surface from voxels: an even soup of ~300k triangles
 # with no edge loops. This makes a "<name> (quads)" copy instead: each
-# separate part (body, handle, lid...) is made watertight with a voxel
-# remesh, then rebuilt with QuadriFlow, whose quads follow the surface's
-# curvature and sharp edges. Parts get quads in proportion to their area.
+# separate part (body, handle, lid...) is rebuilt with QuadriFlow, whose quads
+# follow the surface's curvature and sharp edges. Parts get quads in
+# proportion to their area.
+#
+# QuadriFlow needs a watertight part. Each part is repaired in place first
+# (keeps the true shape, e.g. a spout's open mouth); only if QuadriFlow still
+# refuses does it fall back to a voxel remesh (watertight but softens thin
+# tips), and last to plain reduction. `routes` in the result says which.
+#
+# Quads are evenly sized, so a thin tip ends up about one quad short. Below
+# ~8k quads that shows; use decimate.py (shape-aware) for light versions and
+# check either with match.py.
 #
 # The new mesh has no UVs or texture yet. Follow with bake.py (mode "onto")
 # to bake the original's color, materials and fine detail onto it.
@@ -18,8 +27,12 @@ PARAMS = {
     "object": None,          # mesh object name; None = the largest visible mesh
     "target_quads": 8000,    # total quads across all parts
     "min_part_quads": 150,   # no part gets fewer than this
-    "speck_share": 0.002,    # parts under this share of the area are dropped
-    "detail": 220,           # voxel resolution across each part's longest side;
+    # A part is a speck (and dropped) only if it is BOTH this small a share of
+    # the area AND this small next to the whole object, the same rule as
+    # clean.py. Small but real parts, like a handle's hinge pivots, are kept.
+    "speck_share": 0.002,
+    "speck_size_share": 0.05,
+    "detail": 450,           # voxel fallback: resolution across the whole object;
                              # higher keeps thin walls (spout lips, rims) intact
     "preserve_sharp": True,
 }
@@ -72,6 +85,62 @@ def close_tears(obj):
     return len(edges)
 
 
+def repair(obj):
+    """Make a part watertight without remeshing it: cut out the faces around
+    bad edges and bad vertices, fill the holes, point normals outward."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    size = max(obj.dimensions)
+    for _ in range(4):
+        # QuadriFlow's own test is stricter than "every edge has two faces":
+        # the two must also run in opposite directions, which zero-area and
+        # duplicate faces break. Remove those first.
+        bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=size * 1e-6)
+        bm.verts.index_update()
+        seen = {}
+        twins = []
+        for f in bm.faces:
+            key = frozenset(v.index for v in f.verts)
+            if key in seen:
+                twins.extend((f, seen[key]))
+            else:
+                seen[key] = f
+        if twins:
+            bmesh.ops.delete(bm, geom=list(set(twins)), context="FACES")
+        bad_edges = [e for e in bm.edges if not e.is_manifold]
+        bad_verts = [v for v in bm.verts if not v.is_manifold]
+        if not bad_edges and not bad_verts:
+            break
+        faces = {f for e in bad_edges for f in e.link_faces} | {f for v in bad_verts for f in v.link_faces}
+        bmesh.ops.delete(bm, geom=list(faces), context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bmesh.ops.holes_fill(bm, edges=[e for e in bm.edges if e.is_boundary], sides=0)
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(obj.data)
+    bm.free()
+
+
+def quadriflow(part, budget):
+    try:
+        outcome = bpy.ops.object.quadriflow_remesh(
+            mode="FACES", target_faces=budget, use_preserve_sharp=PARAMS["preserve_sharp"],
+            use_preserve_boundary=True, use_mesh_symmetry=False, seed=0,
+        )
+    except RuntimeError:
+        return False
+    return "FINISHED" in outcome
+
+
+def reduce(part, triangles):
+    if len(part.data.polygons) <= triangles:
+        return
+    mod = part.modifiers.new("Decimate", "DECIMATE")
+    mod.ratio = triangles / len(part.data.polygons)
+    mod.use_collapse_triangulate = True
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+
+
 def quads(obj):
     return sum(1 for p in obj.data.polygons if len(p.vertices) == 4)
 
@@ -90,6 +159,7 @@ select_only([work], work)
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
 # One object per separate part.
+whole = max(work.dimensions)
 bpy.ops.object.mode_set(mode="EDIT")
 bpy.ops.mesh.select_all(action="SELECT")
 bpy.ops.mesh.remove_doubles(threshold=max(work.dimensions) * 1e-6)
@@ -99,27 +169,47 @@ parts = list(bpy.context.selected_objects)
 
 areas = {p.name: area(p) for p in parts}
 total_area = sum(areas.values()) or 1.0
-kept, dropped, failed = [], [], []
+kept, dropped = [], []
 tears = {}
+routes = {}
 for part in parts:
     share = areas[part.name] / total_area
-    if share < PARAMS["speck_share"]:
+    if share < PARAMS["speck_share"] and max(part.dimensions) < whole * PARAMS["speck_size_share"]:
         dropped.append(part.name)
         bpy.data.objects.remove(part, do_unlink=True)
         continue
     budget = max(PARAMS["min_part_quads"], int(PARAMS["target_quads"] * share))
     select_only([part], part)
-    # Watertight first: QuadriFlow refuses non-manifold input.
-    part.data.remesh_voxel_size = max(part.dimensions) / PARAMS["detail"]
-    part.data.use_remesh_fix_poles = True
-    bpy.ops.object.voxel_remesh()
-    try:
-        bpy.ops.object.quadriflow_remesh(
-            mode="FACES", target_faces=budget, use_preserve_sharp=PARAMS.get("preserve_sharp", True),
-            use_preserve_boundary=True, use_mesh_symmetry=False, seed=0,
-        )
-    except RuntimeError as err:
-        failed.append({"part": part.name, "error": str(err)[:200]})
+    original = part.data.copy()
+    # 1. The part's own surface, repaired. QuadriFlow is slow on dense
+    #    input, so very dense parts are reduced (shape-aware) first.
+    repair(part)
+    reduce(part, 60000)
+    repair(part)
+    big = share >= 0.05
+    if quadriflow(part, budget):
+        routes[part.name] = "surface"
+    else:
+        # 2. A voxel remesh is always watertight, but softens thin tips and
+        #    turns small parts (a hinge pin) into blobs, so big parts only.
+        voxel_ok = False
+        if big:
+            part.data = original.copy()
+            part.data.remesh_voxel_size = whole / PARAMS["detail"]
+            part.data.use_remesh_fix_poles = True
+            bpy.ops.object.voxel_remesh()
+            voxel_ok = quadriflow(part, budget)
+        if voxel_ok:
+            routes[part.name] = "voxel"
+        else:
+            # 3. Plain reduction, paired into quads where they line up.
+            part.data = original.copy()
+            reduce(part, budget * 2)
+            bpy.ops.object.mode_set(mode="EDIT")
+            bpy.ops.mesh.select_all(action="SELECT")
+            bpy.ops.mesh.tris_convert_to_quads()
+            bpy.ops.object.mode_set(mode="OBJECT")
+            routes[part.name] = "reduced"
     tears[part.name] = close_tears(part)
     kept.append(part)
 
@@ -129,8 +219,8 @@ select_only(kept, kept[0])
 bpy.ops.object.join()
 result = bpy.context.view_layer.objects.active
 result.name = source.name + " (quads)"
-# Snap the new surface back onto the original, as in hand retopology: the
-# voxel and QuadriFlow passes both drift a little from the true shape.
+# Snap the new surface back onto the original, as in hand retopology:
+# QuadriFlow (and the voxel route) drift a little from the true shape.
 wrap = result.modifiers.new("Shrinkwrap", "SHRINKWRAP")
 wrap.target = source
 wrap.wrap_method = "NEAREST_SURFACEPOINT"
@@ -146,6 +236,6 @@ print("RESULT " + json.dumps({
     "triangles": sum(len(p.vertices) - 2 for p in result.data.polygons),
     "parts": len(kept),
     "dropped_specks": len(dropped),
-    "failed": failed,
+    "routes": sorted(routes.values()),
     "tears_closed": sum(tears.values()),
 }))
