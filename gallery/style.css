@@ -117,3 +117,10 @@ html, body { overflow-x: hidden; }
 .notes ul { margin: 0; padding-left: 1.2em; }
 .notes li { margin: 2px 0; }
 @media (max-width: 520px) { .pictures { grid-template-columns: 1fr; } }
+
+/* Objects: one row of controls, and a landscape stage that fits a thing on a table. */
+.object-row { align-items: center; flex-wrap: wrap; overflow-x: visible; }
+.object-row > * { flex-shrink: 0; white-space: nowrap; }
+.object-row .row-gap { flex: 0 0 4px; }
+.stage--object .pane { aspect-ratio: 4 / 3; max-height: 68vh; }
+.stage--object.compare .pane { aspect-ratio: 4 / 3; }

@@ -96,7 +96,7 @@ function objectPage(run, wanted) {
   // is finished, where the finished one does. The low-poly and mid-poly versions have their own gear.
   const bareOf = (v) => (v.gear?.length || !run.base ? null : v.name === "raw" ? run.base.raw : run.base.finished);
 
-  const stage = h("div", { class: "stage clay-well" });
+  const stage = h("div", { class: run.character ? "stage clay-well" : "stage stage--object clay-well" });
   const factsBox = h("div", { class: "facts" });
   const about = h("p", { class: "about" });
   const chips = versions.map((v) =>
@@ -203,8 +203,14 @@ function objectPage(run, wanted) {
     h("a", { class: "back", href: "#/" }, "← All objects"),
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
-    h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, run.base ? bareBtn : null, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn)),
+    // An object (a camera, a ring, a kettle) has nothing to play or put on: its few controls share the
+    // versions' row, and its stage is a landscape one that fits a thing on a table, not a standing figure.
+    run.character
+      ? h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips)
+      : h("div", { class: "versions object-row", role: "group", "aria-label": "Version" }, chips, h("span", { class: "row-gap" }), compareBtn, wireBtn),
+    run.character
+      ? h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, run.base ? bareBtn : null, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn))
+      : null,
     gearRow,
     stage,
     factsBox,

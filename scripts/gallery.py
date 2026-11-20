@@ -128,6 +128,7 @@ def run_summary(folder):
         "name": brief.get("name") or folder[20:].replace("-", " ").title(),
         "description": brief.get("description"),
         "size_m": brief.get("size_m"),
+        "character": bool(brief.get("character")),
         "picture": "image.png" if has("image.png") else None,
         "render": "render.png" if has("render.png") else None,
         "raw": "profiles/raw.glb" if has("profiles/raw.glb") else ("mesh.glb" if has("mesh.glb") else None),

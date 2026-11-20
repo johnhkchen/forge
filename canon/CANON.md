@@ -37,6 +37,16 @@ pop who is quietly trying to work out what life as a toon is about.
   politely carries on. Lincoln talks to him as if he might answer one day.
 - Now and then the edge of his mask or his gloved hand is in the picture, so we
   remember whose eyes these are.
+- **His camera** is a pinhole box camera he put together himself, since a new
+  pop has almost no credits:
+  - the body is a grey scale-cube cut down to a hand-held box;
+  - the lens is a brass teapot spout, traded from the troll and the lizardkin
+    for an afternoon of sweeping;
+  - the shutter is a flap of his spare black sash;
+  - the strap is a length of boxing-ring rope.
+
+  He develops his prints in the dark storeroom behind the boxing-house bar.
+  **His prints are the strips.**
 
 ## How this world began: the reset
 
