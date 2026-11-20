@@ -481,6 +481,7 @@ def loop_to_plain(loop: dict, sk: Skeleton, name: str = "run") -> tuple:
     for tag in ("l", "r"):
         plain["feet"][tag] = [[b[0], round(b[1] + per_frame * f, 5)] + b[2:] for f, b in ((f, plain["feet"][tag][f]) for f in keep)]
     plain["turns"] = {bone: [rows[f] for f in keep] for bone, rows in plain["turns"].items()}
+    plain["knees"] = {tag: [rows[f] for f in keep] for tag, rows in plain["knees"].items()}
     plain.update({"frames": count, "loop": True, "travel": round(per_frame * FPS, 5)})
     seam = max(
         [abs(x - y) for x, y in zip(plain["hips"][0], plain["hips"][-1])]

@@ -21,6 +21,12 @@ fixed spot (the average of where the ball was), eased in and out over a few
 frames (never over frames held on the spot before), and the foot is marked planted, so animate.py's leg solve holds it
 there. `planted_feet` in the result says how far each foot was moved to do so.
 
+Knees. Our legs are solved from the hip to where the foot must be, and a
+solved leg needs to be told which way its knee points. The motion knows:
+`knees` in the result is, per frame, the axis each knee folds about, read
+from where the hip, knee and ankle are (and from the model's own thigh when
+the leg is nearly straight and has no such plane).
+
 Plain Python: no Blender, no numpy.
 """
 
@@ -75,7 +81,7 @@ def convert(motion: dict, sk: Skeleton, name: str = "motion", plant: bool = True
     # Each of our bones follows one SOMA joint; with soma_also, the last of them (its turn already includes the ones above).
     follows = {bone: (card.get("soma_also") or [card["soma"]])[-1] for bone, card in table.items()}
     turns = {bone: [] for bone in table}
-    hips, balls, feet_turn = [], {"l": [], "r": []}, {"l": [], "r": []}
+    hips, balls, feet_turn, knees = [], {"l": [], "r": []}, {"l": [], "r": []}, {"l": [], "r": []}
     for f in range(count):
         row = motion["rotations"][f]
         local = [tuple(row[4 * have[j] : 4 * have[j] + 4]) if j in have else sk.rest_rot[i] for i, j in enumerate(sk.joints)]
@@ -110,11 +116,30 @@ def convert(motion: dict, sk: Skeleton, name: str = "motion", plant: bool = True
             toe, foot = sk.index[f"{side}ToeBase"], sk.index[f"{side}Foot"]
             ball = ours(pos[toe])
             lift = pos[toe][1] - sk.rest_world_pos[toe][1]
-            points = qrot(qmul(rot[foot], qconj(sk.rest_world_rot[foot])), Z)
+            turn = qmul(rot[foot], qconj(sk.rest_world_rot[foot]))
+            points, across = qrot(turn, Z), qrot(turn, (1.0, 0.0, 0.0))
             balls[tag].append([ball[0] / unit, ball[1] / unit, lift / unit])
+            # Which way the foot faces. With the toes pointing nearly straight down (the back foot of a run)
+            # the foot's own "forward" says nothing about that, and reading it gave a foot spinning half a
+            # turn in three frames, and a knee thrown out sideways with it. So it is read from two things, each
+            # counted by how level it lies: where the toes point, and where the foot's side-to-side axis points.
+            ahead = (points[0], points[2])  # the toes, seen from above
+            square = (-across[2], across[0])  # square to the side-to-side axis, seen from above
+            heading = (ahead[0] * math.hypot(*ahead) + square[0] * math.hypot(*square), ahead[1] * math.hypot(*ahead) + square[1] * math.hypot(*square))
             feet_turn[tag].append(
-                (math.degrees(math.asin(max(-1.0, min(1.0, -points[1])))), math.degrees(math.atan2(points[0], points[2])))
+                (math.degrees(math.asin(max(-1.0, min(1.0, -points[1])))), math.degrees(math.atan2(heading[0], heading[1])))
             )
+            # Which way the knee's hinge points: square to the plane the leg bends in. A nearly straight leg has
+            # no such plane, so there the hinge is the one the model's own thigh carries.
+            a, b = sk.index[f"{side}Leg"], sk.index[f"{side}Shin"]
+            d1, d2 = unit_of(sub(pos[b], pos[a])), unit_of(sub(pos[foot], pos[b]))
+            bend = cross(d1, d2)
+            carried = qrot(qmul(rot[a], qconj(sk.rest_world_rot[a])), (1.0, 0.0, 0.0))
+            folded = min(1.0, length(bend) / 0.26)
+            if length(bend) > 1e-6 and dot(bend, carried) < 0 and folded < 1.0:
+                bend = scale(bend, -1.0)
+            hinge = unit_of(add(scale(carried, 1.0 - folded), scale(unit_of(bend) if length(bend) > 1e-6 else carried, folded)))
+            knees[tag].append([round(c, 5) for c in ours(hinge)])
 
     planted = {"l": [0] * count, "r": [0] * count}
     moved = {}
@@ -166,6 +191,7 @@ def convert(motion: dict, sk: Skeleton, name: str = "motion", plant: bool = True
         "travel": 0.0,  # the motion carries its own travel in `hips`; the ground stays still
         "hips": [[round(c, 5) for c in h] for h in hips],
         "feet": feet,
+        "knees": knees,  # per frame, which way each knee's hinge points (to the character's left when it stands straight)
         "turns": turns,
     }
     return plain, {"frames": count, "bones": sorted(turns), "soma_hip_height_m": round(unit, 4), "planted_feet": moved}

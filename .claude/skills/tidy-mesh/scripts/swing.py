@@ -17,7 +17,8 @@
 #   - and the turn that puts it there is clamped to the bone's "limit_deg".
 # The result is keyed on the cloth bones, one key a frame, into the same
 # action. A motion that loops is run through three times and the last round
-# kept, then its end is eased onto its start, so the loop has no seam.
+# kept (or, for a chain that never settles, the average of a few more),
+# then its end is eased onto its start, so the loop has no seam.
 #
 # "check" in the result: turns outside a limit, how far any cloth joint is
 # inside a leg, the seam, how far the hems travel.
@@ -41,6 +42,7 @@ import math
 from mathutils import Euler, Quaternion, Vector
 
 RODS = ("thigh_l", "thigh_r", "shin_l", "shin_r", "chest")
+MORE_ROUNDS = 6  # a loop whose cloth has not settled is played this many more times, and the rounds averaged
 
 
 def clamp(v, lo, hi):
@@ -188,9 +190,35 @@ if chains:
             for _ in range(max(1, int(PARAMS["rounds"])) - 1):
                 for f in range(frames):
                     step(c, state, taken[f], dt)
-        else:
-            for _ in range(30):  # let it settle into the first pose before the motion starts
-                step(c, state, taken[0], dt)
+            # A chain that a leg knocks about may never settle into the loop: every round ends some degrees from
+            # where it started, a different way each time (the troll's kilt, thrown 80 degrees by thighs 40 cm
+            # thick). Then it is played round a few more times, each round starting where the last one ended, and
+            # the rounds are averaged frame by frame: what the ends are short of the starts shrinks by as many
+            # times as there are rounds.
+            rounds = [[step(c, state, taken[f], dt) for f in range(frames + 1)]]
+            short = max(math.degrees(a.to_quaternion().rotation_difference(b.to_quaternion()).angle) for a, b in zip(rounds[0][0], rounds[0][frames]))
+            kept = (short, rounds[0])
+            if short >= 1.0:
+                for again in range(MORE_ROUNDS):
+                    rounds.append([rounds[-1][frames]] + [step(c, state, taken[f], dt) for f in range(1, frames + 1)])
+                middle = []
+                for f in range(frames + 1):
+                    row = []
+                    for i in range(len(c["bones"])):
+                        first_q = rounds[0][f][i].to_quaternion()
+                        total = [0.0, 0.0, 0.0, 0.0]
+                        for one in rounds:
+                            q = one[f][i].to_quaternion()
+                            if q.dot(first_q) < 0:
+                                q.negate()
+                            total = [t + v for t, v in zip(total, q)]
+                        row.append(held(Quaternion(total).normalized().to_matrix(), limits.get(c["bones"][i]) or [-180, 180, -180, 180, -180, 180]))
+                    middle.append(row)
+                kept = (0.0, middle)
+            played.append(kept[1])
+            continue
+        for _ in range(30):  # let it settle into the first pose before the motion starts
+            step(c, state, taken[0], dt)
         played.append([step(c, state, taken[f], dt) for f in range(frames + 1)])
 
     # ---- key it; a loop's last frame is its first, and the little left over is eased out across the round ----

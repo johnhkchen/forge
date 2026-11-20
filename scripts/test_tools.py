@@ -1090,6 +1090,85 @@ def test_contact(ctx):
           c["planted_foot_strays_cm"] < 2.0 and c["through_floor_cm"] < 0.5 and c["limit_violations"] == 0, c)
 
 
+def rig_numbers(paths):
+    """scripts/rig_check.py on some walking or running .glb files: {path: what it measured}."""
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "rig_check.py"), "--"] + list(paths), capture_output=True, text=True)
+    rows = [json.loads(line[4:]) for line in out.stdout.splitlines() if line.startswith("RIG ")]
+    if len(rows) != len(paths):
+        raise AssertionError("rig_check.py measured %d of %d files:\n%s" % (len(rows), len(paths), (out.stdout + out.stderr)[-1500:]))
+    return dict(zip(paths, rows))
+
+
+def test_rig_fit(ctx):
+    """Where the joints sit, how much of itself the body keeps, and how much it shakes, measured on files the real runner makes (scripts/rig_check.py): the neck starts at the collar and the head turns about a point inside the skull; elbows and knees sit in the middle of their limbs; the trunk loses no more volume over a walk and a run than it did, and a head none; a knee shakes no more than the foot that moves it and never swings out sideways for a frame. Uses each character's real run clip when its run folder has one."""
+    with open(os.path.join(HERE, "test_gaits.json")) as f:
+        said = json.load(f)
+    runs = os.path.dirname(ctx["troll"])
+    found = [ctx["troll"]] + [sorted(glob.glob(os.path.join(runs, pattern)))[-1] for pattern in ("*young-lincoln*", "*flamenco-dancer", "*shadow-ninja") if glob.glob(os.path.join(runs, pattern))]
+    made = []
+    for run in found:
+        copy = os.path.join(ctx["out"], "rigfit", os.path.basename(run))
+        os.makedirs(os.path.join(copy, "profiles"), exist_ok=True)
+        versions = [v for v in ("lowpoly", "midpoly") if os.path.exists(os.path.join(run, "profiles", v + ".glb"))]
+        for name in ["brief.json", "lowpoly_build.json", "gait.json", "run/loop.json", "run/ask.json"] + ["profiles/%s%s" % (v, end) for v in versions for end in (".glb", ".json")]:
+            if os.path.exists(os.path.join(run, name)):
+                os.makedirs(os.path.dirname(os.path.join(copy, name)), exist_ok=True)
+                shutil.copy(os.path.join(run, name), os.path.join(copy, name))
+        traits = next((v for k, v in said.items() if k in run and k != "about"), None)
+        if traits:
+            with open(os.path.join(copy, "gait.json"), "w") as f:
+                json.dump(traits, f)
+        clips = ["walk"] + (["run"] if os.path.exists(os.path.join(copy, "run", "loop.json")) else [])
+        out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                              os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles")] + clips, capture_output=True, text=True)
+        for version in versions:
+            for clip in clips:
+                path = os.path.join(copy, "profiles", "%s-%s.glb" % (version, clip))
+                if not os.path.exists(path):
+                    raise AssertionError("no %s-%s for %s:\n%s" % (version, clip, os.path.basename(run)[20:], (out.stdout + out.stderr)[-1500:]))
+                made.append((os.path.basename(run)[20:], version, clip, path, os.path.exists(os.path.join(copy, "lowpoly_build.json"))))
+    numbers = rig_numbers([row[3] for row in made])
+    for label, version, clip, path, has_recipe in made:
+        n = numbers[path]
+        who = "%s %s %s" % (label, version, clip)
+        with open(path[:-4] + ".json") as f:
+            record = json.load(f)
+        c = record["animation"]["check"]
+        if clip == "walk":
+            j, h = n["joints"], n["heights"]
+            check("%s: the spine runs up the middle of the trunk (hips %.0f%%, spine %.0f%%, chest %.0f%% of the way from the middle to the skin)" % (who, j["hips"]["off_%"], j["spine"]["off_%"], j["chest"]["off_%"]),
+                  max(j[k]["off_%"] for k in ("hips", "spine", "chest")) < 15 and all(j[k]["inside"] for k in ("hips", "spine", "chest")), j)
+            check("%s: the elbow and the knee sit in the middle of their limbs (%.0f%% and %.0f%% off; a quarter of the way down the forearm and shin %.0f%% and %.0f%%)" % (
+                  who, j["forearm_l"]["off_%"], j["shin_l"]["off_%"], j["forearm_l@25"]["off_%"], j["shin_l@25"]["off_%"]),
+                  j["forearm_l"]["off_%"] < 30 and j["shin_l"]["off_%"] < 30 and j["forearm_l@25"]["off_%"] < 40 and j["shin_l@25"]["off_%"] < 40, j)
+            check("%s: the neck bone is %.1f%% of the height long, and stands in the middle of the neck (%.0f%% off)" % (who, h["neck_long_%"], j["neck"]["off_%"]),
+                  h["neck_long_%"] >= 7.0 and j["neck"]["off_%"] < 45 and j["neck"]["inside"], h)
+            if has_recipe:  # a head the block-out names: its chin and crown are known
+                check("%s: the neck starts %.2f of the way from the shoulders to the chin (it was 0.64 to 1.27: under the jaw), and the head turns about a point %.2f of the way from chin to crown (it was 0.21 to 0.31)" % (
+                      who, h["neck_base_between_shoulders_and_chin"], h["head_pivot_between_chin_and_crown"]),
+                      -0.1 <= h["neck_base_between_shoulders_and_chin"] <= (0.95 if "ninja" in label else 0.6) and 0.28 <= h["head_pivot_between_chin_and_crown"] <= 0.5, h)
+            check("%s: the elbow and knee still bend as true hinges, every joint inside its limits, and no more than a few turns were held back (%s)" % (who, record["animation"]["clamped"] or "none"),
+                  c["limit_violations"] == 0 and not any(k.startswith(("forearm", "shin")) for k in record["animation"]["clamped"]), record["animation"]["clamped"])
+            check("%s: every bone the block-out gives a body has a capsule for a physics engine (thigh %.0f cm thick, %.0f cm long)" % (
+                  who, 200 * record["rig"]["capsules"]["thigh_l"][0], 100 * record["rig"]["capsules"]["thigh_l"][1]),
+                  all(k in record["rig"]["capsules"] for k in ("thigh_l", "shin_l", "upper_arm_l", "forearm_l", "head")) and 0.02 < record["rig"]["capsules"]["thigh_l"][0] < 0.2 * n["height"])
+        trunk = (n["volume"].get("trunk") or {}).get("least_%")
+        if trunk is not None:
+            check("%s: the trunk loses no more of its volume than it did (%.1f%% at its least; 21%% was the most, the dancer's run. Not cured: see SKILL.md, Walking, \"What is weak\")" % (who, trunk), trunk > -22.0, n["volume"])
+        check("%s: the head and what sits on it keep their volume to the last drop (%.2f%%)" % (who, n["volume"]["head"]["least_%"]), abs(n["volume"]["head"]["least_%"]) < 0.5 and abs(n["volume"]["head"]["most_%"]) < 0.5)
+        shake = n["jitter"]
+        check("%s: a knee shakes %.2f times what the ball of its foot does (%s) and its hinge turns %.0f degrees in a frame at most (a knee flung sideways read 21 to 57 in the runs)" % (
+              who, shake["knee_to_foot"], "under 1.25: it was 1.3 to 2.9 in the runs" if clip == "run" else "under 2.6: the troll's was 3.9", n["knee_axis_swing_deg"]),
+              shake["knee_to_foot"] < (1.25 if clip == "run" else 2.6) and n["knee_axis_swing_deg"] < 16 and abs(n["knee_axis_swing_deg"] - c["knee_axis_swing_deg"]) < 3, shake)
+        check("%s: the trunk's skin shakes no more than the head does (%.1f against %.1f mm a frame squared): nothing added to the motion on its way to the body" % (who, shake["skin"]["trunk"]["middle"], shake["points"]["head"]),
+              shake["skin"]["trunk"]["middle"] < 1.3 * shake["points"]["head"] + 0.5, shake)
+        off = c["off_the_motion"]
+        check("%s: the spine, neck and head are turned as the motion wrote them (%s degrees off at most) and the hips are %.1f cm from where it put them" % (who, off["turn_deg"], off["hips_cm"]),
+              max(off["turn_deg"].values()) < (6.0 if "troll" in label else 0.5) and off["hips_cm"] < 5.0, off)
+        check("%s: and the old promises hold: feet slide %.3f cm a step, %.2f cm through the floor, no limit broken, the last frame is the first" % (who, c["foot_slide_cm_per_step"], c["through_floor_cm"]),
+              c["foot_slide_cm_per_step"] < 0.3 and c["through_floor_cm"] < 0.5 and c["limit_violations"] == 0 and c["loop_seam"] < 1e-4, c)
+
+
 def test_bone_names(ctx):
     """bones.json: every bone rig.py makes has a SOMA and a Mixamo name, and every SOMA joint is accounted for."""
     with open(os.path.join(TOOLS, "..", "bones.json")) as f:
@@ -1849,7 +1928,7 @@ def test_comic_script(ctx):
 
 
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_contact, test_drape, test_cloth,
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_script]
 
 
