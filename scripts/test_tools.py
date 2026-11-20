@@ -2,7 +2,8 @@
 
     python3 scripts/test_tools.py [RUNS_DIR] [--only NAME] [--keep DIR]
 
-RUNS_DIR (default: runs) must hold the cave-troll and iron-kettle runs. The
+RUNS_DIR (default: runs) must hold the cave-troll and iron-kettle runs (the
+base-body cases also use the flamenco-dancer runs when they are there). The
 live Blender is never touched: every case starts its own `blender -b`, loads
 a run's file through scripts/tidy_headless.py, and runs the same script text
 Claude would send, with PARAMS filled in. A few minutes, one Blender at a
@@ -1144,8 +1145,207 @@ def test_cloth(ctx):
                 check("%s: nothing hangs, so no cloth bones" % who, cloth["cloth_bones"] == [] and walked["animation"]["then"] == [])
 
 
+# ---- the base body: a real body under clothes that hide it ------------------
+
+def cut_params(run, out, **more):
+    """garment.py's PARAMS for a run-shaped folder (image.png, mesh.glb, base/image.png, base/mesh.glb)."""
+    os.makedirs(os.path.join(out, "cut"), exist_ok=True)
+    params = {"picture": run + "/image.png", "base_picture": run + "/base/image.png", "clothed": run + "/mesh.glb", "base": run + "/base/mesh.glb",
+              "out": os.path.join(out, "cut"), "body_out": os.path.join(out, "body.glb"), "overlay": os.path.join(out, "votes")}
+    params.update(more)
+    return params
+
+
+def made_up_character(ctx):
+    """A T-pose figure of tubes in a long skirt, with and without it (scripts/base_fixture.py), made once."""
+    out = os.path.join(ctx["out"], "made-up")
+    if not os.path.exists(os.path.join(out, "truth.json")):
+        done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "base_fixture.py"), "--", out], capture_output=True, text=True)
+        if "RESULT " not in done.stdout:
+            raise AssertionError("base_fixture.py failed:\n%s" % (done.stdout + done.stderr)[-1500:])
+    with open(os.path.join(out, "truth.json")) as f:
+        return out, json.load(f)
+
+
+def test_garment_made_up(ctx):
+    """garment.py on a made-up figure whose every face is known: the skirt comes out exactly, a shrunk base body is laid back on, and a moved picture, an unchanged picture and a different pose are each turned down with numbers."""
+    run, truth = made_up_character(ctx)
+    skirt = [{"name": "long skirt", "slot": "hip", "kind": "worn"}]
+    out = os.path.join(ctx["out"], "made-up-cut")
+    got = blender("-", [("garment.py", cut_params(run, out, garments=skirt))])[0]
+    check("the pictures line up: no edge moved, %.0f%% of the figure changed" % got["pictures"]["changed_pct"],
+          got["pictures"]["ok"] and all(abs(e["moved_pct"]) < 0.5 for e in got["pictures"]["edges"].values()) and 40 < got["pictures"]["changed_pct"] < 80, got["pictures"])
+    check("the framing is found: seen from the front the mesh covers %.0f%% of the figure, not mirrored" % got["view"]["clothed"]["overlap_pct"],
+          got["view"]["clothed"]["overlap_pct"] > 75 and not got["view"]["clothed"]["mirrored"] and abs(got["view"]["clothed"]["stretch"] - 1) < 0.02, got["view"])
+    check("the base body already fits: uncovered parts %.2f%% of the height apart" % got["fit"]["off_pct"]["median"],
+          got["fit"]["ok"] and got["fit"]["off_pct"]["p90"] < 0.1 and abs(got["fit"]["scale"] - 1) < 0.002, got["fit"])
+    piece = got["garments"][0]
+    check("the skirt is cut exactly: %d faces of %d, in one piece" % (piece["faces"], truth["faces"]),
+          got["ok"] and piece["faces"] == truth["skirt_faces"] and piece["pieces"] == 1, (piece["faces"], truth["skirt_faces"]))
+    check("it runs from %.2f to %.2f of the height, whole round its top, none of it in the body's colors" % (piece["bottom"], piece["top"]),
+          abs(piece["top"] - truth["skirt_top"]) < 0.02 and abs(piece["bottom"] - truth["skirt_bottom"]) < 0.02
+          and piece["closed_round_its_top_pct"] == 100 and piece["other_colors_pct"] == 0, piece)
+    votes = got["votes"]["said_garment"]
+    check("each clue alone says more or less than the skirt (picture %d, color %d, distance %d faces); two agreeing say %d" % (
+          votes["picture"]["faces"], votes["color"]["faces"], votes["distance"]["faces"], got["votes"]["two_or_more"]["faces"]),
+          votes["picture"]["faces"] > truth["skirt_faces"] and votes["color"]["faces"] == truth["skirt_faces"]
+          and got["votes"]["two_or_more"]["faces"] == truth["skirt_faces"], got["votes"]["agreement"])
+    written = read_glb(piece["file"])
+    check("the file holds the skirt and nothing else, with its texture", written["meshes"] == 1 and written["triangles"] == truth["skirt_faces"] and written["images"] >= 1, written)
+    check("the body is written too, and the three vote pictures", read_glb(got["body"])["triangles"] == truth["base_faces"]
+          and all(os.path.getsize(path) > 2000 for path in got["overlay"]) and len(got["overlay"]) == 3, got["overlay"])
+
+    # a base body that came out at another size and place is laid back on, by its uncovered parts
+    small = blender("-", [("garment.py", cut_params(run, out + "-small", garments=skirt, base=run + "/small/mesh.glb", overlay=None))])[0]
+    fit = small["fit"]
+    check("a base body made 10%% small and shifted sat %.1f%% off; scaled x%.3f it sits %.2f%% off, and the same skirt is cut" % (fit["before_pct"], fit["scale"], fit["off_pct"]["median"]),
+          small["ok"] and fit["before_pct"] > 1 and abs(fit["scale"] - 1 / truth["small"]["scale"]) < 0.005 and fit["off_pct"]["p90"] < 0.2
+          and small["garments"][0]["faces"] == truth["skirt_faces"], fit)
+
+    # what doesn't line up is turned down, with the numbers
+    moved = blender("-", [("garment.py", cut_params(run, out + "-moved", garments=skirt, base_picture=run + "/moved/image.png"))])[0]
+    check("a second picture with the figure slid sideways is turned down: %s" % (moved["why"] or [""])[0],
+          not moved["ok"] and not moved["pictures"]["ok"] and "garments" not in moved and abs(moved["pictures"]["edges"]["left"]["moved_pct"]) > 4
+          and "edge moved" in moved["why"][0], moved["pictures"])
+    same = blender("-", [("garment.py", cut_params(run, out + "-same", garments=skirt, base_picture=run + "/image.png"))])[0]
+    check("the same picture twice is turned down: %s" % (same["why"] or [""])[0], not same["ok"] and "nothing changed" in same["why"][0], same["why"])
+    posed = blender("-", [("garment.py", cut_params(run, out + "-posed", garments=skirt, base=run + "/posed/mesh.glb"))])[0]
+    check("a base body in another pose is turned down, and nothing is cut: %s" % (posed["why"] or [""])[0],
+          not posed["ok"] and posed["pictures"]["ok"] and "garments" not in posed and not os.listdir(os.path.join(out + "-posed", "cut")), posed["why"])
+    only = blender("-", [("garment.py", {"picture": run + "/image.png", "base_picture": run + "/base/image.png"})])[0]
+    check("with no meshes it only compares the pictures", only["ok"] and "fit" not in only and "garments" not in only)
+
+    # two garments share the cut by where their slots sit
+    two = blender("-", [("garment.py", cut_params(run, out + "-two", overlay=None, garments=[
+        {"name": "long skirt", "slot": "hip"}, {"name": "hood", "slot": "head"}]))])[0]
+    check("named with a hood too, the skirt still gets every face and the hood none",
+          [g["faces"] for g in two["garments"]] == [truth["skirt_faces"], 0] and two["garments"][1]["file"] is None, two["garments"])
+
+
+def dancer_runs(ctx):
+    """The flamenco dancer's clothed run and its hand-made base run, if this machine has them."""
+    runs = os.path.dirname(ctx["troll"])
+    clothed = sorted(glob.glob(os.path.join(runs, "*flamenco-dancer")))
+    base = sorted(glob.glob(os.path.join(runs, "*flamenco-dancer-base")))
+    return (clothed[-1], base[-1]) if clothed and base else None
+
+
+def test_garment_dancer(ctx):
+    """garment.py on the flamenco dancer (read only): her base body fits without help, and the skirt comes out whole up to the waistband, where cutting by distance alone tore the upper skirt away, with no tights or shoes in it."""
+    found = dancer_runs(ctx)
+    if not found:
+        check("no flamenco-dancer runs here: skipped", True)
+        return
+    clothed, base = found
+    out = os.path.join(ctx["out"], "dancer")
+    got = blender("-", [("garment.py", cut_params(clothed, out, garments=[{"name": "ruffled skirt", "slot": "hip", "kind": "worn"}],
+                                                   base_picture=base + "/image.png", base=base + "/mesh.glb"))])[0]
+    pictures = got["pictures"]
+    check("the edited picture kept the figure in place: edges moved %s%%, %.2f%% of it changed in slivers" % (
+          [e["moved_pct"] for e in pictures["edges"].values()], pictures["slivers_pct"]),
+          pictures["ok"] and all(abs(e["moved_pct"]) < 1 for e in pictures["edges"].values()) and pictures["slivers_pct"] < 2, pictures)
+    check("the framing: from the front the clothed mesh covers %.0f%% of the figure in the picture and the base body %.0f%%" % (
+          got["view"]["clothed"]["overlap_pct"], got["view"]["base"]["overlap_pct"]),
+          min(got["view"]["clothed"]["overlap_pct"], got["view"]["base"]["overlap_pct"]) > 80 and not got["view"]["clothed"]["mirrored"], got["view"])
+    fit = got["fit"]
+    check("the two meshes line up as they came: uncovered parts %.2f%% of the height apart before, %.2f%% after (nine in ten within %.2f%%), scale x%.4f" % (
+          fit["before_pct"], fit["off_pct"]["median"], fit["off_pct"]["p90"], fit["scale"]),
+          fit["ok"] and fit["before_pct"] < 0.4 and fit["off_pct"]["median"] < 0.3 and fit["off_pct"]["p90"] < 1.2 and abs(fit["scale"] - 1) < 0.01, fit)
+    agree = got["votes"]["agreement"]
+    said = got["votes"]["said_garment"]
+    check("the clues: picture %.0f%%, color %.0f%%, distance %.0f%% of the surface; all three agree on %.0f%%" % (
+          said["picture"]["area_pct"], said["color"]["area_pct"], said["distance"]["area_pct"], agree["picture + color + distance"]["area_pct"]),
+          all(50 < said[k]["area_pct"] < 85 for k in said) and agree["picture + color + distance"]["area_pct"] > 45, said)
+    check("the upper skirt, which hugs the hips, is kept by picture and color where distance says no: %d faces, %.1f%% of the surface" % (
+          agree["picture + color"]["faces"], agree["picture + color"]["area_pct"]),
+          agree["picture + color"]["faces"] > 15000 and agree["picture + color"]["area_pct"] > 4, agree["picture + color"])
+    skirt = got["garments"][0]
+    check("the skirt: %d faces, %.0f%% of the surface, from %.3f up to %.3f of the height" % (skirt["faces"], skirt["area_pct"], skirt["bottom"], skirt["top"]),
+          got["ok"] and skirt["faces"] > 170000 and skirt["top"] > 0.6 and 0.095 < skirt["bottom"] < 0.13, skirt)
+    check("whole at the waistband: faces all the way round just under its top (%s%%)" % skirt["closed_round_its_top_pct"], skirt["closed_round_its_top_pct"] == 100)
+    check("no tights or shoe scraps: %d piece(s), %.1f%% of it in colors of the rest of the figure, nothing below the hem" % (skirt["pieces"], skirt["other_colors_pct"]),
+          skirt["pieces"] <= 2 and skirt["other_colors_pct"] < 8, skirt)
+    clean = got["cleanup"]
+    check("cleaned up: %d faces grown to the color seam, %d scraps dropped (%d faces), %d holes closed (%d faces)" % (
+          clean["faces_grown_to_the_color_seam"], clean["crumbs_dropped"]["pieces"], clean["crumbs_dropped"]["faces"], clean["holes_closed"]["holes"], clean["holes_closed"]["faces"]),
+          clean["faces_grown_to_the_color_seam"] > 1000 and clean["crumbs_dropped"]["pieces"] > 0 and clean["holes_closed"]["holes"] > 0, clean)
+    check("where the real hips are fuller than the guess, %d skirt points are lifted onto the body, %.2f%% of the height at most" % (
+          skirt["points_lifted_onto_the_body"], skirt["lifted_at_most_pct"]), 0 < skirt["points_lifted_onto_the_body"] < 30000 and skirt["lifted_at_most_pct"] < 3, skirt)
+    written = read_glb(skirt["file"])
+    check("the skirt's file holds one textured mesh of %d triangles" % written["triangles"], written["meshes"] == 1 and written["triangles"] == skirt["faces"] and written["images"] >= 1, written)
+    sheet = os.path.join(ctx["out"], "dancer-sheet.png")
+    done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "base_shots.py"), "--", got["body"], sheet, skirt["file"],
+                           "--votes", os.path.join(out, "votes")], capture_output=True, text=True)
+    check("pictures to judge it by: %s (body, skirt, both; front and quarter; then the votes)" % sheet, os.path.exists(sheet) and os.path.getsize(sheet) > 100000, done.stdout[-300:])
+    ctx["dancer_cut"] = {"clothed": clothed, "body": got["body"], "skirt": skirt["file"], "top": skirt["top"]}
+
+
+def test_follow(ctx):
+    """follow.py: the base body and its skirt make the same move the finish made (turned, sized, stood on the floor), from what stand.py kept or, without that, from a fit; a move it can't find is turned down."""
+    cut = ctx.get("dancer_cut")
+    if cut:
+        who, raw, pieces, size = "the dancer", cut["clothed"] + "/mesh.glb", [cut["body"], cut["skirt"]], 1.65
+    else:
+        run, _ = made_up_character(ctx)
+        who, raw, pieces, size = "the made-up figure", run + "/mesh.glb", [run + "/base/mesh.glb"], 1.8
+    out = os.path.join(ctx["out"], "follow")
+    os.makedirs(out, exist_ok=True)
+    stood = blender("-", [("open.py", {"mesh": raw, "name": "Finished"}), ("stand.py", {"turn": [0, 0, 180], "size": size, "size_of": "height"}),
+                          ("export.py", {"path": os.path.join(out, "final.glb"), "object": "Finished"})], save=os.path.join(out, "scene.blend"))[1]
+    check("%s is finished the way the Blender step does it: turned 180, %.2f m tall, on the floor; stand.py reports the move" % (who, stood["size"][2]),
+          abs(stood["size"][2] - size) < 1e-3 and len(stood["placed"]) == 16 and abs(abs(stood["placed"][0]) - stood["placed"][10]) < 1e-4 and stood["placed"][0] < 0, stood["placed"])
+
+    def jobs(tag):
+        return [{"from": path, "to": os.path.join(out, "%s-%s" % (tag, os.path.basename(path)))} for path in pieces]
+
+    kept = blender(os.path.join(out, "scene.blend"), [("follow.py", {"raw": raw, "follow": jobs("kept")})])[0]
+    check("from the saved scene, the move is the one stand.py kept; the raw mesh moved by it lands %.3f%% of the height from the finished one" % kept["check"]["typical_pct"],
+          kept["ok"] and kept["move_from"] == "kept by stand.py" and kept["check"]["typical_pct"] < 0.01
+          and max(abs(a - b) for a, b in zip(kept["placed"], stood["placed"])) < 1e-4, kept["check"])
+    fitted = blender(os.path.join(out, "final.glb"), [("follow.py", {"raw": raw, "follow": jobs("fitted")})])[0]
+    check("from the finished .glb alone, the move is fitted: same turn, scale within %.2f%%, the raw mesh lands %.3f%% away" % (
+          100 * abs(fitted["scale"] / kept["scale"] - 1), fitted["check"]["typical_pct"]),
+          fitted["ok"] and fitted["move_from"] == "fitted" and abs(fitted["scale"] / kept["scale"] - 1) < 0.005 and fitted["check"]["typical_pct"] < 0.3
+          and fitted["placed"][0] < 0 and fitted["placed"][5] < 0, fitted["placed"])
+    body = kept["written"][0]
+    check("the base body follows: it stands on the floor (lowest point %.3f m), %.2f m tall, centered" % (body["min"][2], body["max"][2] - body["min"][2]),
+          abs(body["min"][2]) < 0.02 * size and abs((body["max"][2] - body["min"][2]) - size) < 0.03 * size and abs(body["min"][0] + body["max"][0]) < 0.05 * size, body)
+    check("each followed file is written and holds its mesh", all(read_glb(w["to"])["triangles"] == read_glb(w["from"])["triangles"] for w in kept["written"]),
+          [w["to"] for w in kept["written"]])
+    if cut:
+        skirt = kept["written"][1]
+        check("the skirt follows too: its top is at %.2f m, where the waistband is on the finished dancer" % skirt["max"][2],
+              abs(skirt["max"][2] - cut["top"] * size) < 0.02 * size and skirt["min"][2] > 0.08 * size, skirt)
+
+    # a move that isn't a quarter turn: kept, it is followed; fitted, it is turned down
+    odd = blender("-", [("open.py", {"mesh": raw, "name": "Finished"}), ("stand.py", {"turn": [0, 0, 30], "size": size, "size_of": "height"}),
+                        ("follow.py", {"raw": raw, "follow": []}),
+                        ("follow.py", {"raw": raw, "follow": jobs("odd"), "placed": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]})])
+    check("a 30 degree turn is followed from what stand.py kept (%.3f%% off)" % odd[2]["check"]["typical_pct"], odd[2]["ok"] and odd[2]["check"]["typical_pct"] < 0.01)
+    check("a wrong move is turned down and nothing is written: %s" % (odd[3]["why"] or [""])[0],
+          not odd[3]["ok"] and odd[3]["written"] == [] and not os.path.exists(os.path.join(out, "odd-" + os.path.basename(pieces[0]))), odd[3]["check"])
+    twice = blender("-", [("open.py", {"mesh": raw, "name": "Finished"}), ("stand.py", {"size": size, "size_of": "height"}), ("stand.py", {"turn": [0, 0, 90]}),
+                          ("follow.py", {"raw": raw, "follow": []})])
+    check("stand.py run twice (size, then a quarter turn) keeps both moves multiplied up", twice[3]["ok"] and twice[3]["move_from"] == "kept by stand.py"
+          and twice[3]["check"]["typical_pct"] < 0.01 and abs(twice[3]["placed"][1]) > 0.5, twice[3]["placed"])
+
+
+def test_open_add(ctx):
+    """open.py "add": a second mesh comes in beside the first (a base body beside the clothed mesh) and nothing is removed."""
+    run, truth = made_up_character(ctx)
+    first, second, again = blender("-", [
+        ("open.py", {"mesh": run + "/mesh.glb", "scene": "Low poly", "name": "Reference"}),
+        ("open.py", {"mesh": run + "/base/mesh.glb", "scene": "Low poly", "name": "Body", "add": True}),
+        ("measure.py", {"object": "Body"}),
+    ])
+    check("the base body comes in as \"Body\" and the reference stays", second["object"] == "Body" and second["removed_first"] == 0 and second["scene"] == first["scene"]
+          and second["triangles"] == truth["base_faces"], second)
+    check("measure.py measures the one it is told to", again["regions"] and again["regions"][0]["vertices"] > 0, again["regions"][:1])
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile, test_drape, test_cloth]
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile, test_drape, test_cloth,
+         test_garment_made_up, test_garment_dancer, test_follow, test_open_add]
 
 
 def main(argv):

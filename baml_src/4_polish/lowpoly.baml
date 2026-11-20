@@ -36,6 +36,27 @@ function lowpoly_budget(brief: ObjectBrief) -> string {
     }
 }
 
+/// The run's base body and garments in finished space, if it has them
+/// (4_polish/follow.baml wrote them). Garment names come from the cut's
+/// report; a garment whose file is missing is left out.
+function base_refs(run: Run) -> BaseRefs? {
+    if (!run.has(BASE_FINAL) || !run.has(CUT_FILE)) {
+        return null;
+    }
+    let cut = run.load<CutReport>(CUT_FILE);
+    BaseRefs {
+        body: run.absolute(BASE_FINAL),
+        garments: (cut.garments ?? []).filter_map((g) -> {
+            let file = `${GARMENTS_DIR}/${slug(g.name)}.glb`;
+            if (run.has(file)) {
+                GarmentRef { name: g.name, mesh: run.absolute(file) }
+            } else {
+                null
+            }
+        }),
+    }
+}
+
 /// Asks Claude to block out a low-poly version in the live Blender and save
 /// it as lowpoly.glb; the "lowpoly" profile bakes the detail onto it.
 function block_out(brief: ObjectBrief, run: Run) -> LowPolyReport {
@@ -53,6 +74,7 @@ function block_out(brief: ObjectBrief, run: Run) -> LowPolyReport {
         parts,
         tools(names),
         lowpoly_budget(brief),
+        base = base_steps(base_refs(run)),
     );
     keep_transcript(run, "lowpoly");
     run.save("lowpoly.json", report);

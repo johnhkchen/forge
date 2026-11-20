@@ -23,6 +23,66 @@
 // lays the pieces on the body, so Claude doesn't have to chase a gap of a
 // centimeter by hand, and loose cloth is left hanging to swing later.
 
+// And when clothes hide the body, the body isn't guessed: such a character
+// has a base body made from a second picture without them, and each hiding
+// garment cut out of the clothed mesh (2b_undress). Body pieces are then
+// measured on the base body and each hidden garment on its own cut.
+
+/// A character's base body and cut garments, in finished space.
+class BaseRefs {
+    body: string,
+    garments: GarmentRef[],
+}
+
+class GarmentRef {
+    name: string,
+    mesh: string,
+}
+
+/// The base-body part of a character's block-out: where to measure the body
+/// and the clothes that hide it. Empty when the run has no base body.
+function base_steps(base: BaseRefs?) -> string {
+    if (base == null) {
+        return "";
+    }
+    let names = base.garments
+        .map((g) -> {
+            g.name
+        })
+        .join(", ");
+    `
+        This character has a real body under its clothes. The reference was
+        made with the clothes on, so under the ${names} it only guesses at
+        the body. These meshes stand in exactly the same place and size as
+        the reference; they were made from a second picture with those
+        clothes off:
+        - the base body, the true body: ${base.body}
+        ${base.garments.map((g) -> { `- the ${g.name} alone, cut out of the reference: ${g.mesh}` }).join("\n")}
+        Use them like this:
+        - In step 1, after the reference, bring each in with open.py and
+          "add": True (same "scene"; don't move or scale them): the base
+          body as "Body", each garment as "Garment: <its name>".
+        - In step 2, measure every body piece (torso, hips, legs, arms,
+          hands, feet) on the base body: "object": "Body" in measure.py.
+          Don't take the body's shape from the reference where the ${names}
+          cover it: what is there is cloth, not body.
+        - Measure each of the ${names} on its own mesh ("object": "Garment:
+          <its name>") and build that gear piece from those rows. The mesh
+          is that garment and nothing else, so the rows are the cloth
+          itself: its top edge (a waistband, a collar), its widest part,
+          its hem. It keeps its "gear" and "fit" tags like any other piece.
+        - Everything else (the head and face.py, gear that hides nothing) is
+          measured on the reference as before: pass "object": "Reference"
+          to measure.py and face.py for those, and "reference": "Reference"
+          to build.py every time, now that it isn't the only mesh in the
+          scene.
+        - Hide "Body" and the "Garment: ..." meshes (hide_viewport = True)
+          before you \`look\` at your model beside the reference. To check
+          the body alone, show "Body" and hide the reference instead.
+        - Say in your notes that the body was measured on the base body.
+    `
+}
+
 /// What a character needs on top of a prop: a pose that can be rigged, and
 /// a face that can be read.
 const CHARACTER_STEPS = `
@@ -144,6 +204,7 @@ function BlockOut(
     parts: string,
     tools: string,
     budget: string,
+    base: string = "",
 ) -> LowPolyReport {
     client: Finisher
     prompt: `
@@ -166,6 +227,7 @@ function BlockOut(
 
         ${if (brief.character ?? false) { CHARACTER_STEPS } else { "" }}
         ${if (brief.character ?? false) { gear_steps(brief) } else { "" }}
+        ${base}
         Style: ${brief.lowpoly_style ?? "early real-time game prop: clean simple shapes, smooth-shaded"}.
 
         1. Bring it in: open.py with "mesh": "${mesh}", "scene": "Low poly"

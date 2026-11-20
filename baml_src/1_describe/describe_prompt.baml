@@ -25,6 +25,9 @@ class ObjectBrief {
     gear: GearItem[]? @description(
         "For characters: every piece of clothing, armor and equipment, so each can be built separately and taken off or swapped. Empty for objects",
     ),
+    hidden_by: string[]? @description(
+        "For characters: the names, exactly as in gear, of worn pieces that hide the shape of the body under them, so it would have to be guessed: a long or full skirt, a robe, a dress or coat that falls past the knee, a hooded cloak, a poncho. Not close-fitting clothes (tight tops, trousers, leggings, sleeves, boots, gloves) and not small attached things (hats, belts, bags): the body already shows through those. Empty when nothing hides the body",
+    ),
     lowpoly_style: string? @description(
         "One line on the low-poly look the idea calls for, like 'faceted flat-shaded, chunky proportions, colors painted in'",
     ),
@@ -34,14 +37,14 @@ class ObjectBrief {
 // pieces sit over a complete body, attached and held props hang off a named
 // point (a hand, the head, the back) so they can be shown, hidden or swapped.
 class GearItem {
-    name: string @description("Short plain name, like 'wool singlet' or 'umbrella'")
+    name: string @description("Short plain name, like 'wool singlet' or 'umbrella'"),
     kind: "worn" | "attached" | "held" @description(
         "worn: clothing or armor that follows the body; attached: a rigid piece fixed to one spot (hat, backpack, sheathed sword); held: carried in a hand",
-    )
+    ),
     slot: string @description(
         "Where it goes: one of head, face, neck, torso, arms, hands, hip, legs, feet, back, hand_right, hand_left",
-    )
-    look: string @description("Its shape, material and color in one line")
+    ),
+    look: string @description("Its shape, material and color in one line"),
 }
 
 class Material {
@@ -74,7 +77,11 @@ function Describe(idea: string) -> ObjectBrief {
         tusks, pointed ears). List every piece of clothing, armor and
         equipment in gear. Held props (a weapon, an umbrella, a tool) go in
         gear only, never in the subject: the picture shows the character
-        with empty hands, and props are made separately.
+        with empty hands, and props are made separately. If a worn piece
+        hides the body under it (a long skirt, a robe, a coat past the knee,
+        a hooded cloak), name it in hidden_by: the body is then made for
+        real from a second picture without it, and the piece is put back on.
+        Tight tops and trousers hide nothing; leave them out.
 
         ${ctx.output_format()}
 

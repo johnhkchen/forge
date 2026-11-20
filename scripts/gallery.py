@@ -78,6 +78,37 @@ def profile_summary(run_dir, name):
     }
 
 
+def slug(name):
+    """'Ruffled Skirt!' -> 'ruffled-skirt', the way the pipeline names files."""
+    return "-".join("".join(c if c.isascii() and c.isalnum() else " " for c in name.lower()).split())
+
+
+def base_summary(run_dir):
+    """A character whose clothes hide its body: the real body made from a second picture, and
+    each hiding garment cut from the clothed mesh. Twice over: beside the raw mesh, and (once the
+    object is finished) where the finished object stands."""
+    cut = read_json(os.path.join(run_dir, "base", "cut.json"))
+    if not cut or not os.path.exists(os.path.join(run_dir, "base", "body.glb")):
+        return None
+    has = lambda f: os.path.exists(os.path.join(run_dir, f))
+
+    def pieces(body, folder):
+        if not has(body):
+            return None
+        garments = [{"name": g["name"], "glb": "%s/%s.glb" % (folder, slug(g["name"]))} for g in cut.get("garments") or []]
+        return {"body": body, "garments": [g for g in garments if has(g["glb"])]}
+
+    fit = cut.get("fit") or {}
+    return {
+        "raw": pieces("base/body.glb", "base/cut"),
+        "finished": pieces("base/final.glb", "garments"),
+        "picture": "base/image.png" if has("base/image.png") else None,
+        "sheet": "base/sheet.png" if has("base/sheet.png") else None,
+        "garments": [g["name"] for g in cut.get("garments") or []],
+        "apart_pct": (fit.get("off_pct") or {}).get("median"),
+    }
+
+
 def run_summary(folder):
     run_dir = os.path.join(RUNS, folder)
     brief = read_json(os.path.join(run_dir, "brief.json")) or {}
@@ -100,6 +131,7 @@ def run_summary(folder):
         "fixes": polish.get("fixes") or [],
         "problems": polish.get("problems") or [],
         "profiles": [profile_summary(run_dir, p) for p in names],
+        "base": base_summary(run_dir),
         "props": [dict(p, run=os.path.basename(p.get("run", "").rstrip("/")))
                   for p in (read_json(os.path.join(run_dir, "props.json")) or {}).get("props", [])],
         "prop_of": os.path.basename(((read_json(os.path.join(run_dir, "prop_of.json")) or {}).get("character") or "").rstrip("/")) or None,
