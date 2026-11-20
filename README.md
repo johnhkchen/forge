@@ -65,7 +65,7 @@ TRELLIS.2 hands back an even soup of ~300k triangles. The `tidy-mesh` skill (`.c
 | `hero` | close-up renders, printing | 200k triangles, cleaned | 2048 |
 | `quads` | keep modeling it | ~15k quads | 2048 + normal map |
 | `web` | web pages, product viewers | ~8k quads, Draco | 1024 WebP + normal map |
-| `game` | real-time games | ~4k quads | 1024 + normal map |
+| `game` | real-time games | ~4k quads, Draco | 1024 WebP + normal map |
 | `mobile` | phones, AR | ~3k quads, Draco | 512 WebP + normal map |
 
 The quads come from [AutoRemesher](https://github.com/huxingyi/autoremesher) (MIT): mostly rectangular faces in regular loops, a little denser where the shape curves. Install it once with `just autoremesher`. Each profile records how far it strays from the full mesh (`shape` in `<profile>.json`); typically under 1% of the object's size.

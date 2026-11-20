@@ -34,7 +34,7 @@ Measured on a real run (`runs/*-iron-kettle/mesh.glb`):
 | `hero` | close-up renders, printing | cleaned, 200k triangles | 2048, materials baked | — |
 | `quads` | keep modeling it | ~15k adaptive quads | 2048 + normal map | 0.26% / 2.4% |
 | `web` | web pages, product viewers | ~8k adaptive quads, Draco | 1024 WebP + normal map | 0.36% / 2.4% |
-| `game` | real-time games | ~4k adaptive quads | 1024 + normal map | 0.51% / 2.2% |
+| `game` | real-time games | ~4k adaptive quads, Draco | 1024 WebP + normal map | 0.51% / 2.2% |
 | `mobile` | phones, AR | ~3k adaptive quads, Draco | 512 WebP + normal map | 0.89% / 2.7% |
 
 **What a good result looks like.** Mostly rectangular quads (~99%) in

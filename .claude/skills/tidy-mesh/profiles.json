@@ -81,7 +81,7 @@
     }
   },
   "game": {
-    "about": "Real-time games. A few thousand adaptive quads; the normal map carries the fine detail.",
+    "about": "Real-time games. A few thousand adaptive quads; the normal map carries the fine detail. WebP textures and Draco compression keep the download small.",
     "steps": [
       [
         "clean.py",
@@ -104,8 +104,8 @@
       ]
     ],
     "export": {
-      "image_format": "AUTO",
-      "draco": false
+      "image_format": "WEBP",
+      "draco": true
     }
   },
   "mobile": {
