@@ -11,7 +11,8 @@
 // Writes into shots/<shot>/: lowpoly-hero.glb, midpoly-hero.glb, what each
 // step measured (.json), and a film and strip of the low-poly one. A second
 // cut of a shot is cast under a name of its own (--clip hero-mixed), so a
-// character can carry both. The
+// character can carry both. A take on a standing set casts every role and
+// films from every one of the set's cameras (sets.baml). The
 // character's own folder is only read; `just clip-to-gallery` copies the
 // clips into it when you want them in the gallery.
 
@@ -54,13 +55,18 @@ function motion_blender(step: string, script: string, args: string[], mark: stri
 }
 
 /// Plays a finished shot on a character (a run folder with a low-poly block-out); returns the shot folder.
+/// For a take (a shot with several people in it) the cast comes from the take itself, and `character` is
+/// the folder their runs are in.
 function cast(
     shot: string,
-    character: string,
+    character: string = "runs",
     prop: string = "",
     clip: string = CLIP_NAME,
 ) -> string {
     let run = Run { dir: `${SHOTS_DIR}/${shot}` };
+    if (run.has("take.json")) {
+        return cast_take(run, character, clip);
+    }
     if (!run.has("motion.json")) {
         throw ShotFailed { step: "cast", reason: `no motion in ${run.dir} yet: run shoot first` }
     }
@@ -75,7 +81,12 @@ function cast(
     if (!run.has(`${filmed}.glb`)) {
         throw ShotFailed { step: "cast", reason: `${filmed}.glb was not written` }
     }
-    //# 2. Film the low-poly one in the set, at the character's size
+    //# 2. Film the low-poly one in the set: from the set's own cameras if it has them...
+    if (run.load<ShotPlan>("plan.json").has_set_cameras()) {
+        film_on_set(run, more = ["--cast", clip]);
+        return run.dir;
+    }
+    //# ...else with the camera that follows, the set brought to the character's size
     let size = run.load<CastRecord>(`${filmed}.json`).size_against_soma;
     motion_blender(
         "film",

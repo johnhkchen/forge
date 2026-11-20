@@ -1,0 +1,689 @@
+{
+ "format": "forge-set/1",
+ "name": "studio",
+ "title": "The studio",
+ "about": "A small talk-show stage: a desk and chair for the host, a couch for two guests, a way on from the wings, a spot to stand and talk, a riser for a band, and a painted skyline out the window.",
+ "stage": "shallow",
+ "units": "metres. y is up. The cameras are out front, at +z: a heading of 0 faces them, 90 faces +x (the desk's side of the picture).",
+ "floor": {
+  "areas": [
+   [
+    [
+     -5.4,
+     0.6
+    ],
+    [
+     4.2,
+     4.3
+    ]
+   ]
+  ]
+ },
+ "ground": {
+  "y": 0.0,
+  "color": [
+   0.87,
+   0.83,
+   0.76
+  ],
+  "size_m": 40.0
+ },
+ "blocks": [
+  {
+   "name": "desk",
+   "kind": "desk",
+   "center": [
+    2.2,
+    0.375,
+    2.1
+   ],
+   "size": [
+    1.6,
+    0.75,
+    0.7
+   ],
+   "heading": 0.0,
+   "color": [
+    0.267,
+    0.404,
+    0.608
+   ]
+  },
+  {
+   "name": "host chair seat",
+   "kind": "seat",
+   "center": [
+    2.2,
+    0.23,
+    0.975
+   ],
+   "size": [
+    0.5,
+    0.46,
+    0.55
+   ],
+   "heading": 0.0,
+   "color": [
+    0.227,
+    0.345,
+    0.522
+   ]
+  },
+  {
+   "name": "host chair back",
+   "kind": "seat",
+   "center": [
+    2.2,
+    0.525,
+    0.65
+   ],
+   "size": [
+    0.5,
+    1.05,
+    0.1
+   ],
+   "heading": 0.0,
+   "color": [
+    0.227,
+    0.345,
+    0.522
+   ]
+  },
+  {
+   "name": "couch seat",
+   "kind": "seat",
+   "center": [
+    -0.1,
+    0.23,
+    0.975
+   ],
+   "size": [
+    1.5,
+    0.46,
+    0.55
+   ],
+   "heading": 0.0,
+   "color": [
+    0.267,
+    0.404,
+    0.608
+   ]
+  },
+  {
+   "name": "couch back",
+   "kind": "seat",
+   "center": [
+    -0.1,
+    0.46,
+    0.63
+   ],
+   "size": [
+    1.78,
+    0.92,
+    0.14
+   ],
+   "heading": 0.0,
+   "color": [
+    0.267,
+    0.404,
+    0.608
+   ]
+  },
+  {
+   "name": "couch arm left",
+   "kind": "seat",
+   "center": [
+    -0.92,
+    0.33,
+    0.975
+   ],
+   "size": [
+    0.14,
+    0.66,
+    0.55
+   ],
+   "heading": 0.0,
+   "color": [
+    0.267,
+    0.404,
+    0.608
+   ]
+  },
+  {
+   "name": "couch arm right",
+   "kind": "seat",
+   "center": [
+    0.72,
+    0.33,
+    0.975
+   ],
+   "size": [
+    0.14,
+    0.66,
+    0.55
+   ],
+   "heading": 0.0,
+   "color": [
+    0.267,
+    0.404,
+    0.608
+   ]
+  },
+  {
+   "name": "band riser",
+   "kind": "riser",
+   "center": [
+    -3.3,
+    0.15,
+    1.35
+   ],
+   "size": [
+    2.0,
+    0.3,
+    1.2
+   ],
+   "heading": 0.0,
+   "color": [
+    0.949,
+    0.937,
+    0.914
+   ]
+  },
+  {
+   "name": "wing flat",
+   "kind": "flat",
+   "center": [
+    -4.675,
+    1.35,
+    3.51
+   ],
+   "size": [
+    1.25,
+    2.7,
+    0.12
+   ],
+   "heading": 0.0,
+   "color": [
+    0.227,
+    0.345,
+    0.522
+   ]
+  },
+  {
+   "name": "back wall left",
+   "kind": "flat",
+   "center": [
+    -5.05,
+    2.5,
+    0.3
+   ],
+   "size": [
+    4.9,
+    5.0,
+    0.2
+   ],
+   "heading": 0.0,
+   "color": [
+    0.98,
+    0.973,
+    0.961
+   ]
+  },
+  {
+   "name": "back wall right",
+   "kind": "flat",
+   "center": [
+    4.85,
+    2.5,
+    0.3
+   ],
+   "size": [
+    3.3,
+    5.0,
+    0.2
+   ],
+   "heading": 0.0,
+   "color": [
+    0.98,
+    0.973,
+    0.961
+   ]
+  },
+  {
+   "name": "window sill",
+   "kind": "flat",
+   "center": [
+    0.3,
+    0.275,
+    0.3
+   ],
+   "size": [
+    5.8,
+    0.55,
+    0.2
+   ],
+   "heading": 0.0,
+   "color": [
+    0.98,
+    0.973,
+    0.961
+   ]
+  },
+  {
+   "name": "window header",
+   "kind": "flat",
+   "center": [
+    0.3,
+    4.2,
+    0.3
+   ],
+   "size": [
+    5.8,
+    1.6,
+    0.2
+   ],
+   "heading": 0.0,
+   "color": [
+    0.98,
+    0.973,
+    0.961
+   ]
+  }
+ ],
+ "marks": {
+  "wings": {
+   "kind": "stand",
+   "at": [
+    -4.7,
+    2.75
+   ],
+   "facing_deg": 90.0,
+   "offstage": true,
+   "about": "the way on: behind the wing flat, out of the cameras' sight"
+  },
+  "monologue": {
+   "kind": "stand",
+   "at": [
+    -2.2,
+    3.3
+   ],
+   "facing_deg": 0.0,
+   "about": "where the host stands to talk to the room"
+  },
+  "centre": {
+   "kind": "stand",
+   "at": [
+    -0.4,
+    2.75
+   ],
+   "facing_deg": 0.0,
+   "about": "the middle of the stage, in front of the couch"
+  },
+  "meet_left": {
+   "kind": "touch",
+   "at": [
+    -0.78,
+    2.75
+   ],
+   "facing_deg": 90.0,
+   "touch": {
+    "hand": "right",
+    "at": [
+     -0.4,
+     1.05,
+     2.75
+    ]
+   },
+   "about": "a handshake at centre, for whoever comes from the wings"
+  },
+  "meet_right": {
+   "kind": "touch",
+   "at": [
+    -0.02,
+    2.75
+   ],
+   "facing_deg": -90.0,
+   "touch": {
+    "hand": "right",
+    "at": [
+     -0.4,
+     1.05,
+     2.75
+    ]
+   },
+   "about": "the other side of that handshake, for whoever comes from the desk"
+  },
+  "desk_chair": {
+   "kind": "sit",
+   "at": [
+    2.2,
+    0.95
+   ],
+   "stand_at": [
+    2.2,
+    1.38
+   ],
+   "facing_deg": -8.0,
+   "seat_height_m": 0.46,
+   "seat": "host chair seat",
+   "beside": [
+    "host chair back"
+   ],
+   "about": "the host's chair, behind the desk"
+  },
+  "couch_1": {
+   "kind": "sit",
+   "at": [
+    0.27,
+    0.95
+   ],
+   "stand_at": [
+    0.27,
+    1.4
+   ],
+   "facing_deg": 10.0,
+   "seat_height_m": 0.46,
+   "seat": "couch seat",
+   "beside": [
+    "couch back",
+    "couch arm right"
+   ],
+   "about": "the couch seat next to the desk: the first guest's"
+  },
+  "couch_2": {
+   "kind": "sit",
+   "at": [
+    -0.47,
+    0.95
+   ],
+   "stand_at": [
+    -0.47,
+    1.4
+   ],
+   "facing_deg": 10.0,
+   "seat_height_m": 0.46,
+   "seat": "couch seat",
+   "beside": [
+    "couch back",
+    "couch arm left"
+   ],
+   "about": "the far couch seat: where a guest moves down to"
+  }
+ },
+ "paths": [
+  {
+   "from": "wings",
+   "to": "meet_left"
+  },
+  {
+   "from": "wings",
+   "to": "monologue"
+  },
+  {
+   "from": "monologue",
+   "to": "centre"
+  },
+  {
+   "from": "meet_left",
+   "to": "couch_1",
+   "via": [
+    [
+     -0.2,
+     2.3
+    ]
+   ]
+  },
+  {
+   "from": "meet_left",
+   "to": "couch_2"
+  },
+  {
+   "from": "centre",
+   "to": "couch_1"
+  },
+  {
+   "from": "desk_chair",
+   "to": "meet_right",
+   "via": [
+    [
+     1.1,
+     1.52
+    ],
+    [
+     0.72,
+     2.3
+    ]
+   ]
+  },
+  {
+   "from": "desk_chair",
+   "to": "monologue",
+   "via": [
+    [
+     1.1,
+     1.52
+    ],
+    [
+     0.5,
+     2.6
+    ]
+   ]
+  }
+ ],
+ "cameras": {
+  "wide": {
+   "at": [
+    -0.4,
+    1.55,
+    10.0
+   ],
+   "aim": [
+    -0.4,
+    1.25,
+    1.5
+   ],
+   "lens_mm": 30,
+   "sees": [
+    "monologue",
+    "centre",
+    "meet_left",
+    "meet_right",
+    "desk_chair",
+    "couch_1",
+    "couch_2"
+   ],
+   "about": "the whole stage"
+  },
+  "host": {
+   "at": [
+    0.6,
+    1.35,
+    8.5
+   ],
+   "aim": [
+    2.1,
+    1.05,
+    1.2
+   ],
+   "lens_mm": 85,
+   "sees": [
+    "desk_chair"
+   ],
+   "about": "the host at the desk"
+  },
+  "guest": {
+   "at": [
+    -1.6,
+    1.35,
+    8.5
+   ],
+   "aim": [
+    -0.1,
+    1.0,
+    1.0
+   ],
+   "lens_mm": 75,
+   "sees": [
+    "couch_1",
+    "couch_2"
+   ],
+   "about": "the couch"
+  }
+ },
+ "lights": [
+  {
+   "name": "key",
+   "kind": "area",
+   "at": [
+    -3.0,
+    4.6,
+    7.0
+   ],
+   "aim": [
+    0.0,
+    1.0,
+    1.6
+   ],
+   "power": 2600.0,
+   "color": [
+    1.0,
+    0.96,
+    0.9
+   ],
+   "size_m": 3.0
+  },
+  {
+   "name": "fill",
+   "kind": "area",
+   "at": [
+    4.5,
+    3.6,
+    7.5
+   ],
+   "aim": [
+    0.5,
+    1.0,
+    1.6
+   ],
+   "power": 1300.0,
+   "color": [
+    0.9,
+    0.94,
+    1.0
+   ],
+   "size_m": 3.0
+  },
+  {
+   "name": "back",
+   "kind": "area",
+   "at": [
+    0.5,
+    4.4,
+    0.9
+   ],
+   "aim": [
+    0.5,
+    0.8,
+    2.6
+   ],
+   "power": 700.0,
+   "color": [
+    1.0,
+    0.95,
+    0.88
+   ],
+   "size_m": 2.0
+  }
+ ],
+ "world": {
+  "color": [
+   0.98,
+   0.973,
+   0.961
+  ],
+  "strength": 0.35
+ },
+ "backdrop": {
+  "image": "backdrop.png",
+  "center": [
+   0.3,
+   2.3,
+   -1.2
+  ],
+  "width_m": 9.0,
+  "height_m": 6.0,
+  "heading": 0.0,
+  "glow": 1.0,
+  "about": "a city skyline at dusk, painted by Codex; it stands a metre and a half behind the window"
+ },
+ "slots": {
+  "desk_left": {
+   "at": [
+    1.72,
+    0.75,
+    2.1
+   ],
+   "heading": 20.0,
+   "about": "the desk top, the couch's end"
+  },
+  "desk_right": {
+   "at": [
+    2.72,
+    0.75,
+    2.05
+   ],
+   "heading": -15.0,
+   "about": "the desk top, the far end"
+  },
+  "couch_side": {
+   "at": [
+    -1.45,
+    0.0,
+    0.95
+   ],
+   "heading": 0.0,
+   "about": "the floor at the couch's far arm"
+  },
+  "riser": {
+   "at": [
+    -3.3,
+    0.3,
+    1.35
+   ],
+   "heading": 0.0,
+   "about": "on the band riser"
+  }
+ },
+ "dressing": [
+  {
+   "prop": "microphone",
+   "slot": "desk_left",
+   "glb": "dressing/microphone.glb"
+  },
+  {
+   "prop": "mug",
+   "slot": "desk_right",
+   "glb": "dressing/mug.glb"
+  },
+  {
+   "prop": "plant",
+   "slot": "couch_side",
+   "glb": "dressing/plant.glb"
+  },
+  {
+   "prop": "drum",
+   "slot": "riser",
+   "glb": "dressing/drum.glb"
+  }
+ ],
+ "geometry": {
+  "glb": "set.glb",
+  "move": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "turn_deg": 0.0,
+  "built_by": "just set-build studio (scripts/sets/build_set.py, from the blocks here and the extra pieces in build.json)"
+ }
+}

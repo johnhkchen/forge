@@ -1,0 +1,15 @@
+{
+  "name": "studio-guest-entrance",
+  "brief": "A guest entrance on the studio set, about 16 seconds, one take from three fixed cameras. Roosevelt walks on from the wings to centre. Lincoln, the host, gets up from the desk chair and meets him there; they shake right hands. Lincoln walks back round the desk and sits; Roosevelt sits on the couch seat next to the desk.",
+  "beats": [
+    { "time": "0-6 s", "action": "Roosevelt waits a moment in the wings, then walks on to centre; Lincoln, seated at the desk, finishes a thought, gets up and walks to centre", "driven_by": "the guest-entrance segment" },
+    { "time": "6-9 s", "action": "they shake right hands at centre", "driven_by": "the guest-entrance segment" },
+    { "time": "9-16 s", "action": "Lincoln walks back round the desk and sits; Roosevelt walks to the couch, turns and sits", "driven_by": "the guest-entrance segment" }
+  ],
+  "set": "studio",
+  "segment": "guest-entrance",
+  "roles": {
+    "host": "young-lincoln-frontier-wrestler",
+    "guest": "roosevelt-wrestler-1890s"
+  }
+}

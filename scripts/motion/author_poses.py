@@ -1,4 +1,4 @@
-"""Our own pose library for the hero shot, written here and nowhere else.
+"""Our own pose library (the hero shot's poses, and standing, sitting and shaking hands for a set), written here and nowhere else.
 
     python3 scripts/motion/author_poses.py            # check, then write motion/poses.json
     python3 scripts/motion/author_poses.py --check    # only check what is written
@@ -34,6 +34,9 @@ from soma import REPO, Skeleton, length, qangle, qconj, qmul, sub  # noqa: E402
 LIBRARY = os.path.join(REPO, "motion", "poses.json")
 WALL_TOP = 0.75  # the wall the vault poses are written for
 PALM = 0.03  # a wrist sits this far above the surface its palm is on
+SEAT = 0.46  # the seat the sitting poses are written for (scripts/sets/standing.py lets a set's seats differ a little)
+SEAT_TO_HIPS = 0.13  # the hips joint sits this far above what is sat on
+SHAKE_HEIGHT, SHAKE_REACH = 1.05, 0.31  # where the wrist is in a handshake: up, and out in front on the body's middle line
 
 # How far each joint may turn from its rest pose, relative to its parent, in degrees.
 LIMITS = {
@@ -200,6 +203,59 @@ def poses_for(sk: Skeleton) -> dict:
         "still": True,
     }
 
+    # ---- for a standing set: standing, sitting, shaking hands (scripts/sets/standing.py) ----
+
+    def hang(side: float) -> dict:
+        """An arm hanging by the body: the hand a little in front of the hip, the elbow behind."""
+        return {"at": (side * (hip + 0.15), 0.89 * H, 0.07), "pole": (side * 0.3, 0.0, -1.0)}
+
+    stand = {
+        "about": "standing easy, feet under the hips, arms by the sides, looking ahead",
+        "hips": (0.0, H - 0.015, 0.0),
+        "left_foot": {"at": (hip + 0.03, ankle, 0.02), "turn": [("Y", 8)]},
+        "right_foot": {"at": (-hip - 0.03, ankle, 0.02), "turn": [("Y", -8)]},
+        "left_hand": hang(1.0),
+        "right_hand": hang(-1.0),
+        "planted": ["left_foot", "right_foot"],
+        "still": True,
+    }
+
+    sit = {
+        "about": f"sitting on a seat {SEAT} m high, back straight, knees over the feet, hands on the thighs",
+        "hips": (0.0, SEAT + SEAT_TO_HIPS, 0.0),
+        "spine": [("X", 4)],
+        "left_foot": {"at": (hip + 0.05, ankle, 0.42), "pole": (0.1, 1.0, 0.3), "turn": [("Y", 6)]},
+        "right_foot": {"at": (-hip - 0.05, ankle, 0.42), "pole": (-0.1, 1.0, 0.3), "turn": [("Y", -6)]},
+        "left_hand": {"at": (hip + 0.06, SEAT + 0.21, 0.27), "pole": (1.0, -0.3, -0.6)},
+        "right_hand": {"at": (-hip - 0.06, SEAT + 0.21, 0.27), "pole": (-1.0, -0.3, -0.6)},
+        "planted": ["left_foot", "right_foot"],
+        "also_on": ["Hips"],
+        "seated": True,
+        "still": True,
+    }
+    sit_talk = dict(sit, about="sitting the same way, leaning in a little, right hand lifted in mid-sentence, head turned to the right")
+    sit_talk.update(
+        spine=[("X", 10), ("Y", -8)],
+        head=[("Y", -16)],
+        right_hand={"at": (-hip - 0.16, SEAT + 0.50, 0.36), "pole": (-1.0, -0.8, -0.2)},
+    )
+
+    shake = {
+        "about": "standing, a small lean in, right hand held out in front at elbow height for a handshake",
+        "hips": (0.0, H - 0.025, 0.01),
+        "spine": [("X", 6)],
+        "head": [("X", -4)],
+        "left_foot": {"at": (hip + 0.04, ankle, -0.06), "turn": [("Y", 10)]},
+        "right_foot": {"at": (-hip - 0.02, ankle, 0.14), "turn": [("Y", -6)]},
+        "left_hand": hang(1.0),
+        "right_hand": {"at": (-0.02, SHAKE_HEIGHT, SHAKE_REACH), "pole": (-1.0, -0.8, -0.4)},
+        "planted": ["left_foot", "right_foot"],
+        "pins": ["right_hand"],
+        "still": True,
+    }
+    shake_dip = dict(shake, about="the same handshake a beat later: knees a touch softer, a nod, the hand where it was")
+    shake_dip.update(hips=(0.0, H - 0.05, 0.02), spine=[("X", 11)], head=[("X", 8)])
+
     return {
         "crouch": crouch,
         "crouch_look_left": look_left,
@@ -214,6 +270,11 @@ def poses_for(sk: Skeleton) -> dict:
         "rise": rise,
         "draw": draw,
         "hero_stance": hero,
+        "stand": stand,
+        "sit": sit,
+        "sit_talk": sit_talk,
+        "shake": shake,
+        "shake_dip": shake_dip,
     }
 
 
@@ -302,7 +363,7 @@ def library_card(sk: Skeleton, built: dict) -> dict:
         card = posed.card()
         card["about"] = posed.desc["about"]
         card["still"] = bool(posed.desc.get("still"))
-        for key in ("next", "step_seconds"):
+        for key in ("next", "step_seconds", "seated"):
             if key in posed.desc:
                 card[key] = posed.desc[key]
         poses[name] = card

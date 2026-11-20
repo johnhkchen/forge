@@ -1,0 +1,491 @@
+{
+ "format": "forge-set/1",
+ "name": "ring",
+ "title": "The ring",
+ "about": "The 1890s wrestling ring: a canvas mat a man's chest above the hall floor, three ropes a side between four oak posts, and wooden steps up to it.",
+ "stage": "open",
+ "units": "metres. y is up and 0 is the mat. The steps are at +z, and so are the cameras.",
+ "from_run": "2026-11-20T14-02-42-1890s-wrestling-ring",
+ "floor": {
+  "areas": [
+   [
+    [
+     -1.86,
+     -1.75
+    ],
+    [
+     1.86,
+     1.75
+    ]
+   ],
+   [
+    [
+     -0.3,
+     1.75
+    ],
+    [
+     0.72,
+     2.38
+    ]
+   ]
+  ],
+  "note": "inside the ropes, and the top of the steps. The top step is 22 cm lower than the mat, but a shot's floor is flat: someone coming up the steps starts level with the mat."
+ },
+ "ground": {
+  "y": -1.36,
+  "color": [
+   0.33,
+   0.27,
+   0.22
+  ],
+  "size_m": 40.0
+ },
+ "blocks": [
+  {
+   "name": "ropes back",
+   "kind": "rope",
+   "center": [
+    0.0,
+    0.58,
+    -1.815
+   ],
+   "size": [
+    3.8,
+    1.16,
+    0.08
+   ],
+   "heading": 0.0,
+   "see_through": true
+  },
+  {
+   "name": "ropes left",
+   "kind": "rope",
+   "center": [
+    -1.93,
+    0.58,
+    0.0
+   ],
+   "size": [
+    0.08,
+    1.16,
+    3.64
+   ],
+   "heading": 0.0,
+   "see_through": true
+  },
+  {
+   "name": "ropes right",
+   "kind": "rope",
+   "center": [
+    1.93,
+    0.58,
+    0.0
+   ],
+   "size": [
+    0.08,
+    1.16,
+    3.64
+   ],
+   "heading": 0.0,
+   "see_through": true
+  },
+  {
+   "name": "ropes front left",
+   "kind": "rope",
+   "center": [
+    -1.11,
+    0.58,
+    1.815
+   ],
+   "size": [
+    1.58,
+    1.16,
+    0.08
+   ],
+   "heading": 0.0,
+   "see_through": true
+  },
+  {
+   "name": "ropes front right",
+   "kind": "rope",
+   "center": [
+    1.32,
+    0.58,
+    1.815
+   ],
+   "size": [
+    1.16,
+    1.16,
+    0.08
+   ],
+   "heading": 0.0,
+   "see_through": true
+  },
+  {
+   "name": "post back left",
+   "kind": "post",
+   "center": [
+    -1.9,
+    0.75,
+    -1.86
+   ],
+   "size": [
+    0.38,
+    1.5,
+    0.38
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "post back right",
+   "kind": "post",
+   "center": [
+    1.9,
+    0.75,
+    -1.86
+   ],
+   "size": [
+    0.38,
+    1.5,
+    0.38
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "post front left",
+   "kind": "post",
+   "center": [
+    -1.9,
+    0.75,
+    1.86
+   ],
+   "size": [
+    0.38,
+    1.5,
+    0.38
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "post front right",
+   "kind": "post",
+   "center": [
+    1.9,
+    0.75,
+    1.86
+   ],
+   "size": [
+    0.38,
+    1.5,
+    0.38
+   ],
+   "heading": 0.0
+  }
+ ],
+ "gate_note": "The front ropes have a gap at the steps: that is how people get in. The real ropes run straight across; a wrestler would duck through them.",
+ "marks": {
+  "steps": {
+   "kind": "stand",
+   "at": [
+    0.21,
+    2.12
+   ],
+   "facing_deg": 180.0,
+   "about": "the top of the steps, outside the ropes: the way in"
+  },
+  "centre": {
+   "kind": "stand",
+   "at": [
+    0.0,
+    0.0
+   ],
+   "facing_deg": 0.0,
+   "about": "the middle of the mat, facing the steps"
+  },
+  "meet_left": {
+   "kind": "touch",
+   "at": [
+    -0.38,
+    0.0
+   ],
+   "facing_deg": 90.0,
+   "touch": {
+    "hand": "right",
+    "at": [
+     0.0,
+     1.05,
+     0.0
+    ]
+   },
+   "about": "a handshake at centre, from the left"
+  },
+  "meet_right": {
+   "kind": "touch",
+   "at": [
+    0.38,
+    0.0
+   ],
+   "facing_deg": -90.0,
+   "touch": {
+    "hand": "right",
+    "at": [
+     0.0,
+     1.05,
+     0.0
+    ]
+   },
+   "about": "the other side of that handshake"
+  },
+  "corner_front_left": {
+   "kind": "stand",
+   "at": [
+    -1.3,
+    1.2
+   ],
+   "facing_deg": 133.0,
+   "about": "the corner by the steps, on the left"
+  },
+  "corner_front_right": {
+   "kind": "stand",
+   "at": [
+    1.3,
+    1.2
+   ],
+   "facing_deg": -133.0,
+   "about": "the corner by the steps, on the right"
+  },
+  "corner_back_left": {
+   "kind": "stand",
+   "at": [
+    -1.3,
+    -1.2
+   ],
+   "facing_deg": 47.0,
+   "about": "the far corner, on the left"
+  },
+  "corner_back_right": {
+   "kind": "stand",
+   "at": [
+    1.3,
+    -1.2
+   ],
+   "facing_deg": -47.0,
+   "about": "the far corner, on the right"
+  }
+ },
+ "paths": [
+  {
+   "from": "steps",
+   "to": "centre"
+  },
+  {
+   "from": "steps",
+   "to": "meet_right",
+   "via": [
+    [
+     0.3,
+     1.2
+    ]
+   ]
+  },
+  {
+   "from": "steps",
+   "to": "corner_front_right",
+   "via": [
+    [
+     0.4,
+     1.45
+    ]
+   ]
+  },
+  {
+   "from": "steps",
+   "to": "corner_front_left",
+   "via": [
+    [
+     0.1,
+     1.45
+    ]
+   ]
+  },
+  {
+   "from": "corner_back_left",
+   "to": "meet_left"
+  },
+  {
+   "from": "corner_back_right",
+   "to": "meet_right"
+  },
+  {
+   "from": "corner_front_left",
+   "to": "meet_left"
+  },
+  {
+   "from": "corner_front_right",
+   "to": "meet_right"
+  },
+  {
+   "from": "corner_back_left",
+   "to": "centre"
+  },
+  {
+   "from": "corner_back_right",
+   "to": "centre"
+  }
+ ],
+ "cameras": {
+  "wide": {
+   "at": [
+    0.0,
+    1.9,
+    8.2
+   ],
+   "aim": [
+    0.0,
+    0.95,
+    0.0
+   ],
+   "lens_mm": 32,
+   "sees": [
+    "steps",
+    "centre",
+    "meet_left",
+    "meet_right",
+    "corner_front_left",
+    "corner_front_right",
+    "corner_back_left",
+    "corner_back_right"
+   ],
+   "about": "the whole ring, from the steps' side"
+  },
+  "ringside": {
+   "at": [
+    2.9,
+    0.5,
+    5.8
+   ],
+   "aim": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "lens_mm": 40,
+   "sees": [
+    "centre",
+    "meet_left",
+    "meet_right"
+   ],
+   "about": "low, from a front-row seat"
+  },
+  "high": {
+   "at": [
+    -4.2,
+    4.2,
+    5.2
+   ],
+   "aim": [
+    0.0,
+    0.7,
+    0.0
+   ],
+   "lens_mm": 35,
+   "sees": [
+    "centre",
+    "meet_left",
+    "meet_right",
+    "corner_back_right"
+   ],
+   "about": "from up in the gallery"
+  }
+ },
+ "lights": [
+  {
+   "name": "ring light",
+   "kind": "area",
+   "at": [
+    0.0,
+    4.4,
+    0.0
+   ],
+   "aim": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "power": 2200.0,
+   "color": [
+    1.0,
+    0.93,
+    0.8
+   ],
+   "size_m": 3.0
+  },
+  {
+   "name": "hall",
+   "kind": "area",
+   "at": [
+    -3.0,
+    3.6,
+    7.5
+   ],
+   "aim": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "power": 1500.0,
+   "color": [
+    1.0,
+    0.95,
+    0.88
+   ],
+   "size_m": 3.0
+  }
+ ],
+ "world": {
+  "color": [
+   0.3,
+   0.26,
+   0.22
+  ],
+  "strength": 0.4
+ },
+ "backdrop": {
+  "image": "backdrop.png",
+  "center": [
+   0.0,
+   3.14,
+   -5.5
+  ],
+  "width_m": 20.0,
+  "height_m": 13.33,
+  "heading": 0.0,
+  "glow": 0.9,
+  "cameras": [
+   "wide"
+  ],
+  "about": "the far wall of the hall and its crowd, painted by Codex"
+ },
+ "slots": {
+  "corner_stool": {
+   "at": [
+    1.45,
+    0.0,
+    -1.35
+   ],
+   "heading": 0.0,
+   "about": "the far right corner"
+  }
+ },
+ "dressing": [],
+ "geometry": {
+  "glb": "set.glb",
+  "move": [
+   0.0,
+   -1.36,
+   0.485
+  ],
+  "turn_deg": 0.0,
+  "built_by": "a copy of the run's profiles/game.glb (just set-from-run ring <runs>)"
+ }
+}
