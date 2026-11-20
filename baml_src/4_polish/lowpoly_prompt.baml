@@ -76,6 +76,9 @@ function base_steps(base: BaseRefs?) -> string {
           to measure.py and face.py for those, and "reference": "Reference"
           to build.py every time, now that it isn't the only mesh in the
           scene.
+        - The base body can be the bigger mesh, so a tool left to pick "the
+          largest visible mesh" may pick the wrong one. While these meshes
+          are in the scene, always name the object a tool works on.
         - Hide "Body" and the "Garment: ..." meshes (hide_viewport = True)
           before you \`look\` at your model beside the reference. To check
           the body alone, show "Body" and hide the reference instead.
