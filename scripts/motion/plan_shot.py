@@ -288,6 +288,14 @@ def set_blocks(path: Path, card: dict, end_m: float) -> tuple:
     """The set as plain blocks standing along the path: a ledge in short
     pieces that follow the curve, one roof slab, and the wall. The walking
     surface is y = 0 everywhere."""
+    if isinstance(card, str):
+        # A standing set, by name: its blocks are where the set has them, whatever the path does.
+        sys.path.insert(0, os.path.join(REPO, "scripts", "sets"))
+        import standing
+
+        st = standing.load(card)
+        blocks = standing.plan_blocks(st)
+        return blocks, next((b for b in blocks if b["name"] == st.get("wall")), None)
     blocks, wall = [], None
 
     def block(name, kind, s, size, y):

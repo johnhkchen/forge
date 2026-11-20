@@ -29,8 +29,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.path.join(HERE, "..", ".claude", "skills", "tidy-mesh", "scripts")
 BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, "sets"))
 import blockout_recipe  # noqa: E402
 import check_safe  # noqa: E402
+import test_sets  # noqa: E402  (the standing sets' own cases, which need no Blender)
 
 
 def blender(base, steps, save=None):
@@ -1619,9 +1621,55 @@ def test_face_versions(ctx):
     check("the face sheet is kept: %s" % os.path.basename(sheet), os.path.getsize(sheet) > 50000)
 
 
+def test_set_check(ctx):
+    """Standing sets: every set in sets/ is sound (marks on the floor and clear of what is in the way, seats the right height, paths clear), and a broken one is told what is wrong."""
+    test_sets.test_set_check()
+
+
+def test_set_marks(ctx):
+    """Standing sets: a shot list that names marks gets its path, distances, facings, the handshake's spot and its seat from the set; one that names none is untouched."""
+    test_sets.test_marks()
+    test_sets.test_segment()
+
+
+def test_set_cameras(ctx):
+    """Standing sets: every fixed camera holds the marks it says it sees, head to foot, with nothing in the way; a camera turned away is told."""
+    test_sets.test_cameras()
+
+
+def test_set_rooftop_parity(ctx):
+    """Standing sets: the two hero shots, moved onto the rooftop set, plan to byte-identical motion requests."""
+    test_sets.test_rooftop_parity()
+
+
+def test_set_build(ctx):
+    """Standing sets: the studio's block-out is built from its data in a background Blender (build.py), and what comes out holds every block people are kept out of."""
+    import standing
+    copy = os.path.join(ctx["out"], "studio-set")
+    shutil.rmtree(copy, ignore_errors=True)
+    shutil.copytree(os.path.join(HERE, "..", "sets", "studio"), copy)
+    for made in ("set.glb", os.path.join("dressing", "mug.glb")):
+        os.remove(os.path.join(copy, made))
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "sets", "build_set.py"), "--", copy], capture_output=True, text=True)
+    lines = [line for line in out.stdout.splitlines() if line.startswith("SETBUILD ")]
+    check("build_set.py built the set and its four pieces of dressing", len(lines) == 5, (out.stdout + out.stderr)[-1500:])
+    held = read_glb(os.path.join(copy, "set.glb"))
+    check("set.glb: %d triangles, flat colors on the corners, no textures, %d kB" % (held["triangles"], os.path.getsize(os.path.join(copy, "set.glb")) // 1000),
+          200 <= held["triangles"] <= 2000 and held["vertex_colors"] and held["images"] == 0 and os.path.getsize(os.path.join(copy, "set.glb")) < 200000, held)
+    st = standing.load(copy)
+    lo, hi = standing.placed_bounds(st)
+    desk = standing.block_named(st, "desk")
+    check("the built set spans %.1f x %.1f m and stands on the floor (lowest point %.2f m)" % (hi[0] - lo[0], hi[2] - lo[2], lo[1]), hi[0] - lo[0] > 10 and -0.2 < lo[1] <= 0.0 and hi[1] > standing.top_of(desk))
+    problems, seen = standing.check(st)
+    check("the freshly built set is sound: every block is inside its geometry, the dressing is on its slots", not problems and len(seen["dressing"]) == 4, problems[:3])
+    mug = read_glb(os.path.join(copy, "dressing", "mug.glb"))
+    check("dressing is its own small file (the mug: %d triangles), so it can be swapped without building the set again" % mug["triangles"], 10 < mug["triangles"] < 200)
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_contact, test_drape, test_cloth,
-         test_garment_made_up, test_garment_dancer, test_follow, test_open_add]
+         test_garment_made_up, test_garment_dancer, test_follow, test_open_add,
+         test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build]
 
 
 def main(argv):

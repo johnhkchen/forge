@@ -36,6 +36,7 @@ check:
     python3 scripts/motion/author_poses.py --check | tail -1
     python3 scripts/motion/test_timeline.py | tail -1
     python3 scripts/motion/test_run_clip.py | tail -1
+    python3 scripts/sets/test_sets.py | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -81,12 +82,33 @@ motion-selftest:
 motion-skeleton:
     baml run motion_skeleton
 
-# Make a shot from its plan in motion/shots/<shot>.json: choreograph, place our poses, generate the motion (in pieces, if a beat is made from a sentence), measure it, film it
+# Is a standing set sound? Marks on the floor and clear of what is in the way, seats the right height, paths clear, every camera holding its marks, the backdrop filling the view (no set named: every set in sets/)
+set-check *sets:
+    python3 scripts/sets/standing.py check {{sets}}
+
+# Build a set's block-out (set.glb) and its dressing from sets/<set>/set.json and build.json, in a background Blender
+set-build set:
+    "{{blender_bin}}" -b --factory-startup -P scripts/sets/build_set.py -- "{{set}}" 2>&1 | grep -E '^SETBUILD|Error|Traceback'
+
+# Have Codex paint a set's backdrop from the words in sets/<set>/backdrop.txt (one picture)
+set-backdrop set:
+    baml run paint_backdrop -- --name "{{set}}"
+
+# Use a finished run's object as a set's geometry: copies one of its versions to sets/<set>/set.glb (the run is only read)
+set-from-run set run profile="game":
+    cp "{{run}}/profiles/{{profile}}.glb" "sets/{{set}}/set.glb"
+    python3 scripts/sets/standing.py check "{{set}}" | tail -1
+
+# One picture of an empty set through one of its own cameras, for its card in the gallery (sets/<set>/card.png)
+set-card set camera="":
+    "{{blender_bin}}" -b --factory-startup -P scripts/sets/set_still.py -- "{{set}}" {{ if camera != "" { "--camera " + camera } else { "" } }} 2>&1 | grep -E '^STILL|Error|Traceback'
+
+# Make a shot from its plan in motion/shots/<shot>.json: choreograph, place our poses, generate the motion (in pieces, if a beat is made from a sentence), measure it, film it. A take (a plan with a segment and roles, like studio-guest-entrance) makes every role and films from every camera of its set
 shoot shot="hero-rooftop":
     baml run shoot -- --shot "{{shot}}"
 
-# Put a character in a finished shot: its skeleton, limits and planted feet, plus a prop on its sockets (writes into shots/<shot>/). clip names the cut: hero, or hero-mixed for a second cut
-cast shot character prop="" clip="hero":
+# Put a character in a finished shot: its skeleton, limits and planted feet, plus a prop on its sockets (writes into shots/<shot>/). clip names the cut: hero, or hero-mixed for a second cut. For a take, the cast is in its plan: `character` is the folder their runs are in (`just cast studio-guest-entrance runs "" guest-entrance`), and it is filmed from every camera
+cast shot character="runs" prop="" clip="hero":
     baml run cast -- --shot "{{shot}}" --character "{{character}}" --prop "{{prop}}" --clip "{{clip}}"
 
 # Copy a shot's clips into the character's own folder, so the gallery shows a Hero button for it (clip as for cast). Never writes over another cut's files
@@ -190,8 +212,8 @@ sync-kit:
     echo "vendored gallery/vendor/b28-clay.css"
 
 # Serve the gallery to this Mac and phones on the same Wi-Fi
-gallery port="8028" runs="runs":
-    python3 scripts/gallery.py --port {{port}} --runs "{{runs}}"
+gallery port="8028" runs="runs" shots="shots":
+    python3 scripts/gallery.py --port {{port}} --runs "{{runs}}" --shots "{{shots}}"
 
 # Only brief, picture and mesh (leaves Blender alone); finish with `just resume`
 mesh idea undress="auto":

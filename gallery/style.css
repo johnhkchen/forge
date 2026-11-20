@@ -106,3 +106,16 @@ html, body { overflow-x: hidden; }
 .notes ul { margin: 0; padding-left: 1.2em; }
 .notes li { margin: 2px 0; }
 @media (max-width: 520px) { .pictures { grid-template-columns: 1fr; } }
+
+/* ---- sets ---- */
+.sets { margin-top: 44px; }
+.sets > h2 { font-size: 1.5rem; margin: 0 0 4px; }
+.sets .lede { margin: 0; color: var(--clay-ink-soft); max-width: 44rem; }
+.card.wide img { aspect-ratio: 16 / 9; }
+.set-stage .pane { aspect-ratio: 16 / 9; }
+.film { margin-top: 12px; }
+.film figure { margin: 12px 0 0; padding: 10px; }
+.film video { width: 100%; display: block; border-radius: var(--clay-radius-sm); background: var(--clay-well); }
+.film figcaption, .notes .hint { padding: 8px 4px 2px; font-size: 0.9rem; color: var(--clay-ink-soft); }
+.pictures img.backdrop { aspect-ratio: 3 / 2; }
+@media (max-width: 720px) { .set-stage .pane { aspect-ratio: 4 / 3; } }

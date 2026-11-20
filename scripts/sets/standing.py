@@ -418,7 +418,7 @@ def check(st: dict) -> tuple:
         apart = math.dist(a["at"], b["at"])
         want = math.degrees(math.atan2(b["at"][0] - a["at"][0], b["at"][1] - a["at"][1]))
         off = max(abs(wrap(a["facing_deg"] - want)), abs(wrap(b["facing_deg"] - want - 180.0)))
-        if not 0.7 <= apart <= 1.05 or off > 30.0:
+        if not 0.6 <= apart <= 1.05 or off > 30.0:
             say(f"marks \"{pair[0]}\" and \"{pair[1]}\" share a hand's spot but stand {apart:.2f} m apart, {off:.0f} degrees off facing each other")
         seen.setdefault("meet", []).append({"marks": pair, "apart_m": round(apart, 3)})
     seen["marks"] = {kind: sorted(n for n, m in marks.items() if m.get("kind") == kind) for kind in MARK_KINDS}

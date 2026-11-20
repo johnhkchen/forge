@@ -36,7 +36,7 @@ WALL_TOP = 0.75  # the wall the vault poses are written for
 PALM = 0.03  # a wrist sits this far above the surface its palm is on
 SEAT = 0.46  # the seat the sitting poses are written for (scripts/sets/standing.py lets a set's seats differ a little)
 SEAT_TO_HIPS = 0.13  # the hips joint sits this far above what is sat on
-SHAKE_HEIGHT, SHAKE_REACH = 1.05, 0.31  # where the wrist is in a handshake: up, and out in front on the body's middle line
+SHAKE_HEIGHT, SHAKE_REACH = 1.05, 0.26  # where the wrist is in a handshake: up, and out in front on the body's middle line
 
 # How far each joint may turn from its rest pose, relative to its parent, in degrees.
 LIMITS = {
