@@ -22,9 +22,26 @@ class ObjectBrief {
     lowpoly_triangles: int? @description(
         "Triangle budget for the low-poly version, from the style the idea asks for (early real-time props 300-800; old-school RuneScape-like characters 600-1500)",
     ),
+    gear: GearItem[]? @description(
+        "For characters: every piece of clothing, armor and equipment, so each can be built separately and taken off or swapped. Empty for objects",
+    ),
     lowpoly_style: string? @description(
         "One line on the low-poly look the idea calls for, like 'faceted flat-shaded, chunky proportions, colors painted in'",
     ),
+}
+
+// Gear is kept separate from a character's body, the way games do it: worn
+// pieces sit over a complete body, attached and held props hang off a named
+// point (a hand, the head, the back) so they can be shown, hidden or swapped.
+class GearItem {
+    name: string @description("Short plain name, like 'wool singlet' or 'umbrella'")
+    kind: "worn" | "attached" | "held" @description(
+        "worn: clothing or armor that follows the body; attached: a rigid piece fixed to one spot (hat, backpack, sheathed sword); held: carried in a hand",
+    )
+    slot: string @description(
+        "Where it goes: one of head, face, neck, torso, arms, hands, hip, legs, feet, back, hand_right, hand_left",
+    )
+    look: string @description("Its shape, material and color in one line")
 }
 
 class Material {
@@ -50,7 +67,10 @@ function Describe(idea: string) -> ObjectBrief {
         standing in a T-pose, arms straight out to the sides, legs slightly
         apart, empty hands, nothing loose (no capes, loose hair strands,
         dangling straps or held weapons). Clothing and gear fit close to the
-        body. Size is its standing height.
+        body. Size is its standing height. List every piece of clothing,
+        armor and equipment in gear. Held props (a weapon, an umbrella, a
+        tool) go in gear only, never in the subject: the picture shows the
+        character with empty hands, and props are made separately.
 
         ${ctx.output_format()}
 

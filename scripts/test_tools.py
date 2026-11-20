@@ -109,7 +109,9 @@ def test_open_stand(ctx):
         ("stand.py", {"size": 2.6, "size_of": "height"}),
     ])
     check("imports the raw mesh as one object", opened["triangles"] == 293921 and opened["joined"] == 1, opened["triangles"])
-    check("emptied the scene first", opened["removed_first"] > 0)
+    check("left the person's own scene alone and worked in a fresh one",
+          opened["removed_first"] == 0 and opened["kept_scene"] and opened["scene"].startswith("Forge"),
+          (opened["removed_first"], opened["kept_scene"], opened["scene"]))
     check("stands 2.6 m tall on z = 0", abs(stood["size"][2] - 2.6) < 1e-3 and abs(stood["min"][2]) < 1e-4, stood["size"])
     check("same result as Claude's by-hand run: 141,134 vertices, 293,305 triangles",
           stood["vertices"] == 141134 and stood["triangles"] == 293305, (stood["vertices"], stood["triangles"]))
