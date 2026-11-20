@@ -2,6 +2,12 @@
 # plain light, optionally with its wireframe drawn over it. Adds a temporary
 # camera and light, and removes them afterwards.
 #
+# "view": "front", "side" or "back" looks straight on instead, with no
+# perspective (front is from -y, where a stood-up object faces), and "box"
+# frames one spot, like a head, instead of the whole object: together they
+# make a close-up to hold next to the same view of another object. These
+# views are lit softly from the camera's side, so a face isn't lost in shadow.
+#
 # EEVEE, small image: a second or two. Safe-mode compatible.
 
 PARAMS = {
@@ -9,6 +15,8 @@ PARAMS = {
     "path": None,        # absolute path of the .png to write (required)
     "size": 640,
     "wireframe": False,  # draw the edges, to judge topology
+    "view": "three-quarter",  # or "front", "side", "back"
+    "box": None,         # {"min": [x, y, z], "max": [x, y, z]}: frame this spot, not the whole object
 }
 
 import bpy
@@ -39,16 +47,34 @@ scene = bpy.context.scene
 corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
 low = Vector([min(c[i] for c in corners) for i in range(3)])
 high = Vector([max(c[i] for c in corners) for i in range(3)])
+if PARAMS["box"]:
+    low, high = Vector(PARAMS["box"]["min"]), Vector(PARAMS["box"]["max"])
 center, reach = (low + high) / 2, (high - low).length
 
 cam = bpy.data.objects.new("preview camera", bpy.data.cameras.new("preview camera"))
 sun = bpy.data.objects.new("preview light", bpy.data.lights.new("preview light", "SUN"))
 for o in (cam, sun):
     scene.collection.objects.link(o)
-cam.location = center + Vector((0.55, -0.8, 0.35)) * reach
-cam.rotation_euler = (center - cam.location).to_track_quat("-Z", "Y").to_euler()
+straight = {"front": (0, -1, 0), "side": (1, 0, 0), "back": (0, 1, 0)}.get(PARAMS["view"])
 sun.data.energy = 4.0
 sun.rotation_euler = (0.8, 0.2, -0.6)
+sky = None
+if straight:
+    away = Vector(straight)
+    cam.data.type = "ORTHO"
+    cam.data.ortho_scale = max(high - low) * 1.15
+    cam.data.clip_end = max(obj.dimensions) * 8
+    cam.location = center + away * max(obj.dimensions) * 3
+    sun.data.energy = 2.5
+    sun.data.angle = 0.5
+    sun.rotation_euler = (-(away + Vector((0, 0, 0.9)) + away.cross(Vector((0, 0, 1))) * 0.6)).to_track_quat("-Z", "Y").to_euler()
+    sky = bpy.data.worlds.new("preview sky")
+    sky.use_nodes = True
+    sky.node_tree.nodes["Background"].inputs["Color"].default_value = (0.75, 0.75, 0.78, 1.0)
+    sky.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.6
+else:
+    cam.location = center + Vector((0.55, -0.8, 0.35)) * reach
+cam.rotation_euler = (center - cam.location).to_track_quat("-Z", "Y").to_euler()
 wire = None
 if PARAMS["wireframe"]:
     wire = obj.modifiers.new("preview wire", "WIREFRAME")
@@ -57,11 +83,14 @@ if PARAMS["wireframe"]:
 
 saved = (scene.camera, scene.render.engine, scene.render.resolution_x,
          scene.render.resolution_y, scene.render.filepath)
+world_was = scene.world
 others = [o for o in scene.objects if o.type == "MESH" and o is not obj and not o.hide_render]
 try:
     for o in others:
         o.hide_render = True
     scene.camera = cam
+    if sky:
+        scene.world = sky
     scene.render.engine = "BLENDER_EEVEE"
     scene.render.resolution_x = scene.render.resolution_y = PARAMS["size"]
     scene.render.filepath = PARAMS["path"]
@@ -71,9 +100,12 @@ finally:
         o.hide_render = False
     (scene.camera, scene.render.engine, scene.render.resolution_x,
      scene.render.resolution_y, scene.render.filepath) = saved
+    if sky:
+        scene.world = world_was
+        bpy.data.worlds.remove(sky)
     if wire:
         obj.modifiers.remove(wire)
     for o in (cam, sun):
         bpy.data.objects.remove(o, do_unlink=True)
 
-print("RESULT " + json.dumps({"object": obj.name, "path": PARAMS["path"]}))
+print("RESULT " + json.dumps({"object": obj.name, "path": PARAMS["path"], "view": PARAMS["view"]}))

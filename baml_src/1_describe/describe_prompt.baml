@@ -50,7 +50,11 @@ function Describe(idea: string) -> ObjectBrief {
         standing in a T-pose, arms straight out to the sides, legs slightly
         apart, empty hands, nothing loose (no capes, loose hair strands,
         dangling straps or held weapons). Clothing and gear fit close to the
-        body. Size is its standing height.
+        body. Size is its standing height. Give it a face that still reads
+        when built from a handful of flat shapes: head level, looking
+        straight ahead, eyes not hidden by hair or a brim, and two or three
+        bold features named plainly (a heavy brow, a big nose, a beard,
+        tusks, pointed ears).
 
         ${ctx.output_format()}
 

@@ -8,6 +8,9 @@
 # Under ~0.5% is invisible at normal viewing distance; over ~1.5% shows in
 # the silhouette.
 #
+# "box" scores one spot alone (a head, a hand): only the surface of each
+# mesh that lies inside it is compared, still against the whole other mesh.
+#
 # Safe-mode compatible: bpy, bmesh, mathutils, math and json only.
 
 PARAMS = {
@@ -15,6 +18,7 @@ PARAMS = {
     "light": None,   # the reduced mesh; None = the "(quads)" or "(light)" mesh in the scene
     "samples": 20000,
     "worst": 5,      # how many worst spots to describe
+    "box": None,     # {"min": [x, y, z], "max": [x, y, z]} in world meters: score only what is inside
 }
 
 import bpy
@@ -45,11 +49,16 @@ def surface_points(obj, count):
     """Points spread over the surface by area, in world space."""
     me = obj.data
     me.calc_loop_triangles()
-    tris = me.loop_triangles
+    m = obj.matrix_world
+    tris = list(me.loop_triangles)
+    if PARAMS["box"]:
+        low, high = PARAMS["box"]["min"], PARAMS["box"]["max"]
+        tris = [t for t in tris if all(low[i] <= (m @ t.center)[i] <= high[i] for i in range(3))]
+        if not tris:
+            raise ValueError("%s has no surface inside the box" % obj.name)
     areas = [t.area for t in tris]
     total = sum(areas)
     rng = random.Random(0)
-    m = obj.matrix_world
     picks = rng.choices(range(len(tris)), weights=areas, k=count)
     out = []
     for i in picks:

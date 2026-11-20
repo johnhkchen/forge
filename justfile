@@ -26,7 +26,7 @@ check:
 check-safe *files:
     python3 scripts/check_safe.py {{files}}
 
-# Try the Blender tools on real runs, in a background Blender (about 20 s; leaves the open Blender alone)
+# Try the Blender tools on real runs, in a background Blender (about a minute; leaves the open Blender alone)
 test-tools runs="runs":
     python3 scripts/test_tools.py "{{runs}}"
 
