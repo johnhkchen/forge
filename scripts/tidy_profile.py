@@ -68,22 +68,30 @@ def largest_mesh():
     return max(meshes, key=lambda o: len(o.data.polygons))
 
 
+REMESH_TIMEOUT_S = 120  # per AutoRemesher attempt
+
+
 def remesh_file(mesh_in, work, tag, want, params):
     """Run AutoRemesher on one OBJ until its quad count is within 10% of
     `want` (its own target is only a starting point). Returns (obj, quads, tries)."""
     adaptivity = params.get("adaptivity", 1.0)
     target = want * (5 if adaptivity > 0.5 else 2.5)
-    tries, best = [], None
+    ceiling = want * 40  # past this AutoRemesher can grind for hours on one part
+    tries, best, starved = [], None, 0
     for attempt in range(4):
         out = os.path.join(work, "%s-%d.obj" % (tag, attempt))
         report = out + ".txt"
-        done = subprocess.run([
-            AUTOREMESHER, "-i", mesh_in, "-o", out, "--report", report,
-            "--target-quads", str(max(int(target), 50)),
-            "--adaptivity", str(adaptivity),
-            "--anisotropy", str(params.get("anisotropy", 1.0)),
-            "--sharp-edge", str(params.get("sharp_edge", 90)),
-        ], capture_output=True, timeout=600)
+        try:
+            done = subprocess.run([
+                AUTOREMESHER, "-i", mesh_in, "-o", out, "--report", report,
+                "--target-quads", str(max(int(target), 50)),
+                "--adaptivity", str(adaptivity),
+                "--anisotropy", str(params.get("anisotropy", 1.0)),
+                "--sharp-edge", str(params.get("sharp_edge", 90)),
+            ], capture_output=True, timeout=REMESH_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            tries.append({"target": int(target), "quads": None, "note": "gave up after %ds" % REMESH_TIMEOUT_S})
+            break
         if done.returncode != 0 or not os.path.exists(report):
             break
         with open(report) as f:
@@ -93,7 +101,15 @@ def remesh_file(mesh_in, work, tag, want, params):
             best = (out, got)
         if not got or abs(got - want) <= want * 0.1:
             break
-        target *= want / got
+        # A part AutoRemesher can barely mesh (a thin skirt, a shell) answers a
+        # big target with a handful of quads; scaling by want/got then asks for
+        # millions. Grow at most 4x a round, stop at the ceiling, and give up
+        # after two starved answers so the part falls back to reduction.
+        if got < want * 0.2:
+            starved += 1
+            if starved >= 2:
+                break
+        target = min(target * min(want / got, 4.0), ceiling)
     return best, tries
 
 
@@ -220,8 +236,20 @@ def autoremesh(params):
                 bpy.ops.object.modifier_apply(modifier=mod.name)
                 made.append(part)
                 kind = "kept (reduced)"
+            elif not params.get("whole_failed"):
+                # AutoRemesher gave nothing for the whole object in one go (it
+                # stalls on some meshes, like the fused lizardkin). Part by
+                # part usually works; QuadriFlow is the last resort.
+                # use_parts brings in Claude's part cuts (parts.json) even for
+                # profiles that normally remesh whole: a fused body splits
+                # into pieces AutoRemesher can handle.
+                result = autoremesh(dict(params, per_part=True, use_parts=True, whole_failed=True))
+                result["note"] = "AutoRemesher gave nothing for the whole object (%s); remeshed part by part" % tries
+                return result
             else:
-                raise RuntimeError("AutoRemesher produced nothing for %s" % source.name)
+                result = run_script("retopo.py", {"target_quads": want})
+                result["note"] = "AutoRemesher gave nothing, whole or by piece; used QuadriFlow"
+                return result
             results.append({"share": round(areas[part.name] / total, 4), "budget": budget, "result": kind, "tries": tries})
         for p in parts:
             if p is not source and p not in made:
