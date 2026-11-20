@@ -150,6 +150,18 @@ cloth-check +files:
 bake-check run +files:
     "{{blender_bin}}" -b --factory-startup -P scripts/bake_check.py -- "{{run}}/scene.blend" {{files}} 2>&1 | grep -E '^BAKE|^SHEET|Error|Traceback'
 
+# Only draw a character's head again, large, from three sides (heads/sheet.png); the next `just tidy` paints the face from it
+head-sheet run:
+    baml run head_sheet_for -- --dir "{{run}}"
+
+# Picture a character's face in every version of a run, next to its picture: front, three-quarter, side (writes out.png and out.json)
+face-sheet run out:
+    "{{blender_bin}}" -b --factory-startup -P scripts/face_sheet.py -- "{{run}}" "{{out}}" 2>&1 | grep -E '^FACES|Error|Traceback'
+
+# Measure the faces on a face sheet against the picture: where eyes, nose, mouth and chin sit, how lopsided, how sharp (uv fetches MediaPipe the first time)
+face-check +sheets:
+    uv run --no-project --python 3.11 --with mediapipe==0.10.14 --with opencv-python-headless --with "numpy<2" python scripts/face_check.py {{sheets}} 2>/dev/null
+
 # For a run from before recipes were kept: rebuild its block-out from the transcript in a background Blender and save the recipe, so `just tidy <run> midpoly` works
 recipe run:
     #!/usr/bin/env bash

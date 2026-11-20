@@ -80,6 +80,25 @@ function draw(brief: ObjectBrief, run: Run) -> string {
 /// Asks codex for one picture and saves it as `target`. `attach` are
 /// pictures it is shown (absolute paths), for an edit of one.
 function codex_picture(dir: string, request: string, attach: string[], target: string) -> string {
+    let drawn = codex_drawn(request, dir, attach);
+    baml.fs.write_bytes(target, baml.fs.open(drawn, "r").bytes());
+    target
+}
+
+/// Asks codex for one picture and returns the file it drew, in codex's own
+/// thread folder. `from` is a picture to work from (the head sheet is drawn
+/// from the character's picture); `dir` is where codex runs.
+function codex_draws(request: string, dir: string, from: string? = null) -> string {
+    let shown: string[] = if let picture: string = from {
+        [picture]
+    } else {
+        []
+    };
+    codex_drawn(request, dir, shown)
+}
+
+/// The one codex call behind both: `attach` pictures are shown with -i.
+function codex_drawn(request: string, dir: string, attach: string[]) -> string {
     //# Ask codex for one picture
     let shown = attach.flat_map((path) -> {
         ["-i", path]
@@ -103,7 +122,7 @@ function codex_picture(dir: string, request: string, attach: string[], target: s
         throw PictureFailed { reason: `codex exited ${out.exit_code}: ${string.from_utf8(out.stderr)}` }
     }
 
-    //# Copy the picture out of codex's thread folder
+    //# Find the picture in codex's thread folder
     let home = baml.sys.home_dir() ?? throw PictureFailed { reason: "no home directory" };
     let folder = `${home}/.codex/generated_images/${codex_thread(events)}`;
     let drawn = (
@@ -116,8 +135,7 @@ function codex_picture(dir: string, request: string, attach: string[], target: s
         })
         .at(0)
         ?? throw PictureFailed { reason: `no .png in ${folder}` };
-    baml.fs.write_bytes(target, baml.fs.open(`${folder}/${drawn.name}`, "r").bytes());
-    target
+    `${folder}/${drawn.name}`
 }
 
 test "codex_thread reads the id from the first event" {

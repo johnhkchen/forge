@@ -4,6 +4,7 @@
 //   2. Codex draws the object                        (2_picture)
 //      a character whose clothes hide its body is drawn again without
 //      them, for a real body under the clothes       (2b_undress)
+//      and a character's head again, from three sides
 //   3. TRELLIS.2 on RunPod lifts it into a mesh      (3_mesh)
 //      and the second picture into the base body; the hiding clothes are
 //      cut out of the clothed mesh                   (2b_undress)
@@ -76,6 +77,19 @@ function finish(
     }
     //# 2b. Clothes that hide the body: Codex draws the character again without them
     base_picture_if_hidden(brief, run, undress_mode = undress);
+    //# 2b. A character's head again, large, from three sides (for its face)
+    if (wants_head_sheet(brief) && !run.has(HEAD_SHEET)) {
+        log.info("head sheet: codex is drawing the head from three sides");
+        // Nothing depends on it: without one the face is painted from image.png.
+        let sheet: string? = head_sheet(brief, run) catch (e) {
+            _ => {
+                log.warn(
+                    "head sheet: codex did not draw one; the face will be painted from image.png",
+                );
+                null
+            },
+        };
+    }
     //# 3. TRELLIS.2 builds the mesh
     if (!run.has("mesh.glb")) {
         log.info("mesh: sending the picture to TRELLIS.2 on RunPod");
