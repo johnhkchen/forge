@@ -1,6 +1,6 @@
 ---
 name: tidy-mesh
-description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate).
+description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and for clothes that sit on the body, move with it and swing (drape, cloth, swing).
 ---
 
 # tidy-mesh
@@ -167,7 +167,9 @@ version made from it):
   with its group. Its result lists the `groups` and `gear_not_built`.
 - **`export.py` writes the groups apart**: one mesh per group, named
   `body`, `gear: wool singlet`, `gear: boots`..., each gear mesh tagged in
-  glTF extras with `gear`, `kind` and `slot`. `"only_this_object"` now
+  glTF extras with `gear`, `kind` and `slot`. After drape.py the body is
+  more than one mesh: `body`, and a `body under: <gear>` for the skin each
+  piece hides (see "Clothes that sit on the body and move with it"). `"only_this_object"` now
   means "these meshes and nothing else".
 - **Sockets**: `"sockets": True` adds five empties, `socket: hand_right`,
   `hand_left`, `head`, `back`, `hip`, worked out from the body pieces of
@@ -345,14 +347,10 @@ lizardkin's tail has five bones.
 
 What is weak, most visible first:
 
-- **Skin shows through clothes on a stride.** The body and a gear piece
-  over it have their rings at different heights, so they bend differently;
-  on the wrestlers a bare thigh pokes through the trousers. The fix is to
-  hide the body's faces under gear while it is worn (the runner already
-  knows which they are: `skin_under_gear`).
 - **Bending is by nearest bone.** No twist bones, no corrective shapes:
-  an elbow or knee folds like a paper tube, and a kilt follows the thighs
-  in facets.
+  an elbow or knee folds like a paper tube. (Skin through clothes on a
+  stride, and kilts that followed the thighs in facets, were the top of
+  this list: see "Clothes that sit on the body and move with it".)
 - **The troll's ankles run out.** Its shins are short, so in late stance
   the ankle hits its limit and the heel comes up as much as 42 degrees;
   on one frame a foot and its toes are clamped (0.14 cm of slide).
@@ -364,6 +362,174 @@ What is weak, most visible first:
   stays in place (the speed is in `<version>-walk.json` for whoever moves
   the character).
 - **Hands and face don't move**: one bone per hand, none in the face.
+
+## Clothes that sit on the body and move with it
+
+A block-out's gear is tubes and boxes built roughly around the body. Left
+like that, trousers are a stiff pipe with a leg loose inside: a gap at
+every cuff, a bare thigh through the cloth on every stride (the body and
+the gear had their rings at different heights, so they bent differently),
+and a kilt that follows the hips like a bucket. Three scripts fix it, in
+this order around the rig:
+
+    drape.py     after the last build.py, before export.py; again on any opened .glb
+    rig.py
+    cloth.py     after rig.py
+    walk.py / any motion, then animate.py
+    swing.py     after animate.py (animate.py's result says so: "then")
+
+The runner does all of it: `lowpoly` and `midpoly` drape before they bake,
+`walk` and `just cast` drape (a version already draped is only read), rig,
+dress and swing. In step 4c Claude runs drape.py itself, last thing before
+the export.
+
+**`drape.py`: lay each piece on the body.** Every piece of gear is taken
+for one of three things; `"pieces"` in the result says which, and why.
+
+- **Tight** (trousers, sleeves, a shirt, wraps, a mask): every point goes
+  to the nearest spot on the body, one step off it (`"clearance"`, half a
+  percent of the height: about a centimeter on a person). A piece worn over
+  another sits a step further out for each layer under it. A point sunk
+  deep in the body is left: that is where two pieces were built into each
+  other (a trouser leg's top inside the hips). Then, where a corner or an
+  edge of the body would still stand out through a flat face of cloth (a
+  six-sided leg in an eight-sided wrap), that face is lifted over it.
+- **Loose** (a kilt, a skirt, a coat's skirts, a hood, a cape): fitted like
+  tight cloth only where it rests on the body. That is down to the belt or
+  sash worn around it, if there is one; otherwise down to where the body
+  starts to fall away under it (cloth hangs from the widest thing above
+  it). Below that line it keeps the hang it was built with, comes along
+  with the edge it hangs from, and is pushed out only as far as cloth would
+  fall: straight down from the widest part of the body above, never in
+  toward the legs.
+- **Stiff** (boots, a hat, a buckle, plates, glasses): left as built. A
+  small one is carried along with the cloth it sits on. A belt or band (a
+  ring with an inside and an outside) has its inside set on what it goes
+  around and keeps its thickness.
+
+What a piece is comes from, in order: `"fit"` in drape.py's own PARAMS; the
+piece's `"fit"` in build.py (what the block-out prompt now asks Claude to
+say); what the file says it was last time; then the piece itself: attached
+gear, footwear and small things are stiff, a ring is a band, a name like
+kilt, coat or hood is loose, a wide piece whose lower edge stands well off
+the body is loose, the rest is tight.
+
+It also cuts a few edge loops, changing no shape (`"rings"`, at most 12%
+more triangles): a tight piece gets one where the body under it has a ring
+and it has none near, so cloth bends where the body bends; and the body
+gets one just inside each end of a piece that covers it, so the skin under
+a sleeve is faces of its own and none is half in, half out.
+
+**Skin under clothes is not drawn.** drape.py marks each body face that a
+piece of gear hides completely: gear straight out from it and at a slant
+four ways, so a face under a hat's brim, or just inside a collar, stays.
+export.py writes those faces as meshes of their own, `body under: wool
+trousers`, tagged `"under"` with the gear's name (names joined with `|`
+where two pieces each hide the face). The rule for a game, and what the
+gallery does: show such a mesh only while every gear it names is off.
+
+Why hide rather than shrink the body or keep it and hope: hidden skin
+cannot come through, whatever the animation does; the body is still whole
+the moment the gear comes off; a dressed character draws fewer triangles;
+and it is one line in any engine. Shrinking the body inside its clothes
+leaves a body that is the wrong shape when they come off, and still clips
+on a deep bend. Of a hanging piece, the last quarter above the hem hides
+nothing, because a hem swings clear of the leg.
+
+**`cloth.py`: clothes take the body's weights.** rig.py binds every piece
+by its nearest bones, so a trouser leg and the leg inside it, built with
+different rings, got different weights and came apart on a stride. Now
+each point of tight or loose cloth takes the weights the body has at the
+spot right under it. A point with no body close under it, or one whose
+nearest body faces the other way (the far side of an armpit), is not
+trusted: its weights are spread in across the cloth from the points that
+did find the body. (This is the usual way to move weights from a body to
+its clothes; see "Robust Skin Weights Transfer via Weight Inpainting",
+Abdrashitov and others, 2023.) Hats, buckles and the foot of a boot keep
+what rig.py gave them; a boot's shaft goes with the shin.
+
+Then **loose cloth gets bones**: for each hanging piece, 4 to 8 chains
+around it (1 to 4 if it only goes part of the way round, like the back of
+a hood), each of 1 to 3 bones from the line it hangs from to the hem,
+named `cloth_<gear>_<chain>_<bone>`, children of the trunk bone the piece
+is worn on (hips, head; never a leg). Points are weighted to them more the
+lower they hang and the further they stand off the body, so a kilt's side
+resting on a thigh stays with the thigh and the panels between swing. Each
+bone has limits like any other (70 degrees out and in, 50 sideways).
+
+**`swing.py`: hang and swing, after any motion.** animate.py bakes the
+body and leaves the cloth bones still; its result lists `"then":
+["swing.py"]` for a rig that has them, and the runner (or Claude) runs it
+next. It plays the baked action through and trails each chain behind the
+body like weights on strings: the way spring bones move skirts and hair on
+VRM avatars and in most game engines. No cloth solver, and nothing a .glb
+can't carry: the result is one rotation key a frame on the cloth bones.
+Each bone's end keeps some of its speed, is pulled toward where it hangs
+at rest, down by gravity and back by the air of walking, stays a
+bone-length from the joint above, is pushed out of the thighs, shins and
+chest (rods around those bones as thick as the body is there, checked
+along the whole cloth bone, not only its end), and is clamped to its
+limits. A loop is played three times and the last round kept, then its end
+is eased onto its start, so it has no seam.
+
+Because swing.py only reads the baked action, it works the same after the
+walk and after a shot, and it is the only thing that had to be added to
+the apply layer: one line in animate.py's result.
+
+**Measured** (`scripts/cloth_check.py`; `just test-tools` runs it on all
+five). "Through" is body points that gear covers standing still, followed
+over every frame of the walk: the share of them that have their cloth
+behind them instead of over them, and the deepest. Lincoln, the ninja and
+Roosevelt are their own block-outs and recipes; the troll and the pirate
+predate gear, so theirs are the recorded block-outs with the gear named
+(the pirate with hips narrower than his coat, for the skirts to hang off).
+
+| | | Skin through cloth over the walk (points x frames, deepest), before | after | Cloth off the body where it touches, before | after | Triangles in the file, before | after | drawn dressed | Cloth bones |
+|---|---|---|---|---|---|---|---|---|---|
+| Lincoln | low | 1,892, 5.8 cm deep | 238, 2.6 cm | 1.8 cm | 1.0 cm | 3,200 | 3,608 | 3,198 | none |
+|  | mid | 1,029, 5.8 cm deep | 214, 1.5 cm | 1.7 cm | 1.0 cm | 7,144 | 7,840 | 6,763 | none |
+| Ninja | low | 112, 0.9 cm deep | 119, 1.6 cm | 2.4 cm | 1.6 cm | 1,596 | 1,780 | 1,433 | 8 |
+|  | mid | 164, 1.0 cm deep | 65, 1.4 cm | 1.6 cm | 0.9 cm | 5,734 | 5,998 | 4,471 | 4 |
+| Roosevelt | low | 87, 1.0 cm deep | 0, 0.0 cm | 1.9 cm | 1.3 cm | 1,828 | 2,052 | 1,775 | none |
+|  | mid | 306, 2.4 cm deep | 32, 0.5 cm | 1.4 cm | 0.9 cm | 6,280 | 6,600 | 5,470 | none |
+| Cave troll | low | 505, 7.8 cm deep | 236, 7.8 cm | 3.8 cm | 1.3 cm | 1,334 | 1,374 | 1,355 | 16 |
+|  | mid | 205, 5.4 cm deep | 59, 0.7 cm | 3.8 cm | 1.3 cm | 4,718 | 4,758 | 4,655 | 16 |
+| Pirate | low | 105, 0.9 cm deep | 186, 4.7 cm | 1.8 cm | 0.8 cm | 1,654 | 1,856 | 1,229 | 6 |
+|  | mid | 167, 1.5 cm deep | 155, 5.0 cm | 1.7 cm | 0.8 cm | 6,038 | 6,598 | 3,984 | 6 |
+
+What is weak, most visible first:
+
+- **A thick, square leg still comes through a low-poly kilt.** The troll's
+  thighs are 43 cm across with corners, and it sways 44 cm a stride. Eight
+  chains of bones make the kilt an octagon that cuts those corners: up to
+  8 cm of thigh through the side at hem height on some frames. The
+  mid-poly version, with rounder legs and more points, is clean.
+- **The low-poly pirate is no better, and deeper.** 186 point-frames
+  against 105, up to 5 cm: skin at the hips where the coat's skirts, the
+  belt and the trouser tops overlap, and at an armpit. His old body was a
+  thinner copy of the coat, so it moved exactly as the coat did; a body
+  with real hips does not.
+- **Seams between pieces of one garment.** A sleeve and a jacket are
+  separate tubes; in the walk a sliver of skin can show at the armpit on
+  the low-poly ninja. Hidden skin only helps where one piece covers a face
+  completely.
+- **Cloth is thicker than it was.** Lifting flat cloth over a coarse body
+  adds up to a centimeter; the low-poly ninja's suit stands 1.6 cm off
+  where 0.9 was asked.
+- **Loose is all or nothing per piece.** A coat built as one tube hangs
+  from its belt, or from its shoulders without one; long sleeves and sash
+  ends that hang sideways are not handled. The prompt asks for a coat as a
+  tight piece above the belt and a loose one below.
+- **No cloth against cloth, or against arms.** A hood's skirt can pass
+  through a raised shoulder, a kilt through a hand. Chains are not tied to
+  their neighbors, so two panels can part further than cloth would.
+- **Feet inside boots.** A body foot as big as its boot shows through the
+  sole from below; stiff gear is not reshaped.
+- **The fold at a joint is still a straight bend.** Cloth and skin now
+  fold together, with a ring at the same height, but an elbow or knee
+  still creases like a paper tube: no twist bones or corrective shapes.
+- **Old block-outs are guessed.** Without `"fit"` on the pieces, a coat
+  called "torso" is taken for tight cloth. Check `"pieces"`.
 
 ## Faces: a character's head is measured, not guessed
 
@@ -506,6 +672,9 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `walk.py` | work out a walk from the measured build and four traits; leaves it on the rig as a motion | walk |
 | `animate.py` | play a motion on the rig: fit it, plant the feet, clamp to the limits, bake keyframes, measure the result | walk |
 | `build.py` | block out a low-poly version from a list of lofts, tubes, lumps, boxes and a head; join, color and check it; keep gear as groups, add sockets, keep the recipe | low poly |
+| `drape.py` | lay each piece of clothing on the body (tight, loose or stiff), and mark the skin it hides | low poly (dressed characters), profiles, walk |
+| `cloth.py` | give clothes the body's weights; give loose cloth chains of bones to hang from | walk |
+| `swing.py` | after any baked motion: make the cloth bones hang and swing, clear of the legs, inside their limits | walk |
 
 How they fit together:
 
@@ -675,8 +844,12 @@ written apart with its sockets; and the `midpoly` profile made for real on
 copies of the troll, lizardkin, pirate and ninja runs (the last three from
 their recorded block-outs in `scripts/test_blockouts.json`); and the walk: each of the four
 rigged, walked and exported, with the foot slide, floor, limits, loop and
-weights checked both in Blender and in the written file. A few minutes
-in all. With `--keep DIR`
+weights checked both in Blender and in the written file; and the clothes:
+drape.py on the troll, then Lincoln, the ninja, Roosevelt, the troll and
+the pirate made low poly, mid poly and walking by the real runner and
+measured with `scripts/cloth_check.py` over every frame (skin through
+cloth, the gap, the cloth bones' limits and seam, triangles). About ten
+minutes in all. With `--keep DIR`
 the face cases leave `troll-head-compared.png` and
 `pirate-head-compared.png`: front and side of the reference, each head, and
 the fitted head as wire over the reference. `just check-safe` checks every script against safe

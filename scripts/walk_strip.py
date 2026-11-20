@@ -142,6 +142,11 @@ for obj in [o for o in scene.objects if o.type == "MESH" and o.name not in stage
 
 wide = gap * len(frames) + 0.2 * tall
 center = Vector(((low.x + high.x) / 2, (low.y + high.y) / 2, (low.z + high.z) / 2))
+# Poses that leave the standing figure's box (a jump, a crouch under the floor line) are kept in the picture.
+posed = [o.matrix_world @ Vector(c) for o in stage.objects for c in o.bound_box]
+if posed:
+    top, bottom = max(max(c.z for c in posed), high.z), min(min(c.z for c in posed), low.z)
+    center.z, tall = (top + bottom) / 2, max(tall, top - bottom)
 away = {"side": Vector((1, 0, 0)), "front": Vector((0, -1, 0)), "quarter": Vector((0.45, -1, 0.25)).normalized()}[view]
 cam = bpy.data.objects.new("strip camera", bpy.data.cameras.new("strip camera"))
 cam.data.type = "ORTHO"
