@@ -29,24 +29,36 @@ Measured on a real run (`runs/*-iron-kettle/mesh.glb`):
 
 ## Profiles: pick by what the object is for
 
-| Profile | For | Mesh | Textures | Worst shape error (kettle) |
+| Profile | For | Mesh | Textures | Shape error, typical / worst (kettle) |
 |---|---|---|---|---|
 | `hero` | close-up renders, printing | cleaned, 200k triangles | 2048, materials baked | — |
-| `quads` | keep modeling it | ~20k quads that follow the form | 2048 + normal map | ~2.4%, at the spout tip |
-| `web` | web pages, product viewers | 16k triangles, shape-aware, Draco | 1024 WebP + normal map | 0.25% |
-| `game` | real-time games | 8k triangles, shape-aware | 1024 + normal map | 0.6% |
-| `mobile` | phones, AR | 5k triangles, shape-aware, Draco | 512 WebP + normal map | 0.5% |
+| `quads` | keep modeling it | ~15k adaptive quads | 2048 + normal map | 0.26% / 2.4% |
+| `web` | web pages, product viewers | ~8k adaptive quads, Draco | 1024 WebP + normal map | 0.36% / 2.4% |
+| `game` | real-time games | ~4k adaptive quads | 1024 + normal map | 0.51% / 2.2% |
+| `mobile` | phones, AR | ~3k adaptive quads, Draco | 512 WebP + normal map | 0.89% / 2.7% |
 
-**Why the light profiles aren't quads.** QuadriFlow makes every quad the
-same size, so a thin tip (a spout, a knob) ends up about one quad short. At
-4k quads that was 2.5% off on the kettle, 3.6% at 2.5k, visible in the
-silhouette. Shape-aware reduction (decimate.py) puts faces where the shape
-changes and few on flat areas: 0.3–0.6% at the same budgets. Game engines
-draw triangles anyway; the usual practice is a clean quad base for editing
-and shape-aware reductions for delivery, which is what these profiles do.
+**What a good result looks like.** Mostly rectangular quads (~99%) in
+regular loops (most vertices with four edges), a little denser where the
+shape curves (spout, knob, rims) and larger on flat areas. That is normal,
+editable modeling topology. We do not chase the last percent of shape error
+with exotic geometry: slivers and triangle fans are harder to edit than a
+tip that is a millimetre short. The worst spot on the kettle (~2.4%) is
+where the handle's metal straps tuck into the handle, which barely shows.
 
-Profiles are defined in `profiles.json` (steps and their PARAMS); edit or add
-one there rather than hand-running a different recipe each time.
+**How:** the light profiles use AutoRemesher (MIT,
+github.com/huxingyi/autoremesher, `just autoremesher` installs it into
+`tools/`), which sizes quads to the curvature (`adaptivity`). It runs only in
+the background runner, not over MCP. Its quad target is a starting point, so
+the runner re-runs it until the count is within 10%. Without it installed,
+profiles fall back to `retopo.py` (QuadriFlow: even quad size, so thin tips
+come out a quad short) and say so in `<profile>.json`. Below ~3k quads the
+thin handle brackets start to break up on an object like the kettle.
+
+Not used, and why (researched Nov 2026): shape-aware triangle decimation
+(faithful but slivers, hard to edit); QuadWild (prebuilt only as a 2023
+build); Exoside Quad Remesher (licence forbids automated use); open AI
+"artist mesh" models (triangles only, drop small parts); cloud retopology
+(Tencent Smart Topology, Meshy remesh) is a possible future comparison.
 
 ## Run a profile (default: in the background)
 
@@ -118,9 +130,12 @@ Rules for the live session:
 
 ## Known limits
 
-- Evenly sized quads lose thin tips: the `quads` profile is ~2.4% off at the
-  kettle's spout tip (typical error 0.2%). Raise `target_quads` if that
-  matters, or sharpen the tip by hand; it is a base for editing.
+- Thin straps and brackets are the weak spot at every size (~2.4% on the
+  kettle's handle brackets); below ~3k quads they break up. Raise the
+  profile's `quads` for objects with fine detail.
+- In the live Blender (MCP) there is no AutoRemesher: `retopo.py` gives even
+  QuadriFlow quads, which lose about one quad at thin tips. For adaptive
+  quads, run the profile in the background and import the result.
 - QuadriFlow refuses some parts that pass every manifold check we can run;
   retopo.py then falls back to a fine voxel remesh (big parts) or plain
   reduction (small parts) and says so in `routes`. The voxel route's error

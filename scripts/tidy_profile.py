@@ -9,17 +9,27 @@ can't), <profile>.png, <profile>-wire.png and <profile>.json (what each
 step did).
 
 Profiles and their steps live in .claude/skills/tidy-mesh/profiles.json; the
-steps are the same scripts Claude sends to a live Blender over MCP.
+steps are the same scripts Claude sends to a live Blender over MCP, plus one
+step only this runner can do: "autoremesher", which hands the mesh to the
+AutoRemesher program (MIT, github.com/huxingyi/autoremesher; install with
+`just autoremesher`) for adaptive quad remeshing. Without the program it falls
+back to retopo.py (QuadriFlow) and says so.
 """
 import json
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 
 import bpy
 
 SKILL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude", "skills", "tidy-mesh")
 SCRIPTS = os.path.join(SKILL, "scripts")
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+AUTOREMESHER = os.environ.get("AUTOREMESHER") or os.path.join(
+    ROOT, "tools", "autoremesher-dl", "autoremesher.app", "Contents", "MacOS", "autoremesher")
 
 
 def load(source):
@@ -53,14 +63,85 @@ def run_script(name, params):
     return captured[-1] if captured else None
 
 
+def largest_mesh():
+    meshes = [o for o in bpy.context.scene.objects if o.type == "MESH" and o.visible_get()]
+    return max(meshes, key=lambda o: len(o.data.polygons))
+
+
+def autoremesh(params):
+    """Adaptive quad remesh with AutoRemesher: denser quads where the shape
+    curves, larger ones on flat areas, in regular loops. Its quad target is a
+    starting point, not a promise, so this re-runs (a few seconds each) until
+    the result lands within 10% of the wanted count."""
+    want = params["quads"]
+    if not os.access(AUTOREMESHER, os.X_OK):
+        result = run_script("retopo.py", {"target_quads": want})
+        result["note"] = "AutoRemesher not installed (just autoremesher); used QuadriFlow instead"
+        return result
+    source = largest_mesh()
+    work = tempfile.mkdtemp(prefix="autoremesher-")
+    try:
+        for o in bpy.context.selected_objects:
+            o.select_set(False)
+        source.select_set(True)
+        bpy.context.view_layer.objects.active = source
+        mesh_in = os.path.join(work, "in.obj")
+        bpy.ops.wm.obj_export(filepath=mesh_in, export_selected_objects=True, apply_modifiers=True,
+                              export_materials=False, export_uv=False, export_normals=False,
+                              export_triangulated_mesh=True, forward_axis="Y", up_axis="Z")
+        adaptivity = params.get("adaptivity", 1.0)
+        target = want * (5 if adaptivity > 0.5 else 2.5)
+        tries, best = [], None
+        for attempt in range(4):
+            out = os.path.join(work, "out%d.obj" % attempt)
+            report = out + ".txt"
+            subprocess.run([
+                AUTOREMESHER, "-i", mesh_in, "-o", out, "--report", report,
+                "--target-quads", str(int(target)),
+                "--adaptivity", str(adaptivity),
+                "--anisotropy", str(params.get("anisotropy", 1.0)),
+                "--sharp-edge", str(params.get("sharp_edge", 90)),
+            ], check=True, capture_output=True, timeout=600)
+            with open(report) as f:
+                got = int(next(l for l in f if l.strip().startswith("Quads:")).split(":")[1])
+            tries.append({"target": int(target), "quads": got})
+            if best is None or abs(got - want) < abs(best[1] - want):
+                best = (out, got)
+            if abs(got - want) <= want * 0.1 or got == 0:
+                break
+            target *= want / max(got, 1)
+        before = set(bpy.data.objects)
+        bpy.ops.wm.obj_import(filepath=best[0], forward_axis="Y", up_axis="Z")
+        new = next(o for o in bpy.data.objects if o not in before and o.type == "MESH")
+        new.name = source.name + " (quads)"
+        for o in bpy.context.selected_objects:
+            o.select_set(False)
+        new.select_set(True)
+        bpy.context.view_layer.objects.active = new
+        bpy.ops.object.shade_smooth_by_angle(angle=0.61)
+        source.hide_set(True)
+        source.hide_render = True
+        faces = new.data.polygons
+        return {
+            "object": new.name,
+            "faces": len(faces),
+            "quads": sum(1 for p in faces if len(p.vertices) == 4),
+            "tries": tries,
+            "settings": {"adaptivity": adaptivity, "sharp_edge": params.get("sharp_edge", 90)},
+        }
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def make(source, out_dir, profile, spec):
     started = time.time()
     load(source)
     record = {"profile": profile, "about": spec["about"], "source": source, "steps": []}
     for name, params in spec["steps"]:
-        record["steps"].append({"script": name, "result": run_script(name, params)})
+        result = autoremesh(params) if name == "autoremesher" else run_script(name, params)
+        record["steps"].append({"script": name, "result": result})
     light = [n for n, _ in spec["steps"]]
-    if "retopo.py" in light or "decimate.py" in light and any(p.get("as_copy") for _, p in spec["steps"]):
+    if {"retopo.py", "autoremesher"} & set(light) or any(p.get("as_copy") for _, p in spec["steps"]):
         record["shape"] = run_script("match.py", {})
     glb = os.path.join(out_dir, profile + ".glb")
     record["export"] = run_script("export.py", dict(spec["export"], path=glb))

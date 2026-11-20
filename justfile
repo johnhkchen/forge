@@ -46,3 +46,14 @@ tidy run +profiles:
     set -euo pipefail
     src="{{run}}/scene.blend"; [ -f "$src" ] || src="{{run}}/mesh.glb"
     "{{blender_bin}}" -b --factory-startup -P scripts/tidy_profile.py -- "$src" "{{run}}/profiles" {{profiles}} 2>&1 | grep -E '^PROFILE|Error|Traceback'
+
+# Install AutoRemesher (MIT, adaptive quad remesher) into tools/ for the profiles (macOS)
+autoremesher:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p tools/autoremesher-dl && cd tools/autoremesher-dl
+    gh release download 1.2.0 -R huxingyi/autoremesher -p 'autoremesher-1.2.0.dmg' --clobber
+    echo "4d3295fa2f87567e6b97a732afff511d82ec73a49825476038ce0997c641e9a7  autoremesher-1.2.0.dmg" | shasum -a 256 -c
+    mnt=$(mktemp -d); hdiutil attach -nobrowse -readonly -mountpoint "$mnt" autoremesher-1.2.0.dmg >/dev/null
+    rm -rf autoremesher.app; cp -R "$mnt/autoremesher.app" .; hdiutil detach "$mnt" >/dev/null
+    ./autoremesher.app/Contents/MacOS/autoremesher --version

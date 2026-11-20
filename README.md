@@ -32,7 +32,7 @@ A step is skipped if its file is already there, so `just resume runs/<folder>` p
 
 ## Setup
 
-You need the `baml`, `claude`, `codex`, `uv` and `just` CLIs, and Blender.
+You need the `baml`, `claude`, `codex`, `uv`, `gh` and `just` CLIs, and Blender. Run `just autoremesher` once for the quad profiles.
 
 1. **Blender add-on (one time).** Run `just blender-addon`, then `just blender`. The add-on starts its server whenever Blender opens.
 2. **TRELLIS.2 worker image.** Push this repo to GitHub. `.github/workflows/worker.yml` builds `worker/` into `ghcr.io/<you>/trellis2-worker`. It only installs prebuilt wheels, so the build is quick and needs no GPU.
@@ -62,11 +62,11 @@ TRELLIS.2 hands back an even soup of ~300k triangles. The `tidy-mesh` skill (`.c
 | Profile | For | Mesh | Textures |
 |---|---|---|---|
 | `hero` | close-up renders, printing | 200k triangles, cleaned | 2048 |
-| `quads` | keep modeling it | ~20k quads that follow the form | 2048 + normal map |
-| `web` | web pages, product viewers | 16k triangles, shape-aware, Draco | 1024 WebP + normal map |
-| `game` | real-time games | 8k triangles, shape-aware | 1024 + normal map |
-| `mobile` | phones, AR | 5k triangles, shape-aware, Draco | 512 WebP + normal map |
+| `quads` | keep modeling it | ~15k quads | 2048 + normal map |
+| `web` | web pages, product viewers | ~8k quads, Draco | 1024 WebP + normal map |
+| `game` | real-time games | ~4k quads | 1024 + normal map |
+| `mobile` | phones, AR | ~3k quads, Draco | 512 WebP + normal map |
 
-Each profile records how far it strays from the full mesh (`shape` in `<profile>.json`). The light ones stay within about half a percent of the object's size.
+The quads come from [AutoRemesher](https://github.com/huxingyi/autoremesher) (MIT): mostly rectangular faces in regular loops, a little denser where the shape curves. Install it once with `just autoremesher`. Each profile records how far it strays from the full mesh (`shape` in `<profile>.json`); typically under 1% of the object's size.
 
 In a Claude Code session here, ask for any of these ("make a game version of the kettle") and Claude uses the skill, either in the background or step by step in your open Blender.

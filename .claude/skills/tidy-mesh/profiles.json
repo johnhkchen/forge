@@ -27,16 +27,17 @@
     }
   },
   "quads": {
-    "about": "Keep modeling it. Clean quad topology that follows the form, ready to edit or subdivide.",
+    "about": "Keep modeling it. Clean quads in regular loops, denser where the shape curves, ready to edit or subdivide.",
     "steps": [
       [
         "clean.py",
         {}
       ],
       [
-        "retopo.py",
+        "autoremesher",
         {
-          "target_quads": 20000
+          "quads": 16000,
+          "adaptivity": 1.0
         }
       ],
       [
@@ -53,18 +54,17 @@
     }
   },
   "web": {
-    "about": "Web pages and product viewers. Shape-aware reduction (faces where the shape changes), 1024 textures with a normal map, compressed.",
+    "about": "Web pages and product viewers. Adaptive quads, 1024 textures with a normal map, compressed.",
     "steps": [
       [
         "clean.py",
         {}
       ],
       [
-        "decimate.py",
+        "autoremesher",
         {
-          "target_triangles": 16000,
-          "as_copy": true,
-          "quadify": true
+          "quads": 8000,
+          "adaptivity": 1.0
         }
       ],
       [
@@ -81,18 +81,17 @@
     }
   },
   "game": {
-    "about": "Real-time games. Shape-aware reduction keeps the silhouette; the normal map carries the fine detail.",
+    "about": "Real-time games. A few thousand adaptive quads; the normal map carries the fine detail.",
     "steps": [
       [
         "clean.py",
         {}
       ],
       [
-        "decimate.py",
+        "autoremesher",
         {
-          "target_triangles": 8000,
-          "as_copy": true,
-          "quadify": true
+          "quads": 4000,
+          "adaptivity": 1.0
         }
       ],
       [
@@ -116,11 +115,11 @@
         {}
       ],
       [
-        "decimate.py",
+        "autoremesher",
         {
-          "target_triangles": 5000,
-          "as_copy": true,
-          "quadify": true
+          "quads": 3000,
+          "adaptivity": 1.0,
+          "anisotropy": 0.3
         }
       ],
       [
