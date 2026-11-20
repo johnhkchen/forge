@@ -76,9 +76,9 @@ function facts(run, v) {
   ];
 }
 
-function objectPage(run) {
+function objectPage(run, wanted) {
   const versions = versionsOf(run);
-  const start = versions.find((v) => v.name === "web") || versions[versions.length - 1];
+  const start = versions.find((v) => v.name === wanted) || versions.find((v) => v.name === "web") || versions[versions.length - 1];
   const state = { version: start, compare: versions.length > 1, wire: true };
 
   const stage = h("div", { class: "stage clay-well" });
@@ -92,6 +92,7 @@ function objectPage(run) {
 
   function select(v) {
     state.version = v;
+    history.replaceState(null, "", `#/run/${encodeURIComponent(run.id)}/${v.name}`);
     chips.forEach((c, i) => c.setAttribute("aria-pressed", String(versions[i] === v)));
     render();
   }
@@ -214,7 +215,11 @@ class Viewer {
   }
 
   async wireFor(model, spec, triangles) {
-    const material = new THREE.LineBasicMaterial({ color: 0x5b84c4, transparent: true, opacity: 0.7 });
+    // Fade the lines as the mesh gets denser: a 1k-triangle block-out gets
+    // bold lines, a 300k-triangle raw mesh faint ones, so it doesn't turn
+    // into a solid blue blob.
+    const opacity = Math.min(0.75, Math.max(0.07, 0.75 * Math.sqrt(4000 / Math.max(triangles, 1))));
+    const material = new THREE.LineBasicMaterial({ color: 0x5b84c4, transparent: true, opacity });
     if (spec.edges) {
       // The real quad edges, exported alongside the GLB (which only holds triangles).
       const gltf = await load(spec.edges);
@@ -294,11 +299,12 @@ class Viewer {
 
 async function route() {
   if (!runs.length) runs = await fetch("api/runs").then((r) => r.json()).catch(() => []);
-  const match = location.hash.match(/^#\/run\/(.+)$/);
+  // #/run/<run id>[/<version>]: a link can open a given version
+  const match = location.hash.match(/^#\/run\/([^/]+)(?:\/([a-z]+))?$/);
   viewer?.dispose();
   viewer = null;
   const run = match && runs.find((r) => r.id === decodeURIComponent(match[1]));
-  app.replaceChildren(run ? objectPage(run) : shelf());
+  app.replaceChildren(run ? objectPage(run, match[2]) : shelf());
   window.scrollTo(0, 0);
 }
 

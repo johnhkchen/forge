@@ -182,7 +182,7 @@
         ]
       ],
       "export": {
-        "materials": false,
+        "image_format": "AUTO",
         "draco": true
       }
     }
