@@ -32,6 +32,7 @@ RUN python -m pip install --extra-index-url https://pypi.nvidia.com \
       "numpy==2.4.3" \
       "scipy==1.17.1" \
       "usd-core==26.3" \
+      "tensorrt-cu12==10.8.0.43" \
       "tensorrt-cu12-bindings==10.8.0.43" \
       "tensorrt-cu12-libs==10.8.0.43" \
       "runpod>=1.7"
@@ -39,7 +40,7 @@ RUN python -m pip install --extra-index-url https://pypi.nvidia.com \
 # Fail the build early if the Python side is broken. (TensorRT's own library
 # may want a GPU driver to load, so only check that it is installed.)
 RUN python -c "import numpy, scipy, runpod, warp; from pxr import Usd, UsdSkel; print('numpy', numpy.__version__, 'warp', warp.__version__)" \
- && python -c "import importlib.util as u; missing=[m for m in ('tensorrt','tensorrt_libs') if u.find_spec(m) is None]; assert not missing, missing"
+ && python -c "import importlib.util as u; missing=[m for m in ('tensorrt','tensorrt_bindings','tensorrt_libs') if u.find_spec(m) is None]; assert not missing, missing"
 
 COPY handler.py /app/handler.py
 WORKDIR /app
