@@ -52,8 +52,9 @@ just tidy runs/<run folder> hero quads web game mobile
 ```
 
 This reads the run's `scene.blend` (with Claude's material fixes; falls back
-to `mesh.glb`) and writes into `runs/<run>/profiles/`: `<profile>.glb`, a
-preview `<profile>.png`, a wireframe preview `<profile>-wire.png`, and
+to `mesh.glb`) and writes into `runs/<run>/profiles/`: `<profile>.glb`,
+`<profile>.blend` (GLB can only store triangles, so the real quads live
+here), a preview `<profile>.png`, a wireframe preview `<profile>-wire.png`, and
 `<profile>.json` with what every step did. About 10 s per profile, 20 s for
 `quads`. **Always look at both previews** before saying a profile is good.
 
@@ -77,6 +78,7 @@ add-on's safe mode.
 | `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one | 5–60 s, freezes Blender |
 | `export.py` | writes one object as GLB (WebP, Draco optional) | ~1 s |
 | `preview.py` | renders a quick three-quarter PNG, optionally with wireframe | ~2 s |
+| `lineup.py` | shows a run's raw mesh and its profiles side by side in a new "Profiles" scene, labelled, wireframe on | ~2 s |
 
 Rules for the live session:
 

@@ -4,8 +4,9 @@
 
 SOURCE is a .blend (the run's scene.blend, with Claude's material fixes) or a
 .glb. The object is the largest visible mesh in it. For each profile this
-writes OUT_DIR/<profile>.glb, <profile>.png, <profile>-wire.png and
-<profile>.json (what each step did).
+writes OUT_DIR/<profile>.glb, <profile>.blend (keeps quads, which GLB
+can't), <profile>.png, <profile>-wire.png and <profile>.json (what each
+step did).
 
 Profiles and their steps live in .claude/skills/tidy-mesh/profiles.json; the
 steps are the same scripts Claude sends to a live Blender over MCP.
@@ -60,6 +61,9 @@ def make(source, out_dir, profile, spec):
         record["steps"].append({"script": name, "result": run_script(name, params)})
     glb = os.path.join(out_dir, profile + ".glb")
     record["export"] = run_script("export.py", dict(spec["export"], path=glb))
+    # GLB can only store triangles; the .blend keeps the real quads for
+    # anyone who will keep modeling it.
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out_dir, profile + ".blend"), copy=True, compress=True)
     run_script("preview.py", {"path": os.path.join(out_dir, profile + ".png")})
     run_script("preview.py", {"path": os.path.join(out_dir, profile + "-wire.png"), "wireframe": True})
     record["bytes"] = os.path.getsize(glb)
