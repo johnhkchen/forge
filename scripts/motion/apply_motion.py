@@ -9,7 +9,9 @@ through the same tidy-mesh steps as the walk:
     rig.py       the skeleton, fitted to this character, with its joint limits
     cloth.py     clothes take the body's weights; loose cloth gets its bones
     animate.py   the motion fitted to the character: planted feet stay
-                 planted, every joint stays inside its limits; baked, measured
+                 planted, its real shoes and shins stay out of the floor (and
+                 out of a shot's wall), every joint stays inside its limits;
+                 baked, measured
     swing.py     (and anything else the rig asks for after a bake) loose cloth
                  hangs and swings with what was just baked
     export.py    one .glb
@@ -129,7 +131,7 @@ def fit(source, plain, name, recipe=None, spec=None, tail=False, echo=None):
         plain, added = with_tail(plain, record["rig"]["measure"])
         if added:
             record["tail"] = added
-    record["animation"] = run_script("animate.py", {"motion": plain, "action": name, "check": True}, echo)
+    record["animation"] = run_script("animate.py", dict(spec.get("animate", {}), motion=plain, action=name, check=True), echo)
     for script in record["animation"].get("then", []):  # what the rig asks for after any bake: swing.py, for cloth bones
         record[script[:-3]] = run_script(script, spec.get(script[:-3], {}), echo)
     return record

@@ -481,6 +481,13 @@ toe_y = min([s["lo"].y for s in foot_segs] or [ankle.y - 0.12 * tall])
 foot_x = (min(s["lo"].x for s in foot_segs) + max(s["hi"].x for s in foot_segs)) / 2 if foot_segs else ankle.x
 ball = Vector((ankle.x, lerp(ankle.y, toe_y, 0.62), floor + 0.4 * (ankle_z - floor)))  # straight ahead of the ankle, so ankle and toes hinge on one axis
 toe_tip = Vector((ball.x, lerp(ankle.y, toe_y, 0.95), ball.z))
+toe_mid = envelope(foot_segs, 1, (ball.y + toe_tip.y) / 2) if foot_segs else None
+if toe_mid is not None:  # a thin or pointed toe (a heeled shoe's): the toe bone moves by the little it takes to stay inside the foot
+    aside = clamp(ball.x, toe_mid[0].x - 0.8 * toe_mid[1].x, toe_mid[0].x + 0.8 * toe_mid[1].x) - ball.x
+    ball.x, toe_tip.x = ball.x + aside, toe_tip.x + aside  # sideways whole, so it still hinges square to the foot
+    middle = clamp(ball.z, toe_mid[0].z - 0.8 * toe_mid[1].z, toe_mid[0].z + 0.8 * toe_mid[1].z)
+    if abs(middle - ball.z) > 1e-5:
+        toe_tip.z = max(2 * middle - ball.z, floor + 0.002)  # and its tip dips
 
 heads = [s for s in trunk if s["kind"] == "head"]
 if not heads:

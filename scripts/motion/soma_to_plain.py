@@ -18,7 +18,7 @@ there as `soma_also` (Spine2, Neck2) has its turn folded into the bone above.
 Feet. A motion model's feet drift a little while they are meant to be down.
 Here each stretch where the model says a foot is on the ground becomes one
 fixed spot (the average of where the ball was), eased in and out over a few
-frames, and the foot is marked planted, so animate.py's leg solve holds it
+frames (never over frames held on the spot before), and the foot is marked planted, so animate.py's leg solve holds it
 there. `planted_feet` in the result says how far each foot was moved to do so.
 
 Plain Python: no Blender, no numpy.
@@ -134,6 +134,8 @@ def convert(motion: dict, sk: Skeleton, name: str = "motion", plant: bool = True
             for f in range(max(0, first - EASE), min(count, last + EASE + 1)):
                 # Fully on the spot while down; easing toward it just before and away just after.
                 edge = max(first - f, f - last, 0)
+                if edge and planted[tag][f]:
+                    continue  # this frame is held on the spot before: easing toward the next one would slide a planted foot
                 w = 1.0 - edge / (EASE + 1.0)
                 w = w * w * (3.0 - 2.0 * w)
                 before = list(balls[tag][f])

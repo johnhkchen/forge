@@ -1,18 +1,26 @@
 """Plays a shot's motion on one of our characters, in a background Blender.
 
     Blender -b --factory-startup -P scripts/motion/apply_shot.py -- <shot folder> <character run folder>
-        [--prop <prop run folder>] [--versions lowpoly,midpoly] [--name hero]
+        [--prop <prop run folder>] [--versions lowpoly,midpoly] [--name hero] [--no-contact]
 
 The shot's motion.json (SOMA, from the motion worker) is turned into the plain
 form by soma_to_plain.py and then goes through the same steps as the walk:
 drape.py lays the clothes on the body, rig.py puts the skeleton in, cloth.py
 gives the clothes the body's weights and loose cloth its bones, animate.py
-fits the motion to this character, keeps planted feet planted, clamps every
-joint to its limits, bakes it and measures it, swing.py makes the loose cloth
+fits the motion to this character, keeps planted feet planted, keeps its feet
+and shins out of the roof and the wall, clamps every joint to its limits, bakes
+it and measures it, swing.py makes the loose cloth
 hang and swing with it, and export.py writes one .glb. Those steps are
 apply_motion.py's, which a character's run goes through too. Nothing here is a
 second way to animate a character: this file only feeds animate.py a different
 motion, and adds the prop.
+
+Two things only a shot has go to animate.py with the motion: the plan's blocks
+that stand above the walking surface (the wall), and the spots the plan pins a
+hand to (the wall top in the vault, the roof in the landing). A character's
+arms are not the motion model's, so a pinned hand misses its spot after the
+fit; animate.py solves the arm to it. `--no-contact` plays the motion without
+any of that, to measure against.
 
 For each version it writes into the shot folder:
     <version>-<name>.glb    the character, rigged, with the action <name>
@@ -185,6 +193,51 @@ def fcurves_of(action):
     return curves
 
 
+HAND_EASE_FRAMES = 8  # a pinned hand comes onto its spot, and leaves it, over this many frames
+OUR_ARM = {"left_hand": "l", "right_hand": "r"}
+
+
+def ours(point, unit):
+    """A point of the shot (SOMA: x left, y up, z forward, metres) as animate.py takes it: x left, y back, z up, in hip heights."""
+    return [round(point[0] / unit, 5), round(-point[2] / unit, 5), round(point[1] / unit, 5)]
+
+
+def set_for(plan, unit):
+    """The shot's blocks that stand above the walking surface (the wall), for animate.py to keep the legs out of."""
+    out = []
+    for block in plan.get("set") or []:
+        across, tall, through = block["size"]
+        if block["center"][1] + tall / 2.0 < 0.01:
+            continue  # the roof and the ledge: their top is the floor
+        out.append({"name": block["name"], "center": ours(block["center"], unit), "size": [round(across / unit, 5), round(through / unit, 5), round(tall / unit, 5)],
+                    "turn": block.get("heading", 0.0)})
+    return out
+
+
+def hands_for(plan, unit, count):
+    """Where the plan pins a hand, as animate.py takes it: per frame the wrist's spot and how firmly it is held to it.
+
+    A character's arms are not the motion model's, so after the motion is fitted a pinned hand misses its
+    spot by the difference. animate.py solves the arm to the spot; this says where and when. A pin holds
+    from the frame its move ends for as long as the next move holds it, and eases on and off around that."""
+    out = {}
+    moves = plan["moves"]
+    for n, move in enumerate(moves):
+        for pin, spot in (move.get("pin_points") or {}).items():
+            if pin not in OUR_ARM:
+                continue
+            hold = moves[n + 1].get("hold_pins_frames", 0) if n + 1 < len(moves) else 0
+            first, last = move["frame"], min(count - 1, move["frame"] + hold)
+            rows = out.setdefault(OUR_ARM[pin], [None] * count)
+            for f in range(max(0, first - HAND_EASE_FRAMES), min(count, last + HAND_EASE_FRAMES + 1)):
+                edge = max(first - f, f - last, 0)
+                w = 1.0 - edge / (HAND_EASE_FRAMES + 1.0)
+                w = round(w * w * (3.0 - 2.0 * w), 4)
+                if rows[f] is None or w > rows[f][3]:
+                    rows[f] = ours(spot, unit) + [w]
+    return out
+
+
 def measure(rig, plan, scale, prop):
     """What the baked action does on this character, against the shot's plan scaled to its size."""
     scene = bpy.context.scene
@@ -198,7 +251,8 @@ def measure(rig, plan, scale, prop):
             if not pin.endswith("hand"):
                 continue
             got = shown.matrix_world @ shown.pose.bones[hand_bone[pin]].head
-            target = Vector((want[0], -want[2], want[1])) * scale
+            hips = rig.data.bones["hips"].head_local  # the shot's ground point is the floor under the resting hips
+            target = Vector((hips.x, hips.y, 0.0)) + Vector((want[0], -want[2], want[1])) * scale
             out["hands"].append({"move": move["name"], "pin": pin, "wrist_from_planned_spot_cm": round(100 * (got - target).length, 1)})
     for beat in plan["beats"]:
         move = [m for m in plan["moves"] if m["beat"] == beat["name"]][-1]
@@ -216,6 +270,7 @@ def main():
     prop_run = os.path.abspath(args[args.index("--prop") + 1]) if "--prop" in args else None
     versions = args[args.index("--versions") + 1].split(",") if "--versions" in args else list(VERSION_FILES)
     name = args[args.index("--name") + 1] if "--name" in args else "hero"
+    spec = {"animate": {"contact": False}} if "--no-contact" in args else {}  # the motion as it was before the contact step, to compare against
 
     with open(os.path.join(shot, "motion.json")) as f:
         motion = json.load(f)
@@ -225,6 +280,9 @@ def main():
         cues = json.load(f).get("props") or []
     sk = Skeleton.load()
     plain, converted = soma_to_plain.convert(motion, sk, name)
+    # What only a shot has: the wall to keep the legs out of, and the spots the plan pins a hand to.
+    plain["set"] = set_for(plan, converted["soma_hip_height_m"])
+    plain["hands"] = hands_for(plan, converted["soma_hip_height_m"], plain["frames"] + 1)
     recipe = None
     if os.path.exists(os.path.join(character, "lowpoly_build.json")):
         with open(os.path.join(character, "lowpoly_build.json")) as f:
@@ -237,7 +295,7 @@ def main():
             continue
         # The shared steps: clothes, skeleton, the motion fitted and baked, loose cloth swung (apply_motion.py).
         record = {"version": version, "motion": name, "character": source, "shot": shot, "from_soma": converted}
-        record.update(apply_motion.fit(source, plain, name, recipe))
+        record.update(apply_motion.fit(source, plain, name, recipe, spec))
         rig = bpy.data.objects[record["rig"]["rig"]]
         scale = record["rig"]["measure"]["hip_height"] / converted["soma_hip_height_m"]
         record["size_against_soma"] = round(scale, 4)
@@ -257,9 +315,15 @@ def main():
         with open(os.path.join(shot, "%s-%s.json" % (version, name)), "w") as f:
             json.dump(record, f, indent=2)
         a, c = record["animation"], record["animation"]["check"]
-        print("APPLY %s: %d bones, %d frames, hips lowered %.1f cm, clamped %s, planted feet slide %.2f cm, through the floor %.2f cm, %d turns outside a limit, %.2f MB -> %s" % (
-            version, len(record["rig"]["bones"]), a["frames"] + 1, a["hips_lowered_cm"], json.dumps(a["clamped"]), c["foot_slide_cm_per_step"],
-            c["through_floor_cm"], c["limit_violations"], record["bytes"] / 1e6, glb))
+        print("APPLY %s: %d bones, %d frames, hips lowered %.1f cm, clamped %s, a planted foot strays %.2f cm at most, through the floor %.2f cm (%s), %d turns outside a limit, %.2f MB -> %s" % (
+            version, len(record["rig"]["bones"]), a["frames"] + 1, a["hips_lowered_cm"], json.dumps(a["clamped"]), c["planted_foot_strays_cm"],
+            c["through_floor_cm"], c["lowest_part"], c["limit_violations"], record["bytes"] / 1e6, glb))
+        if "in_the_set" in c:
+            print("APPLY %s: deepest in the set %.2f cm (%s, frame %d); by part %s" % (version, c["in_the_set"]["deepest_cm"], c["in_the_set"]["part"], c["in_the_set"]["frame"], json.dumps(c["in_the_set"]["deepest_by_part_cm"])))
+        if "contact" in a:
+            k = a["contact"]
+            print("APPLY %s: feet lifted up to %.1f cm, legs moved clear of the set up to %.1f cm, hips raised up to %.1f cm, hands lifted up to %.1f cm" % (
+                version, k["feet_lifted_cm"], k["legs_moved_clear_of_the_set_cm"], k["hips_raised_cm"], k["hands_lifted_off_the_floor_cm"]))
         for hand in record["against_the_plan"]["hands"]:
             print("APPLY %s: %s at '%s' is %.1f cm from its planned spot" % (version, hand["pin"], hand["move"], hand["wrist_from_planned_spot_cm"]))
 

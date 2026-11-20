@@ -950,8 +950,10 @@ def test_walk_profile(ctx):
             for version in versions:
                 with open(os.path.join(copy, "profiles", version + "-walk.json")) as f:
                     both.append(json.load(f))
-            check("%s: the low-poly and mid-poly versions get the same body skeleton and the same walk" % label,
-                  both[0]["rig"]["joints"] == both[1]["rig"]["joints"] and both[0]["walk"]["gait"]["frames"] == both[1]["walk"]["gait"]["frames"])
+            apart = max(abs(a - b) for name, at in both[0]["rig"]["joints"].items() for a, b in zip(at, both[1]["rig"]["joints"][name]))
+            check("%s: the low-poly and mid-poly versions get the same body skeleton (no joint more than %.1f mm apart) and the same walk" % (label, 1000 * apart),
+                  sorted(both[0]["rig"]["joints"]) == sorted(both[1]["rig"]["joints"]) and apart < 0.002
+                  and both[0]["walk"]["gait"]["frames"] == both[1]["walk"]["gait"]["frames"])
 
 
 def test_run_profile(ctx):
@@ -1014,6 +1016,78 @@ def test_run_profile(ctx):
     test_run_clip.to_the_end(copies, os.path.join(ctx["out"], "running", ".run-cache"))
     check("told to run differently, the troll's old run is cleared away to be made again", not os.path.exists(os.path.join(copies[0], "profiles", "lowpoly-run.glb"))
           and os.path.exists(os.path.join(copies[-1], "profiles", "lowpoly-run.glb")) == (len(copies) > 1))
+
+
+def wall_motion(frames=30):
+    """A made-up moment of a shot, in animate.py's plain form: the hips travel forward past a low wall, the left foot
+    stays planted, the right foot swings through the wall a little under its top, and the left hand has a spot on the
+    top of a post beside it. Lengths in hip heights; made for the troll (feet 0.45 apart from the middle)."""
+    count = frames + 1
+    hips, left, right, hand = [], [], [], []
+    for f in range(count):
+        t = f / frames
+        hips.append([0.0, round(-0.6 * t, 4), -0.12])
+        left.append([0.45, -0.3, 0.0, 0.0, 0.0, 1])
+        right.append([-0.45, round(0.2 - 1.3 * t, 4), 0.12, 0.0, 0.0, 0])
+        near = max(0.0, 1.0 - abs(f - 15) / 8.0) if abs(f - 15) > 2 else 1.0
+        hand.append([0.9, -0.5, 1.23, round(near, 3)] if near > 0 else None)
+    return {"name": "past the wall", "fps": 30, "frames": frames, "loop": False, "travel": 0.0, "hips": hips, "feet": {"l": left, "r": right}, "turns": {},
+            "hands": {"l": hand}, "set": [{"name": "wall", "center": [-0.45, -0.6, 0.125], "size": [0.8, 0.2, 0.25], "turn": 0.0},
+                                           {"name": "post", "center": [0.9, -0.5, 0.6], "size": [0.3, 0.3, 1.2], "turn": 0.0}]}
+
+
+def test_contact(ctx):
+    """animate.py's contact step, each time against the same motion with the step off: a heeled shoe stays on the floor (the dancer, if she is there); the troll's real run keeps its feet out of the floor without sinking its hips (if its clip is there); and past a made-up wall the shin and foot clear it and the hand lands on its spot."""
+    runs = os.path.dirname(ctx["troll"])
+    dancer = sorted(glob.glob(os.path.join(runs, "*flamenco-dancer", "profiles", "lowpoly.glb")))
+    if dancer:
+        with open(os.path.join(HERE, "test_gaits.json")) as f:
+            said = json.load(f)
+        traits = next((v for k, v in said.items() if k in dancer[-1] and k != "about"), None)
+        walk = {"traits": {k: v for k, v in traits.items() if k != "why"}} if traits else {}
+        plain, careful = [blender(dancer[-1], [("drape.py", {"rings": False}), ("rig.py", {}), ("cloth.py", {}), ("walk.py", walk), ("animate.py", {"contact": on})])[4] for on in (False, True)]
+        check("heels: as written, the dancer's %s goes %.2f cm through the floor (the shoe's toe reaches past the toe bone)" % (plain["check"]["lowest_part"], plain["check"]["through_floor_cm"]),
+              plain["check"]["through_floor_cm"] > 0.5 and plain["check"]["lowest_part"].startswith(("toe", "foot")), plain["check"])
+        c = careful["check"]
+        check("heels: with the contact step nothing goes more than %.2f cm through, feet slide %.3f cm a step, no limit broken, the loop closes" % (c["through_floor_cm"], c["foot_slide_cm_per_step"]),
+              c["through_floor_cm"] < 0.1 and c["foot_slide_cm_per_step"] < 0.3 and c["limit_violations"] == 0 and c["loop_seam"] < 1e-5, c)
+        check("heels: it took no lowering of the hips (%.1f cm) and the shoe's own points were tested (%d on a toe)" % (careful["hips_lowered_cm"], careful["contact"]["points_tested"]["toe_l"]),
+              careful["hips_lowered_cm"] < 1.0 and careful["contact"]["points_tested"]["toe_l"] >= 4)
+    else:
+        print("    skipped: no flamenco-dancer run with a low-poly version")
+
+    if os.path.exists(os.path.join(ctx["troll"], "run", "loop.json")):
+        copy = os.path.join(ctx["out"], "contact", os.path.basename(ctx["troll"]))
+        os.makedirs(os.path.join(copy, "profiles"), exist_ok=True)
+        os.makedirs(os.path.join(copy, "run"), exist_ok=True)
+        for name in ["brief.json", "lowpoly_build.json", "gait.json", "run/loop.json", "run/ask.json", "profiles/lowpoly.glb", "profiles/lowpoly.json"]:
+            if os.path.exists(os.path.join(ctx["troll"], name)):
+                shutil.copy(os.path.join(ctx["troll"], name), os.path.join(copy, name))
+        out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                              os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles"), "run"], capture_output=True, text=True)
+        if not os.path.exists(os.path.join(copy, "profiles", "lowpoly-run.json")):
+            raise AssertionError("no lowpoly-run for the troll:\n%s" % (out.stdout + out.stderr)[-1500:])
+        with open(os.path.join(copy, "profiles", "lowpoly-run.json")) as f:
+            moved = json.load(f)["animation"]
+        c = moved["check"]
+        check("the troll's run: nothing goes more than %.2f cm through the floor (it was 8.0: a heel coming down first on a 0.7 m foot)" % c["through_floor_cm"], c["through_floor_cm"] < 0.5, c)
+        check("the troll's run: the hips come down %.1f cm for reach (it was 10.6) and up %.1f; planted feet slide %.3f cm a step; no limit broken; the loop closes" % (
+              moved["hips_lowered_cm"], moved["contact"]["hips_raised_cm"], c["foot_slide_cm_per_step"]),
+              moved["hips_lowered_cm"] < 3.0 and moved["contact"]["hips_raised_cm"] < 4.0 and c["foot_slide_cm_per_step"] < 0.5 and c["limit_violations"] == 0 and c["loop_seam"] < 1e-4, moved["contact"])
+    else:
+        print("    skipped: the troll has no run clip (run/loop.json)")
+
+    plain, careful = [blender(os.path.join(ctx["troll"], "profiles", "lowpoly.glb"), [("rig.py", {}), ("animate.py", {"motion": wall_motion(), "contact": on})])[1] for on in (False, True)]
+    legs = ("thigh_r", "shin_r", "foot_r", "toe_r")
+    before = max(plain["check"]["in_the_set"]["deepest_by_part_cm"].get(part, 0.0) for part in legs)
+    after = max(careful["check"]["in_the_set"]["deepest_by_part_cm"].get(part, 0.0) for part in legs)
+    check("a wall: as written the swinging leg goes %.1f cm into it; with the contact step %.2f cm (the foot was lifted %.1f cm over the top)" % (before, after, careful["contact"]["feet_lifted_cm"]),
+          before > 3.0 and after < 0.5 and careful["contact"]["feet_lifted_cm"] > 3.0, careful["check"]["in_the_set"])
+    check("a wall: the hand is %.1f cm from its spot on the post as written, %.1f cm with the arm solved to it" % (plain["check"]["hand_from_its_spot_cm"]["l"], careful["check"]["hand_from_its_spot_cm"]["l"]),
+          plain["check"]["hand_from_its_spot_cm"]["l"] > 20.0 and careful["check"]["hand_from_its_spot_cm"]["l"] < 3.5, careful["check"])
+    c = careful["check"]
+    check("a wall: the planted foot strays %.2f cm, nothing goes more than %.2f cm through the floor, and no joint is past its limit" % (c["planted_foot_strays_cm"], c["through_floor_cm"]),
+          c["planted_foot_strays_cm"] < 2.0 and c["through_floor_cm"] < 0.5 and c["limit_violations"] == 0, c)
 
 
 def test_bone_names(ctx):
@@ -1444,7 +1518,7 @@ def test_gearbake(ctx):
 
 
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_drape, test_cloth,
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_contact, test_drape, test_cloth,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add]
 
 

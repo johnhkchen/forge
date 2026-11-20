@@ -239,7 +239,9 @@ an animation made for one fits all:
   narrowest ring before the hand; the elbow and knee are where rings were
   set close together for bending (or the narrowest ring, or the ring
   nearest where the joint usually is); the hip is at the top of the leg
-  piece; the ankle sits over the foot piece; a long piece running out
+  piece; the ankle sits over the foot piece, and the toe bone is moved the
+  little it takes to stay inside a thin or pointed toe (the dancer's heeled
+  shoe, 0.9 cm sideways); a long piece running out
   behind the hips is a tail and gets 2 to 5 bones. `found_by` in the result
   says which rule placed each.
 - **Elbows and knees sit on the straight line** from shoulder to wrist and
@@ -300,13 +302,15 @@ hip height. animate.py is what plays any such motion on a character:
 1. **Fit**: scale by this character's hip height, turn each bone from its
    own rest pose.
 2. **Plant the feet**: each leg is solved exactly from hip joint to foot
-   (two bones and a hinge), so a planted foot's ball stays on the floor and
-   moves back at exactly walking speed. If the legs can't reach, the hips
-   come down for the whole loop. If an ankle hits its limit the heel lifts
-   and the leg is solved again.
-3. **Limits**: every turn is clamped to the bone's `limit_deg`; `clamped`
+   (two bones and a hinge), so a planted foot's ball stays where it was put
+   and moves back at exactly walking speed. If a planted foot is out of
+   reach, the hips come down for the whole loop. If an ankle hits its limit
+   the heel lifts and the leg is solved again.
+3. **Contact**: the real shoes, feet and shins are kept out of the floor
+   (see "Contact" below).
+4. **Limits**: every turn is clamped to the bone's `limit_deg`; `clamped`
    lists what needed it.
-4. **Bake** one key a frame into an action named for the motion, then play
+5. **Bake** one key a frame into an action named for the motion, then play
    it back and measure it (`check`).
 
 So the walk is one source of motion among others. A clip from a motion
@@ -318,7 +322,7 @@ it gets here it is one motion like any other, and a second cut of a shot is
 cast under a name of its own (`just cast <shot> <run> <prop run> hero-mixed`).
 `scripts/motion/soma_to_plain.py` renames it with `bones.json`,
 turns it into the same plain form, and `scripts/motion/apply_shot.py` sends
-it through the same four steps (`just cast <shot> <run> [prop run]`; README,
+it through the same steps (`just cast <shot> <run> [prop run]`; README,
 "Shots"). A character's run is a third: one sentence, made by Kimodo, cut
 into a loop (see "Running" below). It looks joints up by name, so a skeleton with more joints than
 the table needs is fine. Three things it does that the walk has no need of:
@@ -347,8 +351,8 @@ Measured on four characters (`just test-tools`, traits from Opus in
 | Feet apart | 0.83 m | 0.21 | 0.29 | 0.41 |
 | Bob / sway | 10.8 / 43.9 cm | 4.8 / 3.7 | 8.0 / 11.5 | 8.9 / 16.2 |
 | Arm swing, hands travel | 16 deg, 0.78 m | 10 deg, 0.24 m | 22 deg, 0.51 m | 16 deg, 0.42 m |
-| Planted foot slides, a step | 0.14 cm | 0.01 | 0.01 | 0.02 |
-| Through the floor | 0.06 cm | 0.01 | 0.01 | 0.00 |
+| Planted foot slides, a step | 0.04 cm | 0.00 | 0.01 | 0.01 |
+| Through the floor | 0.02 cm | 0.02 | 0.02 | 0.02 |
 | Turns outside a limit | 0 | 0 | 0 | 0 |
 
 The troll is slow, wide and rolling because its build is (bulk four times
@@ -364,7 +368,7 @@ What is weak, most visible first:
   this list: see "Clothes that sit on the body and move with it".)
 - **The troll's ankles run out.** Its shins are short, so in late stance
   the ankle hits its limit and the heel comes up as much as 42 degrees;
-  on one frame a foot and its toes are clamped (0.14 cm of slide).
+  on one frame a foot and its toes are clamped (0.04 cm of slide).
 - **Joint finding is rules of thumb.** It expects a T-pose facing -y, two
   legs, arms held out, and pieces built along the axes. A head is "the
   lowest sizeable piece above the arms"; a cape that hangs behind the hips
@@ -475,10 +479,11 @@ and mid poly where there is one, came out alike):
 | Take kept, of 5 (its score; the worst) | 5 (3.6; 12.0) | 3 (2.0; 4.8) | 1 (4.0; 5.6) | 1 (5.3; 13.5) | 3 (3.5; 10.1) | 5 (3.4; 9.5) |
 | The two ends before easing, joints on average (worst joint) | 2.7 cm (6.6) | 1.9 (5.4) | 3.3 (7.1) | 4.4 (9.7) | 3.2 (7.1) | 2.9 (7.6) |
 | Loop seam after | 0 | 0 | 0 | 0 | 0 | 0 |
-| Planted foot slides, a step | 0.02 cm | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| Planted foot slides, a step | 0.20 cm | 0.01 | 0.00 | 0.00 | 0.00 | 0.00 |
 | Turns outside a limit | 0 | 0 | 0 | 0 | 0 | 0 |
-| Through the floor | 8.0 cm | 2.9 | 4.7 | 0.5 | 0.2 | 0.0 |
-| Hips lowered so the legs reach | 10.6 cm | 3.9 | 2.7 | 2.2 | 0.2 | 0.6 |
+| Through the floor | 0.03 cm | 0.43 (tail tip) | 0.01 | 0.05 | 0.02 | 0.02 |
+| Hips lowered so a planted foot reaches | 0.2 cm | 1.5 | 0.0 | 0.0 | 0.0 | 0.0 |
+| Hips raised to clear the floor | 1.7 cm | 0.0 | 3.4 | 0.2 | 0.0 | 0.0 |
 
 The ninja's loose cloth (8 bones low poly, 4 mid poly): no turn outside a
 limit, 0.05 cm into a leg at the deepest, seam 0, hems travel 16.5 cm (low
@@ -505,9 +510,11 @@ What is weak, most visible first:
   a different sentence for that band of traits in `run_prompt`
   (run_clip.py); `just runs` then makes only his again. The scores catch a
   thrown-back head and a still arm, not "does this look like him".
-- **The troll sinks.** Its legs are short for its hips, so the hips come
-  down 10.6 cm for the feet to reach, and a toe pushing off goes 8 cm
-  through the floor (the pirate 4.7). The feet do not slide.
+- **A foot in the air comes up short on short legs.** The troll's hips used
+  to come down 10.6 cm so every foot could reach where the motion put it,
+  and a heel then went 8 cm through the floor (see "Contact"). Now the hips
+  come down only for a planted foot, so a swinging foot stops up to 10.8 cm
+  short of its spot (the pirate's 5.8).
 - **Everyone runs at about the same beat.** 164 to 195 steps a minute,
   troll and ninja alike: Kimodo runs like a person of ordinary size, and
   the clip is scaled, not re-timed. The troll's speed is right; its legs
@@ -520,6 +527,130 @@ What is weak, most visible first:
   suit, at the hips and knees of a longer stride.
 - **Several sentences in one job** (`--batch`) is built and tested but
   gave worse runs; it is kept for when cost matters more.
+
+## Contact: feet, shins and hands stay out of the floor and the set
+
+Every motion a character plays (the walk, a run, a shot) goes through
+`animate.py`, and one step of it is about touching things. It tests the
+character's real mesh, not its bones: for each leg and hand bone, the
+outermost points of whatever mostly follows that bone (shoe, foot, shin,
+thigh, hand), about a hundred a bone. Three things showed why:
+
+- **The dancer's heels.** Her shoe's toe reaches 10 cm ahead of the ball of
+  the foot; the toe bone is 5 cm long. Toes were let droop by what the bone
+  had room for, so the shoe's tip went 0.75 cm through the floor on every
+  step.
+- **The troll's run.** Its hips were lowered 10.6 cm for the whole loop so
+  that a foot in the air could reach where the motion put it. Crouched like
+  that, its ankle ran out of bend as the foot came down, the foot tipped
+  toes-up, and the heel of a 0.7 m foot went 8 cm under.
+- **The ninja's shots.** The motion model can't see the set and has a
+  different body: a foot dipped under the roof, a shin crossed the wall, a
+  knee sank 13 cm in the landing, the vault hand was 14 cm off the wall top.
+
+What the step does, in the order it tries things:
+
+1. **Hips come down only for a planted foot.** A foot in the air that is
+   out of reach comes up short. In a loop the hips come down by one amount
+   throughout; in a shot only around the frames that need it.
+2. **Toes** fall in line with the foot only as far as their real shape
+   clears the floor.
+3. **A planted foot whose toes still dig in** (heel up, toes bent as far as
+   they go) lowers its heel, if the leg still reaches.
+4. **Anything else under the floor lifts the foot straight up**: a heel
+   coming down first, a foot in the air. Never sideways, so a planted foot
+   does not slide.
+5. **A leg inside a block of the set** (a shot's wall) is moved out the
+   short way: over the top, or back out the face the hips are on when that
+   is more than 2.5 times nearer.
+6. **What no place for the foot can cure, the hips cure by rising**: a knee
+   in the floor in a deep crouch, a leg folded as far as it goes and still
+   under the top of a wall it is passing over. At most 0.3 of the hip
+   height.
+7. **A hand with a spot** (a shot's plan pins it: the wall top, the roof)
+   is put there by solving the arm, and laid flat. The hips move over by up
+   to a twentieth of the hip height if the arm is a little short. Past what
+   the arm and shoulder can do the hand goes as far as it can; a spot on the
+   floor that is out of reach is moved in toward the shoulder. Any hand
+   under the floor is lifted out; a hand held on a wall top is lifted at
+   most 3% of the hip height, so it stays on its spot.
+
+Each correction comes on and goes off over a few frames (three; eight where
+there is a wall to get over; twelve for the hips), wraps around a loop's
+seam, and the leg is solved again with it, so joint limits still hold and
+the last frame still equals the first. A shot's wall and hand spots ride
+along in the motion itself (`"set"`, `"hands"`; `apply_shot.py` writes them
+from the shot's plan). `"contact": False` plays a motion as it was written
+(`--no-contact` on `apply_shot.py`), which is how the "before" columns below
+were measured where the old files did not hold the number.
+
+`contact` in the result says what was done (feet lifted, heels lowered, legs
+moved clear, hips raised, hands lifted), and `check` measures the outcome on
+the played-back mesh: `through_floor_cm` and `lowest_part` (which bone's
+part), `in_the_set` (deepest, and by part), `hand_from_its_spot_cm`,
+`planted_foot_strays_cm` (the furthest a planted foot gets from where it
+landed, over the ground).
+
+Measured, before and after (low poly; mid poly within 0.05 cm on the walks
+and runs):
+
+| Through the floor, cm | Troll | Ninja | Pirate | Lizardkin | Lincoln | Roosevelt | Dancer |
+|---|---|---|---|---|---|---|---|
+| Walk, before | 0.06 | 0.22 | 0.01 | 0.00 | 0.00 | 0.16 | 0.75 |
+| Walk, after | 0.02 | 0.02 | 0.02 | 0.02 | 0.02 | 0.02 | 0.02 |
+| Run, before | 8.00 | 0.23 | 4.70 | 2.87 | 0.01 | 0.48 | 1.68 |
+| Run, after | 0.03 | 0.02 | 0.01 | 0.43 (tail tip; feet 0.02) | 0.02 | 0.05 | 0.02 |
+| Run: hips lowered, before | 10.6 | 0.2 | 2.7 | 3.9 | 0.6 | 2.2 | 0.0 |
+| Run: hips lowered, after (raised) | 0.2 (1.7) | 0.0 | 0.0 (3.4) | 1.5 | 0.0 | 0.0 (0.2) | 0.0 |
+
+Planted feet slide 0.2 cm a step in the troll's run and 0.04 in its walk,
+0.01 or less everywhere else. No turn is outside a limit and every loop's
+seam is 0. The 0.02 is the step's own tolerance.
+
+The ninja's two cuts of the rooftop shot (low poly; mid poly alike):
+
+| | Our poses, before | after | Mixed (text and poses), before | after |
+|---|---|---|---|---|
+| Through the roof | 12.9 cm (knee, landing) | 0.03 | 12.8 (knee, landing) | 0.20 |
+| Legs in the wall | 6.0 cm | 2.9 (a foot, 1 frame; mid poly 0.6) | right through (15, half its thickness) | 7.5 |
+| Vault hand from its spot | 13.9 cm | 2.8 | 15.4 | 25.4 |
+| A planted foot strays | 2.3 cm | 0.00 | 1.2 | 1.2 |
+| Turns outside a limit | 0 | 0 | 0 | 0 |
+| Hips raised | | 19 cm (landing) | | 28 (vault and landing) |
+
+(The files made before this step said 15.8 and 24.3 cm of foot slide. Most
+of that was one bug in `soma_to_plain.py`: easing a foot toward its next
+planted spot also moved the last frames it was held on the spot before.)
+
+What is weak, most visible first:
+
+- **The mixed cut's vault is a run through the wall, and no leg fix makes
+  it a vault.** Kimodo plants a foot 12 cm from the wall and carries the
+  hips over at 15 to 35 cm above the top. To get the legs over, the hips
+  are raised 28 cm (the most allowed) and the feet lifted up to 75 cm.
+  Shins still cut 7.5 cm into the wall for six frames, and with the body
+  that high the hand cannot reach down to the top: it ends 25 cm from its
+  spot, further than before. The cure is a different sentence or a pose
+  key for that beat, which means making the motion again.
+- **The three-point landing is a two-point landing.** The ninja's legs are
+  thicker than the motion model's, so to keep its knee out of the roof the
+  hips rise 19 cm, and then its arm (0.72 m) cannot reach the roof: the
+  hand hangs 17 to 25 cm above it. Before, the hand was 16 cm off and the
+  knee 13 cm into the roof. A fix would treat the knee as something that
+  rests on the floor, or plant the back foot further out for this body.
+- **Over or back is decided point by point.** A foot that goes into a tall
+  wall low down is stopped at the face, then goes over the top once that is
+  the nearer way. Fine for a wall crossed near its top; a crossing should be
+  decided once.
+- **A foot in the air comes up short** where the hips are no longer lowered
+  for it: by up to 10.8 cm in the troll's run, 5.8 in the pirate's.
+- **A held hand ends its hold badly.** In the vault the body is past the
+  hand before the plan lets go; in the last two frames the wrist runs out
+  of bend and the fingers go up to 6 cm into the wall top.
+- **Points that follow two bones are tested as if they followed one.** It
+  costs under 0.2 cm.
+- **Tails, hips, elbows and heads are not tested.** The lizardkin's tail tip
+  still dips 0.4 cm in its run.
 
 ## Clothes that sit on the body and move with it
 
@@ -1273,7 +1404,9 @@ copies of the troll, lizardkin, pirate and ninja runs (the last three from
 their recorded block-outs in `scripts/test_blockouts.json`); and the walk: each of the four
 rigged, walked and exported, with the foot slide, floor, limits, loop and
 weights checked both in Blender and in the written file; the run profile, skipped with no clip
-and made for real from a stick-figure clip (troll, lizardkin); and the clothes:
+and made for real from a stick-figure clip (troll, lizardkin); the contact step, each time
+against the same motion with it off (the dancer's heels, the troll's real run, and a made-up
+wall and post: the leg must clear the wall and the hand land on the post); and the clothes:
 drape.py on the troll, then Lincoln, the ninja, Roosevelt, the troll and
 the pirate made low poly, mid poly and walking by the real runner and
 measured with `scripts/cloth_check.py` over every frame (skin through

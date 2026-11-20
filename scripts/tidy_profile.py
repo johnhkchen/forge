@@ -657,7 +657,7 @@ def walk(source, out_dir, profile, spec):
         if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
             record["cloth"] = run_script("cloth.py", spec.get("cloth", {}))
         record["walk"] = run_script("walk.py", dict(spec.get("walk", {}), traits=traits or None))
-        record["animation"] = run_script("animate.py", {})
+        record["animation"] = run_script("animate.py", spec.get("animate", {}))
         for script in record["animation"].get("then", []):  # what the rig asks for after a bake: swing.py, for cloth bones
             record[script[:-3]] = run_script(script, spec.get(script[:-3], {}))
         glb = os.path.join(out_dir, name + ".glb")
