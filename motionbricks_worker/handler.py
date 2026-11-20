@@ -2,14 +2,21 @@
 
 Each motion model lives in models/, in a Python environment of its own under
 /opt/envs/, and runs as a child process that this router talks to in JSON
-lines. So one model's packages never have to agree with another's, and a
-second model (NVIDIA Kimodo, text to motion, wants Python 3.10 and PyTorch)
-can be added beside the first by adding an environment to the Dockerfile, a
-file to models/, and two lines to the tables below.
+lines. So one model's packages never have to agree with another's. Two models
+live here: NVIDIA MotionBricks (poses in, the motion between them out) and
+NVIDIA Kimodo (sentences in, motion out; it wants Python 3.10 and PyTorch). A
+third is an environment in the Dockerfile, a file in models/, and two lines in
+the tables below.
+
+MotionBricks starts with the worker. Kimodo starts on the first job that asks
+for it, so a job for MotionBricks never waits for Kimodo or shares the GPU's
+memory with it.
 
 Input (job["input"]):
-    kind     which job; see KINDS. "inbetween" is the main one: poses in,
-             the motion between them out (models/motionbricks_model.py)
+    kind     which job; see KINDS.
+             "inbetween"  poses in, the motion between them out
+                          (models/motionbricks_model.py)
+             "text"       sentences in, motion out (models/kimodo_model.py)
     ...      the rest is that kind's own input
 
 Output: like the TRELLIS.2 worker, the handler is a generator. /stream/{job}
@@ -40,6 +47,15 @@ MODELS = {
         "script": "/app/models/motionbricks_model.py",
         "eager": True,
     },
+    "kimodo": {
+        "python": "/opt/envs/kimodo/bin/python",
+        "script": "/app/models/kimodo_model.py",
+        "eager": False,
+        # Both models write the SOMA skeleton, each its own way. Kimodo's file
+        # carries poses across, and for that it is handed the skeleton
+        # MotionBricks loaded: {input name: (model, kind)}.
+        "borrows": {"soma_skeleton": ("motionbricks", "skeleton")},
+    },
 }
 # Which model answers which kind of job.
 KINDS = {
@@ -47,6 +63,8 @@ KINDS = {
     "skeleton": "motionbricks",
     "selftest": "motionbricks",
     "info": "motionbricks",
+    "text": "kimodo",
+    "text_info": "kimodo",
 }
 
 CHUNK_BYTES = 512 * 1024  # base64 grows it to ~700 KB, under /stream's 1 MB per item
@@ -96,6 +114,17 @@ class Model:
 
 
 LOADED = {name: Model(name) for name in MODELS}
+BORROWED: dict = {}
+
+
+def borrowed(model: Model) -> dict:
+    """What a model is handed from another on every job, asked for once."""
+    out = {}
+    for name, (other, kind) in (model.card.get("borrows") or {}).items():
+        if name not in BORROWED:
+            BORROWED[name] = LOADED[other].ask(kind, {})["result"]
+        out[name] = BORROWED[name]
+    return out
 
 
 def handler(job):
@@ -104,10 +133,12 @@ def handler(job):
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {sorted(KINDS)}")
     model = LOADED[KINDS[kind]]
+    if model.process is None:
+        yield {"kind": "info", "stage": f"starting {model.name}"}
     model.start()
     yield {"kind": "info", "stage": kind, "gpu": (model.boot or {}).get("gpu")}
 
-    answer = model.ask(kind, params)
+    answer = model.ask(kind, {**params, **borrowed(model)})
     data = json.dumps(answer["result"], separators=(",", ":")).encode()
     seconds = {"work": answer["seconds"], **{f"boot_{k}": v for k, v in model.boot["seconds"].items()}}
 

@@ -1,5 +1,6 @@
-# The motion worker for RunPod Serverless. Today it holds one model, NVIDIA
-# MotionBricks (poses in, the motion between them out).
+# The motion worker for RunPod Serverless. It holds two models: NVIDIA
+# MotionBricks (poses in, the motion between them out) and NVIDIA Kimodo
+# (sentences in, motion out).
 #
 # Each model gets a Python environment of its own under /opt/envs/, and the
 # router that answers RunPod gets another, so one model's packages never have
@@ -7,10 +8,11 @@
 # file in models/, two lines in handler.py.
 #
 # This image holds only our code and the Python packages the models run on.
-# Nothing of NVIDIA's MotionBricks release is baked in: not its code, not its
-# model, not its sample clips. On its first boot the worker fetches the pinned
-# release (v0.2.0) onto the network volume itself; see
-# models/motionbricks_model.py.
+# Nothing of NVIDIA's is baked in: not MotionBricks' or Kimodo's code, not a
+# model, not a sample clip, and not the text encoder Kimodo reads sentences
+# with (Meta's Llama 3). On first use each model fetches its own pinned release
+# onto the network volume; see models/motionbricks_model.py and
+# models/kimodo_model.py.
 #
 # TensorRT 10.8 builds a plan for the exact GPU it runs on, so the endpoint
 # uses one GPU type (RTX 4090) and keeps the plan on the volume.
@@ -50,6 +52,42 @@ RUN uv venv --seed --python 3.12 /opt/envs/motionbricks \
 # may want a GPU driver to load, so only check that it is installed.)
 RUN /opt/envs/motionbricks/bin/python -c "import numpy, scipy, warp; from pxr import Usd, UsdSkel; print('numpy', numpy.__version__, 'warp', warp.__version__)" \
  && /opt/envs/motionbricks/bin/python -c "import importlib.util as u; missing=[m for m in ('tensorrt','tensorrt_bindings','tensorrt_libs') if u.find_spec(m) is None]; assert not missing, missing"
+
+# Kimodo: Python 3.10 and PyTorch, with the versions Kimodo's own lock file
+# pins. On its first boot the worker compiles Kimodo's motion clean-up (C++),
+# so the compiler, CMake and Eigen are here; pybind11 comes with pip.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential cmake libeigen3-dev \
+ && rm -rf /var/lib/apt/lists/*
+RUN uv venv --seed --python 3.10 /opt/envs/kimodo \
+ && /opt/envs/kimodo/bin/python -m pip install --index-url https://download.pytorch.org/whl/cu124 "torch==2.5.1" \
+ && /opt/envs/kimodo/bin/python -m pip install \
+      "numpy==1.26.4" \
+      "scipy==1.15.3" \
+      "einops==0.8.2" \
+      "hydra-core==1.3.2" \
+      "omegaconf==2.3.0" \
+      "transformers==5.1.0" \
+      "peft==0.18.1" \
+      "accelerate==1.13.0" \
+      "huggingface-hub==1.6.0" \
+      "hf-xet==1.4.0" \
+      "safetensors==0.7.0" \
+      "tokenizers==0.22.2" \
+      "tqdm==4.67.3" \
+      "pydantic==2.12.5" \
+      "packaging==26.0" \
+      "pybind11==2.13.6"
+
+# Fail the build early if Kimodo's Python side is broken, or if a C++ Python
+# extension cannot be built here the way the worker will build Kimodo's.
+COPY build_check /tmp/build_check
+RUN /opt/envs/kimodo/bin/python -c "import torch, numpy, scipy, einops, hydra, omegaconf, transformers, peft, safetensors, huggingface_hub; from scipy.spatial.transform import Rotation; print('torch', torch.__version__, 'transformers', transformers.__version__, 'hub', huggingface_hub.__version__)" \
+ && mkdir /tmp/build_check/out && cd /tmp/build_check/out \
+ && cmake /tmp/build_check -DPython3_EXECUTABLE=/opt/envs/kimodo/bin/python -Dpybind11_DIR="$(/opt/envs/kimodo/bin/python -m pybind11 --cmakedir)" -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build . -- -j4 \
+ && /opt/envs/kimodo/bin/python -c "import _build_check; assert _build_check.trace_of_identity(3) == 3.0; print('a C++ extension builds and loads')" \
+ && rm -rf /tmp/build_check
 
 COPY handler.py /app/handler.py
 COPY models /app/models

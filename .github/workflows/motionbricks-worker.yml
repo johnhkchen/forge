@@ -1,6 +1,7 @@
 # Builds motionbricks_worker/ into ghcr.io/<owner>/motionbricks-worker on every
-# push that touches it. The image holds no NVIDIA model or sample data (the
-# worker fetches those onto the network volume itself), so it can be public.
+# push that touches it. The image holds no NVIDIA model, no text encoder and no
+# sample data (the worker fetches those onto the network volume itself), so it
+# can be public. It runs two motion models, MotionBricks and Kimodo.
 name: motionbricks worker image
 
 on:
@@ -35,8 +36,11 @@ jobs:
           context: motionbricks_worker
           platforms: linux/amd64
           push: true
+          # Every build is tagged with its commit. Only main moves `latest`,
+          # so a branch can build an image to try without changing what
+          # `latest` means.
           tags: |
             ${{ steps.image.outputs.name }}:${{ github.sha }}
-            ${{ steps.image.outputs.name }}:latest
+            ${{ github.ref == 'refs/heads/main' && format('{0}:latest', steps.image.outputs.name) || '' }}
           cache-from: type=registry,ref=${{ steps.image.outputs.name }}:buildcache
           cache-to: type=registry,ref=${{ steps.image.outputs.name }}:buildcache,mode=max
