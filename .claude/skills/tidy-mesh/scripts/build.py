@@ -664,6 +664,9 @@ mat.node_tree.links.new(paint.outputs["Color"], nodes["Principled BSDF"].inputs[
 light.data.materials.clear()
 light.data.materials.append(mat)
 light["forge_groups"] = json.dumps([group_tag(g, listed) for g in groups])  # export.py writes one mesh per group from this
+for key in ("draped", "forge_masks"):  # the pieces were joined afresh: whatever drape.py did to the old mesh is gone
+    if key in light:
+        del light[key]
 
 # Attachment points: empties that export.py sends along.
 wanted = PARAMS["sockets"]

@@ -55,7 +55,10 @@ def write(path, doc, rest):
 def tag_name(extras):
     """The name a node's tag gives it, or None for an untagged node."""
     kind = (extras or {}).get("forge")
-    if kind == "body":
+    if kind == "body":  # after drape.py: the faces a gear item hides are a mesh of their own, named for that gear
+        under = extras.get("under")
+        if under:
+            return "body under: " + " + ".join(under.split("|"))  # "under" is the gear's names, joined with |
         return "body"
     if kind == "gear" and extras.get("gear"):
         return "gear: " + extras["gear"]
@@ -74,7 +77,7 @@ def contents(doc):
             recipe = json.loads(extras["forge_build"])
         if name and extras["forge"] == "socket":
             sockets[extras["socket"]] = node.get("translation", [0, 0, 0])
-        elif name:
+        elif name and not extras.get("under"):
             groups.append({k: extras.get(k) for k in ("gear", "kind", "slot") if extras.get(k)} | {"name": name})
     return {"groups": groups, "sockets": sockets, "recipe": recipe}
 

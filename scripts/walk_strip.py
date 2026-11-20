@@ -1,6 +1,6 @@
 """Picture a rigged character's animation as a strip of poses, in a background Blender.
 
-    blender -b --factory-startup -P scripts/walk_strip.py -- FILE OUT.png [--view side|front|quarter] [--frames 8] [--bones] [--size 420]
+    blender -b --factory-startup -P scripts/walk_strip.py -- FILE OUT.png [--view side|front|quarter] [--frames 8] [--at 165,180,258] [--bones] [--undressed] [--size 420]
 
 FILE is a .glb with a skeleton and an animation (profiles/lowpoly-walk.glb),
 or a .blend saved after rig.py. The character is stood side by side `--frames`
@@ -8,7 +8,11 @@ times, each copy frozen at the next moment of the loop, and the row is
 rendered once, straight on: from the side (looking at its left), the front,
 or a three-quarter view. `--bones` draws the skeleton as red sticks inside a
 see-through body, to check where the joints landed. With no animation in the
-file it draws the rest pose once.
+file it draws the rest pose once. A character is drawn dressed, without the
+body faces its gear hides; `--undressed` draws the whole body and no gear.
+`--at` picks the frames by number instead of spreading them over the clip. A
+clip that travels (a shot) is drawn on the spot: each pose stands where its
+place in the row is, not where the motion had carried it.
 """
 import math
 import os
@@ -32,21 +36,29 @@ def option(name, default):
 view = option("--view", "side")
 count = int(option("--frames", "8"))
 size = int(option("--size", "420"))
+chosen = option("--at", "")
 bones = "--bones" in args
 if bones:
     args.remove("--bones")
+undressed = "--undressed" in args
+if undressed:
+    args.remove("--undressed")
 source, out = os.path.abspath(args[0]), os.path.abspath(args[1])
 
 if source.endswith(".blend"):
     bpy.ops.wm.open_mainfile(filepath=source)
 else:
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.context.scene.render.fps = 30  # what every motion here is baked at; the importer lays keys out by the scene's rate
     bpy.ops.import_scene.gltf(filepath=source)
 scene = bpy.context.scene
 rig = next((o for o in scene.objects if o.type == "ARMATURE"), None)
-meshes = [o for o in scene.objects if o.type == "MESH" and o.visible_get()]
+# Dressed, as a game draws it: body faces that worn gear hides ("body under: ...") are left out. --undressed draws the body alone, whole.
+meshes = [o for o in scene.objects if o.type == "MESH" and o.visible_get() and not (o.get("forge") == "gear" if undressed else o.get("under"))]
 action = rig.animation_data.action if rig and rig.animation_data and rig.animation_data.action else None
-if action:
+if action and chosen:
+    frames = [float(f) for f in chosen.split(",")]
+elif action:
     first, last = [int(round(f)) for f in action.frame_range]
     frames = [first + (last - first) * i / count for i in range(count)]
 else:
@@ -111,6 +123,9 @@ for i, frame in enumerate(frames):
     scene.frame_set(int(frame), subframe=frame - int(frame))
     deps = bpy.context.evaluated_depsgraph_get()
     shift = across * gap * (i - (len(frames) - 1) / 2)
+    if rig and "hips" in rig.pose.bones:  # a clip that travels is drawn on the spot
+        gone = rig.matrix_world @ rig.pose.bones["hips"].head - rig.matrix_world @ rig.data.bones["hips"].head_local
+        shift -= Vector((gone.x, gone.y, 0.0))
     for obj in meshes:
         frozen = bpy.data.meshes.new_from_object(obj.evaluated_get(deps), depsgraph=deps)
         paint(frozen, bones)
@@ -122,11 +137,16 @@ for i, frame in enumerate(frames):
         copy = bpy.data.objects.new("bones %d" % i, sticks(rig, "bones %d" % i))
         copy.location = shift
         stage.objects.link(copy)
-for obj in meshes:
+for obj in [o for o in scene.objects if o.type == "MESH" and o.name not in stage.objects]:
     obj.hide_render = True
 
 wide = gap * len(frames) + 0.2 * tall
 center = Vector(((low.x + high.x) / 2, (low.y + high.y) / 2, (low.z + high.z) / 2))
+# Poses that leave the standing figure's box (a jump, a crouch under the floor line) are kept in the picture.
+posed = [o.matrix_world @ Vector(c) for o in stage.objects for c in o.bound_box]
+if posed:
+    top, bottom = max(max(c.z for c in posed), high.z), min(min(c.z for c in posed), low.z)
+    center.z, tall = (top + bottom) / 2, max(tall, top - bottom)
 away = {"side": Vector((1, 0, 0)), "front": Vector((0, -1, 0)), "quarter": Vector((0.45, -1, 0.25)).normalized()}[view]
 cam = bpy.data.objects.new("strip camera", bpy.data.cameras.new("strip camera"))
 cam.data.type = "ORTHO"

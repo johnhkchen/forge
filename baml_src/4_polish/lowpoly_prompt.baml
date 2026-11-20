@@ -17,6 +17,11 @@
 // or swap the boots. So the body is built whole, each gear item from the
 // brief is a piece of its own over it, and the points props attach to
 // (sockets) are marked. export.py writes them as separate named meshes.
+//
+// And its clothes sit on it: Claude builds each piece where the picture shows
+// it and says how it is worn ("fit": tight, loose or stiff); drape.py then
+// lays the pieces on the body, so Claude doesn't have to chase a gap of a
+// centimeter by hand, and loose cloth is left hanging to swing later.
 
 /// What a character needs on top of a prop: a pose that can be rigged, and
 /// a face that can be read.
@@ -75,10 +80,20 @@ function gear_steps(brief: ObjectBrief) -> string {
           boots there are feet. Where gear covers it the body can be plain
           (6 sides, few rings); it only shows with the gear off. Hair,
           beards, horns, tails and tusks are body.
-        - Then each gear item below as a piece or pieces of its own, sitting
-          just outside the body (about a centimeter, so the body doesn't
-          poke through), with "gear": "<the item's name>" on every piece of
-          it. A piece with no "gear" is body.
+        - Then each gear item below as a piece or pieces of its own, built
+          where the reference shows it, with "gear": "<the item's name>" on
+          every piece of it. A piece with no "gear" is body.
+        - Say how each gear piece is worn, with "fit" on the piece:
+          "tight" for cloth that lies on the body (trousers, sleeves, a
+          shirt, wraps, a mask), "loose" for cloth that hangs off it (a
+          kilt, a skirt, a coat's skirts below the belt, a hood, a cape, a
+          sash's ends), "stiff" for what keeps its own shape (boots, a hat,
+          armor plates, a buckle, glasses). Build a coat as a tight piece
+          down to the belt and a loose piece below it.
+        - Leave loose pieces hanging the way they hang in the reference, at
+          their full length and standing off the legs. Don't pull a kilt or
+          a coat's skirts in to the thighs, and don't spend rounds closing
+          small gaps between cloth and body: the next step does that.
         - The hidden body comes on top of the triangle budget, up to a
           quarter more; don't thin the pieces people see to pay for it.
         - Pass the list once as build.py's "gear" (below, ready to paste).
@@ -87,6 +102,15 @@ function gear_steps(brief: ObjectBrief) -> string {
         Gear to build:
         ${built.map((g) -> { `- ${g.name} (${g.kind}, ${g.slot}): ${g.look}` }).join("\n")}
         build.py "gear": ${baml.json.stringify(tags)}
+        - When the shape is right, and after your last build.py call, run
+          drape.py once (it needs no settings). It lays every tight piece on
+          the body, fits loose pieces where they rest and leaves them
+          hanging below, and marks the skin the gear hides so it can't show
+          through. Read its result: "pieces" says what each piece was taken
+          for (a wrong one is put right with "fit" on the piece in build.py,
+          then drape.py again), and "skin_showing_through" should be 0 or
+          close to it. \`look\` once more, then export. build.py undoes
+          drape.py, so it comes last.
         ${if (held) { `Held in the hand, made separately and not built here: ${held.map((g) -> { g.name }).join(", ")}. Leave the hands empty.` } else { "" }}
 
         ${sockets}
@@ -97,6 +121,9 @@ class LowPolyPart {
     name: string @description("The part, like 'body' or 'spout'"),
     gear: string? @description(
         "For a piece of gear: the gear item it is, named exactly as in the gear list. Leave out for the body and for objects",
+    ),
+    fit: string? @description(
+        "For a piece of gear: 'tight' (lies on the body), 'loose' (hangs off it) or 'stiff' (keeps its shape). Leave out for the body and for objects",
     ),
     shape: string @description("How it was built, like '8-sided loft, 5 rings, top ring narrowed'"),
     triangles: int,

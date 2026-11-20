@@ -1,5 +1,28 @@
 const LOWPOLY_TOOLS = ["open", "measure", "build", "export"];
 const CHARACTER_TOOLS = ["open", "measure", "face", "build", "export"];
+// A character with clothes on also lays them on its body before exporting.
+const DRESSED_TOOLS = ["open", "measure", "face", "build", "drape", "export"];
+
+/// Does the brief list anything worn or attached (gear that is built on the character)?
+function wears_gear(brief: ObjectBrief) -> bool {
+    (brief.gear ?? [])
+        .filter((g) -> {
+            g.kind != "held"
+        })
+        .length()
+        > 0
+}
+
+/// The Blender tools a block-out is given: a character's adds the face, a dressed character's the draping.
+function lowpoly_tools(brief: ObjectBrief) -> string[] {
+    if (!(brief.character ?? false)) {
+        LOWPOLY_TOOLS
+    } else if (wears_gear(brief)) {
+        DRESSED_TOOLS
+    } else {
+        CHARACTER_TOOLS
+    }
+}
 
 /// The triangle budget as the prompt states it. A character's head and face
 /// get a stated share: without one they get about 5%.
@@ -22,11 +45,7 @@ function block_out(brief: ObjectBrief, run: Run) -> LowPolyReport {
         "(none found: treat it as one piece)"
     };
     //# Claude builds it from simple shapes and checks it against the detail
-    let names = if (brief.character ?? false) {
-        CHARACTER_TOOLS
-    } else {
-        LOWPOLY_TOOLS
-    };
+    let names = lowpoly_tools(brief);
     let report = BlockOut(
         brief,
         run.absolute("final.glb"),
@@ -137,6 +156,23 @@ test "a character with gear is asked for a whole body, gear as its own pieces, a
     assert.contains(asked, "made separately and not built here: umbrella");
     assert.is_true(!asked.includes("- umbrella"));
     assert.contains(asked, `set "sockets": True`);
+    // Its clothes are laid on the body by drape.py: it says how each piece is worn and runs it last.
+    assert.equal(lowpoly_tools(wrestler).join(" "), DRESSED_TOOLS.join(" "));
+    let dressed = BlockOut@spec(
+        wrestler,
+        "final.glb",
+        "lowpoly.glb",
+        "{}",
+        tools(lowpoly_tools(wrestler)),
+        lowpoly_budget(wrestler),
+    )
+        .prompt()
+        .to_string();
+    assert.contains(dressed, `"tight" for cloth that lies on the body`);
+    assert.contains(dressed, "Leave loose pieces hanging");
+    assert.contains(dressed, "drape.py once");
+    assert.contains(dressed, "===== drape");
+    assert.is_true(!dressed.includes("about a centimeter"));
     // A character from before gear lists still gets its sockets, and no gear talk.
     let troll = lowpoly_test_brief(true, 1200);
     let plain = BlockOut@spec(troll, "final.glb", "lowpoly.glb", "{}", tools(CHARACTER_TOOLS), lowpoly_budget(troll))
@@ -144,12 +180,21 @@ test "a character with gear is asked for a whole body, gear as its own pieces, a
         .to_string();
     assert.contains(plain, `set "sockets": True`);
     assert.is_true(!plain.includes("Its gear comes off"));
+    assert.is_true(!plain.includes("drape.py once"));
+    assert.equal(lowpoly_tools(troll).join(" "), CHARACTER_TOOLS.join(" "));
+    // Something only held is not worn: no draping for it.
+    let armed = ObjectBrief {
+        ...lowpoly_test_brief(true, 1200),
+        gear: [GearItem { name: "club", kind: "held", slot: "hand_right", look: "a knotted branch" }],
+    };
+    assert.equal(lowpoly_tools(armed).join(" "), CHARACTER_TOOLS.join(" "));
     // An object gets neither.
     let kettle = lowpoly_test_brief(false, null);
     let prop = BlockOut@spec(kettle, "final.glb", "lowpoly.glb", "{}", tools(LOWPOLY_TOOLS), lowpoly_budget(kettle))
         .prompt()
         .to_string();
-    assert.is_true(!prop.includes(`"sockets": True in build.py`))
+    assert.is_true(!prop.includes(`"sockets": True in build.py`));
+    assert.equal(lowpoly_tools(kettle).join(" "), LOWPOLY_TOOLS.join(" "))
 }
 
 test "a low-poly report can say which gear a piece is" {
@@ -158,7 +203,7 @@ test "a low-poly report can say which gear a piece is" {
           "triangles": 900,
           "parts": [
             { "name": "torso", "shape": "8-sided loft", "triangles": 100 },
-            { "name": "coat", "gear": "navy coat", "shape": "8-sided loft", "triangles": 120 }
+            { "name": "coat", "gear": "navy coat", "fit": "loose", "shape": "8-sided loft", "triangles": 120 }
           ],
           "shape_typical": 2.1,
           "shape_worst": 5.0,
@@ -169,7 +214,10 @@ test "a low-poly report can say which gear a piece is" {
     let report = BlockOut@spec(troll, "final.glb", "lowpoly.glb", "{}", tools(CHARACTER_TOOLS), lowpoly_budget(troll))
         .parse(reply);
     assert.equal(report.parts.at(0)?.gear, null);
-    assert.equal(report.parts.at(1)?.gear, "navy coat")
+    assert.equal(report.parts.at(1)?.gear, "navy coat");
+    // ...and how a gear piece is worn; the body says nothing
+    assert.equal(report.parts.at(1)?.fit, "loose");
+    assert.equal(report.parts.at(0)?.fit, null)
 }
 
 test "a character's budget sets aside the head's share" {

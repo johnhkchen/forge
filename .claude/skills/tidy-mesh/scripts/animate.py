@@ -32,6 +32,10 @@
 #      check below will show it.
 #   4. Bake: one key per frame on every bone, in an action named for the motion.
 #
+# "then" in the result names what to run next on the baked action: a rig with
+# cloth bones (cloth.py) asks for swing.py, which makes loose cloth hang and
+# swing with whatever motion was just baked.
+#
 # "check": True then plays the baked action back in Blender and measures it:
 # how far a planted foot slid (cm per step), how far anything went through the
 # floor, turns outside a limit, and whether the last frame equals the first.
@@ -279,6 +283,7 @@ result = {
     "speed_m_s": round(motion.get("travel", 0.0) * scale, 3), "bones_keyed": len(poses[0]),
     "hips_lowered_cm": round(100 * drop, 1), "heel_lifted_for_ankle_deg": round(heel_help, 1),
     "clamped": clamped, "out_of_reach_cm": round(100 * max(short.values()), 2),
+    "then": json.loads(rig.get("forge_then", "[]")),  # passes this rig asks for after any motion is baked: run each next (cloth.py asks for swing.py)
 }
 
 # ---- play it back and measure ----

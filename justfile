@@ -125,6 +125,10 @@ gait run:
 walk-strip file out view="side":
     "{{blender_bin}}" -b --factory-startup -P scripts/walk_strip.py -- "{{file}}" "{{out}}" --view {{view}} 2>&1 | grep -E '^STRIP|Error|Traceback'
 
+# Measure a dressed character's .glb (standing or walking): skin through its clothes over the clip, how far they sit off the body, cloth bones
+cloth-check +files:
+    "{{blender_bin}}" -b --factory-startup -P scripts/cloth_check.py -- {{files}} 2>&1 | grep -E '^CLOTH|Error|Traceback'
+
 # For a run from before recipes were kept: rebuild its block-out from the transcript in a background Blender and save the recipe, so `just tidy <run> midpoly` works
 recipe run:
     #!/usr/bin/env bash
