@@ -1,0 +1,132 @@
+{
+ "name": "rooftop-ninja",
+ "title": "Silent as a Shadow",
+ "premise": "A very serious ninja crosses a rooftop at night, certain that nobody can see or hear a thing, while everything about the trip is a little louder and clumsier than planned; the last panel is the triumphant sword pose",
+ "layout": "scroll",
+ "panels": [
+  {
+   "file": "panels/01.webp",
+   "size": [
+    900,
+    558
+   ],
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "alt": "Panel 1. Midnight. The city sleeps.. ninja: \"Silent. Invisible. A whisper in the dark.\"",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 558\" role=\"group\" aria-label=\"lettering\"><g class=\"caption\"><rect x=\"19.8\" y=\"19.8\" width=\"351.2\" height=\"56.5\" rx=\"7.3\" fill=\"#fff3c4\" stroke=\"#1c1917\" stroke-width=\"4.0\"/><text x=\"35.9\" y=\"54.0\" font-size=\"29.2\" font-style=\"italic\">Midnight. The city sleeps.</text></g><g class=\"balloon think\" data-who=\"ninja\"><g fill=\"#1c1917\" stroke=\"#1c1917\" stroke-width=\"8.1\" stroke-linejoin=\"round\"><rect x=\"566.2\" y=\"19.8\" width=\"293.2\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"564.9\" cy=\"169.3\" r=\"11.0\"/><circle cx=\"562.9\" cy=\"175.7\" r=\"8.4\"/><circle cx=\"561.1\" cy=\"181.6\" r=\"5.8\"/></g><g fill=\"#fffdf8\"><rect x=\"566.2\" y=\"19.8\" width=\"293.2\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"564.9\" cy=\"169.3\" r=\"11.0\"/><circle cx=\"562.9\" cy=\"175.7\" r=\"8.4\"/><circle cx=\"561.1\" cy=\"181.6\" r=\"5.8\"/></g><text x=\"712.8\" y=\"65.2\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">Silent. Invisible. A</text><text x=\"712.8\" y=\"102.8\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">whisper in the</text><text x=\"712.8\" y=\"140.4\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">dark.</text></g></svg>",
+   "sky_image": "backdrops/rooftop.webp",
+   "sky_zoom": 100
+  },
+  {
+   "file": "panels/02.webp",
+   "size": [
+    900,
+    900
+   ],
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "alt": "Panel 2. ninja: \"That was the roof. Ninjas do not creak.\". CREEEAK",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 900\" role=\"group\" aria-label=\"lettering\"><g class=\"balloon think\" data-who=\"ninja\"><g fill=\"#1c1917\" stroke=\"#1c1917\" stroke-width=\"8.1\" stroke-linejoin=\"round\"><rect x=\"373.4\" y=\"84.1\" width=\"253.4\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"493.7\" cy=\"235.2\" r=\"11.0\"/><circle cx=\"493.7\" cy=\"244.1\" r=\"8.4\"/><circle cx=\"493.7\" cy=\"252.2\" r=\"5.8\"/></g><g fill=\"#fffdf8\"><rect x=\"373.4\" y=\"84.1\" width=\"253.4\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"493.7\" cy=\"235.2\" r=\"11.0\"/><circle cx=\"493.7\" cy=\"244.1\" r=\"8.4\"/><circle cx=\"493.7\" cy=\"252.2\" r=\"5.8\"/></g><text x=\"500.1\" y=\"129.5\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">That was the</text><text x=\"500.1\" y=\"167.1\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">roof. Ninjas do</text><text x=\"500.1\" y=\"204.7\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">not creak.</text></g><text class=\"sfx\" x=\"704.1\" y=\"838.4\" font-size=\"103.5\" text-anchor=\"middle\" transform=\"rotate(-8 704.1 803.2)\" fill=\"#ffd23f\" stroke=\"#1c1917\" stroke-width=\"8.9\" paint-order=\"stroke\" stroke-linejoin=\"round\">CREEEAK</text></svg>",
+   "sky_image": "backdrops/rooftop.webp",
+   "sky_zoom": 100
+  },
+  {
+   "file": "panels/03.webp",
+   "size": [
+    900,
+    900
+   ],
+   "sky": [
+    "#2a3a66",
+    "#7a6a96"
+   ],
+   "alt": "Panel 3. ACHOO!",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 900\" role=\"group\" aria-label=\"lettering\"><text class=\"sfx\" x=\"717.1\" y=\"131.9\" font-size=\"103.5\" text-anchor=\"middle\" transform=\"rotate(8 717.1 96.8)\" fill=\"#ffd23f\" stroke=\"#1c1917\" stroke-width=\"8.9\" paint-order=\"stroke\" stroke-linejoin=\"round\">ACHOO!</text></svg>",
+   "sky_image": null,
+   "sky_zoom": 230
+  },
+  {
+   "file": "panels/04.webp",
+   "size": [
+    900,
+    900
+   ],
+   "sky": [
+    "#2a3a66",
+    "#7a6a96"
+   ],
+   "alt": "Panel 4. ninja: \"A ninja sneeze. Technically a whisper.\"",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 900\" role=\"group\" aria-label=\"lettering\"><g class=\"balloon think\" data-who=\"ninja\"><g fill=\"#1c1917\" stroke=\"#1c1917\" stroke-width=\"8.1\" stroke-linejoin=\"round\"><rect x=\"309.1\" y=\"84.1\" width=\"256.4\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"442.7\" cy=\"240.2\" r=\"11.0\"/><circle cx=\"442.7\" cy=\"256.5\" r=\"8.4\"/><circle cx=\"442.7\" cy=\"271.3\" r=\"5.8\"/></g><g fill=\"#fffdf8\"><rect x=\"309.1\" y=\"84.1\" width=\"256.4\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"442.7\" cy=\"240.2\" r=\"11.0\"/><circle cx=\"442.7\" cy=\"256.5\" r=\"8.4\"/><circle cx=\"442.7\" cy=\"271.3\" r=\"5.8\"/></g><text x=\"437.3\" y=\"129.5\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">A ninja sneeze.</text><text x=\"437.3\" y=\"167.1\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">Technically a</text><text x=\"437.3\" y=\"204.7\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">whisper.</text></g></svg>",
+   "sky_image": null,
+   "sky_zoom": 175
+  },
+  {
+   "file": "panels/05.webp",
+   "size": [
+    900,
+    558
+   ],
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "alt": "Panel 5. ninja: \"Swift as the wind. Light as the wind.\". CLOMP CLOMP",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 558\" role=\"group\" aria-label=\"lettering\"><g class=\"balloon think\" data-who=\"ninja\"><g fill=\"#1c1917\" stroke=\"#1c1917\" stroke-width=\"8.1\" stroke-linejoin=\"round\"><rect x=\"373.4\" y=\"19.8\" width=\"240.2\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"493.8\" cy=\"166.6\" r=\"11.0\"/><circle cx=\"493.8\" cy=\"168.9\" r=\"8.4\"/><circle cx=\"493.8\" cy=\"171.0\" r=\"5.8\"/></g><g fill=\"#fffdf8\"><rect x=\"373.4\" y=\"19.8\" width=\"240.2\" height=\"145.2\" rx=\"66.8\"/><circle cx=\"493.8\" cy=\"166.6\" r=\"11.0\"/><circle cx=\"493.8\" cy=\"168.9\" r=\"8.4\"/><circle cx=\"493.8\" cy=\"171.0\" r=\"5.8\"/></g><text x=\"493.5\" y=\"65.2\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">Swift as the</text><text x=\"493.5\" y=\"102.8\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">wind. Light as</text><text x=\"493.5\" y=\"140.4\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">the wind.</text></g><text class=\"sfx\" x=\"604.5\" y=\"496.4\" font-size=\"103.5\" text-anchor=\"middle\" transform=\"rotate(-8 604.5 461.2)\" fill=\"#ffd23f\" stroke=\"#1c1917\" stroke-width=\"8.9\" paint-order=\"stroke\" stroke-linejoin=\"round\">CLOMP CLOMP</text></svg>",
+   "sky_image": "backdrops/rooftop.webp",
+   "sky_zoom": 100
+  },
+  {
+   "file": "panels/06.webp",
+   "size": [
+    900,
+    1170
+   ],
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "alt": "Panel 6. ninja: \"Graceful.\". SCRAAAPE",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 1170\" role=\"group\" aria-label=\"lettering\"><g class=\"balloon think\" data-who=\"ninja\"><g fill=\"#1c1917\" stroke=\"#1c1917\" stroke-width=\"8.1\" stroke-linejoin=\"round\"><rect x=\"148.4\" y=\"341.2\" width=\"172.8\" height=\"70.0\" rx=\"32.2\"/><circle cx=\"239.6\" cy=\"421.2\" r=\"11.0\"/><circle cx=\"239.6\" cy=\"436.2\" r=\"8.4\"/><circle cx=\"239.6\" cy=\"449.9\" r=\"5.8\"/></g><g fill=\"#fffdf8\"><rect x=\"148.4\" y=\"341.2\" width=\"172.8\" height=\"70.0\" rx=\"32.2\"/><circle cx=\"239.6\" cy=\"421.2\" r=\"11.0\"/><circle cx=\"239.6\" cy=\"436.2\" r=\"8.4\"/><circle cx=\"239.6\" cy=\"449.9\" r=\"5.8\"/></g><text x=\"234.8\" y=\"386.6\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">Graceful.</text></g><text class=\"sfx\" x=\"675.3\" y=\"1108.4\" font-size=\"103.5\" text-anchor=\"middle\" transform=\"rotate(-8 675.3 1073.2)\" fill=\"#ffd23f\" stroke=\"#1c1917\" stroke-width=\"8.9\" paint-order=\"stroke\" stroke-linejoin=\"round\">SCRAAAPE</text></svg>",
+   "sky_image": "backdrops/rooftop.webp",
+   "sky_zoom": 100
+  },
+  {
+   "file": "panels/07.webp",
+   "size": [
+    900,
+    558
+   ],
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "alt": "Panel 7. ninja: \"Like a falling leaf.\". THUD!",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 558\" role=\"group\" aria-label=\"lettering\"><g class=\"balloon think\" data-who=\"ninja\"><g fill=\"#1c1917\" stroke=\"#1c1917\" stroke-width=\"8.1\" stroke-linejoin=\"round\"><rect x=\"437.7\" y=\"19.8\" width=\"201.8\" height=\"107.6\" rx=\"49.5\"/><circle cx=\"531.8\" cy=\"135.3\" r=\"11.0\"/><circle cx=\"531.8\" cy=\"147.1\" r=\"8.4\"/><circle cx=\"531.8\" cy=\"157.9\" r=\"5.8\"/></g><g fill=\"#fffdf8\"><rect x=\"437.7\" y=\"19.8\" width=\"201.8\" height=\"107.6\" rx=\"49.5\"/><circle cx=\"531.8\" cy=\"135.3\" r=\"11.0\"/><circle cx=\"531.8\" cy=\"147.1\" r=\"8.4\"/><circle cx=\"531.8\" cy=\"157.9\" r=\"5.8\"/></g><text x=\"538.6\" y=\"65.2\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">Like a</text><text x=\"538.6\" y=\"102.8\" font-size=\"32.4\" text-anchor=\"middle\" font-style=\"italic\">falling leaf.</text></g><text class=\"sfx\" x=\"750.3\" y=\"496.4\" font-size=\"103.5\" text-anchor=\"middle\" transform=\"rotate(-8 750.3 461.2)\" fill=\"#ffd23f\" stroke=\"#1c1917\" stroke-width=\"8.9\" paint-order=\"stroke\" stroke-linejoin=\"round\">THUD!</text></svg>",
+   "sky_image": "backdrops/rooftop.webp",
+   "sky_zoom": 100
+  },
+  {
+   "file": "panels/08.webp",
+   "size": [
+    900,
+    1170
+   ],
+   "sky": [
+    "#1b2a52",
+    "#6a5a8c"
+   ],
+   "alt": "Panel 8. Three streets away, every dog woke up.. ninja: \"UNSEEN! UNHEARD! UNSTOPPABLE!\"",
+   "svg": "<svg class=\"lettering\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 1170\" role=\"group\" aria-label=\"lettering\"><g class=\"caption\"><rect x=\"19.8\" y=\"19.8\" width=\"529.6\" height=\"56.5\" rx=\"7.3\" fill=\"#fff3c4\" stroke=\"#1c1917\" stroke-width=\"4.0\"/><text x=\"35.9\" y=\"54.0\" font-size=\"29.2\" font-style=\"italic\">Three streets away, every dog woke up.</text></g><g class=\"balloon shout\" data-who=\"ninja\"><g fill=\"#1c1917\" stroke=\"#1c1917\" stroke-width=\"12.1\" stroke-linejoin=\"round\"><rect x=\"244.8\" y=\"116.2\" width=\"301.6\" height=\"165.5\" rx=\"76.1\"/><polygon points=\"392.2,241.5 404.0,284.9 415.8,239.2\"/></g><g fill=\"#fffdf8\"><rect x=\"244.8\" y=\"116.2\" width=\"301.6\" height=\"165.5\" rx=\"76.1\"/><polygon points=\"392.2,241.5 404.0,284.9 415.8,239.2\"/></g><text x=\"395.6\" y=\"168.0\" font-size=\"36.9\" text-anchor=\"middle\">UNSEEN!</text><text x=\"395.6\" y=\"210.8\" font-size=\"36.9\" text-anchor=\"middle\">UNHEARD!</text><text x=\"395.6\" y=\"253.6\" font-size=\"36.9\" text-anchor=\"middle\">UNSTOPPABLE!</text></g></svg>",
+   "sky_image": "backdrops/rooftop.webp",
+   "sky_zoom": 100
+  }
+ ],
+ "png": "scroll.png",
+ "html": "page.html",
+ "draw_seconds": 2.18,
+ "problems": []
+}

@@ -1,6 +1,6 @@
 ---
 name: tidy-mesh
-description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and a run (the run profile), and for clothes that sit on the body, move with it and swing (drape, cloth, swing), and for a real body under clothes that hide it (a base body from a second picture, garments cut out of the clothed mesh: garment, follow).
+description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and a run (the run profile), and for clothes that sit on the body, move with it and swing (drape, cloth, swing), and for a real body under clothes that hide it (a base body from a second picture, garments cut out of the clothed mesh: garment, follow) Also for drawing a scene in the comic style (toon shading, ink outlines) and swapping a character's drawn expression (toon, face_swap).
 ---
 
 # tidy-mesh
@@ -1305,6 +1305,139 @@ What is still weak, most visible first:
 - **Low poly at 256 px** reads as a face now, no more: 0.1 to 0.2 of the
   picture's detail.
 
+## Comics: one drawing hand, frozen poses, swapped faces
+
+A comic panel is a rigged character frozen in a pose, drawn in one style,
+with the words laid over it as text. Two skill scripts do the drawing; the
+rest is in `scripts/comic/` and `baml_src/10_comic/`.
+
+    just comic "<premise>" strip "lincoln, roosevelt" ring     # Opus writes, Blender draws, code letters
+    just comic-again <name>                                    # after editing comics/<name>/comic.json
+    just comic-style out/ runs/<run>/profiles/midpoly-walk.glb # before and after, side by side
+
+**`toon.py`: the hand.** Run it on any scene with a camera.
+
+- **Paint.** Every material keeps whatever fed its Base Color and gets a
+  "comic paint" node after it: the color is brightened (a texture holds a
+  surface's own color, darker than it looks under lamps), its light-to-dark
+  is snapped to eight steps counted the way the eye does, and black is
+  lifted a little so the ink still shows on black cloth. Textures over 128
+  px are read from a smaller copy, which is what turns speckle into flat
+  shapes (a head keeps 256). Then one of three flat tones multiplies it,
+  picked by how far the surface faces a light that is given as the camera
+  sees it (upper left), so every panel is lit from the same side whatever
+  the camera does. No lamps, no shadows to flicker, nothing to sample: a
+  picture is a fraction of a second.
+- **Ink.** Inverted hull, not Freestyle. Each mesh gets a geometry-nodes
+  modifier that welds a copy of it, pushes it out along its normals, turns
+  it inside out and paints it black, so it shows as a line round the shape
+  and wherever one piece passes in front of another. The push grows with
+  each point's distance from the camera, so the line is the same width on
+  screen near and far; measured on the troll, 3 px at one distance and 3 px
+  from twice as far. Freestyle gives a cleaner line and catches creases,
+  but it runs after the render, on one core, and took seconds where the
+  hull adds nothing measurable; a comic is drawn by the dozen.
+- **It comes off.** `"undo": True` plugs the old shader back in and removes
+  the lines. The old nodes are never deleted.
+- Colors in PARAMS (`ink`, `background`) are as you see them on screen.
+  With `"background": None` the picture has no background, which is how
+  panels are drawn: the page puts a sky or a painted backdrop behind.
+
+**`face_swap.py`: the same body, another face.** A flat drawing of a face
+is projected onto the front of the head from an empty parented to the head
+bone, like a slide projector that turns with the head. It reaches about
+60% of the way back through the head and only onto points that follow the
+head bone, so the back of a hood and a hand held up in front are left
+alone. It fills the "drawn" input of toon.py's paint, so the face gets the
+same tones of light as everything else. Why a projection and not a texture
+swap or a flat overlay: the low-poly and mid-poly heads have different
+texture layouts and a projection needs neither; and an overlay pasted on
+the finished picture cannot turn with the head or go behind an arm.
+
+**Expression sheets** (`just expressions <who>`, one Codex image each):
+
+1. `face_fit.py head` draws the character's own head from the front in the
+   comic style (`comics/cast/<who>/head.png`).
+2. Codex is shown that and the run's head sheet, and asked for a grid of
+   eight of the same head, same size, same place: neutral, happy, angry,
+   surprised, sad, smug, talking, shouting. Showing it our picture is what
+   makes the drawing fit: it keeps our colors and the 3D head's shape.
+3. `face_fit.py cut` finds the head in each cell, lines it up with the 3D
+   head by its top and width, cuts the face area out with a soft edge, and
+   tones it to the head's own lit skin. A masked face (`"kind": "eyes"` in
+   `comics/cast.json`) is lined up by the strip of skin itself, on our head
+   and in the drawing, and only that strip is kept.
+4. `face_fit.py show` puts each face on the head, front and three-quarter
+   (`faces.png`). Look at it. If the face sits wrong, change `region` (or
+   `lighten`) in `comics/cast.json` and run `just expressions-fit <who>`,
+   which costs no image.
+
+**Poses.** `motion/comic_poses.json` holds thirteen, each a few bones
+turned away from the T-pose in the character's own axes, mirrored for the
+other side, so one pose fits every character with our bone names. After the
+turns the character is set down on its lowest point. `just comic-poses`
+pictures them all on one character. A pose can also be `clip@seconds`
+(any walk, run or shot clip the character has), or one of the named poses a
+shot was built from, such as `hero:land_three_point`: those are read off
+the shot's plan and stay where the shot had them, on the shot's own roof
+and wall.
+
+**Panels** (`scripts/comic/render_panels.py`, one Blender for a whole
+comic). Each character file is brought in once. Per panel: pose, stand at
+left, center or right of the place facing left, right, the camera or away
+(left and right are turned 28 degrees toward the reader so a face shows),
+put the face on, fit the camera to the framing with room at the top for
+balloons, draw. It writes where every head and body landed in the picture
+(`panels.json`), which is all the lettering needs.
+
+**Lettering** (`scripts/comic/lettering.py`, no Blender). For each balloon
+it tries spots on a grid and keeps the cheapest one that breaks no rule: no
+balloon over any face or another balloon; a tail that ends on the rim of
+its speaker's head, leaning toward the mouth, and crosses nobody else's
+face; a later balloon never above and left of an earlier one. If the words
+don't fit, the type shrinks up to three times, then the panel is reported
+as too wordy. Text is measured from the fonts' own letter widths
+(`font_widths.json`), so no browser is needed. Comic Neue for balloons,
+Bangers for sound effects, both from Google Fonts and kept in
+`gallery/vendor/fonts`.
+
+**Sets.** `scripts/comic/kit.py` is the only place that knows what a place
+is. `from_set_json` there turns a `sets/<name>/set.json` into marks, named
+cameras and backdrop files, and a set of the same name replaces a stand-in.
+A panel may name a mark in `at` and a camera in `camera`. The stand-ins
+(`STAND_INS`: the ring run's low-poly file, the hero shot's blocks, three
+flat colors) carry no marks or cameras on purpose: they are not a set
+format. Delete each one when its set exists.
+
+Measured (M-series Mac, EEVEE, 900 px panels): a panel takes 0.15 to 0.6 s
+once its characters are in; the first panel of a comic 0.4 to 1.4 s with
+loading. The 4-panel strip draws in 1.1 s, the 8-panel episode in 2.2 s.
+Lettering and the page take under a second, the .png another second or two
+(headless Chrome). An expression sheet is one Codex image, a backdrop one
+more. A script is one Opus call of about 6,500 characters in and 1,600 to
+2,200 tokens out.
+
+What is weak, worst first:
+
+- **The face is a flat picture.** Past about 60 degrees the far eye slides
+  round the cheek. It is painted over real glasses and a real mustache
+  (Roosevelt), which doubles them slightly. It is lined up by the head's
+  outline, not by where the eyes are, and the block-out heads are 6 to 11%
+  off the detailed ones.
+- **Poses are stiff.** Mitten hands, no fingers, no weight shift. Nothing
+  checks that two characters, or a hand and a body, are not inside each
+  other. Only a shot's own clip carries a prop (the ninja's sword).
+- **The paint keeps what the texture has**, baked shading and blotches
+  included; on the mid-poly characters knees and forearms come out patchy.
+  Shrinking the texture to flatten it also lets colors leak a little
+  across the seams of the texture.
+- **The hull line** breaks where a mesh has a hole or an inside-out face,
+  and it draws no crease lines inside a smooth piece.
+- **A two-shot with people far apart** is fitted to their width, so the
+  heads come out small.
+- **Opus picks only left, center and right.** Depth, and who is in front,
+  are not in the script.
+
 ## Parts: remesh the pieces a modeler would build separately
 
 TRELLIS.2 fuses touching parts into one surface: the kettle's lid, knob and
@@ -1356,6 +1489,8 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `drape.py` | lay each piece of clothing on the body (tight, loose or stiff), and mark the skin it hides | low poly (dressed characters), profiles, walk |
 | `cloth.py` | give clothes the body's weights; give loose cloth chains of bones to hang from | walk |
 | `swing.py` | after any baked motion: make the cloth bones hang and swing, clear of the legs, inside their limits | walk |
+| `toon.py` | draw the scene the comic way: flat tones, simplified colors, an ink line that stays the same width on screen | comics |
+| `face_swap.py` | put a drawn expression on the front of a rigged character's head; it turns with the head | comics |
 | `garment.py` | check a base body against the clothed character (pictures, then meshes), lay it on, and cut each hiding garment out by three votes | base body (background only) |
 | `follow.py` | move the base body and garments the way the finish moved the mesh | base body (background only) |
 

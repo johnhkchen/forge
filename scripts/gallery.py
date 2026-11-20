@@ -2,9 +2,9 @@
 
     python3 scripts/gallery.py [--port 8028] [--runs DIR]
 
-Read-only. Serves gallery/ (the page) and runs/ (the files), plus
-/api/runs, a list of runs built from the folders on each request, so a new
-run shows up on reload. Binds to all interfaces so a phone on the same Wi-Fi
+Read-only. Serves gallery/ (the page), runs/ and comics/ (the files), plus
+/api/runs and /api/comics, lists built from the folders on each request, so
+a new run or comic shows up on reload. Binds to all interfaces so a phone on the same Wi-Fi
 can open it; nothing here is meant for the internet.
 """
 import argparse
@@ -19,6 +19,7 @@ from urllib.parse import unquote, urlparse
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PAGE = os.path.join(ROOT, "gallery")
 RUNS = os.path.join(ROOT, "runs")
+COMICS = os.path.join(ROOT, "comics")
 PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 
 mimetypes.add_type("model/gltf-binary", ".glb")
@@ -150,6 +151,18 @@ def all_runs():
     return [run_summary(f) for f in sorted(folders, reverse=True)]
 
 
+def all_comics():
+    """Every lettered comic in comics/: what its reader.json holds (scripts/comic/layout.py writes it)."""
+    if not os.path.isdir(COMICS):
+        return []
+    found = []
+    for name in sorted(os.listdir(COMICS)):
+        reader = read_json(os.path.join(COMICS, name, "reader.json"))
+        if reader and reader.get("panels") and not name.startswith(("_", ".")):
+            found.append((os.path.getmtime(os.path.join(COMICS, name, "reader.json")), dict(reader, name=name)))
+    return [comic for _, comic in sorted(found, key=lambda pair: pair[0], reverse=True)]
+
+
 class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass  # quiet; the terminal shows the address and that's enough
@@ -183,6 +196,10 @@ class Handler(SimpleHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         if path == "/api/runs":
             return self.send_json(all_runs())
+        if path == "/api/comics":
+            return self.send_json(all_comics())
+        if path.startswith("/comics/"):
+            return self.send_file(COMICS, path[len("/comics/"):])
         if path.startswith("/runs/"):
             return self.send_file(RUNS, path[len("/runs/"):])
         if path in ("/", ""):
