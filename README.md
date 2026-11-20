@@ -54,6 +54,7 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just check` | compile and run the offline tests |
 | `just health` | is the RunPod endpoint up? |
 | `just tidy <run folder> <profile>…` | make sized versions: `hero`, `quads`, `web`, `game`, `mobile` |
+| `just gallery` | look at every object, raw vs cleaned-up, on this Mac or a phone on the same Wi-Fi |
 
 ## Profiles
 

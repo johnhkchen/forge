@@ -57,3 +57,16 @@ autoremesher:
     mnt=$(mktemp -d); hdiutil attach -nobrowse -readonly -mountpoint "$mnt" autoremesher-1.2.0.dmg >/dev/null
     rm -rf autoremesher.app; cp -R "$mnt/autoremesher.app" .; hdiutil detach "$mnt" >/dev/null
     ./autoremesher.app/Contents/MacOS/autoremesher --version
+
+# Vendor the b28 clay style kit into the gallery
+sync-kit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p gallery/vendor
+    curl -fsSL https://b28.dev/kit/b28-clay.css -o gallery/vendor/b28-clay.css
+    grep -q -- '--clay-' gallery/vendor/b28-clay.css || { echo "sync-kit: not the b28 clay kit" >&2; exit 1; }
+    echo "vendored gallery/vendor/b28-clay.css"
+
+# Serve the gallery to this Mac and phones on the same Wi-Fi
+gallery port="8028":
+    python3 scripts/gallery.py --port {{port}}

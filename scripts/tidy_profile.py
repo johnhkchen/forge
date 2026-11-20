@@ -133,6 +133,36 @@ def autoremesh(params):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def export_edges(path):
+    """The light mesh's real edges (quads included) as a lines-only GLB, so a
+    web viewer can draw the true topology. GLB meshes are always triangles."""
+    import bmesh
+    obj = largest_mesh()
+    lines = obj.copy()
+    lines.data = obj.data.copy()
+    lines.modifiers.clear()
+    lines.data.materials.clear()
+    for c in obj.users_collection:
+        c.objects.link(lines)
+    bm = bmesh.new()
+    bm.from_mesh(lines.data)
+    bmesh.ops.delete(bm, geom=list(bm.faces), context="FACES_ONLY")
+    bm.to_mesh(lines.data)
+    bm.free()
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    lines.select_set(True)
+    bpy.context.view_layer.objects.active = lines
+    obj.hide_set(True)
+    try:
+        bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True,
+                                  use_mesh_edges=True, export_materials="NONE",
+                                  export_normals=False, export_texcoords=False)
+    finally:
+        obj.hide_set(False)
+        bpy.data.objects.remove(lines, do_unlink=True)
+
+
 def make(source, out_dir, profile, spec):
     started = time.time()
     load(source)
@@ -145,6 +175,8 @@ def make(source, out_dir, profile, spec):
         record["shape"] = run_script("match.py", {})
     glb = os.path.join(out_dir, profile + ".glb")
     record["export"] = run_script("export.py", dict(spec["export"], path=glb))
+    if {"autoremesher", "retopo.py"} & set(light):
+        export_edges(os.path.join(out_dir, profile + "-edges.glb"))
     # GLB can only store triangles; the .blend keeps the real quads for
     # anyone who will keep modeling it.
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out_dir, profile + ".blend"), copy=True, compress=True)
@@ -170,5 +202,11 @@ unknown = [p for p in wanted if p not in profiles]
 if unknown:
     sys.exit("unknown profile(s) %s; choose from %s" % (unknown, sorted(profiles)))
 os.makedirs(out_dir, exist_ok=True)
+# The raw mesh as the scene placed it (real size, Claude's orientation), so a
+# before/after view lines up. Same TRELLIS.2 geometry as mesh.glb.
+raw = os.path.join(out_dir, "raw.glb")
+if not os.path.exists(raw):
+    load(source)
+    run_script("export.py", {"path": raw, "image_format": "WEBP", "draco": False})
 for profile in wanted:
     make(source, out_dir, profile, profiles[profile])
