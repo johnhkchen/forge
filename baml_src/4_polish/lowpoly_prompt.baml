@@ -7,6 +7,36 @@
 // Claude measures the detailed mesh (measure.py), describes the pieces as
 // data, and build.py makes them; the scripts are passed in as `tools`
 // (see tools.baml).
+//
+// A character also gets a face: left to itself Claude spends the triangles
+// on the outline and builds the head as a plain loft (the first troll's was
+// 54 triangles of 1,254, with no brow, eyes, nose or mouth). face.py finds
+// the features on the detailed head and prints a "head" piece for build.py.
+
+/// What a character needs on top of a prop: a pose that can be rigged, and
+/// a face that can be read.
+const CHARACTER_STEPS = `
+    It is a character in a T-pose, to be rigged later: keep the T-pose,
+    build it symmetric (model the +X half and set "mirror": True, if the
+    reference is centered on x = 0), and give elbows, knees, shoulders, hips
+    and the neck an extra ring so they can bend. Keep hands and feet as
+    simple blocks; no separate fingers.
+
+    The face is what people look at, so the head is never a plain loft:
+    - In step 2, measure a "head" box too, then run face.py with that box.
+      It prints the head as one piece and draws a line at each feature;
+      \`look\` (mode "angles", target ["Look: face"]) and correct any row
+      whose line misses its brow, eyes, nose, mouth or chin.
+    - In step 3, that "head" piece goes into build.py's "parts" with the
+      rest. Add the ears, tusks, hair or beard the description names, and
+      use its "color" as the skin color of the body pieces too. A hat,
+      helmet or horns are pieces of their own.
+    - In step 4, also \`look\` at the head alone (target ["Look: face"])
+      front-on and from the side, next to the reference and without it. At
+      the size the whole figure is seen, the brow, eyes, nose and mouth must
+      still read; if they don't, raise "bold" or darken the colors. Say in
+      your notes what reads on the face and what doesn't.
+`;
 
 class LowPolyPart {
     name: string @description("The part, like 'body' or 'spout'"),
@@ -49,7 +79,7 @@ function BlockOut(
         whatever isn't in a box):
         ${parts}
 
-        ${if (brief.character ?? false) { "It is a character in a T-pose, to be rigged later: keep the T-pose, build it symmetric (model the +X half and set \"mirror\": True, if the reference is centered on x = 0), and give elbows, knees, shoulders, hips and the neck an extra ring so they can bend. Keep hands and feet as simple blocks; no separate fingers." } else { "" }}
+        ${if (brief.character ?? false) { CHARACTER_STEPS } else { "" }}
         Style: ${brief.lowpoly_style ?? "early real-time game prop: clean simple shapes, smooth-shaded"}.
 
         1. Bring it in: open.py with "mesh": "${mesh}", "scene": "Low poly"

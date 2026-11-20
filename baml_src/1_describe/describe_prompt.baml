@@ -67,10 +67,14 @@ function Describe(idea: string) -> ObjectBrief {
         standing in a T-pose, arms straight out to the sides, legs slightly
         apart, empty hands, nothing loose (no capes, loose hair strands,
         dangling straps or held weapons). Clothing and gear fit close to the
-        body. Size is its standing height. List every piece of clothing,
-        armor and equipment in gear. Held props (a weapon, an umbrella, a
-        tool) go in gear only, never in the subject: the picture shows the
-        character with empty hands, and props are made separately.
+        body. Size is its standing height. Give it a face that still reads
+        when built from a handful of flat shapes: head level, looking
+        straight ahead, eyes not hidden by hair or a brim, and two or three
+        bold features named plainly (a heavy brow, a big nose, a beard,
+        tusks, pointed ears). List every piece of clothing, armor and
+        equipment in gear. Held props (a weapon, an umbrella, a tool) go in
+        gear only, never in the subject: the picture shows the character
+        with empty hands, and props are made separately.
 
         ${ctx.output_format()}
 

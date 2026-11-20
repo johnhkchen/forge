@@ -14,10 +14,33 @@ const TOOLS_DIR = ".claude/skills/tidy-mesh/scripts";
 // the same scripts are bundled inside Blender as bpy.ops.forge.run, so a
 // prompt carries only each tool's instructions and settings, not its code.
 const FORGE_STARTUP = "Library/Application Support/Blender/5.2/scripts/startup/forge_tools.py";
+const FORGE_BUNDLE = "Library/Application Support/Blender/5.2/scripts/startup/forge_tools";
 
+/// True when the add-on is installed and its bundled scripts are the ones
+/// in this repo. After a script is added or changed and before `just
+/// forge-addon` is run again, Blender still holds the old copies: a prompt
+/// that promised a new tool by name would get "no Forge tool named ...", so
+/// until then the prompts go back to carrying the whole scripts.
 function forge_installed() -> bool {
     let home = baml.sys.home_dir() ?? "";
-    home != "" && baml.fs.exists(`${home}/${FORGE_STARTUP}`)
+    home != ""
+        && baml.fs.exists(`${home}/${FORGE_STARTUP}`)
+        && bundle_current(`${home}/${FORGE_BUNDLE}`)
+}
+
+/// Does `bundle` hold an identical copy of every script in TOOLS_DIR?
+function bundle_current(bundle: string) -> bool {
+    let scripts: baml.fs.DirEntry[] = baml.fs.read_dir(TOOLS_DIR) catch (e) {
+        _ => []
+    };
+    scripts
+        .filter((entry) -> {
+            entry.name.ends_with(".py")
+        })
+        .every((entry) -> {
+            let copy = `${bundle}/${entry.name}`;
+            baml.fs.exists(copy) && baml.fs.read(copy) == baml.fs.read(`${TOOLS_DIR}/${entry.name}`)
+        })
 }
 
 /// How to call the tools through the Forge add-on.
@@ -45,7 +68,11 @@ const FORGE_RULES = `
 
 /// The rules for whichever way the tools are delivered.
 function tool_rules() -> string {
-    if (forge_installed()) { FORGE_RULES } else { TOOL_RULES }
+    if (forge_installed()) {
+        FORGE_RULES
+    } else {
+        TOOL_RULES
+    }
 }
 
 /// A tool's instructions and PARAMS block: everything before its imports.
@@ -94,6 +121,11 @@ function tools(names: string[]) -> string {
 test "a tool card stops before the imports" {
     let card = tool_card("# what it does\nPARAMS = {\"a\": 1}\n\nimport bpy\nprint(1)");
     assert.equal(card, "# what it does\nPARAMS = {\"a\": 1}")
+}
+
+test "a bundle missing a script, or holding an old copy, is not current" {
+    assert.is_true(bundle_current(TOOLS_DIR));
+    assert.is_true(!bundle_current("baml_src"))
 }
 
 test "tools pastes each script under its name" {

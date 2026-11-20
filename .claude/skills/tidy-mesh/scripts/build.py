@@ -14,6 +14,41 @@
 #   "lumps": [[x, y, z, radius], ...]  rough rocks, one per row
 #       ([x, y, z, rx, ry, rz] squashes one). "jitter": 0.2, "seed": 1.
 #   "box": {"min": [x, y, z], "max": [x, y, z]}
+#   "head": "-y"  a head with a face, looking that way ("-y", "+y", "-x",
+#       "+x"). Don't write this one by hand: face.py measures the
+#       reference's head and prints the whole piece, ready to paste. What it
+#       holds, so you can adjust it after looking:
+#       "scan"   the name face.py stored the head's surface under, in this
+#                scene. With it the head's points are laid on the reference
+#                (outline, skull, cheeks, jaw) and the features are cut into
+#                that. Without it you get a plain head from "rows" alone.
+#       "box"    the head's box. "rows": [height, front of the face there,
+#                half-width] for "chin", "mouth", "nose", "eyes", "brow",
+#                "top": the heights place the features; front and half-width
+#                only shape a head with no "scan"
+#       "kind"   "creature" (heavy brow, scowl, broad nose and mouth) or "human"
+#       "face"   sizes in meters, all optional: "eye_in" / "eye_out" (inner
+#                and outer eye corner, from the center line), "eye_tall",
+#                "eye_sunk", "nose_out", "nose_wide" and "mouth_wide" (half
+#                widths), "mouth_tall", "underbite" (lower lip ahead of the
+#                upper), "scowl" 0-1 (inner brow pulled down), "bold" 1.0
+#                (how far brow, nose and sockets stand out; 1.3 reads from
+#                farther away)
+#       "eyes"   "sunk" (a dark socket, the eye set back in it) or "flat"
+#                (one colored face per eye, 16 triangles fewer)
+#       "tusks"  {"at": from the center line, "z": where it starts, "long": ,
+#                "wide": , "front": how far forward the tip is, "from":
+#                "below" or "above"} and "ears": {"long": , "tall": , "up":
+#                0-1 (0 sticks out, 1 points up), "z": , "front": }; True
+#                takes the defaults
+#       "colors" {"skin", "socket", "eye", "mouth", "brow", "nose", "tusk",
+#                "ear", "hair", "beard"}: a flat color per region ("hair"
+#                covers the top and back, "beard" the jaw and upper lip).
+#                Unset ones are shades of the piece's "color".
+#       "back": False leaves the back open (a head sunk into the chest);
+#       "round": True adds a column around the back (a head seen from
+#       behind); "caps": False leaves the underside open. 150 to 240
+#       triangles, already mirrored across the face's center line.
 #
 # For lofts and tubes:
 #   "sides": 8            points around each ring (4 makes a square post)
@@ -160,8 +195,277 @@ def box(part):
     verts = [Vector((x, y, z)) for z in (lo[2], hi[2]) for y in (lo[1], hi[1]) for x in (lo[0], hi[0])]
     return verts, [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
 
+FACING = {"-y": (1, -1.0), "+y": (1, 1.0), "-x": (0, -1.0), "+x": (0, 1.0)}
+# What a face needs to read at this size, as shares of the head's height or of a row's half-width.
+KINDS = {
+    "creature": {"brow": 0.08, "scowl": 0.5, "nose_wide": 0.3, "mouth_wide": 0.62, "ear_long": 0.24, "ear_up": 0.6},
+    "human": {"brow": 0.03, "scowl": 0.0, "nose_wide": 0.16, "mouth_wide": 0.42, "ear_long": 0.1, "ear_up": 0.15},
+}
+
+def mix(a, b, t):
+    return a + (b - a) * t
+
+def tone(color, by):
+    return [min(1.0, c * by) for c in color[:3]]
+
+def facing_out(verts, faces):
+    """The faces, wound so they point away from the middle of the shape."""
+    middle = sum(verts, Vector()) / len(verts)
+    out = 0.0
+    for f in faces:
+        pts = [verts[i] for i in f]
+        normal = (pts[1] - pts[0]).cross(pts[2] - pts[0]) if len(pts) == 3 else (pts[2] - pts[0]).cross(pts[3] - pts[1])
+        out += normal.dot(sum(pts, Vector()) / len(pts) - middle)
+    return faces if out >= 0 else [tuple(reversed(f)) for f in faces]
+
+def spike(base, tip):
+    """An open cone from a ring of base points to a tip: an ear or a tusk."""
+    verts = list(base) + [tip]
+    return verts, [(i, (i + 1) % len(base), len(base)) for i in range(len(base))]
+
+def scan_row(zs, z):
+    """Which two stored rows `z` lies between, and how far along."""
+    r = 0
+    while r < len(zs) - 2 and zs[r + 1] < z:
+        r += 1
+    return r, min(1.0, max(0.0, (z - zs[r]) / (zs[r + 1] - zs[r])))
+
+def scan_at(scan, side, s, z):
+    """The measured surface ("front" or "back") at `s` from the center line and height `z`: how far
+    forward it is, or None where face.py saw nothing. Past the head's edge it gives the edge."""
+    r, t = scan_row(scan["zs"], z)
+    lanes = len(scan[side][0])
+    x = min(max(s / scan["half"] * lanes - 0.5, 0.0), lanes - 1.0)
+    found = []
+    for row in (scan[side][r], scan[side][r + 1]):
+        i = int(x)
+        while i > 0 and row[i] is None:
+            i -= 1
+        j = min(i + 1, lanes - 1)
+        found.append(row[i] if i < int(x) or row[i] is None or row[j] is None else mix(row[i], row[j], x - i))
+    if None in found:
+        return found[0] if found[1] is None else found[1]
+    return mix(found[0], found[1], t)
+
+def head(part):
+    """A head with a face, from where the features sit (see the notes at the top).
+    Built as a grid, rows going up and columns going from the middle of the face
+    around to the back of the skull; a feature is a few grid points pushed in or
+    out and a few cells painted. Returns points, faces and a color per face."""
+    a, sign = FACING[part["head"]]
+    u = 1 - a
+    lo, hi = part["box"]["min"], part["box"]["max"]
+    back = min(sign * lo[a], sign * hi[a])
+    given = part.get("rows", {})
+    order = ("chin", "mouth", "nose", "eyes", "brow", "top")
+    missing = [k for k in order if k not in given]
+    if missing:
+        raise ValueError("head %r: rows needs %s (face.py prints them all)" % (part.get("name"), ", ".join(missing)))
+    chin, mouth, nose, eyes, brow, top = [(given[k][0], sign * given[k][1], given[k][2]) for k in order]
+    if not chin[0] < mouth[0] < nose[0] < eyes[0] < brow[0] < top[0]:
+        raise ValueError("head %r: rows must climb: chin < mouth < nose < eyes < brow < top" % part.get("name"))
+    if min(r[1] for r in (chin, mouth, nose, eyes, brow, top)) <= back:
+        raise ValueError("head %r: the box must reach behind the face (its back is in front of a row)" % part.get("name"))
+    scan = None
+    if part.get("scan"):
+        stored = bpy.context.scene.get("face: " + part["scan"])
+        if not stored:
+            raise ValueError("head %r: this scene has no measured surface named %r: run face.py first, or drop \"scan\" for a plain head"
+                             % (part.get("name"), part["scan"]))
+        scan = json.loads(stored)
+    kind = KINDS[part.get("kind", "creature")]
+    face = part.get("face", {})
+    tall = max(hi[2], top[0]) - chin[0]
+    bold = face.get("bold", 1.0)
+    step = 0.015 * tall
+
+    # Sizes: the measured ones, but never so small the feature disappears.
+    eye_out = min(face.get("eye_out", 0.72 * eyes[2]), 0.8 * eyes[2])
+    eye_in = min(max(face.get("eye_in", 0.22 * eyes[2]), 0.12 * eyes[2]), eye_out - 0.3 * eyes[2])
+    eye_tall = min(max(face.get("eye_tall", 0), 0.14 * tall), 0.8 * (brow[0] - nose[0]))
+    eye_sunk = max(face.get("eye_sunk", 0), 0.035 * tall) * bold
+    nose_out = max(face.get("nose_out", 0), 0.07 * tall) * bold
+    nose_wide = min(max(face.get("nose_wide", kind["nose_wide"] * nose[2]), 0.1 * nose[2]), 0.45 * nose[2])
+    mouth_wide = min(max(face.get("mouth_wide", kind["mouth_wide"] * mouth[2]), 0.3 * mouth[2]), 0.75 * mouth[2])
+    mouth_tall = max(face.get("mouth_tall", 0), 0.045 * tall)
+    under = face.get("underbite", 0.0)
+    scowl = face.get("scowl", kind["scowl"])
+
+    # Rows, bottom to top: [height, front, half-width, first column, second column].
+    z_low, z_high = mouth[0] - mouth_tall / 2, mouth[0] + mouth_tall / 2
+    z_under = mix(z_high, nose[0], 0.55)
+    z_lid = eyes[0] - eye_tall / 2
+    z_edge = min(eyes[0] + eye_tall / 2, max(brow[0], eyes[0] + step))
+    z_ridge = mix(max(brow[0], z_edge), top[0], 0.4)
+    cheek = mix(nose[1], brow[1], min(1.0, max(0.0, (z_lid - nose[0]) / (brow[0] - nose[0]))))
+    ledge = max(brow[1], cheek + kind["brow"] * tall * bold)
+    k = 1 / eyes[2]
+    rings = [
+        [min(lo[2], chin[0] - 0.08 * tall), mix(back, chin[1], 0.55), 0.7 * chin[2], 0.3 * chin[2], 0.5 * chin[2]],
+        [chin[0], chin[1], chin[2], 0.45 * mouth_wide, 0.9 * mouth_wide],
+        [z_low, mouth[1] + under, mouth[2], 0.5 * mouth_wide, mouth_wide],
+        [z_high, mouth[1], mouth[2], 0.5 * mouth_wide, mouth_wide],
+        [z_under, nose[1], nose[2], nose_wide, max(eye_out * k * nose[2], nose_wide + 0.15 * nose[2])],
+        [z_lid, cheek, eyes[2], eye_in, eye_out],
+        [z_edge, ledge, mix(eyes[2], brow[2], 0.5), eye_in, eye_out],
+        [z_ridge, mix(ledge, top[1], 0.35), brow[2], eye_in * k * brow[2], eye_out * k * brow[2]],
+        [top[0], top[1], top[2], eye_in * k * top[2], eye_out * k * top[2]],
+    ]
+    for i in range(1, len(rings)):
+        rings[i][0] = max(rings[i][0], rings[i - 1][0] + step)
+        if scan:  # as wide as the reference is at that height
+            r, t = scan_row(scan["zs"], rings[i][0])
+            rings[i][2] = max(mix(scan["wide"][r], scan["wide"][r + 1], t), 0.25 * eyes[2])
+    grid = []  # grid[row][column] = Vector((sideways, forward, up))
+    for z, front, wide, s1, s2 in rings:
+        deep = front - back
+        s2 = min(max(s2, 0.3 * wide), 0.78 * wide)
+        s1 = min(s1, s2 - 0.12 * wide)
+        row = [Vector((0, front, z)), Vector((s1, front - 0.08 * deep * (s1 / wide) ** 2, z)),
+               Vector((s2, front - 0.08 * deep * (s2 / wide) ** 2, z)),
+               Vector((max(0.86 * wide, s2 + 0.06 * wide), front - 0.2 * deep, z)), Vector((wide, back + 0.45 * deep, z))]
+        if part.get("round"):
+            row.append(Vector((0.72 * wide, back + 0.1 * deep, z)))
+        if part.get("back", True):
+            row.append(Vector((0, back, z)))
+        if scan and grid:  # lay the ring on the reference: the face as seen from the front, the rest from behind
+            for c in range(4):
+                row[c].y = scan_at(scan, "front", row[c].x, z) or row[c].y
+            edge, behind = scan_at(scan, "front", wide, z), scan_at(scan, "back", wide, z)
+            if edge is not None:
+                row[4].y = edge if behind is None else (edge + behind) / 2
+            for c in range(5, len(row)):
+                if behind is None:  # sunk into the body here: the side runs straight back into it
+                    row[c].x = 0.95 * wide
+                row[c].y = scan_at(scan, "back", row[c].x, z) or row[c].y
+        grid.append(row)
+    if scan:  # under the jaw: the chin's ring, drawn in
+        inside = sum((p.y for p in grid[1]), 0.0) / len(grid[1])
+        grid[0] = [Vector((0.75 * p.x, mix(inside, p.y, 0.6), rings[0][0])) for p in grid[1]]
+    peak = max(hi[2], rings[-1][0] + 0.06 * tall)
+    if scan:
+        peak = max(min(peak, scan["zs"][-1]), rings[-1][0] + step)
+    crown = Vector((0, (grid[-1][0].y + (grid[-1][-1].y if part.get("back", True) else back)) / 2, peak))
+    grid.append([crown.copy() for _ in grid[0]])
+    tip = nose[1] + nose_out
+    if scan:  # the reference's own nose, or what reads, whichever sticks out more
+        tip = max(scan_at(scan, "front", 0, nose[0]) or tip, grid[5][1].y + nose_out)
+        for c in range(4):  # and its own brow, nudged out where it would not overhang the eyes at all
+            grid[6][c].y = max(grid[6][c].y, grid[5][max(c, 1)].y + 0.2 * kind["brow"] * tall * bold)
+    else:
+        grid[4][1].y += 0.3 * nose_out  # the nose's wings
+    grid[5][0] = Vector((0, tip, min(max(nose[0], rings[4][0] + step), rings[6][0] - step)))  # the tip of the nose
+    grid[6][0].z -= 0.45 * scowl * eye_tall
+    grid[6][1].z -= 0.3 * scowl * eye_tall
+    grid[6][2].z = min(grid[6][2].z + 0.15 * scowl * eye_tall, mix(rings[6][0], rings[7][0], 0.5))
+    for c in range(2, len(grid[0])):  # past its corner the mouth is one line
+        grid[2][c] = grid[3][c] = (grid[2][c] + grid[3][c]) / 2
+
+    paint = part.get("colors", {})
+    skin = list(paint.get("skin", part.get("color", (0.6, 0.6, 0.6))))[:3]
+    hair = paint.get("hair")
+    socket, pupil = paint.get("socket", tone(skin, 0.4)), paint.get("eye", (0.04, 0.03, 0.03))
+    verts, faces, shades = [], [], []
+    width = len(grid[0])
+    for r in range(len(grid) - 1):
+        for c in range(width - 1):
+            cell = [grid[r][c], grid[r][c + 1], grid[r + 1][c + 1], grid[r + 1][c]]
+            color = hair if hair and (r >= 7 or (r >= 5 and c >= 4)) else skin
+            if "beard" in paint and (r < 2 or (r == 3 and c < 2)) and c < 4:  # jaw, chin and upper lip
+                color = paint["beard"]
+            n = len(verts)
+            if c == 0 and r in (4, 5):  # the nose: under and side below the tip, bridge above it
+                verts += cell
+                faces += [(n, n + 1, n + 3), (n + 1, n + 2, n + 3)] if r == 4 else [(n, n + 1, n + 2), (n, n + 2, n + 3)]
+                shades += [paint.get("nose", tone(skin, 0.72)) if r == 4 else skin, skin]
+            elif c == 1 and r == 5 and part.get("eyes", "sunk") == "sunk":  # a socket: four dark sides down to the eye
+                middle = sum(cell, Vector()) / 4
+                deep = max(eye_sunk, min(middle.y - eyes[1], 0.12 * tall))
+                inner = [middle + (p - middle) * 0.6 - Vector((0, deep, 0)) for p in cell]
+                verts += cell + inner
+                faces += [(n + i, n + (i + 1) % 4, n + 4 + (i + 1) % 4, n + 4 + i) for i in range(4)] + [(n + 4, n + 5, n + 6, n + 7)]
+                shades += [socket] * 4 + [pupil]
+            else:
+                if c == 1 and r == 5:
+                    color = paint.get("eye", (0.04, 0.03, 0.03))
+                elif r == 2 and c < 2:
+                    color = paint.get("mouth", tone(skin, 0.35))
+                elif r == 6 and c < 3:
+                    color = paint.get("brow", tone(skin, 0.8))
+                verts += cell
+                faces.append((n, n + 1, n + 2, n + 3))
+                shades.append(color)
+    if part.get("caps", True):  # under the jaw
+        n = len(verts)
+        verts += list(reversed(grid[0]))
+        faces.append(tuple(range(n, n + width)))
+        shades.append(skin)
+    twin = len(verts)  # the other half of the face
+    verts += [Vector((-p.x, p.y, p.z)) for p in verts]
+    faces += [tuple(reversed([twin + i for i in f])) for f in faces]
+    shades += shades
+    faces = facing_out(verts, faces)
+
+    extra = []  # ears and tusks: [(base points, tip, color)]
+    ears = part.get("ears")
+    if ears:
+        ears = ears if isinstance(ears, dict) else {}
+        size, up = ears.get("long", kind["ear_long"] * tall), ears.get("up", kind["ear_up"])
+        at = Vector((0.9 * rings[5][2], cheek - min(0.6 * (cheek - back), 0.65 * eyes[2]), ears.get("z", eyes[0])))
+        if "front" in ears:
+            at.y = sign * ears["front"]
+        half = ears.get("tall", 0.18 * tall) / 2
+        base = [at + Vector((0, half, 0)), at + Vector((0, 0, half)), at + Vector((0, -half, 0)), at + Vector((0, 0, -half))]
+        tip = at + Vector((0.1 * eyes[2] + size * (1 - 0.6 * up), -0.35 * size, 0.9 * size * up))
+        extra.append((base, tip, paint.get("ear", tone(skin, 0.9))))
+    tusks = part.get("tusks")
+    if tusks:
+        tusks = tusks if isinstance(tusks, dict) else {}
+        size, r = tusks.get("long", 0.2 * tall), tusks.get("wide", 0.035 * tall)
+        below = tusks.get("from", "below") == "below"
+        at = Vector((min(tusks.get("at", 0.8 * mouth_wide), mouth[2] - r), mouth[1] + (under if below else 0.0) - 0.5 * r,
+                     tusks.get("z", mouth[0] - (0.25 * size if below else -0.25 * size))))
+        base = [at + Vector((r, 0, 0)), at + Vector((0, r, 0)), at + Vector((-r, 0, 0)), at + Vector((0, -r, 0))]
+        tip = at + Vector((0.3 * r, 0.25 * size, size if below else -size))
+        if "front" in tusks:  # as far forward as the reference's
+            tip.y = sign * tusks["front"]
+            at.y = max(at.y, tip.y - 0.5 * size)
+            base = [at + Vector((r, 0, 0)), at + Vector((0, r, 0)), at + Vector((-r, 0, 0)), at + Vector((0, -r, 0))]
+        extra.append((base, tip, paint.get("tusk", (0.88, 0.84, 0.68))))
+    for base, tip, color in extra:
+        for flip in (1, -1):
+            points, sides = spike([Vector((flip * p.x, p.y, p.z)) for p in base], Vector((flip * tip.x, tip.y, tip.z)))
+            n = len(verts)
+            verts += points
+            faces += [tuple(n + i for i in f) for f in facing_out(points, sides)]
+            shades += [color] * len(sides)
+
+    # Weld the grid's shared points, drop cells that closed up, and stand it in the world.
+    middle = (lo[u] + hi[u]) / 2
+    index, placed, kept, colors = {}, [], [], []
+    for f, color in zip(faces, shades):
+        ring = []
+        for i in f:
+            key = tuple(round(v, 6) for v in verts[i])
+            if key not in index:
+                index[key] = len(placed)
+                p = [0.0, 0.0, verts[i].z]
+                p[u], p[a] = middle + verts[i].x, sign * verts[i].y
+                placed.append(Vector(p))
+            if index[key] not in ring:
+                ring.append(index[key])
+        if len(ring) > 2:
+            kept.append(tuple(ring))
+            colors.append(color)
+    if (u, sign) in ((0, -1.0), (1, 1.0)):  # these two ways of facing mirror the shape, which turns every face inside out
+        kept = [tuple(reversed(f)) for f in kept]
+    return placed, kept, colors
+
 def make_piece(part, owner, scene):
-    if "loft" in part:
+    shades = None
+    if "head" in part:
+        verts, faces, shades = head(part)
+    elif "loft" in part:
         verts, faces = skin(loft_rings(part), part.get("caps", [True, True]), part.get("closed", False))
     elif "tube" in part:
         verts, faces = skin(tube_rings(part), part.get("caps", [True, True]), part.get("closed", False))
@@ -170,13 +474,19 @@ def make_piece(part, owner, scene):
     elif "box" in part:
         verts, faces = box(part)
     else:
-        raise ValueError("piece %r needs a loft, tube, lumps or box" % part.get("name"))
-    if part.get("mirror") and "lumps" not in part:
+        raise ValueError("piece %r needs a loft, tube, lumps, box or head" % part.get("name"))
+    if part.get("mirror") and "lumps" not in part and "head" not in part:
         count = len(verts)
         verts = verts + [Vector((-p.x, p.y, p.z)) for p in verts]
         faces = faces + [tuple(reversed([count + i for i in f])) for f in faces]
     me = bpy.data.meshes.new("piece: " + part["name"])
     me.from_pydata([tuple(p) for p in verts], [], faces)
+    paint = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    flat = tuple(part.get("color", (0.6, 0.6, 0.6)))[:3] + (1.0,)
+    for i, poly in enumerate(me.polygons):
+        shade = tuple(shades[i])[:3] + (1.0,) if shades else flat
+        for corner in poly.loop_indices:
+            paint.data[corner].color = shade
     bm = bmesh.new()
     bm.from_mesh(me)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)  # a ring of radius 0 becomes a point
@@ -184,10 +494,6 @@ def make_piece(part, owner, scene):
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(me)
     bm.free()
-    paint = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
-    shade = tuple(part.get("color", (0.6, 0.6, 0.6)))[:3] + (1.0,)
-    for d in paint.data:
-        d.color = shade
     piece = bpy.data.objects.new("piece: " + part["name"], me)
     piece["piece_of"] = owner
     piece["piece"] = part["name"]

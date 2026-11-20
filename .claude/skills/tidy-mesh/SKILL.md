@@ -75,7 +75,10 @@ a tool is one line:
 It runs only the bundled scripts, by name, with data-only settings. The
 pipeline prompts switch automatically (`baml_src/4_polish/tools.baml`):
 with the add-on installed they carry each tool's instructions and PARAMS
-(about a quarter of the text), otherwise the whole scripts.
+(about a quarter of the text), otherwise the whole scripts. If a script
+here has changed since the add-on was installed, Blender still holds the
+old copy, so the prompts go back to whole scripts until `just forge-addon`
+is run again.
 `just forge-addon-remove` uninstalls it.
 
 ## Low poly: built, not reduced
@@ -96,6 +99,100 @@ If the brief's `lowpoly_style` asks for flat colors (old-school RuneScape
 and the like), the profile keeps Claude's per-part vertex colors and faceted
 shading instead and bakes nothing: the troll is 15 KB with no textures. A
 baked texture turns muddy at a few hundred triangles.
+
+## Faces: a character's head is measured, not guessed
+
+Left to itself, Claude spends a low-poly character's triangles on the
+outline and builds the head as one more loft. The first troll's head was 54
+triangles of 1,254: no brow, eyes, nose or mouth, only tusks, and from the
+front it read as a notch in the chest. On a character the face is what
+people look at, and old RuneScape models show how little it takes: a brow
+that overhangs, dark eye sockets, a wedge of a nose, a mouth line, and flat
+colors doing the rest.
+
+So step 4c gives a character two extra things (`CHARACTER_STEPS` in
+`baml_src/4_polish/lowpoly_prompt.baml`): a stated share of the triangles
+for the head and face (15-25%), and `face.py`.
+
+- **`face.py` finds the face.** Give it the head's box and which way the
+  face looks. It looks at the head front-on, 44 rows by 12 lanes a side,
+  and reads how far forward the surface is and how dark the texture is.
+  Eyes and mouth are the dark bands; brow, nose and chin are where the
+  profile sticks out; tusks are a lane that juts out beside the mouth. It
+  prints a whole `"head"` piece: six rows of `[height, front of the face,
+  half-width]` (chin, mouth, nose, eyes, brow, top), eye and mouth sizes,
+  the underbite, tusks, ears, and skin, socket, beard and hair colors.
+  `"found"` says whether each came from the texture, the shape, or a guess.
+- **It keeps the head's surface.** The same look, plus one from behind,
+  is stored in the scene under the piece's name: how far forward the front
+  is, how far back the back is, and how wide the head is, row by row. The
+  piece's `"scan"` points at it.
+- **It shows its work.** It draws a wire box with a line at each feature's
+  height, `Look: face`. Aim `look` at it: a line that misses its feature
+  means that row's height needs setting by hand.
+- **`build.py` lays the head on that surface, then cuts the face into it.**
+  The `"head"` piece goes into `"parts"` like any loft. Its ten rings sit at
+  the feature heights; each ring's points are put on the stored surface, so
+  the outline, the skull, the cheeks and the jaw are the reference's. Where
+  the head is sunk into the body, its sides run straight back into it.
+  Then the features: sockets set in and painted dark, the nose's tip, the
+  mouth band, tusks and ears where face.py found them. Brow and nose are
+  only pushed out when the reference's own wouldn't read. 150 to 240
+  triangles, mirrored across the face's center line (the two halves of the
+  reference are averaged). Without `"scan"` it builds a plain head from the
+  rows alone, which has the features at the right heights on a box-like
+  shape.
+- **Check it up close.** `preview.py` with `"view": "front"` or `"side"`
+  and a `"box"` renders a close-up straight on, and `"over"` draws a second
+  object on top as wire. `match.py` with a `"box"` scores that spot alone,
+  and compares outlines and surfaces there: how much of the two shadows is
+  shared, how far apart their edges are, and how far apart the surfaces are
+  toward the viewer.
+
+How well it follows the reference, head alone, front / side (`just
+test-tools`, which also leaves the pictures):
+
+| Troll's head | Triangles | Outline shared | Edges off | Surface off | Reference strays, head box |
+|---|---|---|---|---|---|
+| hand-built loft | 54 + 16 | 80% / 30% | 4.7 / 11.6 cm | 14.4 / 10.9 cm | 2.77% / 3.45% |
+| plain (rows alone) | 188 | 83% / 89% | 3.1 / 1.2 cm | 3.5 / 5.3 cm | 1.75% / 3.23% |
+| laid on the surface | 196 | 91% / 90% | 1.6 / 1.2 cm | 2.2 / 1.5 cm | 1.11% / 1.71% |
+
+The pirate (a person, with a beard, an eye patch, a hat and a white
+collar): 188 triangles; surface off 1.5 / 2.1 cm against 2.7 / 2.5 for the
+plain head; side outline 91% shared against 82%. A loose box that takes in
+the troll's chest and shoulders finds the same features within 2 cm.
+
+What still doesn't follow the reference:
+
+- **Between the rings.** Ten rings and five to seven points a side: warts,
+  lips, nostrils and the curve between two rings are gone. The eye sockets
+  are deliberately deeper than the reference's.
+- **The top of the skull** is one point above the last ring, a low pyramid
+  where the reference is a dome.
+- **Whatever else is in the box.** The pirate's collar sits beside his
+  beard, so the jaw's ring is as wide as the collar. Stop the box above it.
+- **Tusks and ears are simple spikes** at the measured place and length,
+  not the reference's curved ones.
+
+Where it goes wrong, and what to do:
+
+- **A hat or helmet.** Seen from the front, a brim hides the forehead and
+  is as dark as the eyes. Stop the box at the brim; the hat is its own piece.
+- **Hair or a beard over the face, an eye patch.** The dark bands are no
+  longer the eyes and mouth. `"found"` will say `"shape"` or `"guess"`;
+  look at the guide lines and set the rows by hand.
+- **No texture, or eyes no darker than the skin.** It goes by shape alone:
+  the nose, chin and tusks are still found, the eyes are placed in the
+  hollow above the nose or, failing that, where eyes usually sit: a guess
+  on a smooth head, so check the guide lines.
+- **A head turned or tipped.** It expects a level head looking straight
+  along one axis, which is how the pipeline draws characters.
+- **Ears hidden by hair, and horns.** Ears are found when they stand out
+  beside the head at eye height; otherwise add `"ears": True` (or sizes)
+  when the description names them. Horns are separate pieces (a tube each).
+- **Colors come from the texture, baked shadows and all.** Use the head's
+  `"color"` for the body's skin too, or the head will not match it.
 
 ## Parts: remesh the pieces a modeler would build separately
 
@@ -139,7 +236,8 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `export.py` | write one object as a GLB and read the file back to prove nothing else came along | finish, low poly |
 | `measure.py` | size a part without its neighbors, and slice it into rows of middle and half-width | parts, low poly |
 | `split.py` | paint or cut the parts from boxes: several boxes per part, tilted boxes, parts that wrap around | parts |
-| `build.py` | block out a low-poly version from a list of lofts, tubes, lumps and boxes; join, color and check it | low poly |
+| `face.py` | find the brow, eyes, nose, mouth and chin on a character's head and print it as a `"head"` piece for `build.py` | low poly (characters) |
+| `build.py` | block out a low-poly version from a list of lofts, tubes, lumps, boxes and a head; join, color and check it | low poly |
 
 How they fit together:
 
@@ -228,11 +326,11 @@ so they pass the add-on's safe mode (`just check-safe`).
 | `inspect.py` | measures everything below, changes nothing | instant |
 | `clean.py` | welds seams, deletes specks and loose bits, closes small holes, fixes normals, smooth shading with sharp edges | ~2 s |
 | `decimate.py` | shape-aware reduction to a triangle budget, keeping UVs; `as_copy` + `quadify` make a light "(light)" copy to bake onto | a few s |
-| `match.py` | how far a light mesh strays from the full one, and where (both directions, % of size) | ~2 s |
+| `match.py` | how far a light mesh strays from the full one, and where (both directions, % of size); `"box"` scores one spot alone | ~2 s |
 | `retopo.py` | rebuilds each part as quads with QuadriFlow, on the part's own repaired surface when it can (voxel remesh only as a fallback for big parts), shrinkwrapped back onto the original; `routes` says which way each part went | 5–30 s, freezes Blender |
 | `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one | 5–60 s, freezes Blender |
 | `export.py` | writes one object as GLB (WebP, Draco optional), from the open scene only, and reads it back to check | ~1 s |
-| `preview.py` | renders a quick three-quarter PNG, optionally with wireframe | ~2 s |
+| `preview.py` | renders a quick three-quarter PNG, optionally with wireframe; `"view"` and `"box"` make a straight-on close-up | ~2 s |
 | `split.py` | splits an object into named parts from boxes ("color" mode just paints them, to check the boxes) | ~1 s |
 | `lineup.py` | shows a run's raw mesh and its profiles side by side in a new "Profiles" scene, labelled, wireframe on | ~2 s |
 
@@ -291,8 +389,12 @@ as over MCP. Re-run the five profiles on the kettle run and compare previews
 before calling a change done.
 
 `just test-tools` (`scripts/test_tools.py`) tries the bench tools on the
-cave-troll and iron-kettle runs the same way, about 20 seconds: the troll's
+cave-troll and iron-kettle runs the same way, about a minute: the troll's
 import and cleanup, its part sizes against `parts.json`, both block-outs
 rebuilt, each exported file opened to count what is in it, old part plans
-cut exactly as before. `just check-safe` checks every script against safe
+cut exactly as before, and the troll's face measured and rebuilt next to
+its old head (and the pirate's, if that run is there). With `--keep DIR`
+the face cases leave `troll-head-compared.png` and
+`pirate-head-compared.png`: front and side of the reference, each head, and
+the fitted head as wire over the reference. `just check-safe` checks every script against safe
 mode.
