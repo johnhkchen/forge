@@ -176,7 +176,7 @@ def autoremesh(params):
             # Cut the parts Claude found (split.py), then treat every piece
             # (cut parts and already-separate ones) as its own remesh.
             cut = run_script("split.py", {"object": source.name, "mode": "split",
-                                          "parts": [{"name": p["name"], "box": {"min": p["min"], "max": p["max"]}}
+                                          "parts": [{"name": p["name"], "min": p["min"], "max": p["max"], "turn": p.get("turn"), "wraps": p.get("wraps")}
                                                     for p in plan["parts"]]})
             pieces = [o for o in bpy.data.objects if o.type == "MESH" and o.name.startswith(source.name + " · ")]
             for o in bpy.context.selected_objects:

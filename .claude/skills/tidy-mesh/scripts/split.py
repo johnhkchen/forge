@@ -8,6 +8,15 @@
 # small parts inside bigger ones first (knob before lid). Faces in no box
 # belong to the body.
 #
+# For a part a straight box can't follow:
+#   - give several boxes the same name and they make one part (a belt that
+#     climbs from front to back can be "belt" three times);
+#   - add "turn": [x, y, z] (degrees, about the box's own center) to tilt a
+#     box along a sloped strap or a leaning handle.
+#   - add "wraps": True to a part that goes all the way around the body (a
+#     belt, a wrist band), so the body beyond it (legs, a hand) stays body
+#     instead of being handed to the part as a leftover.
+#
 # mode "color": paints each part a distinct color, changes nothing else. Use
 #               it with `look` to check the boxes.
 # mode "split": separates each part into its own object named
@@ -19,7 +28,7 @@
 
 PARAMS = {
     "object": None,   # None = the largest visible mesh
-    "parts": [],      # [{"name": "knob", "box": {"min": [x, y, z], "max": [x, y, z]}}, ...]
+    "parts": [],      # [{"name": "knob", "min": [x, y, z], "max": [x, y, z]}, ...]; optional "turn": [x, y, z], "wraps": True
     "mode": "color",  # "color" or "split"
     "body": "body",   # name for faces in no box
 }
@@ -28,7 +37,8 @@ import bpy
 import bmesh
 import colorsys
 import json
-from mathutils import Vector
+import math
+from mathutils import Euler, Vector
 
 
 
@@ -47,18 +57,31 @@ def pick_object(name):
     return max(meshes, key=face_count)
 
 
+def as_box(part):
+    """(low, high, turn-back matrix or None, center) of a part's box. The
+    box is {"min", "max"} on the part itself or under "box"."""
+    box = part.get("box", part)
+    low, high = Vector(box["min"]), Vector(box["max"])
+    turn = part.get("turn") or box.get("turn")
+    back = Euler([math.radians(a) for a in turn]).to_matrix().inverted() if turn and any(turn) else None
+    return low, high, back, (low + high) / 2
+
+
 def inside(p, box):
-    lo, hi = box["min"], box["max"]
-    return all(lo[i] <= p[i] <= hi[i] for i in range(3))
+    low, high, back, center = box
+    if back:
+        p = back @ (p - center) + center
+    return low[0] <= p[0] <= high[0] and low[1] <= p[1] <= high[1] and low[2] <= p[2] <= high[2]
 
 
-def assign(obj, parts, body):
-    """Part index per face (len(parts) = body), by face center in world space."""
+def assign(obj, boxes, body):
+    """Part index per face (`body` = in no box), by face center in world
+    space. `boxes` is [(part index, box)], in the order given."""
     m = obj.matrix_world
     out = []
     for poly in obj.data.polygons:
         c = m @ poly.center
-        out.append(next((i for i, p in enumerate(parts) if inside(c, p["box"])), len(parts)))
+        out.append(next((k for k, box in boxes if inside(c, box)), body))
     return out
 
 
@@ -83,12 +106,15 @@ def neighbors(obj):
     return near
 
 
-def tidy_owners(owner, near, body):
+def tidy_owners(owner, near, body, twins, wraps):
     """Box cuts through a fused surface leave scraps: a bit of body caught in
     a bracket's box, a ring of body inside the lid's box. Keep each part's
     largest connected region; give every other region of it to the
     neighboring part it shares the most border with. Regions that touch
-    nothing (a separate pin) stay where they are."""
+    nothing (a separate pin) stay where they are. So does the body beyond a
+    part marked "wraps" (a belt cuts the legs off the torso; they are still
+    body), and a part's twin from a second box (`twins`: parts made of
+    several boxes; a region at least half the size of the part's largest)."""
     for _ in range(3):
         seen = [False] * len(owner)
         regions = []
@@ -114,6 +140,8 @@ def tidy_owners(owner, near, body):
         for k, region in regions:
             if region is largest[k]:
                 continue
+            if k in twins and 2 * len(region) >= len(largest[k]):
+                continue
             border = {}
             members = set(region)
             for f in region:
@@ -123,6 +151,8 @@ def tidy_owners(owner, near, body):
             if not border:
                 continue
             into = max(border.items(), key=second)[0]
+            if k == body and into in wraps:
+                continue
             for f in region:
                 owner[f] = into
             moved += 1
@@ -138,10 +168,16 @@ def second(pair):
 obj = pick_object(PARAMS["object"])
 parts = PARAMS["parts"]
 for p in parts:
-    if not p.get("name") or "box" not in p or len(p["box"]["min"]) != 3 or len(p["box"]["max"]) != 3:
+    box = p.get("box", p)
+    if not p.get("name") or len(box.get("min", ())) != 3 or len(box.get("max", ())) != 3:
         raise ValueError("each part needs a name and a box with 3-number min and max: %r" % p)
-names = [p["name"] for p in parts] + [PARAMS["body"]]
-owner = tidy_owners(assign(obj, parts, PARAMS["body"]), neighbors(obj), len(parts))
+names = list(dict.fromkeys(p["name"] for p in parts))  # boxes that share a name are one part
+boxes = [(names.index(p["name"]), as_box(p)) for p in parts]
+body = len(names)
+names.append(PARAMS["body"])
+twins = {k for k, _ in boxes if sum(1 for j, _ in boxes if j == k) > 1}
+wraps = {names.index(p["name"]) for p in parts if p.get("wraps")}
+owner = tidy_owners(assign(obj, boxes, body), neighbors(obj), body, twins, wraps)
 
 areas = [0.0] * len(names)
 counts = [0] * len(names)

@@ -22,6 +22,14 @@ check:
     baml check
     baml test
 
+# Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
+check-safe *files:
+    python3 scripts/check_safe.py {{files}}
+
+# Try the Blender tools on real runs, in a background Blender (about 20 s; leaves the open Blender alone)
+test-tools runs="runs":
+    python3 scripts/test_tools.py "{{runs}}"
+
 # Open Blender (the MCP add-on starts its server on launch)
 blender:
     open -a Blender

@@ -4,7 +4,9 @@ without a live Blender session or MCP.
     blender -b --factory-startup -P scripts/tidy_headless.py -- MESH.glb|SCENE.blend SCRIPT.py [SCRIPT.py ...] [--params '{"script.py": {...}}'] [--save OUT.blend]
 
 Each script's PARAMS dict is updated from --params before it runs, the same
-edit Claude makes before sending a script over MCP.
+edit Claude makes before sending a script over MCP. Every script runs in a
+fresh namespace, as every MCP call does. To run one script twice with
+different PARAMS, list it twice and key the second one "script.py#2".
 """
 import json
 import os
@@ -31,11 +33,15 @@ else:
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(mesh))
 
+seen = {}
 for path in scripts:
     with open(path) as f:
         source = f.read()
     namespace = {"__name__": "__main__"}
     name = os.path.basename(path)
+    seen[name] = seen.get(name, 0) + 1
+    if seen[name] > 1:
+        name = "%s#%d" % (name, seen[name])
     if name in overrides:
         # Run the PARAMS block first, patch it, then run the rest.
         head, _, tail = source.partition("\nimport ")

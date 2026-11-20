@@ -67,10 +67,10 @@ Below ~1,000 triangles every reduction method fails on a real object (on the
 kettle: shape-aware reduction crumples it, AutoRemesher drops the handle and
 spout). Early real-time artists didn't reduce, they blocked models out from
 simple shapes and painted the shading into one small texture. So does this
-tier: pipeline step 4c (`BlockOut`, `baml_src/4_polish`) has Claude build the
-object in a "Low poly" scene from 6-12-sided cylinders, cones and boxes sized
-to each part in `parts.json`, check it with `look` and `match.py`, and export
-`runs/<run>/lowpoly.glb`. The `lowpoly` profile brings it in (`blockout`
+tier: pipeline step 4c (`BlockOut`, `baml_src/4_polish`) has Claude measure
+each part (`measure.py`), build the object in a "Low poly" scene from lofts
+of 6-12 sides, tubes, lumps and boxes (`build.py`, which also checks the
+shape), look at it, and export `runs/<run>/lowpoly.glb` (`export.py`). The `lowpoly` profile brings it in (`blockout`
 step) and bakes the detailed mesh's color with its ambient occlusion
 multiplied in (`bake.py` `"ao": true`) into one 256 px texture: no normal,
 metal or roughness maps. Without `lowpoly.glb` the profile is skipped.
@@ -84,7 +84,8 @@ where a part ends (we tried cutting along creases: TRELLIS blends the joins
 too softly), so someone who knows what the object is has to say.
 
 That's Claude, in pipeline step 4b (`FindParts`, in `baml_src/4_polish`): in
-a "Parts" scene of the live Blender it places one axis-aligned box per part,
+a "Parts" scene of the live Blender it places one box per part (or a few
+with the same name, or a tilted one, where a straight box can't follow it),
 checks them with `split.py` in "color" mode and `look`, and saves the boxes
 as `runs/<run>/parts.json`. The profile runner then cuts with `split.py`
 ("split" mode: each part becomes its own piece, its cut opening capped
@@ -94,7 +95,79 @@ to one remesh; `just resume` asks Claude again.
 
 To do it by hand in the live Blender: run `split.py` in "color" mode with
 your boxes, `look`, adjust, then write the boxes to `parts.json`
-(`{"parts": [{"name", "why", "min", "max"}], "notes"}`).
+(`{"parts": [{"name", "why", "min", "max"}], "notes"}`; a part may add
+`"turn": [x, y, z]` degrees to tilt its box and `"wraps": true` if it goes
+all the way around, like a belt, so the legs below it stay body).
+
+## The bench: tools for the three Blender steps
+
+In pipeline steps 4, 4b and 4c Claude used to write the same Blender code
+again in every run, and about one call in seven failed on the way (17 of
+117 in the cave-troll run, 13 of them refused by safe mode). These scripts
+are that work, done once. Each step's prompt carries the ones it uses
+(`baml_src/4_polish/tools.baml`).
+
+| Script | Use it to | Step |
+|---|---|---|
+| `open.py` | bring a .glb in as one named object, in a scene of its own, and print its size | all three |
+| `stand.py` | turn it to face front, scale it to its real size, rest it on the floor, weld it, shade it smooth | finish |
+| `retouch.py` | change metal, sheen, color or grain all over or in one area (a place, a color range, or both); say what the texture is like there | finish |
+| `frame.py` | put a wire box around a spot so `look` can frame a close-up without clipping | finish, parts |
+| `stage.py` | add the floor, three lights, sky and a camera that fits the object; set the render | finish |
+| `export.py` | write one object as a GLB and read the file back to prove nothing else came along | finish, low poly |
+| `measure.py` | size a part without its neighbors, and slice it into rows of middle and half-width | parts, low poly |
+| `split.py` | paint or cut the parts from boxes: several boxes per part, tilted boxes, parts that wrap around | parts |
+| `build.py` | block out a low-poly version from a list of lofts, tubes, lumps and boxes; join, color and check it | low poly |
+
+How they fit together:
+
+- **Measure, then build.** `measure.py` prints rows of `[position, middle,
+  middle, half-width, half-width]`. Those are the `"rings"` of a `build.py`
+  loft, so a measured part goes straight in. On the kettle, seven pieces
+  built from rows nobody touched come out at 806 triangles, 3.0% off
+  typically; Claude's hand-tuned one was 790 and 2.3%.
+- **One call per round.** `build.py` keeps every piece in the scene, hidden.
+  The next call sends only the pieces that change and gets back the triangle
+  count, how far the shape strays (the same numbers `match.py` gives), where
+  the detailed mesh pokes out most, and which piece sticks out where.
+- **Areas, not the whole surface.** `retouch.py` picks an area by where it
+  is, how light, how colorful, or what hue, so "the dark band on that wrist"
+  is a box plus a darkness range. `"show"` paints the area red to check it.
+  Every number ends up in a Value node named `retouch: <area>.<setting>`, so
+  a later nudge is one line, not the whole script again.
+- **Exports hold one thing.** Blender's glTF exporter writes every scene in
+  the file unless told `use_active_scene=True`; "selected only" is not
+  enough. Two runs hit it: the kettle's `lowpoly.glb` picked up two meshes
+  from other scenes, the troll's the whole 293k-triangle reference.
+  `export.py` sets it and reads the file back (`"only_this_object": true`).
+- **Close-ups need a box.** `look` only draws what lies within a few
+  target-widths of its target. Aimed at a tiny marker it cuts the rest away.
+  `frame.py` makes the target the size of the spot; pass no distance.
+
+### Nothing carries over between calls
+
+The add-on runs every `execute_blender_code` call as
+`exec(code, {"bpy": bpy})` (`addon.py`, `execute_code`): a brand-new
+namespace each time. A function or variable from one call is gone in the
+next, and safe mode closes the places code could be kept (`bpy.data.texts`,
+`bpy.app.driver_namespace`, handlers). So:
+
+- every tool is one whole script, sent each time with its `PARAMS` edited.
+  The comments above `PARAMS` are the instructions; Claude reads them and
+  sends from `PARAMS = {` down;
+- what has to last lives in the Blender file: `build.py`'s pieces are hidden
+  objects, `retouch.py`'s numbers are nodes, `open.py` tags the scene it made;
+- the scripts are kept short and each does a lot per call, because the cost
+  of a call is now mostly retyping the script.
+
+### Safe mode
+
+`scripts/check_safe.py` (`just check-safe`) reads a script the way the
+add-on's safe mode does and lists what it would refuse. Run it on anything
+you add here. The rules that catch people out: no `lambda`, no classes, no
+numpy, no `import x as y`, no variable named after a builtin (`min`, `max`,
+`type`, `id`), no calling a function that was passed in as an argument,
+`getattr` only with a literal name.
 
 ## Run a profile (default: in the background)
 
@@ -125,8 +198,8 @@ To show a result in the live Blender, import it over MCP
 The scripts in `scripts/` are the same steps, written to be sent whole
 through the blender MCP `execute_blender_code` tool. Read the file, edit the
 `PARAMS` block at the top, send it, and read the `RESULT {json}` line it
-prints. They use only bpy, bmesh, mathutils, math and json, so they pass the
-add-on's safe mode.
+prints. They use only bpy, bmesh, mathutils and a few plain-Python modules,
+so they pass the add-on's safe mode (`just check-safe`).
 
 | Script | Does | Cost in live Blender |
 |---|---|---|
@@ -136,9 +209,9 @@ add-on's safe mode.
 | `match.py` | how far a light mesh strays from the full one, and where (both directions, % of size) | ~2 s |
 | `retopo.py` | rebuilds each part as quads with QuadriFlow, on the part's own repaired surface when it can (voxel remesh only as a fallback for big parts), shrinkwrapped back onto the original; `routes` says which way each part went | 5–30 s, freezes Blender |
 | `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one | 5–60 s, freezes Blender |
-| `export.py` | writes one object as GLB (WebP, Draco optional) | ~1 s |
+| `export.py` | writes one object as GLB (WebP, Draco optional), from the open scene only, and reads it back to check | ~1 s |
 | `preview.py` | renders a quick three-quarter PNG, optionally with wireframe | ~2 s |
-| `split.py` | splits an object into named parts from one box per part ("color" mode just paints them, to check the boxes) | ~1 s |
+| `split.py` | splits an object into named parts from boxes ("color" mode just paints them, to check the boxes) | ~1 s |
 | `lineup.py` | shows a run's raw mesh and its profiles side by side in a new "Profiles" scene, labelled, wireframe on | ~2 s |
 
 Rules for the live session:
@@ -191,5 +264,13 @@ blender -b --factory-startup -P scripts/tidy_headless.py -- MESH.glb \
   --params '{"inspect.py": {}}'
 ```
 
-runs scripts against a GLB with no live Blender. Re-run the five profiles on
-the kettle run and compare previews before calling a change done.
+runs scripts against a GLB with no live Blender, each in a fresh namespace
+as over MCP. Re-run the five profiles on the kettle run and compare previews
+before calling a change done.
+
+`just test-tools` (`scripts/test_tools.py`) tries the bench tools on the
+cave-troll and iron-kettle runs the same way, about 20 seconds: the troll's
+import and cleanup, its part sizes against `parts.json`, both block-outs
+rebuilt, each exported file opened to count what is in it, old part plans
+cut exactly as before. `just check-safe` checks every script against safe
+mode.

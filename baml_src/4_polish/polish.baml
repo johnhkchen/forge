@@ -1,3 +1,5 @@
+const POLISH_TOOLS = ["open", "stand", "retouch", "frame", "stage", "export"];
+
 /// Finishes the raw mesh in the live Blender session and saves the results
 /// next to it in the run folder.
 function polish(brief: ObjectBrief, run: Run) -> PolishReport {
@@ -9,7 +11,7 @@ function polish(brief: ObjectBrief, run: Run) -> PolishReport {
         render: run.absolute("render.png"),
     };
     let reference = baml.media.Image.from_file(run.path("image.png"), "image/png");
-    let report = Polish(brief, reference, files);
+    let report = Polish(brief, reference, files, tools(POLISH_TOOLS));
     keep_transcript(run, "polish");
     run.save("polish.json", report);
     report
@@ -33,8 +35,7 @@ test "Polish parses a report" {
         materials: [],
         size_m: 0.3,
     };
-    let report = Polish@spec(brief, baml.media.Image.from_base64("iVBORw0KGgo=", "image/png"), files).parse(
-        reply,
-    );
+    let report = Polish@spec(brief, baml.media.Image.from_base64("iVBORw0KGgo=", "image/png"), files, tools(POLISH_TOOLS))
+        .parse(reply);
     assert.equal(report.score, 4)
 }
