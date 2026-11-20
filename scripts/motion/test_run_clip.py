@@ -154,7 +154,8 @@ def pretend(request: dict) -> dict:
         segments.append({"name": prompt["text"], "first_frame": len(points), "last_frame": len(points) + prompt["frames"] - 1})
         points += path["points"]
     stride = 18 + int(run_clip.digest(request["prompts"][0]["text"])[:4], 16) % 5
-    answer = pretend_run(points, stride)
+    # Different dice, a different take: the body drifts more or less from stride to stride.
+    answer = pretend_run(points, stride, drift=0.5 + (request.get("seed", 0) % 3))
     answer["segments"] = segments
     answer["made_by"] = {"model": "a pretend worker (scripts/motion/test_run_clip.py)", "seed": request.get("seed", 0)}
     return answer
@@ -162,6 +163,7 @@ def pretend(request: dict) -> dict:
 
 def to_the_end(folders: list, cache: str, sent: list = None, **more) -> dict:
     """What `baml run runs` does: run a pass, send what it asks for, run it again."""
+    more.setdefault("takes", 1)
     for _ in range(3):
         result = run_clip.step(folders, cache, SK, **more)
         if not result["todo"]:
@@ -199,7 +201,7 @@ def test_each_character_gets_a_sentence_and_a_speed_of_its_own():
             assert ask["leg_from"] == "its lowpoly walk" and ask["traits_from"] == "gait.json"
         assert "huge" in asks["troll"]["prompt"] and "lumbering" in asks["troll"]["prompt"] and "stiff" in asks["troll"]["prompt"]
         assert "low crouch" in asks["ninja"]["prompt"] and "quick" in asks["ninja"]["prompt"] and "stocky" in asks["ninja"]["prompt"]
-        assert "proudly" in asks["roosevelt"]["prompt"] and "upright" in asks["roosevelt"]["prompt"]
+        assert "proudly" in asks["roosevelt"]["prompt"] and "straight back" in asks["roosevelt"]["prompt"]
         assert "tall lanky" in asks["lincoln"]["prompt"] and "loping" in asks["lincoln"]["prompt"]
         # The troll lumbers, the ninja is quick, the long-legged light one is quickest.
         assert asks["troll"]["speed_mps"] < asks["roosevelt"]["speed_mps"] < asks["lincoln"]["speed_mps"]
@@ -239,12 +241,12 @@ def test_heavier_is_slower_and_a_longer_leg_is_faster():
 # ---- the job ---------------------------------------------------------------------
 
 
-def test_one_job_carries_every_character_along_one_straight_line():
+def test_one_job_can_carry_every_character_along_one_straight_line():
     root = tempfile.mkdtemp(prefix="forge-run-")
     try:
         runs = cast_folders(root)
         asks = [run_clip.ask_for(run, SK) for run in runs.values()]
-        (batch,) = run_clip.batches(asks)
+        (batch,) = run_clip.batches(asks, 8)
         assert batch[0]["character"] == "Cave Troll" and [a["soma_speed_mps"] for a in batch] == sorted(a["soma_speed_mps"] for a in asks), "slowest first"
         request = run_clip.batch_request(batch)
         assert request["kind"] == "text" and request["tidy"] is True and len(request["prompts"]) == 3
@@ -264,8 +266,8 @@ def test_one_job_carries_every_character_along_one_straight_line():
         jumps = [b[1] - a[1] for a, b in zip(all_points, all_points[1:])]
         assert max(abs(b - a) for a, b in zip(jumps[1:], jumps[2:])) < 0.01
         assert all_points[0] == [0.0, 0.0]
-        # One job per character, when asked: each line then starts at its own origin.
-        alone = run_clip.batches(asks, 1)
+        # One job per character unless asked otherwise: each line then starts at its own origin.
+        alone = run_clip.batches(asks)
         assert len(alone) == 3 and all(run_clip.batch_request(b)["prompts"][0]["constraints"][0]["points"][0] == [0.0, 0.0] for b in alone)
     finally:
         shutil.rmtree(root, ignore_errors=True)
@@ -276,12 +278,12 @@ def test_clips_are_cached_and_only_a_changed_character_is_made_again():
     try:
         runs = cast_folders(root)
         folders, cache = list(runs.values()), os.path.join(root, ".run-cache")
-        first = run_clip.step(folders, cache, SK)
+        first = run_clip.step(folders, cache, SK, size=8, takes=1)
         assert len(first["todo"]) == 1 and first["todo"][0]["kind"] == "text" and "Cave Troll" in first["todo"][0]["what"]
         assert all(state == "waiting for Kimodo" for state in first["state"].values())
         assert not os.path.exists(os.path.join(runs["troll"], "run", "loop.json"))
         sent = []
-        done = to_the_end(folders, cache, sent)
+        done = to_the_end(folders, cache, sent, size=8)
         assert len(sent) == 1 and len(sent[0]["prompts"]) == 3
         files = {name: os.path.join(run, "run", "loop.json") for name, run in runs.items()}
         made = {name: os.path.getmtime(path) for name, path in files.items()}
@@ -291,35 +293,81 @@ def test_clips_are_cached_and_only_a_changed_character_is_made_again():
             assert len(clip["root"]) == 180 and clip["prompt"] == done["asks"][run]["prompt"] and clip["ask"] == done["asks"][run]["hash"]
             assert done["state"][run]["ask"] == done["asks"][run]["hash"]
         # A second go asks for nothing and writes nothing.
-        again = to_the_end(folders, cache, sent)
+        again = to_the_end(folders, cache, sent, size=8)
         assert len(sent) == 1 and again["todo"] == []
         assert {name: os.path.getmtime(path) for name, path in files.items()} == made
         # The ninja is told to walk differently: only its clip is asked for again, alone in its job.
         with open(os.path.join(runs["ninja"], "gait.json"), "w") as f:
             json.dump(dict(CAST["ninja"]["gait"], stealth=0.2), f)
-        changed = to_the_end(folders, cache, sent)
+        changed = to_the_end(folders, cache, sent, size=8)
         assert len(sent) == 2 and len(sent[1]["prompts"]) == 1 and "low crouch" not in sent[1]["prompts"][0]["text"]
         assert os.path.getmtime(files["troll"]) == made["troll"] and os.path.getmtime(files["roosevelt"]) == made["roosevelt"]
         assert changed["state"][runs["ninja"]]["prompt"] == sent[1]["prompts"][0]["text"]
         # A folder with no gait.json is passed over, not an error.
         prop = os.path.join(root, "a-kettle")
         os.makedirs(prop)
-        with_prop = run_clip.step(folders + [prop], cache, SK)
+        with_prop = run_clip.step(folders + [prop], cache, SK, size=8, takes=1)
         assert with_prop["todo"] == [] and with_prop["state"][prop].startswith("skipped")
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
 
-def test_one_job_per_character_gives_each_its_own_request():
+def test_by_default_each_character_gets_a_job_of_its_own():
     root = tempfile.mkdtemp(prefix="forge-run-")
     try:
         runs = cast_folders(root)
         sent = []
-        done = to_the_end(list(runs.values()), os.path.join(root, ".run-cache"), sent, size=1)
+        done = to_the_end(list(runs.values()), os.path.join(root, ".run-cache"), sent)
         assert len(sent) == 3 and all(len(r["prompts"]) == 1 for r in sent)
         assert all(isinstance(state, dict) and state["first_equals_last"] for state in done["state"].values())
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+
+def test_each_run_is_made_several_times_and_the_best_take_is_kept():
+    root = tempfile.mkdtemp(prefix="forge-run-")
+    try:
+        runs = cast_folders(root, ("troll", "ninja"))
+        sent = []
+        done = to_the_end(list(runs.values()), os.path.join(root, ".run-cache"), sent, takes=3)
+        assert len(sent) == 6 and all(len(r["prompts"]) == 1 for r in sent), "three jobs each, each sentence alone"
+        for run in runs.values():
+            seeds = sorted(r["seed"] for r in sent if r["prompts"][0]["text"] == done["asks"][run]["prompt"])
+            assert seeds == [done["asks"][run]["seed"] + t for t in range(3)]
+            card = done["state"][run]
+            scores = {t["take"]: t["score"] for t in card["takes"]}
+            assert len(scores) == 3 and len(set(scores.values())) > 1, scores
+            assert scores[card["take"]] == min(scores.values()), (card["take"], scores)
+            with open(os.path.join(run, "run", "clip.json")) as f:
+                clip = json.load(f)
+            assert clip["take"] == card["take"] and clip["seed"] == done["asks"][run]["seed"] + card["take"]
+        # Two characters never share dice.
+        assert done["asks"][runs["troll"]]["seed"] != done["asks"][runs["ninja"]]["seed"]
+        again = to_the_end(list(runs.values()), os.path.join(root, ".run-cache"), sent, takes=3)
+        assert len(sent) == 6 and again["todo"] == []
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def test_a_take_with_a_thrown_back_head_or_still_arms_scores_worse():
+    clip = pretend_run(steady(3.0), 20)
+    good = run_clip.take_score(SK, clip)
+    assert good["score"] is not None and good["head"] == 0.0 and good["arms"] == 0.0 and min(good["hand_swing_cm"]) > 15, good
+    chin_up = dict(clip, rotations=[list(row) for row in clip["rotations"]])
+    head = SK.index["Head"]
+    for row in chin_up["rotations"]:
+        row[4 * head : 4 * head + 4] = list(turned("Head", X, -40.0))
+    worse = run_clip.take_score(SK, chin_up)
+    assert worse["head_tilt_deg"] < -35 and worse["head"] > 8 and worse["score"] > good["score"] + 8, worse
+    stiff = dict(clip, rotations=[list(row) for row in clip["rotations"]])
+    for side in ("Left", "Right"):
+        j = SK.index[side + "Arm"]
+        for row in stiff["rotations"]:
+            row[4 * j : 4 * j + 4] = list(SK.rest_rot[j])
+    still = run_clip.take_score(SK, stiff)
+    assert still["arms"] > 3 and still["score"] > good["score"] + 3, still
+    nothing = dict(clip, rotations=[list(clip["rotations"][0]) for _ in clip["rotations"]])
+    assert run_clip.take_score(SK, nothing)["score"] is None
 
 
 # ---- the loop --------------------------------------------------------------------

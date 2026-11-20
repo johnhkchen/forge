@@ -393,9 +393,9 @@ lanky) and the traits pick one manner of running:
 | Cave troll | A huge person runs forward in a slow, heavy, lumbering run, with pounding steps and a stiff upper body. | 2.53 m/s |
 | Lizardkin | A stocky person runs forward at a steady pace with heavy, solid steps. | 2.86 |
 | Pirate | A stocky person runs forward with a confident swagger, shoulders rolling, with heavy steps. | 2.97 |
-| Roosevelt | A stocky person runs forward proudly, upright with the chest out, with firm, strong steps. | 3.26 |
+| Roosevelt | A stocky person runs forward proudly with a straight back and strong, firm steps, pumping the arms. | 3.26 |
 | Ninja | A stocky person runs forward stealthily in a low crouch, with light, quick, quiet steps. | 3.42 |
-| Lincoln | A tall lanky person runs forward at an easy pace with long, loose, loping strides. | 3.79 |
+| Lincoln | A tall lanky person runs forward with long, relaxed, loping strides, arms swinging loosely. | 3.79 |
 
 The speed follows the leg, as the walk's does: a Froude number (speed
 squared / gravity x leg length) of about 1.7 for an easy run, brought well
@@ -405,15 +405,27 @@ into walking. The clip is made at the model's own size and scaled to the
 character by its leg, so the path Kimodo is given runs at that speed times
 (the model's leg / the character's leg).
 
-**The job.** One Kimodo job carries up to eight sentences, made one after
-the other as one long motion along one straight line: six seconds each,
-slowest first, the line's speed changing over 24 frames where one stretch
-runs into the next. So six characters are one job. Each character's ask
-(sentence, speed, length, seed) has a fingerprint; its clip
-(`<run>/run/clip.json`) is made again only when that changes, and then only
-that character is sent. Requests and answers are kept by the hash of their
-content in `runs/.run-cache/`, like a shot's. `--batch 1` on `run_clip.py`
-sends one job per character instead.
+**The jobs: each sentence alone, five takes.** Each sentence goes to Kimodo
+as a job of its own: six seconds along a straight line at that speed, about
+three seconds of GPU on a warm worker. A job can carry up to eight sentences
+as one long motion (`--batch 8` on `run_clip.py`), but each stretch is then
+made as a continuation of the one before, and on our six the later
+characters came out with still arms and their heads thrown back where the
+same sentences sent alone ran properly. So alone is the default.
+
+The same sentence with different dice also gives different runs, some good
+and some odd. So each character is made five times (five seeds; every
+character has seeds of its own, or all six come back with the very same
+beat), and each take is scored on what can be measured: how far apart the
+two ends of its best loop are, how steadily the legs repeat, a head tilted
+back past 15 degrees or hung past 30, an arm that swings less than 15 cm.
+The lowest score is kept. All five scores are written in `clip.json` and
+`loop.json`, and `just runs` prints them.
+
+A character's ask (sentence, speed, length, seed, takes) has a
+fingerprint; its clip (`<run>/run/clip.json`) is made again only when that
+changes, and then only for that character. Requests and answers are kept
+by the hash of their content in `runs/.run-cache/`, like a shot's.
 
 **The cut.** The first 45 frames of a stretch (the model settling into the
 new pace) and the last 6 are never used. In between: the stride's length
@@ -447,44 +459,62 @@ runs` says `run skipped: Kimodo not available` with the worker's reason and
 ends well; the `run` profile with no clip says the same and writes
 nothing; a pipeline run logs it and carries on. Nothing is half-made.
 
-Tried without Kimodo. `python3 scripts/motion/test_run_clip.py` (in `just
-check`) tests the sentence and speed, the job, the cache, the cut and the
-run on the spot against a pretend worker that makes a stick-figure run.
-`just test-tools` runs the `run` profile for real on the troll and the
-lizardkin with that stick figure. And once, by hand, a jog MotionBricks
-made between our own two sprint poses (154 frames, 2.2 m/s) was cut and
-played on all six characters, to see the whole path with a model's motion
-in it. That jog is a test, not anyone's run, and none of it is kept:
+Measured on the six characters (Kimodo-SOMA-RP-v1.2, Nov 2026; low poly,
+and mid poly where there is one, came out alike):
 
-| TEST jog | Troll | Pirate | Ninja | Lizardkin | Lincoln | Roosevelt |
+| | Troll | Lizardkin | Pirate | Roosevelt | Ninja | Lincoln |
 |---|---|---|---|---|---|---|
-| Loop | 68 frames, 2 strides | same | same | same | same | same |
-| Ends apart before easing | 0.01 cm | same | same | same | same | same |
-| Speed on the character | 2.36 m/s | 1.82 | 2.19 | 2.11 | 2.38 | 1.97 |
-| Planted foot slides, a step | 15.1 cm | 0.003 | 0.004 | 0.04 | 0.004 | 0.003 |
-| Through the floor | 2.9 cm | 1.1 | 1.3 | 2.1 | 1.4 | 1.2 |
+| Speed | 2.54 m/s | 2.83 | 2.96 | 3.26 | 3.42 | 3.80 |
+| Steps a minute | 167 | 164 | 180 | 167 | 180 | 195 |
+| Loop | 43 frames, 2 strides | 22, 1 | 20, 1 | 43, 2 | 20, 1 | 37, 2 |
+| Take kept, of 5 (its score; the worst) | 5 (3.6; 12.0) | 3 (2.0; 4.8) | 1 (4.0; 5.6) | 1 (5.3; 13.5) | 3 (3.5; 10.1) | 5 (3.4; 9.5) |
+| The two ends before easing, joints on average (worst joint) | 2.7 cm (6.6) | 1.9 (5.4) | 3.3 (7.1) | 4.4 (9.7) | 3.2 (7.1) | 2.9 (7.6) |
+| Loop seam after | 0 | 0 | 0 | 0 | 0 | 0 |
+| Planted foot slides, a step | 0.02 cm | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
 | Turns outside a limit | 0 | 0 | 0 | 0 | 0 | 0 |
-| Loop seam | 0 | 0 | 0 | 0 | 0 | 0 |
-| Cloth bones: outside a limit, in a leg, seam | none | none | 8 (low poly), 4 (mid): 0, 0 cm, 0 | none | none | none |
+| Through the floor | 8.0 cm | 2.9 | 4.7 | 0.5 | 0.2 | 0.0 |
+| Hips lowered so the legs reach | 10.6 cm | 3.9 | 2.7 | 2.2 | 0.2 | 0.6 |
 
-What is weak, most likely to show first:
+The ninja's loose cloth (8 bones low poly, 4 mid poly): no turn outside a
+limit, 0.05 cm into a leg at the deepest, seam 0, hems travel 16.5 cm (low
+poly) and 3.9 cm (mid poly). Skin through its clothes over
+the run: 3.1% of covered points (low poly, 3.2 cm deepest; the walk has
+1.7%, 1.6 cm) and 1.0% (mid poly). The lizardkin's tail: five bones, lifted
+8 degrees, swinging 5.
+In every loop the eased frames move no more sharply than the rest of the
+loop does (largest joint acceleration at the seam against elsewhere: 6.6
+against 8.9 cm a frame squared for the troll, and like that for the rest).
 
-- **No real run has been made yet.** Everything above is tested on a stick
-  figure and one test jog. What Kimodo makes of each sentence, and whether
-  six sentences in one job hold their line and their pace, is unseen.
-- **Short legs and long strides.** The troll's thighs reach their limits in
-  the test jog's 1.3 m steps and its planted feet slide 15 cm. A lumbering
-  run has shorter steps, but if its real clip does the same, the cure is in
-  the ask (slower, or "short steps" in the sentence), not here.
-- **Toes dip.** A foot pushing off goes 1 to 3 cm through the floor.
-- **A loop is one or two strides.** Seen for long, it repeats. The cut
-  picks the best match; it does not vary it.
-- **Arms.** Our elbows are one-way hinges and the forearms are held to
-  their limits on most frames of a run; no limit is broken, but an arm
-  pumps a little flatter than the model drew it.
-- **The sentence is a recipe, not a reading.** It is put together from
-  trait bands; two characters with like traits get like sentences (the
-  pirate and Roosevelt are one band apart).
+Tried without Kimodo too. `python3 scripts/motion/test_run_clip.py` (in
+`just check`) tests the sentence and speed, the jobs, the cache, the takes,
+the cut and the run on the spot against a pretend worker that makes a
+stick-figure run. `just test-tools` runs the `run` profile for real on the
+troll and the lizardkin with that stick figure, and checks that with no
+clip it is skipped and nothing fails.
+
+What is weak, most visible first:
+
+- **A sentence steers a little; the dice steer a lot.** Roosevelt's "proudly"
+  comes out as an arched back, chin up and the arms swept behind him, in
+  the best of five takes. It reads as a strut more than a run. The cure is
+  a different sentence for that band of traits in `run_prompt`
+  (run_clip.py); `just runs` then makes only his again. The scores catch a
+  thrown-back head and a still arm, not "does this look like him".
+- **The troll sinks.** Its legs are short for its hips, so the hips come
+  down 10.6 cm for the feet to reach, and a toe pushing off goes 8 cm
+  through the floor (the pirate 4.7). The feet do not slide.
+- **Everyone runs at about the same beat.** 164 to 195 steps a minute,
+  troll and ninja alike: Kimodo runs like a person of ordinary size, and
+  the clip is scaled, not re-timed. The troll's speed is right; its legs
+  just turn over faster than something that heavy would.
+- **A loop is one or two strides.** Seen for long, it repeats.
+- **Arms.** Our elbows are one-way hinges, and the shoulders and forearms
+  are held to their limits on every frame of a run; no limit is broken,
+  but an arm pumps a little flatter than the model drew it.
+- **Skin through cloth is about double the walk's** on the ninja's low-poly
+  suit, at the hips and knees of a longer stride.
+- **Several sentences in one job** (`--batch`) is built and tested but
+  gave worse runs; it is kept for when cost matters more.
 
 ## Clothes that sit on the body and move with it
 

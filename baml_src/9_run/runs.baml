@@ -14,9 +14,9 @@
 //
 // scripts/motion/run_clip.py does the thinking (the sentence, the speed, the
 // job, the cut) and never calls a worker: it leaves the requests that still
-// need an answer in <cache>/todo.json. This file sends them. One job carries
-// every character still without a clip, and an answer already in the cache is
-// never asked for again.
+// need an answer in <cache>/todo.json. This file sends them: one job for each
+// character still without a clip (a few seconds each on a warm worker), and
+// an answer already in the cache is never asked for again.
 //
 // Kimodo reads the sentence with a model built on Meta's Llama 3, which each
 // account has to be given access to (see README, Setup). Until then, or with
@@ -107,7 +107,7 @@ function runs(dir: string = RUNS_DIR) -> string {
     if (!folders) {
         return `no characters in ${dir} (a character has a gait.json)`;
     }
-    //# 1. The clips: one sentence each, one job on RunPod, cut into loops
+    //# 1. The clips: one sentence each to Kimodo on RunPod, cut into loops
     let skipped = run_clips(folders, `${dir}/${RUN_CACHE}`);
     if (skipped) {
         log.info(skipped);

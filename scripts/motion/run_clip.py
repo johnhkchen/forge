@@ -1,6 +1,6 @@
 """A looping run for each character, made from a sentence.
 
-    python3 scripts/motion/run_clip.py <character run folder>... [--cache DIR] [--batch 8]
+    python3 scripts/motion/run_clip.py <character run folder>... [--cache DIR] [--batch 1]
 
 A character's walk is worked out from its build (walk.py). Its run is asked
 for in words: Kimodo (NVIDIA's text-to-motion model, on the motion worker) is
@@ -15,12 +15,26 @@ length). About 1.7 is an easy human run; weight brings it well down, a stiff
 build and creeping a little. The troll lumbers at 2.5 m/s; the ninja goes
 low and quick at 3.4.
 
-One job, several characters. A Kimodo job takes up to eight sentences and
-makes them one after the other as one long motion, so one job carries every
-character still without a run: six seconds each, slowest first, along one
-straight line whose speed changes where one character's stretch ends and the
-next begins. The first second and a half of each stretch (where it settles
-into the new pace) is never used. `--batch 1` sends one job per character.
+One job each, or one for several. Each character's sentence goes to Kimodo
+as a job of its own: six seconds along a straight line at its speed. A Kimodo
+job can also take up to eight sentences and make them one after the other as
+one long motion (`--batch 8`: slowest first, along one line whose speed
+changes where one character's stretch ends and the next begins). That is one
+job instead of six, but each stretch is then made as a continuation of the
+one before, and it shows: tried on the six characters in Nov 2026, the later
+ones came out with their arms hanging still and their heads thrown back,
+where the same sentences sent alone gave runs with swinging arms. So alone is
+the default. Either way the first second and a half of a stretch (where it
+gets up to pace) is never used.
+
+Five takes, the best one kept. A sentence gives a motion, not the motion:
+the same words with different dice gave one run with pumping arms and another
+with the arms hanging behind and the chin in the air. So each character is
+made five times (five seeds, each character with seeds of its own), and
+every take is scored on what can be measured: how well its best loop closes,
+how steadily its legs repeat, whether the head is thrown back or hung, and
+whether both arms swing. The lowest score is kept; all five scores are
+written beside the clip, so it can be seen what was passed over and why.
 
 Caching. A character's ask (its sentence, speed, length and seed) has a
 fingerprint; its clip is kept beside it, and is only made again when the ask
@@ -58,7 +72,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import soma_to_plain  # noqa: E402
-from soma import Skeleton, heading_of, qconj, qmul, qslerp  # noqa: E402
+from soma import Skeleton, heading_of, qconj, qmul, qrot, qslerp  # noqa: E402
 from timeline import CONTACT_ORDER, by_our_joints, cut, moved  # noqa: E402
 
 FPS = 30
@@ -70,7 +84,9 @@ SETTLE_FRAMES = 45  # the start of a stretch is the model getting up to the new 
 END_FRAMES = 6  # nor are its last few frames, where the next sentence is about to take over
 RAMP_FRAMES = 24  # over which the path's speed changes from one character's to the next
 SOMA_SPEEDS = (1.8, 5.5)  # m/s at the model's own size; outside this a "run" is a walk or a sprint it does badly
-BATCH = 8  # sentences one Kimodo job takes
+BATCH = 8  # the most sentences one Kimodo job takes
+TAKES = 5  # times each character's run is made, on different seeds; the best-scoring one is kept
+ALONE = 1  # how many go in a job unless asked otherwise: a sentence made after another comes out worse (see above)
 BLEND_FRAMES = 8  # the end of a loop eased onto the frames that led into its start
 STRIDES_LIKED = 2  # a loop of two strides or more has a little life in it; a single stride has to match this much better
 ONE_STRIDE_COSTS = 1.2
@@ -168,13 +184,14 @@ def run_prompt(brief: dict, traits: dict) -> str:
     elif weight >= 0.8:
         how = "runs forward in a slow, heavy, lumbering run, with pounding steps"
     elif swagger >= 0.72:
-        how = "runs forward proudly, upright with the chest out, with %s steps" % ("firm, strong" if weight >= 0.55 else "springy")
+        # ("upright with the chest out" was tried first: Kimodo threw the head back 40 degrees and let the arms hang.)
+        how = "runs forward proudly with a straight back and %s steps, pumping the arms" % ("strong, firm" if weight >= 0.55 else "springy")
     elif swagger >= 0.55:
         how = "runs forward with a confident swagger, shoulders rolling%s" % (", with heavy steps" if weight >= 0.55 else "")
     elif weight >= 0.55:
         how = "runs forward at a steady pace with heavy, solid steps"
     elif weight < 0.4:
-        how = "runs forward at an easy pace with long, loose, loping strides" if "lanky" in subject else "runs forward lightly with quick, springy steps"
+        how = "runs forward with long, relaxed, loping strides, arms swinging loosely" if "lanky" in subject else "runs forward lightly with quick, springy steps"
     else:
         how = "runs forward at a steady, even pace"
     if stiff >= 0.6:
@@ -182,7 +199,7 @@ def run_prompt(brief: dict, traits: dict) -> str:
     return "%s %s." % (subject, how)
 
 
-def ask_for(run: str, sk: Skeleton, seconds: float = SECONDS, seed: int = 0) -> dict:
+def ask_for(run: str, sk: Skeleton, seconds: float = SECONDS, seed: int = 0, takes: int = TAKES) -> dict:
     """Everything that decides a character's run clip. Its `hash` is the clip's fingerprint."""
     brief = read_json(os.path.join(run, "brief.json")) or {}
     traits, build = traits_of(run), build_of(run)
@@ -190,16 +207,20 @@ def ask_for(run: str, sk: Skeleton, seconds: float = SECONDS, seed: int = 0) -> 
     soma_leg = sk.rest_world_pos[sk.index["LeftLeg"]][1]
     # The clip is made at the model's size and scaled to the character by its leg, speed and all.
     wanted = pace["speed_mps"] * soma_leg / build["leg_m"]
+    name = brief.get("name") or os.path.basename(run)
     ask = {
         "prompt": run_prompt(brief, traits),
         "frames": int(round(seconds * FPS)),
         "soma_speed_mps": round(clamp(wanted, *SOMA_SPEEDS), 3),
-        "seed": int(seed),
+        # Each character rolls its own dice (the same ones every time). With one seed for all,
+        # Kimodo gave all six the very same beat: 164 steps a minute, troll and ninja alike.
+        "seed": int(seed) + int(digest(name)[:6], 16) % 100000,
         "steps": 100,
         "guidance": [2.0, 2.0],
+        "takes": int(takes),
     }
     return {
-        "character": brief.get("name") or os.path.basename(run),
+        "character": name,
         **ask,
         "hash": digest(ask),
         "speed_mps": round(ask["soma_speed_mps"] * build["leg_m"] / soma_leg, 3),
@@ -240,11 +261,12 @@ def batch_request(asks: list) -> dict:
     return {"kind": "text", "prompts": prompts, "seed": first["seed"], "steps": first["steps"], "guidance": first["guidance"], "tidy": True}
 
 
-def batches(asks: list, size: int = BATCH) -> list:
+def batches(asks: list, size: int = ALONE) -> list:
     """The asks as jobs: slowest first, so each change of pace is a small one; asks that cannot share a job's settings get their own."""
     groups = {}
-    for ask in sorted(asks, key=lambda a: (a["soma_speed_mps"], a["hash"])):
-        groups.setdefault((ask["seed"], ask["steps"], tuple(ask["guidance"])), []).append(ask)
+    for ask in sorted(asks, key=lambda a: (a["soma_speed_mps"], a["hash"], a["seed"])):
+        # A job has one seed, its first sentence's; sharing a job means sharing that.
+        groups.setdefault((ask["steps"], tuple(ask["guidance"])) + ((ask["hash"], ask["seed"]) if size == 1 else ()), []).append(ask)
     out = []
     for group in groups.values():
         out += [group[i : i + size] for i in range(0, len(group), size)]
@@ -468,10 +490,54 @@ def loop_to_plain(loop: dict, sk: Skeleton, name: str = "run") -> tuple:
     return plain, report
 
 
+# ---- which take to keep ----------------------------------------------------------
+
+
+def carriage(sk: Skeleton, loop: dict) -> dict:
+    """How the body is carried over a loop: the head's tilt, and how far each hand swings fore and aft."""
+    joints = len(sk.joints)
+    head, left, right = sk.index["Head"], sk.index["LeftHand"], sk.index["RightHand"]
+    tilt, swing = [], {left: [], right: []}
+    for root, row in zip(loop["root"], loop["rotations"]):
+        pos, rot = sk.fk(root, [tuple(row[4 * j : 4 * j + 4]) for j in range(joints)])
+        up = qrot(qmul(rot[head], qconj(sk.rest_world_rot[head])), (0.0, 1.0, 0.0))
+        tilt.append(math.degrees(math.atan2(up[2], up[1])))  # + nose down, - chin up
+        for hand in swing:
+            swing[hand].append(pos[hand][2] - pos[0][2])
+    return {
+        "head_tilt_deg": round(sum(tilt) / len(tilt), 1),
+        "hand_swing_cm": [round(100.0 * (max(v) - min(v)), 1) for v in swing.values()],
+    }
+
+
+def take_score(sk: Skeleton, clip: dict) -> dict:
+    """One take, weighed. Lower is better; "score" is in rough centimetres of wrongness. A take with no loop in it scores None."""
+    try:
+        found = find_loop(sk, clip)
+    except ValueError as why:
+        return {"score": None, "why": str(why)}
+    held = carriage(sk, make_loop(sk, clip, found))
+    seam = found["seam_before_blend"]["joints_apart_cm"]
+    unsteady = 10.0 * (1.0 - min(1.0, found["stride_sureness"]))
+    tilt = held["head_tilt_deg"]
+    head = 0.4 * max(0.0, -15.0 - tilt, tilt - 30.0)  # chin up past 15 degrees, or hung past 30
+    arms = 0.3 * max(0.0, 15.0 - min(held["hand_swing_cm"]))  # an arm that barely moves
+    return {
+        "score": round(seam + unsteady + head + arms, 2),
+        "seam_cm": seam,
+        "unsteady": round(unsteady, 2),
+        "head": round(head, 2),
+        "arms": round(arms, 2),
+        **held,
+        "strides": found["strides"],
+        "stride_frames": found["stride_frames"],
+    }
+
+
 # ---- one pass ------------------------------------------------------------------
 
 
-def step(folders: list, cache: str, sk: Skeleton = None, size: int = BATCH, seconds: float = SECONDS, seed: int = 0) -> dict:
+def step(folders: list, cache: str, sk: Skeleton = None, size: int = ALONE, seconds: float = SECONDS, seed: int = 0, takes: int = TAKES) -> dict:
     """Do as much as the answers on hand allow. Returns what is still to make and what each character has."""
     sk = sk or Skeleton.load()
     os.makedirs(cache, exist_ok=True)
@@ -480,14 +546,15 @@ def step(folders: list, cache: str, sk: Skeleton = None, size: int = BATCH, seco
         if not os.path.exists(os.path.join(run, "gait.json")):
             state[run] = "skipped: no gait.json (not a character that walks)"
             continue
-        asks[run] = ask_for(run, sk, seconds, seed)
+        asks[run] = ask_for(run, sk, seconds, seed, takes)
         write_json(os.path.join(run, "run", "ask.json"), asks[run], indent=1)
     wanting = [run for run in asks if (read_json(os.path.join(run, "run", "clip.json")) or {}).get("ask") != asks[run]["hash"]]
     by_hash = {}
     for run in wanting:
         by_hash.setdefault(asks[run]["hash"], []).append(run)
-    todo = []
-    for batch in batches([asks[runs[0]] for runs in by_hash.values()], size):
+    todo, made = [], {}
+    wanted = [dict(asks[runs[0]], seed=asks[runs[0]]["seed"] + take, take=take) for runs in by_hash.values() for take in range(asks[runs[0]]["takes"])]
+    for batch in batches(wanted, size):
         request = batch_request(batch)
         name = digest(request)
         request_file = os.path.join(cache, name + ".request.json")
@@ -495,7 +562,7 @@ def step(folders: list, cache: str, sk: Skeleton = None, size: int = BATCH, seco
             write_json(request_file, request)
         answer = read_json(os.path.join(cache, name + ".json"))
         if answer is None:
-            who = [asks[run]["character"] for ask in batch for run in by_hash[ask["hash"]]]
+            who = ["%s%s" % (asks[run]["character"], " (take %d)" % (ask["take"] + 1) if ask["takes"] > 1 else "") for ask in batch for run in by_hash[ask["hash"]]]
             todo.append({"request": name, "kind": "text", "what": "a run for " + ", ".join(who)})
             for ask in batch:
                 for run in by_hash[ask["hash"]]:
@@ -503,9 +570,16 @@ def step(folders: list, cache: str, sk: Skeleton = None, size: int = BATCH, seco
             continue
         for number, ask in enumerate(batch):
             clip = stretch_of(answer, number, ask, sk)
-            clip.update({"ask": ask["hash"], "prompt": ask["prompt"], "request": name, "stretch": number, "made_by": answer.get("made_by")})
-            for run in by_hash[ask["hash"]]:
-                write_json(os.path.join(run, "run", "clip.json"), clip)
+            clip.update({"ask": ask["hash"], "prompt": ask["prompt"], "request": name, "stretch": number, "take": ask["take"], "seed": ask["seed"], "made_by": answer.get("made_by")})
+            made.setdefault(ask["hash"], {})[ask["take"]] = clip
+    for name, clips in made.items():
+        if len(clips) < asks[by_hash[name][0]]["takes"]:
+            continue  # some takes are still to come
+        scores = [dict(take_score(sk, clips[take]), take=take, seed=clips[take]["seed"]) for take in sorted(clips)]
+        sound = [s for s in scores if s["score"] is not None]
+        kept = min(sound, key=lambda s: (s["score"], s["take"]))["take"] if sound else 0
+        for run in by_hash[name]:
+            write_json(os.path.join(run, "run", "clip.json"), dict(clips[kept], takes=scores))
     for run, ask in asks.items():
         clip = read_json(os.path.join(run, "run", "clip.json")) or {}
         if clip.get("ask") != ask["hash"]:
@@ -518,7 +592,8 @@ def step(folders: list, cache: str, sk: Skeleton = None, size: int = BATCH, seco
             except ValueError as why:
                 state[run] = "no loop: %s" % why
                 continue
-            loop["loop"].update({"ask": ask["hash"], "prompt": ask["prompt"], "made_by": clip.get("made_by")})
+            loop["loop"].update({"ask": ask["hash"], "prompt": ask["prompt"], "made_by": clip.get("made_by"), "take": clip.get("take", 0), "takes": clip.get("takes")})
+            loop["loop"].update(carriage(sk, loop))
             write_json(loop_file, loop)
             # A new loop: the versions made from the old one are out of date. Gone, the `run` profile makes them again.
             for version in ("lowpoly", "midpoly"):
@@ -535,15 +610,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("folders", nargs="+", help="character run folders (each with a gait.json)")
     parser.add_argument("--cache", help="where requests and answers are kept (default: .run-cache beside the first folder)")
-    parser.add_argument("--batch", type=int, default=BATCH, help="characters per Kimodo job, 1 to 8")
+    parser.add_argument("--batch", type=int, default=ALONE, help="characters per Kimodo job, 1 to 8 (more than 1 is cheaper and worse)")
     parser.add_argument("--seconds", type=float, default=SECONDS)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--takes", type=int, default=TAKES, help="times each run is made, on different seeds; the best is kept")
     args = parser.parse_args()
-    if not 1 <= args.batch <= BATCH or not 3.0 <= args.seconds <= 10.0:
-        sys.exit("a job takes 1 to 8 characters, and a sentence makes 3 to 10 seconds")
+    if not 1 <= args.batch <= BATCH or not 3.0 <= args.seconds <= 10.0 or not 1 <= args.takes <= 8:
+        sys.exit("a job takes 1 to 8 characters, a sentence makes 3 to 10 seconds, and a run is made 1 to 8 times")
     folders = [os.path.abspath(f.rstrip("/")) for f in args.folders if os.path.isdir(f)]
     cache = os.path.abspath(args.cache or os.path.join(os.path.dirname(folders[0]), ".run-cache"))
-    result = step(folders, cache, size=args.batch, seconds=args.seconds, seed=args.seed)
+    result = step(folders, cache, size=args.batch, seconds=args.seconds, seed=args.seed, takes=args.takes)
     for run in folders:
         name = os.path.basename(run)
         ask, state = result["asks"].get(run), result["state"].get(run)
@@ -556,6 +632,9 @@ def main() -> None:
                 f"{state['steps_per_minute']} steps a minute, cut at frames {state['first_frame']}-{state['last_frame']}; the two ends were "
                 f"{seam['joints_apart_cm']} cm apart (worst joint {seam['worst_joint_cm']} cm) before {state['blend_frames']} frames were eased"
             )
+            if state.get("takes"):
+                told = ", ".join("take %d %s" % (t["take"] + 1, t["score"] if t["score"] is not None else "no loop") for t in state["takes"])
+                print(f"RUN {name}: kept take {state['take'] + 1} of {len(state['takes'])} (scores, lower is better: {told}); head tilt {state['head_tilt_deg']} deg, hands swing {state['hand_swing_cm']} cm")
         elif state:
             print(f"RUN {name}: {state}")
     for item in result["todo"]:
