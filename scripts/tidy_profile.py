@@ -10,10 +10,18 @@ step did).
 
 Profiles and their steps live in .claude/skills/tidy-mesh/profiles.json; the
 steps are the same scripts Claude sends to a live Blender over MCP, plus one
-step only this runner can do: "autoremesher", which hands the mesh to the
-AutoRemesher program (MIT, github.com/huxingyi/autoremesher; install with
-`just autoremesher`) for adaptive quad remeshing. Without the program it falls
-back to retopo.py (QuadriFlow) and says so.
+steps only this runner can do:
+
+- "autoremesher" hands the mesh to the AutoRemesher program (MIT,
+  github.com/huxingyi/autoremesher; install with `just autoremesher`) for
+  adaptive quad remeshing. Without the program it falls back to retopo.py
+  (QuadriFlow) and says so.
+- "blockout" brings in Claude's low-poly block-out (the run's lowpoly.glb).
+- "rebuild" builds that block-out again from its recipe (lowpoly_build.json),
+  with more sides and more rings: the mid-poly version.
+
+A character's gear stays apart in both: the .glb gets one mesh per group
+("body", "gear: wool singlet"...) and an empty per attachment point.
 """
 import json
 import os
@@ -24,6 +32,9 @@ import tempfile
 import time
 
 import bpy
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import blockout_recipe  # noqa: E402
 
 SKILL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude", "skills", "tidy-mesh")
 SCRIPTS = os.path.join(SKILL, "scripts")
@@ -283,32 +294,49 @@ def autoremesh(params):
 
 def export_edges(path):
     """The light mesh's real edges (quads included) as a lines-only GLB, so a
-    web viewer can draw the true topology. GLB meshes are always triangles."""
+    web viewer can draw the true topology. GLB meshes are always triangles.
+    A mesh in groups (body, gear) gets one set of lines per group, tagged the
+    same way, so the viewer can hide a gear piece's lines with the piece."""
     import bmesh
     obj = largest_mesh()
-    lines = obj.copy()
-    lines.data = obj.data.copy()
-    lines.modifiers.clear()
-    lines.data.materials.clear()
-    for c in obj.users_collection:
-        c.objects.link(lines)
-    bm = bmesh.new()
-    bm.from_mesh(lines.data)
-    bmesh.ops.delete(bm, geom=list(bm.faces), context="FACES_ONLY")
-    bm.to_mesh(lines.data)
-    bm.free()
+    tags = json.loads(obj.get("forge_groups", "[]"))
+    made = []
+    for index, tag in enumerate(tags if len(tags) > 1 else [None]):
+        lines = obj.copy()
+        lines.data = obj.data.copy()
+        lines.modifiers.clear()
+        lines.data.materials.clear()
+        for key in list(lines.keys()):
+            del lines[key]
+        for c in obj.users_collection:
+            c.objects.link(lines)
+        bm = bmesh.new()
+        bm.from_mesh(lines.data)
+        if tag:
+            mark = bm.faces.layers.int.get("forge_group")
+            bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[mark] != index], context="FACES")
+            lines.name = "lines: " + tag["name"]
+            for key in ("forge", "gear"):
+                if tag.get(key):
+                    lines[key] = tag[key]
+        bmesh.ops.delete(bm, geom=list(bm.faces), context="FACES_ONLY")
+        bm.to_mesh(lines.data)
+        bm.free()
+        made.append(lines)
     for o in bpy.context.selected_objects:
         o.select_set(False)
-    lines.select_set(True)
-    bpy.context.view_layer.objects.active = lines
+    for lines in made:
+        lines.select_set(True)
+    bpy.context.view_layer.objects.active = made[0]
     obj.hide_set(True)
     try:
         bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True,
-                                  use_mesh_edges=True, export_materials="NONE",
+                                  use_mesh_edges=True, export_materials="NONE", export_extras=True,
                                   export_normals=False, export_texcoords=False)
     finally:
         obj.hide_set(False)
-        bpy.data.objects.remove(lines, do_unlink=True)
+        for lines in made:
+            bpy.data.objects.remove(lines, do_unlink=True)
 
 
 class Skip(Exception):
@@ -341,16 +369,34 @@ def color_preview_material(obj):
     obj.data.materials.append(mat)
 
 
+GROUP_KEYS = ("forge", "gear", "kind", "slot", "socket", "socket_of", "forge_build")
+
+
 def blockout(run_dir):
     """Claude's hand-built low-poly mesh (lowpoly.glb, step 4c), brought in
-    as the light mesh to bake onto. Same world space as scene.blend."""
+    as the light mesh to bake onto. Same world space as scene.blend.
+
+    It comes back as one object, which is what the bake, the shape check and
+    the previews work on. If the file holds groups (a body and gear) or
+    sockets, each face remembers its group and export.py writes them apart
+    again."""
     path = os.path.join(run_dir, "lowpoly.glb")
     if not os.path.exists(path):
         raise Skip("no lowpoly.glb yet (just resume asks Claude to block it out)")
     full = largest_mesh()
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=path)
-    meshes = [o for o in bpy.data.objects if o not in before and o.type == "MESH"]
+    new = [o for o in bpy.data.objects if o not in before]
+    meshes = [o for o in new if o.type == "MESH"]
+    meshes.sort(key=lambda o: o.get("forge") != "body")  # the body first, as build.py lists it
+    sockets = [o for o in new if o.type == "EMPTY" and o.get("forge") == "socket"]
+    tags = []
+    for index, o in enumerate(meshes):
+        name = blockout_recipe.tag_name(o)
+        if name:
+            tags.append({k: o[k] for k in ("forge", "gear", "kind", "slot") if k in o} | {"name": name})
+        mark = o.data.attributes.new("forge_group", "INT", "FACE")
+        mark.data.foreach_set("value", [index] * len(o.data.polygons))
     for o in bpy.context.selected_objects:
         o.select_set(False)
     for o in meshes:
@@ -361,16 +407,116 @@ def blockout(run_dir):
     low = bpy.context.view_layer.objects.active
     bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    for o in [o for o in bpy.data.objects if o not in before and o is not low]:
+    for o in [o for o in bpy.data.objects if o not in before and o is not low and o not in sockets]:
         bpy.data.objects.remove(o, do_unlink=True)
     low.name = full.name + " (light)"
     low.data.materials.clear()
+    for key in [k for k in GROUP_KEYS if k in low]:
+        del low[key]
+    if len(tags) == len(meshes):
+        low["forge_groups"] = json.dumps(tags)
+    for o in sockets:
+        o.matrix_world = o.matrix_world.copy()
+        o["socket_of"] = low.name
     full.hide_set(True)
     full.hide_render = True
     faces = low.data.polygons
     return {"object": low.name, "faces": len(faces),
             "triangles": sum(len(p.vertices) - 2 for p in faces),
             "quads": sum(1 for p in faces if len(p.vertices) == 4)}
+
+
+# ---- mid poly: the block-out's recipe, built again with more sides and rings ----
+
+def read_recipe(run_dir):
+    """What build.py was given for the block-out: lowpoly_build.json, or the
+    copy riding in lowpoly.glb (scripts/blockout_recipe.py explains why)."""
+    path = os.path.join(run_dir, "lowpoly_build.json")
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    glb = os.path.join(run_dir, "lowpoly.glb")
+    if os.path.exists(glb):
+        return blockout_recipe.contents(blockout_recipe.read(glb)[0])["recipe"]
+    return None
+
+
+def rebuild(run_dir, params):
+    """The mid-poly mesh: the block-out's own pieces, built again by build.py
+    with about 2-4 times the sides and rings and smooth shading, until the
+    triangle count is in range. Gear groups and sockets come along as in the
+    block-out, the sockets exactly where they were."""
+    recipe = read_recipe(run_dir)
+    if not recipe:
+        raise Skip("no recipe for the block-out (lowpoly_build.json): it was made before recipes were kept; "
+                   "`just recipe <run>` gets one back from the transcript, or delete lowpoly.glb and `just resume` to block it out again")
+    full = largest_mesh()
+    size = max(full.dimensions)
+    for name, scan in recipe.get("scans", {}).items():
+        bpy.context.scene["face: " + name] = json.dumps(scan)
+    low, high = params.get("triangles", [3000, 8000])
+    level, tried, result = 1, [], None
+    while True:
+        sides, rings = blockout_recipe.DENSER[level]
+        result = run_script("build.py", {
+            "reference": full.name, "check": 0, "shading": "smooth", "crease": params.get("crease", 40),
+            "parts": [blockout_recipe.denser(p, sides, rings, size) for p in recipe["pieces"]],
+            "gear": recipe.get("gear") or [], "sockets": recipe.get("sockets") or False,
+        })
+        tried.append({"sides": sides, "rings": rings, "triangles": result["triangles"]})
+        went = [t["triangles"] for t in tried]
+        if result["triangles"] < low and level + 1 < len(blockout_recipe.DENSER) and max(went) < low:
+            level += 1
+        elif result["triangles"] > high and level > 0 and min(went) > high:
+            level -= 1
+        else:
+            break
+    full.hide_set(True)
+    full.hide_render = True
+    made = bpy.data.objects[result["object"]]
+    del made["forge_build"]  # the denser recipe has no reader; keep it out of the .glb
+    faces = made.data.polygons
+    return {"object": result["object"], "faces": len(faces), "triangles": result["triangles"],
+            "quads": sum(1 for p in faces if len(p.vertices) == 4),
+            "pieces": len(recipe["pieces"]),
+            "tried": tried, "groups": [g["name"] for g in result.get("groups", [])], "sockets": result.get("sockets")}
+
+
+def skin_under_gear(low):
+    """After a bake, the body under a coat is painted like the coat: the bake
+    copies whatever the detailed mesh shows there. So body faces that gear
+    covers get a plain material in the color Claude gave the piece instead.
+    Take the gear off and there is skin, not a second coat."""
+    from mathutils.bvhtree import BVHTree
+    tags = json.loads(low.get("forge_groups", "[]"))
+    if len(tags) < 2 or tags[0].get("forge") != "body":
+        return None
+    me = low.data
+    marks = [0] * len(me.polygons)
+    me.attributes["forge_group"].data.foreach_get("value", marks)
+    gear = [tuple(p.vertices) for p in me.polygons if marks[p.index]]
+    tree = BVHTree.FromPolygons([tuple(v.co) for v in me.vertices], gear)
+    reach = max(low.dimensions) * 0.04
+    paint = me.color_attributes[0] if me.color_attributes else None
+    slots, covered = {}, 0
+    for p in me.polygons:
+        if marks[p.index] or tree.ray_cast(p.center + p.normal * 1e-4, p.normal, reach)[0] is None:
+            continue
+        color = (0.6, 0.6, 0.6)
+        if paint:
+            at = p.loop_start if paint.domain == "CORNER" else p.vertices[0]
+            color = tuple(round(c, 2) for c in paint.data[at].color[:3])
+        if color not in slots:
+            mat = bpy.data.materials.new("under the gear %d" % (len(slots) + 1))
+            mat.use_nodes = True
+            bsdf = mat.node_tree.nodes["Principled BSDF"]
+            bsdf.inputs["Base Color"].default_value = color + (1.0,)
+            bsdf.inputs["Roughness"].default_value = 0.85
+            me.materials.append(mat)
+            slots[color] = len(me.materials) - 1
+        p.material_index = slots[color]
+        covered += 1
+    return {"body_faces_under_gear": covered, "plain_colors": len(slots)}
 
 
 def read_plan(source):
@@ -400,15 +546,36 @@ def make(source, out_dir, profile, spec):
             result = blockout(os.path.dirname(source))
             if params.get("keep_colors"):
                 color_preview_material(bpy.data.objects[result["object"]])
+        elif name == "rebuild":
+            result = rebuild(os.path.dirname(source), params)
         else:
             result = run_script(name, params)
         record["steps"].append({"script": name, "result": result})
     light = [n for n, _ in spec["steps"]]
-    if {"retopo.py", "autoremesher", "blockout"} & set(light) or any(p.get("as_copy") for _, p in spec["steps"]):
+    built = {"blockout", "rebuild"} & set(light)
+    if {"retopo.py", "autoremesher"} & set(light) or built or any(p.get("as_copy") for _, p in spec["steps"]):
         record["shape"] = run_script("match.py", {})
+    if built:
+        low = largest_mesh()
+        if "bake.py" in light:
+            record["under_gear"] = skin_under_gear(low)
+            # The texture has taken over from the painted colors. Left on the
+            # mesh they would go into the .glb, where viewers multiply them
+            # into the texture and darken it.
+            for paint in list(low.data.color_attributes):
+                low.data.color_attributes.remove(paint)
+        # What the gallery offers to show and hide.
+        record["gear"] = [{k: g.get(k) for k in ("gear", "kind", "slot")} for g in json.loads(low.get("forge_groups", "[]")) if g.get("gear")]
+        record["sockets"] = sorted(o["socket"] for o in bpy.context.scene.objects if o.get("socket_of") == low.name)
     glb = os.path.join(out_dir, profile + ".glb")
     record["export"] = run_script("export.py", dict(spec["export"], path=glb))
-    if {"autoremesher", "retopo.py", "blockout"} & set(light):
+    if built:
+        # Blender keeps names unique across the file, so a scene that already
+        # had a "body" would write "body.001"; the tags say what each node is.
+        doc, rest = blockout_recipe.read(glb)
+        if blockout_recipe.tidy_names(doc):
+            blockout_recipe.write(glb, doc, rest)
+    if {"autoremesher", "retopo.py"} & set(light) or built:
         export_edges(os.path.join(out_dir, profile + "-edges.glb"))
     # GLB can only store triangles; the .blend keeps the real quads for
     # anyone who will keep modeling it.

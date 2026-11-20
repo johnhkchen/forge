@@ -5,13 +5,17 @@ set dotenv-load
 default:
     @just --list
 
-# Make an object from an idea: brief, picture, mesh, Blender
-make idea:
-    baml run make -- --idea "{{idea}}"
+# Make an object from an idea: brief, picture, mesh, Blender. props: none, held (what a character carries) or all (hats and backpacks too)
+make idea props="none":
+    baml run make -- --idea "{{idea}}" --props "{{props}}"
 
-# Continue a stopped run at its first missing step
-resume dir:
-    baml run resume -- --dir "{{dir}}"
+# Continue a stopped run at its first missing step (props as for make)
+resume dir props="none":
+    baml run resume -- --dir "{{dir}}" --props "{{props}}"
+
+# Only write the briefs for a finished character's props (held, or all); `just resume` each prop's folder to make it
+props dir wanted="held":
+    baml run props -- --dir "{{dir}}" --wanted "{{wanted}}"
 
 # Only the first step: show the brief Opus would write
 brief idea:
@@ -26,7 +30,7 @@ check:
 check-safe *files:
     python3 scripts/check_safe.py {{files}}
 
-# Try the Blender tools on real runs, in a background Blender (about a minute; leaves the open Blender alone)
+# Try the Blender tools on real runs, in a background Blender (a few minutes; leaves the open Blender alone)
 test-tools runs="runs":
     python3 scripts/test_tools.py "{{runs}}"
 
@@ -55,6 +59,13 @@ tidy run +profiles:
     src="{{run}}/scene.blend"; [ -f "$src" ] || src="{{run}}/mesh.glb"
     "{{blender_bin}}" -b --factory-startup -P scripts/tidy_profile.py -- "$src" "{{run}}/profiles" {{profiles}} 2>&1 | grep -E '^PROFILE|Error|Traceback'
 
+# For a run from before recipes were kept: rebuild its block-out from the transcript in a background Blender and save the recipe, so `just tidy <run> midpoly` works
+recipe run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    "{{blender_bin}}" -b --factory-startup -P scripts/replay_blockout.py -- "{{run}}" 2>&1 | grep -E '^REPLAY|^replay:'
+    cp "{{run}}/replay/lowpoly_build.json" "{{run}}/lowpoly_build.json"
+
 # Install AutoRemesher (MIT, adaptive quad remesher) into tools/ for the profiles (macOS)
 autoremesher:
     #!/usr/bin/env bash
@@ -76,8 +87,8 @@ sync-kit:
     echo "vendored gallery/vendor/b28-clay.css"
 
 # Serve the gallery to this Mac and phones on the same Wi-Fi
-gallery port="8028":
-    python3 scripts/gallery.py --port {{port}}
+gallery port="8028" runs="runs":
+    python3 scripts/gallery.py --port {{port}} --runs "{{runs}}"
 
 # Only brief, picture and mesh (leaves Blender alone); finish with `just resume`
 mesh idea:

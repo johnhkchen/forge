@@ -1,5 +1,6 @@
 # Block out a low-poly version from a list of simple pieces, join them into
-# one object, and say how far it strays from the detailed mesh.
+# one object, and say how far it strays from the detailed mesh. A character's
+# gear stays its own group, and it gets the points props attach to.
 #
 # Each piece has a "name", an optional "color" [r, g, b] (painted flat as
 # vertex color), and ONE of these shapes:
@@ -64,6 +65,24 @@
 #   ring (a belt that sits lower in front).
 #   Add a ring where something bends (elbow, knee) to give it an edge loop.
 # Any piece: "mirror": True also builds its twin across x = 0.
+#   "finer": 1 splits every face of the piece in four, rounding as it goes
+#   (the mid-poly rebuild does this to heads; leave it out of a block-out).
+#
+# Gear comes off. On a character, a piece of clothing, armor or equipment
+# says which gear item it is: "gear": "wool singlet" (a name from the brief's
+# gear list; pass that list once as PARAMS["gear"]). Pieces without "gear"
+# are the body, and the body is built whole underneath: take the coat away
+# and there is a chest, not a hole. In the scene it is still one object to
+# look at and check; export.py writes it as one mesh per group, named "body",
+# "gear: wool singlet"..., each gear mesh tagged with its kind and slot.
+#
+# "sockets": True adds the points a game hangs props on, as empties named
+# "socket: hand_right", "socket: hand_left" (the middle of each palm),
+# "socket: head" (top of the head), "socket: back" (between the shoulder
+# blades) and "socket: hip" (the left hip, where a sheath hangs). They are
+# worked out from the body pieces of a T-pose facing -y, so the right hand
+# is the one at -x. Read them in the result; move one that landed wrong
+# with "sockets": {"head": [x, y, z]}.
 #
 # Pieces stay in the scene, hidden, so the next call only needs the pieces
 # that change ("parts") or go ("remove"); everything is joined again each time.
@@ -78,6 +97,9 @@ PARAMS = {
     "parts": [],        # pieces to add or replace, by name
     "remove": [],       # names of pieces to drop
     "shading": "flat",  # "flat" (faceted) or "smooth"
+    "crease": None,     # with "smooth": edges bent more than this many degrees stay crisp
+    "gear": None,       # the brief's gear list, [{"name": , "kind": , "slot": }]; None = as last time
+    "sockets": None,    # True = add attachment points; {"head": [x, y, z]} moves one; False = none; None = as last time
     "check": 8000,      # points to sample for the shape check; 0 = skip it
 }
 
@@ -492,11 +514,15 @@ def make_piece(part, owner, scene):
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)  # a ring of radius 0 becomes a point
     if "lumps" in part or "box" in part:
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for _ in range(int(part.get("finer", 0))):
+        bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=1, smooth=1.0, use_grid_fill=True)
     bm.to_mesh(me)
     bm.free()
     piece = bpy.data.objects.new("piece: " + part["name"], me)
     piece["piece_of"] = owner
     piece["piece"] = part["name"]
+    piece["gear"] = part.get("gear") or ""
+    piece["spec"] = json.dumps(part)  # the recipe, so the same piece can be built again, denser
     scene.collection.objects.link(piece)
     piece.hide_set(True)
     piece.hide_render = True
@@ -526,6 +552,53 @@ def off(points, tree, size):
 def first(pair):
     return pair[0]
 
+def group_name(piece):
+    return "gear: " + piece["gear"] if piece.get("gear") else "body"
+
+def group_tag(group, listed):
+    """What export.py writes on a group's mesh: for gear, its kind and slot from the brief."""
+    if group == "body":
+        return {"name": group, "forge": "body"}
+    item = listed.get(group[6:], {})
+    return {"name": group, "forge": "gear", "gear": group[6:], "kind": item.get("kind") or "worn", "slot": item.get("slot") or ""}
+
+def ray(tree, start, aim):
+    """Where a ray first meets the body, or None."""
+    return tree.ray_cast(Vector(start), Vector(aim))[0]
+
+def find_sockets(points, faces, head_top, moved):
+    """Where props attach on a T-pose body facing -y: palms, top of the head, upper back, left hip."""
+    lows = [min(p[i] for p in points) for i in range(3)]
+    highs = [max(p[i] for p in points) for i in range(3)]
+    tall = highs[2] - lows[2]
+    middle = (lows[0] + highs[0]) / 2
+    tree = BVHTree.FromPolygons([tuple(p) for p in points], faces)
+    found = {}
+    for key, tip, inward in (("hand_right", lows[0], 1.0), ("hand_left", highs[0], -1.0)):
+        hand = [p for p in points if abs(p.x - tip) < 0.1 * tall]
+        found[key] = [tip + inward * 0.055 * tall] + [(min(p[i] for p in hand) + max(p[i] for p in hand)) / 2 for i in (1, 2)]
+    arms = (found["hand_right"][2] + found["hand_left"][2]) / 2
+    if head_top:
+        found["head"] = list(head_top)
+    else:
+        crown = [p for p in points if abs(p.x - middle) < 0.12 * tall]
+        peak = max(p.z for p in crown)
+        near = [p.y for p in crown if p.z > peak - 0.03 * tall]
+        found["head"] = [middle, sum(near) / len(near), peak]
+    up = arms - 0.04 * tall
+    spine = ray(tree, (middle, highs[1] + 1, up), (0, -1, 0))
+    found["back"] = [middle, spine.y if spine else highs[1], up]
+    waist = lows[2] + 0.62 * (arms - lows[2])
+    front, behind = ray(tree, (middle, lows[1] - 1, waist), (0, 1, 0)), ray(tree, (middle, highs[1] + 1, waist), (0, -1, 0))
+    depth = (front.y + behind.y) / 2 if front and behind else (lows[1] + highs[1]) / 2
+    side = ray(tree, (highs[0] + 1, depth, waist), (-1, 0, 0))
+    found["hip"] = [side.x if side else middle + 0.1 * tall, depth, waist]
+    for key, spot in moved.items():
+        if key not in found:
+            raise ValueError("no socket named %r: sockets are %s" % (key, ", ".join(found)))
+        found[key] = list(spot)
+    return {key: [round(c, 4) for c in spot] for key, spot in found.items()}, tall
+
 def summary(d):
     if not d:
         return None
@@ -550,16 +623,36 @@ for part in PARAMS["parts"]:
 if not pieces:
     raise ValueError("nothing to build: PARAMS['parts'] is empty")
 
-joined = bmesh.new()
-for piece in pieces.values():
-    joined.from_mesh(piece.data)
 light = bpy.data.objects.get(name)
 if light is None:
     light = bpy.data.objects.new(name, bpy.data.meshes.new(name))
     scene.collection.objects.link(light)
+
+# Which gear item each gear piece is: the brief's list, kept on the object between calls.
+if PARAMS["gear"] is not None:
+    light["forge_gear"] = json.dumps([{"name": g["name"], "kind": g.get("kind"), "slot": g.get("slot")} for g in PARAMS["gear"]])
+listed = {g["name"]: g for g in json.loads(light.get("forge_gear", "[]"))}
+for piece in pieces.values():
+    if piece.get("gear") and listed and piece["gear"] not in listed:
+        raise ValueError("piece %r is gear %r, which the gear list doesn't have: %s" % (piece["piece"], piece["gear"], ", ".join(listed)))
+groups = ["body"] if any(not p.get("gear") for p in pieces.values()) else []
+for piece in pieces.values():
+    if group_name(piece) not in groups:
+        groups.append(group_name(piece))
+
+joined = bmesh.new()
+marks = []  # for each face, which group it belongs to
+for piece in pieces.values():
+    joined.from_mesh(piece.data)
+    marks += [groups.index(group_name(piece))] * len(piece.data.polygons)
 joined.to_mesh(light.data)
 joined.free()
-light.data.polygons.foreach_set("use_smooth", [PARAMS["shading"] == "smooth"] * len(light.data.polygons))
+smooth = PARAMS["shading"] == "smooth"
+light.data.polygons.foreach_set("use_smooth", [smooth] * len(light.data.polygons))
+if smooth and PARAMS["crease"]:
+    light.data.set_sharp_from_angle(angle=math.radians(PARAMS["crease"]))
+tag = light.data.attributes.get("forge_group") or light.data.attributes.new("forge_group", "INT", "FACE")
+tag.data.foreach_set("value", marks)
 light.data.update()
 bpy.context.view_layer.update()
 mat = bpy.data.materials.get("piece colors") or bpy.data.materials.new("piece colors")
@@ -570,6 +663,51 @@ paint.name = paint.attribute_name = "Col"
 mat.node_tree.links.new(paint.outputs["Color"], nodes["Principled BSDF"].inputs["Base Color"])
 light.data.materials.clear()
 light.data.materials.append(mat)
+light["forge_groups"] = json.dumps([group_tag(g, listed) for g in groups])  # export.py writes one mesh per group from this
+
+# Attachment points: empties that export.py sends along.
+wanted = PARAMS["sockets"]
+before = json.loads(light.get("forge_sockets", "null"))
+if wanted is None:
+    wanted = before["moved"] if before else False
+sockets = {}
+for old in [o for o in scene.objects if o.get("socket_of") == name]:
+    bpy.data.objects.remove(old, do_unlink=True)
+if wanted is not False:
+    moved = wanted if isinstance(wanted, dict) else {}
+    flesh = [p for p in pieces.values() if not p.get("gear")] or list(pieces.values())
+    points, faces = [], []
+    for piece in flesh:
+        start = len(points)
+        points += [v.co.copy() for v in piece.data.vertices]
+        faces += [tuple(start + i for i in poly.vertices) for poly in piece.data.polygons]
+    heads = [[v.co for v in p.data.vertices] for p in flesh if "head" in json.loads(p.get("spec", "{}"))]
+    top = [sum(p.x for p in heads[0]) / len(heads[0]), sum(p.y for p in heads[0]) / len(heads[0]), max(p.z for p in heads[0])] if heads else None
+    sockets, tall = find_sockets(points, faces, top, moved)
+    for key, spot in sockets.items():
+        marker = bpy.data.objects.new("socket: " + key, None)
+        marker.empty_display_type = "SPHERE"
+        marker.empty_display_size = 0.02 * tall
+        marker.location = spot
+        marker["socket_of"] = name
+        marker["forge"] = "socket"
+        marker["socket"] = key
+        scene.collection.objects.link(marker)
+    light["forge_sockets"] = json.dumps({"moved": moved if moved else True, "at": sockets})
+elif "forge_sockets" in light:
+    del light["forge_sockets"]
+
+# The recipe: every piece as it was asked for, so the mid-poly profile can build the same thing denser.
+recipe = [json.loads(p["spec"]) for p in pieces.values() if p.get("spec")]
+if len(recipe) == len(pieces):
+    scans = {}
+    for part in recipe:
+        if part.get("scan") and scene.get("face: " + part["scan"]):
+            scans[part["scan"]] = json.loads(scene["face: " + part["scan"]])
+    light["forge_build"] = json.dumps({"version": 1, "object": name, "shading": PARAMS["shading"], "gear": list(listed.values()),
+                                       "sockets": sockets, "pieces": recipe, "scans": scans})
+elif "forge_build" in light:
+    del light["forge_build"]
 
 result = {
     "object": light.name,
@@ -578,7 +716,13 @@ result = {
     "size": [round(d, 3) for d in light.dimensions],
     "reference_size": [round(d, 3) for d in ref.dimensions],
     "pieces": [{"name": n, "triangles": triangles(o.data)} for n, o in pieces.items()],
+    "recipe_kept": "forge_build" in light,
 }
+if len(groups) > 1:
+    result["groups"] = [dict(group_tag(g, listed), triangles=sum(triangles(p.data) for p in pieces.values() if group_name(p) == g)) for g in groups]
+    result["gear_not_built"] = [g["name"] for g in listed.values() if g.get("kind") != "held" and "gear: " + g["name"] not in groups]
+if sockets:
+    result["sockets"] = sockets
 if PARAMS["check"]:
     rng = random.Random(0)
     size = max(ref.dimensions)

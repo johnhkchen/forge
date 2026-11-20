@@ -4,6 +4,10 @@
 // .claude/skills/tidy-mesh/SKILL.md for what each one is for.
 
 const DEFAULT_PROFILES: string[] = ["web", "game", "lowpoly"];
+// A character also gets the mid-poly version: its block-out built again
+// denser, with the detail baked on, for phone games on today's hardware.
+const CHARACTER_PROFILES: string[] = ["web", "game", "lowpoly", "midpoly"];
+const RECIPE_FILE = "lowpoly_build.json";
 const BLENDER_APP = "/Applications/Blender.app/Contents/MacOS/Blender";
 const PROFILE_TIMEOUT_MINUTES = 15;
 
@@ -22,6 +26,17 @@ function missing_profiles(run: Run, wanted: string[]) -> string[] {
     wanted.filter((p) -> {
         !run.has(`profiles/${p}.glb`)
     })
+}
+
+/// The profiles a run gets by default. `midpoly` is built from the
+/// block-out's recipe, which runs from before recipes were kept don't have,
+/// so those keep the three they had.
+function profiles_for(brief: ObjectBrief, run: Run) -> string[] {
+    if ((brief.character ?? false) && run.has(RECIPE_FILE)) {
+        CHARACTER_PROFILES
+    } else {
+        DEFAULT_PROFILES
+    }
 }
 
 /// Makes the given profiles from the run's scene.blend (Claude's finished

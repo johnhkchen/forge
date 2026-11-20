@@ -12,6 +12,11 @@
 // on the outline and builds the head as a plain loft (the first troll's was
 // 54 triangles of 1,254, with no brow, eyes, nose or mouth). face.py finds
 // the features on the detailed head and prints a "head" piece for build.py.
+//
+// And its gear comes off: a game has to show the character without the coat
+// or swap the boots. So the body is built whole, each gear item from the
+// brief is a piece of its own over it, and the points props attach to
+// (sockets) are marked. export.py writes them as separate named meshes.
 
 /// What a character needs on top of a prop: a pose that can be rigged, and
 /// a face that can be read.
@@ -38,8 +43,61 @@ const CHARACTER_STEPS = `
       your notes what reads on the face and what doesn't.
 `;
 
+/// The gear part of a character's block-out: a whole body, each gear item a
+/// piece of its own over it, and sockets for the props. A character with no
+/// gear list (a brief from before gear) still gets its sockets.
+function gear_steps(brief: ObjectBrief) -> string {
+    let gear = brief.gear ?? [];
+    let built = gear.filter((g) -> {
+        g.kind != "held"
+    });
+    let held = gear.filter((g) -> {
+        g.kind == "held"
+    });
+    let sockets = `
+        Mark where props attach: set "sockets": True in build.py. Its result
+        gives five "sockets" (each palm, the top of the head, the upper back,
+        the left hip). Check the hand ones sit in the palms and the head one
+        on top of the head, not on a hat or a hump; move one that landed
+        wrong with "sockets": {"head": [x, y, z]}.
+    `;
+    if (!built) {
+        return sockets;
+    }
+    let tags = gear.map((g) -> {
+        { "name": g.name, "kind": g.kind, "slot": g.slot }
+    });
+    `
+        Its gear comes off: a game will show this character without its coat,
+        or swap its boots. So build it in two layers:
+        - The body first, whole: skin (or fur, or scales) everywhere, under
+          the clothes too. Under a coat there is a chest and arms, under
+          boots there are feet. Where gear covers it the body can be plain
+          (6 sides, few rings); it only shows with the gear off. Hair,
+          beards, horns, tails and tusks are body.
+        - Then each gear item below as a piece or pieces of its own, sitting
+          just outside the body (about a centimeter, so the body doesn't
+          poke through), with "gear": "<the item's name>" on every piece of
+          it. A piece with no "gear" is body.
+        - The hidden body comes on top of the triangle budget, up to a
+          quarter more; don't thin the pieces people see to pay for it.
+        - Pass the list once as build.py's "gear" (below, ready to paste).
+          The result then lists the "groups" it made (the body and one per
+          gear item) and "gear_not_built", which should end up empty.
+        Gear to build:
+        ${built.map((g) -> { `- ${g.name} (${g.kind}, ${g.slot}): ${g.look}` }).join("\n")}
+        build.py "gear": ${baml.json.stringify(tags)}
+        ${if (held) { `Held in the hand, made separately and not built here: ${held.map((g) -> { g.name }).join(", ")}. Leave the hands empty.` } else { "" }}
+
+        ${sockets}
+    `
+}
+
 class LowPolyPart {
     name: string @description("The part, like 'body' or 'spout'"),
+    gear: string? @description(
+        "For a piece of gear: the gear item it is, named exactly as in the gear list. Leave out for the body and for objects",
+    ),
     shape: string @description("How it was built, like '8-sided loft, 5 rings, top ring narrowed'"),
     triangles: int,
 }
@@ -80,6 +138,7 @@ function BlockOut(
         ${parts}
 
         ${if (brief.character ?? false) { CHARACTER_STEPS } else { "" }}
+        ${if (brief.character ?? false) { gear_steps(brief) } else { "" }}
         Style: ${brief.lowpoly_style ?? "early real-time game prop: clean simple shapes, smooth-shaded"}.
 
         1. Bring it in: open.py with "mesh": "${mesh}", "scene": "Low poly"
@@ -113,8 +172,9 @@ function BlockOut(
         5. Export: export.py with "object": "Reference (light)" (or the
            name build.py printed, if it differs), "path": "${out}" and
            "materials": False. Its result must say
-           "only_this_object": true. Leave the "Low poly" scene for the
-           person to see.
+           "only_this_object": true (for a character with gear or sockets
+           it writes one mesh per group and the sockets, and lists them).
+           Leave the "Low poly" scene for the person to see.
 
         Tools:
 

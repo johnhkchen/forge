@@ -29,10 +29,19 @@ PARAMS = {
     "maps": ["color", "roughness", "metallic", "normal"],  # normal: "onto" only
     "metallic": True,        # bake a metallic map (skip for objects with no metal)
     "roughness": 0.85,       # used when no roughness map is baked
+    # "onto" only: how far from the light mesh to look for the full one, as a
+    # share of the object's size (0.02 = 2%). None = 1%, or more for a coarse
+    # mesh. A list looks near first, then farther for what that missed:
+    # [0.02, 0.07] suits a block-out, which sits well off the full mesh in places.
+    "reach": None,
     # Low-poly style: bake the full mesh's soft shadows (ambient occlusion)
     # into the color, so one texture carries the shading a normal map would.
     "ao": False,
     "ao_strength": 0.8,
+    # "onto" a block-out: where it sits too far from the full mesh for the
+    # bake to find anything (a hat brim built flat, a hand built as a
+    # mitten), use the block-out's own painted color there instead of black.
+    "fill": False,
 }
 
 import bpy
@@ -95,8 +104,10 @@ def route_to_emission(mat, channel):
     tree = mat.node_tree
     emit = tree.nodes.new("ShaderNodeEmission")
     emit.inputs["Strength"].default_value = 1.0
-    sock = bsdf.inputs[channel]
-    if sock.is_linked:
+    sock = bsdf.inputs[channel or "Base Color"]
+    if not channel:  # plain white: a bake of it is white wherever the bake found the surface
+        emit.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+    elif sock.is_linked:
         tree.links.new(sock.links[0].from_socket, emit.inputs["Color"])
     else:
         v = sock.default_value
@@ -152,6 +163,38 @@ def bake_pass(kind, source_mats, target_mats, img, selected_to_active, reach):
         drop(temp)
     img.pack()
 
+
+def own_colors(target, holder, img):
+    """The target's painted vertex colors as a texture laid out like the baked ones."""
+    tree = holder.node_tree
+    paint = tree.nodes.new("ShaderNodeVertexColor")
+    paint.layer_name = target.data.color_attributes[0].name
+    emit = tree.nodes.new("ShaderNodeEmission")
+    tree.links.new(paint.outputs["Color"], emit.inputs["Color"])
+    out = output_node(holder)
+    old = out.inputs["Surface"].links[0].from_socket if out.inputs["Surface"].is_linked else None
+    tree.links.new(emit.outputs["Emission"], out.inputs["Surface"])
+    select_only([target], target)
+    try:
+        bake_pass("EMIT", [holder], [holder], img, False, 0)
+    finally:
+        if old is not None:
+            tree.links.new(old, out.inputs["Surface"])
+        tree.nodes.remove(emit)
+        tree.nodes.remove(paint)
+
+def patch(img, found, other, plain):
+    """Where `found` is black (the bake met nothing), take `other`'s pixel, or the `plain` color."""
+    pixels = list(img.pixels)
+    spare = list(other.pixels) if other else None
+    missed = 0
+    for i in range(0, len(pixels), 4):
+        if found[i] < 0.5:
+            missed += 1
+            pixels[i:i + 3] = spare[i:i + 3] if spare else plain
+    img.pixels[:] = pixels
+    img.pack()
+    return missed
 
 def prepare_target(low):
     """Fresh UVs and a placeholder material, so the bake has somewhere to write."""
@@ -220,7 +263,6 @@ if not source_mats:
 scene = bpy.context.scene
 saved = (scene.render.engine, scene.cycles.samples)
 scene.render.engine = "CYCLES"
-scene.cycles.samples = 1  # an emission bake needs a single sample
 size = PARAMS["texture_size"]
 reach = size_of(obj) * 0.01
 
@@ -243,7 +285,12 @@ if selected_to_active:
     verts = target.data.vertices
     mean_edge = sum((verts[e.vertices[0]].co - verts[e.vertices[1]].co).length for e in edges) / max(len(edges), 1)
     reach = max(reach, mean_edge * max(target.scale) * 0.75)
+reaches = [reach]
+if selected_to_active and PARAMS["reach"]:
+    asked = PARAMS["reach"] if isinstance(PARAMS["reach"], list) else [PARAMS["reach"]]
+    reaches = [size_of(obj) * share for share in asked]
 base = target.name
+filled = None
 
 wanted = set(PARAMS["maps"])
 if not PARAMS["metallic"]:
@@ -251,29 +298,56 @@ if not PARAMS["metallic"]:
 channels = [c for c in (("color", "Base Color", False), ("roughness", "Roughness", True),
                         ("metallic", "Metallic", True)) if c[0] in wanted]
 
-maps = {}
-try:
+def bake_set(reach, tag, with_mask):
+    """Every wanted map baked with one reach. Returns {map: image} and, with `with_mask`, which
+    pixels the bake found the full mesh for (a list like an image's pixels: 1 found, 0 not)."""
+    got = {}
+    scene.cycles.samples = 1  # an emission bake needs a single sample
     for key, socket, data in channels:
-        img = new_image("%s %s" % (base, key), size, data)
+        img = new_image("%s %s%s" % (base, key, tag), size, data)
         undo = [route_to_emission(m, socket) for m in source_mats]
         try:
             bake_pass("EMIT", source_mats, target_mats, img, selected_to_active, reach)
         finally:
             for u in undo:
                 undo_route(u)
-        maps[key] = img
+        got[key] = img
     if selected_to_active and "normal" in wanted:
         scene.cycles.samples = 4
-        img = new_image("%s normal" % base, size, True)
+        img = new_image("%s normal%s" % (base, tag), size, True)
         bake_pass("NORMAL", source_mats, target_mats, img, True, reach)
-        maps["normal"] = img
+        got["normal"] = img
+    seen = None
+    if with_mask:
+        scene.cycles.samples = 1
+        mask = new_image("%s found" % base, size, True)
+        undo = [route_to_emission(m, None) for m in source_mats]
+        try:
+            bake_pass("EMIT", source_mats, target_mats, mask, True, reach)
+        finally:
+            for u in undo:
+                undo_route(u)
+        seen = list(mask.pixels)
+        bpy.data.images.remove(mask)
+    return got, seen
+
+fill = bool(PARAMS["fill"] and selected_to_active and target.data.color_attributes)
+try:
+    maps, found = bake_set(reaches[0], "", fill or len(reaches) > 1)
+    for far in reaches[1:]:  # what the near look missed, taken from a farther one
+        more, seen = bake_set(far, " far", True)
+        select_only([obj, target], target)
+        for key, img in maps.items():
+            patch(img, found, more[key], None)
+            bpy.data.images.remove(more[key])
+        found = [max(pair) for pair in zip(found, seen)]
     if PARAMS["ao"]:
         if scene.world is None:
             scene.world = bpy.data.worlds.new("bake world")
         scene.world.light_settings.distance = size_of(obj) * 0.08
         scene.cycles.samples = 32
         ao = new_image("%s shadows" % base, size, True)
-        bake_pass("AO", source_mats, target_mats, ao, selected_to_active, reach)
+        bake_pass("AO", source_mats, target_mats, ao, selected_to_active, reaches[0])
         color = maps["color"]
         k = PARAMS["ao_strength"]
         shade = list(ao.pixels)
@@ -286,6 +360,14 @@ try:
         color.pixels[:] = pixels
         color.pack()
         bpy.data.images.remove(ao)
+    if fill:
+        scene.cycles.samples = 1
+        own = new_image("%s own colors" % base, size, False)
+        own_colors(target, target_mats[0], own)
+        flat = {"normal": [0.5, 0.5, 1.0], "roughness": [PARAMS["roughness"]] * 3, "metallic": [0.0, 0.0, 0.0]}
+        for key, img in maps.items():
+            filled = patch(img, found, own if key == "color" else None, flat.get(key))
+        bpy.data.images.remove(own)
 finally:
     scene.render.engine, scene.cycles.samples = saved
 
@@ -293,6 +375,8 @@ baked = final_material(base + " baked", maps)
 target.data.materials.clear()
 target.data.materials.append(baked)
 done = ["baked %s%s at %d px" % (", ".join(sorted(maps)), " with soft shadows in the color" if PARAMS["ao"] else "", size)]
+if filled is not None:
+    done.append("where the bake found nothing to copy, the texture has the block-out's own colors")
 if mode == "onto":
     obj.hide_set(True)
     obj.hide_render = True

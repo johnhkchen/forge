@@ -137,6 +137,41 @@
       "draco": true
     }
   },
+  "midpoly": {
+    "about": "Phone games on today's hardware: the same simple pieces as the low-poly version, built again rounder and smooth, a few thousand triangles, with the detailed mesh's color, bumps and shine baked on. Gear still comes off.",
+    "steps": [
+      [
+        "clean.py",
+        {}
+      ],
+      [
+        "rebuild",
+        {
+          "triangles": [
+            3000,
+            8000
+          ],
+          "crease": 40
+        }
+      ],
+      [
+        "bake.py",
+        {
+          "mode": "onto",
+          "texture_size": 1024,
+          "reach": [
+            0.02,
+            0.07
+          ],
+          "fill": true
+        }
+      ]
+    ],
+    "export": {
+      "image_format": "WEBP",
+      "draco": true
+    }
+  },
   "lowpoly": {
     "about": "Old-school real-time style, like early Warcraft: a few hundred triangles Claude blocks out from simple shapes, with the detail's color and soft shadows painted into one small texture.",
     "steps": [

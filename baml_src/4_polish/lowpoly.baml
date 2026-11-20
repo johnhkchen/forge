@@ -37,7 +37,37 @@ function block_out(brief: ObjectBrief, run: Run) -> LowPolyReport {
     );
     keep_transcript(run, "lowpoly");
     run.save("lowpoly.json", report);
+    //# Save the recipe it was built from, for the mid-poly version
+    keep_recipe(run);
     report
+}
+
+const RECIPE_TOOL = "scripts/blockout_recipe.py";
+
+/// Saves what build.py was given as lowpoly_build.json, and names the .glb's
+/// meshes for their tags (body, gear: ..., socket: ...).
+///
+/// Claude's tools run in Blender's safe mode and can't write files of their
+/// own, so the recipe and the tags ride inside lowpoly.glb; this reads them
+/// back out (scripts/blockout_recipe.py). The run is still good without it,
+/// so a failure here is a warning: only the `midpoly` profile needs the recipe.
+function keep_recipe(run: Run) -> void {
+    if (!run.has("lowpoly.glb")) {
+        return;
+    }
+    let out = baml.sys.run("python3", args = [RECIPE_TOOL, run.path("lowpoly.glb")], capture_output = true) catch (e) {
+        baml.errors.Io => {
+            log.warn("lowpoly: python3 not found, so the block-out's recipe was not saved");
+            return;
+        },
+    };
+    if (out.ok()) {
+        log.info(`lowpoly: ${string.from_utf8(out.stdout).trim()}`);
+    } else {
+        log.warn(
+            `lowpoly: could not read the recipe out of lowpoly.glb: ${string.from_utf8(out.stderr)}`,
+        );
+    }
 }
 
 test "BlockOut parses a report" {
@@ -77,6 +107,69 @@ function lowpoly_test_brief(character: bool, triangles: int?) -> ObjectBrief {
         lowpoly_triangles: triangles,
         lowpoly_style: null,
     }
+}
+
+test "a character with gear is asked for a whole body, gear as its own pieces, and sockets" {
+    let wrestler = ObjectBrief {
+        ...lowpoly_test_brief(true, 1400),
+        gear: [
+            GearItem {
+                name: "wool singlet",
+                kind: "worn",
+                slot: "torso",
+                look: "navy knitted wool",
+            },
+            GearItem {
+                name: "round spectacles",
+                kind: "attached",
+                slot: "face",
+                look: "gunmetal rims",
+            },
+            GearItem { name: "umbrella", kind: "held", slot: "hand_right", look: "black, furled" },
+        ],
+    };
+    let asked = BlockOut@spec(wrestler, "final.glb", "lowpoly.glb", "{}", tools(CHARACTER_TOOLS), lowpoly_budget(wrestler))
+        .prompt()
+        .to_string();
+    assert.contains(asked, "The body first, whole");
+    assert.contains(asked, "- wool singlet (worn, torso): navy knitted wool");
+    assert.contains(asked, `{"name":"round spectacles","kind":"attached","slot":"face"}`);
+    assert.contains(asked, "made separately and not built here: umbrella");
+    assert.is_true(!asked.includes("- umbrella"));
+    assert.contains(asked, `set "sockets": True`);
+    // A character from before gear lists still gets its sockets, and no gear talk.
+    let troll = lowpoly_test_brief(true, 1200);
+    let plain = BlockOut@spec(troll, "final.glb", "lowpoly.glb", "{}", tools(CHARACTER_TOOLS), lowpoly_budget(troll))
+        .prompt()
+        .to_string();
+    assert.contains(plain, `set "sockets": True`);
+    assert.is_true(!plain.includes("Its gear comes off"));
+    // An object gets neither.
+    let kettle = lowpoly_test_brief(false, null);
+    let prop = BlockOut@spec(kettle, "final.glb", "lowpoly.glb", "{}", tools(LOWPOLY_TOOLS), lowpoly_budget(kettle))
+        .prompt()
+        .to_string();
+    assert.is_true(!prop.includes(`"sockets": True in build.py`))
+}
+
+test "a low-poly report can say which gear a piece is" {
+    let reply = `
+        {
+          "triangles": 900,
+          "parts": [
+            { "name": "torso", "shape": "8-sided loft", "triangles": 100 },
+            { "name": "coat", "gear": "navy coat", "shape": "8-sided loft", "triangles": 120 }
+          ],
+          "shape_typical": 2.1,
+          "shape_worst": 5.0,
+          "notes": "none"
+        }
+    `;
+    let troll = lowpoly_test_brief(true, 1200);
+    let report = BlockOut@spec(troll, "final.glb", "lowpoly.glb", "{}", tools(CHARACTER_TOOLS), lowpoly_budget(troll))
+        .parse(reply);
+    assert.equal(report.parts.at(0)?.gear, null);
+    assert.equal(report.parts.at(1)?.gear, "navy coat")
 }
 
 test "a character's budget sets aside the head's share" {

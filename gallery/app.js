@@ -6,7 +6,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 const app = document.getElementById("app");
-const VERSION_NAMES = { raw: "Raw TRELLIS.2", hero: "Hero", quads: "Quads", web: "Web", game: "Game", mobile: "Mobile", lowpoly: "Low poly" };
+const VERSION_NAMES = { raw: "Raw TRELLIS.2", hero: "Hero", quads: "Quads", web: "Web", game: "Game", mobile: "Mobile", midpoly: "Mid poly", lowpoly: "Low poly" };
+const SOCKET_NAMES = { hand_right: "right hand", hand_left: "left hand", head: "head", back: "back", hip: "hip" };
 const RAW_WIREFRAME_LIMIT = 400000; // triangles; above this the raw wireframe is too heavy for a phone
 
 const draco = new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/");
@@ -79,7 +80,9 @@ function facts(run, v) {
 function objectPage(run, wanted) {
   const versions = versionsOf(run);
   const start = versions.find((v) => v.name === wanted) || versions.find((v) => v.name === "web") || versions[versions.length - 1];
-  const state = { version: start, compare: versions.length > 1, wire: true };
+  // `off` holds the gear the visitor took off; it carries over between the versions that have gear.
+  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false };
+  const hasGear = versions.some((v) => v.gear?.length);
 
   const stage = h("div", { class: "stage clay-well" });
   const factsBox = h("div", { class: "facts" });
@@ -89,6 +92,32 @@ function objectPage(run, wanted) {
   );
   const compareBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.compare), onclick: () => { state.compare = !state.compare; compareBtn.setAttribute("aria-pressed", String(state.compare)); render(); } }, "Before / after");
   const wireBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.wire), onclick: () => { state.wire = !state.wire; wireBtn.setAttribute("aria-pressed", String(state.wire)); viewer?.setWire(state.wire); } }, "Wireframe");
+
+  const socketsBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => { state.sockets = !state.sockets; socketsBtn.setAttribute("aria-pressed", String(state.sockets)); viewer?.setSockets(state.sockets); } }, "Where props go");
+  const gearRow = h("div", { class: "gear", role: "group", "aria-label": "Gear" });
+
+  // One chip per piece of gear: pressed in means it's on. Only the low-poly and mid-poly versions have gear that comes off.
+  function showGear() {
+    const gear = state.version.gear || [];
+    socketsBtn.hidden = !(state.version.sockets || []).length;
+    gearRow.hidden = !hasGear;
+    if (!gear.length) {
+      gearRow.replaceChildren(h("span", { class: "hint" }, "Gear comes off in the Low poly and Mid poly versions."));
+      return;
+    }
+    gearRow.replaceChildren(
+      h("span", { class: "hint" }, "Wearing"),
+      ...gear.map((g) => {
+        const chip = h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(!state.off.has(g.gear)), title: `${g.kind}, ${g.slot}`, onclick: () => {
+          if (state.off.has(g.gear)) state.off.delete(g.gear); else state.off.add(g.gear);
+          chip.setAttribute("aria-pressed", String(!state.off.has(g.gear)));
+          viewer?.setGear(state.off);
+        } }, g.gear);
+        return chip;
+      }),
+      h("span", { class: "hint" }, "Tap a piece to take it off."),
+    );
+  }
 
   function select(v) {
     state.version = v;
@@ -107,8 +136,9 @@ function objectPage(run, wanted) {
       glb: file(run, x.glb),
       edges: x.edges ? file(run, x.edges) : null,
       onTriangles: x === raw ? (n) => { raw.triangles = n; if (state.version === raw) showFacts(); } : null,
-    })), state.wire);
+    })), state.wire, state.off, state.sockets);
     showFacts();
+    showGear();
   }
 
   function showFacts() {
@@ -124,7 +154,8 @@ function objectPage(run, wanted) {
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn)),
+    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, socketsBtn)),
+    gearRow,
     stage,
     factsBox,
     about,
@@ -144,6 +175,9 @@ function making(run) {
     pictures.length ? h("div", { class: "pictures" }, pictures.map(([caption, rel]) =>
       h("figure", { class: "clay-surface" }, h("img", { src: file(run, rel), alt: caption, loading: "lazy" }), h("figcaption", {}, caption)),
     )) : null,
+    run.props.length ? h("div", { class: "notes clay-surface" }, h("h3", {}, "What it carries"), h("ul", {}, run.props.map((p) =>
+      h("li", {}, h("a", { href: `#/run/${encodeURIComponent(p.run)}` }, p.name || p.gear), ` · goes on the ${SOCKET_NAMES[p.socket] || p.socket}. Made on its own, so it can be put down or swapped.`)))) : null,
+    run.prop_of ? h("div", { class: "notes clay-surface" }, h("h3", {}, "Made for"), h("p", {}, h("a", { href: `#/run/${encodeURIComponent(run.prop_of)}` }, "the character that carries it"))) : null,
     run.fixes.length ? h("div", { class: "notes clay-surface" }, h("h3", {}, "What Claude fixed in Blender"), h("ul", {}, run.fixes.map((f) => h("li", {}, f)))) : null,
     run.problems.length ? h("div", { class: "notes clay-surface" }, h("h3", {}, "What it couldn't fix"), h("ul", {}, run.problems.map((f) => h("li", {}, f)))) : null,
   );
@@ -152,10 +186,12 @@ function making(run) {
 // ---------- the 3D view: one camera shared by every pane ----------
 
 class Viewer {
-  constructor(stage, specs, wire) {
+  constructor(stage, specs, wire, off = new Set(), sockets = false) {
     this.stage = stage;
     this.panes = [];
     this.wire = wire;
+    this.off = off;
+    this.sockets = sockets;
     this.camera = new THREE.PerspectiveCamera(32, 1, 0.001, 100);
     this.camera.position.set(0.55, 0.35, 0.8);
     this.framed = false;
@@ -183,7 +219,7 @@ class Viewer {
     const controls = new OrbitControls(this.camera, renderer.domElement);
     controls.enableDamping = false;
     controls.addEventListener("change", () => this.draw());
-    const pane = { el, renderer, scene, controls, wire: null, status };
+    const pane = { el, renderer, scene, controls, wire: null, model: null, markers: null, status };
     this.fill(pane, spec);
     return pane;
   }
@@ -203,8 +239,12 @@ class Viewer {
       });
       spec.onTriangles?.(Math.round(triangles));
       pane.scene.add(model);
+      pane.model = model;
       pane.wire = await this.wireFor(model, spec, triangles);
       if (pane.wire) { pane.wire.visible = this.wire; pane.scene.add(pane.wire); }
+      pane.markers = this.markersFor(model);
+      if (pane.markers) { pane.markers.visible = this.sockets; pane.scene.add(pane.markers); }
+      this.setGear(this.off);
       pane.status.remove();
       if (!this.framed) this.frame(model);
       this.draw();
@@ -228,6 +268,7 @@ class Viewer {
         if (o.isLineSegments || o.isLine) {
           const lines = new THREE.LineSegments(o.geometry, material);
           lines.applyMatrix4(o.matrixWorld);
+          lines.userData.gear = o.userData.gear;
           group.add(lines);
         }
       });
@@ -240,9 +281,49 @@ class Viewer {
       if (!o.isMesh) return;
       const lines = new THREE.LineSegments(new THREE.WireframeGeometry(o.geometry), material);
       lines.applyMatrix4(o.matrixWorld);
+      lines.userData.gear = gearOf(o);
       group.add(lines);
     });
     return group;
+  }
+
+  // A small ball and a label at each point the file marks for props ("socket: hand_right"...).
+  markersFor(model) {
+    const sockets = [];
+    model.updateMatrixWorld(true);
+    model.traverse((o) => { if (o.userData.socket) sockets.push(o); });
+    if (!sockets.length) return null;
+    const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()).length();
+    const group = new THREE.Group();
+    const ball = new THREE.SphereGeometry(size * 0.009, 16, 12);
+    const paint = new THREE.MeshBasicMaterial({ color: 0x44679b, depthTest: false });
+    for (const socket of sockets) {
+      const at = socket.getWorldPosition(new THREE.Vector3());
+      const dot = new THREE.Mesh(ball, paint);
+      dot.position.copy(at);
+      dot.renderOrder = 2;
+      const label = labelSprite(SOCKET_NAMES[socket.userData.socket] || socket.userData.socket);
+      label.position.copy(at).add(new THREE.Vector3(0, size * 0.028, 0));
+      label.scale.multiplyScalar(size * 0.026);
+      group.add(dot, label);
+    }
+    return group;
+  }
+
+  // Show or hide each gear piece, by the name its node carries in the file.
+  setGear(off) {
+    this.off = off;
+    this.panes.forEach((p) => {
+      p.model?.traverse((o) => { if (o.userData.gear) o.visible = !off.has(o.userData.gear); });
+      p.wire?.children.forEach((o) => { if (o.userData.gear) o.visible = !off.has(o.userData.gear); });
+    });
+    this.draw();
+  }
+
+  setSockets(on) {
+    this.sockets = on;
+    this.panes.forEach((p) => { if (p.markers) p.markers.visible = on; });
+    this.draw();
   }
 
   frame(model) {
@@ -293,6 +374,36 @@ class Viewer {
     this.panes.forEach((p) => { p.controls.dispose(); p.renderer.dispose(); });
     this.panes = [];
   }
+}
+
+// The gear piece a mesh belongs to: the tag on it or on the node above it.
+function gearOf(o) {
+  for (let at = o; at; at = at.parent) if (at.userData.gear) return at.userData.gear;
+  return undefined;
+}
+
+// A word on a small off-white pill that always faces the viewer.
+function labelSprite(text) {
+  const canvas = document.createElement("canvas");
+  const pad = 18, height = 56;
+  const ctx = canvas.getContext("2d");
+  ctx.font = "600 30px Karla, sans-serif";
+  canvas.width = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  canvas.height = height;
+  ctx.font = "600 30px Karla, sans-serif";
+  ctx.fillStyle = "#faf8f5";
+  ctx.beginPath();
+  ctx.roundRect(0, 0, canvas.width, height, height / 2);
+  ctx.fill();
+  ctx.fillStyle = "#1c1917";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, pad, height / 2 + 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, toneMapped: false }));
+  sprite.scale.set(canvas.width / height, 1, 1);
+  sprite.renderOrder = 3;
+  return sprite;
 }
 
 // ---------- routing ----------

@@ -63,9 +63,15 @@ html, body { overflow-x: hidden; }
 }
 .chip[aria-pressed="true"] { background: var(--clay-primary); color: var(--clay-on-primary); box-shadow: var(--clay-shadow-pressed); }
 .chip:active { box-shadow: var(--clay-shadow-pressed); }
-.toggles { display: flex; gap: 8px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px; }
 .toggle { font-size: 0.9rem; padding: 0.55em 1.05em; }
 .toggle[aria-pressed="true"] { background: var(--clay-well); box-shadow: var(--clay-shadow-pressed); }
+
+.gear { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; }
+.gear[hidden], .toggle[hidden] { display: none; }
+.gear .hint { font-size: 0.88rem; color: var(--clay-ink-soft); }
+.gear .hint:first-child { font-weight: 600; color: var(--clay-ink); }
+.gear .chip { font-size: 0.86rem; padding: 0.4em 0.85em; }
 
 .stage { padding: 10px; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
 .stage.compare { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

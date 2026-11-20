@@ -6,22 +6,26 @@
 //   4. Claude finishes it in Blender over MCP        (4_polish)
 //      finds its parts (lid, knob, spout...) and blocks out a low-poly version
 //   5. Sized versions: web, game, ...               (5_profiles)
+//   6. Only when asked: a character's props, each a small run of its own (6_props)
 //
 // Each step writes its result into the run folder, and a step whose result is
 // already there is skipped, so `resume` picks a stopped run up where it left off.
 //
 //   baml run make -- --idea "a brass diving helmet"
 //   baml run resume -- --dir runs/2026-11-20T03-22-22-brass-diving-helmet
+//
+// Props are off unless asked for: add `--props held` (things carried in a
+// hand) or `--props all` (hats, backpacks and the like too) to either.
 
 /// Makes one object from a loose idea; returns the run folder.
-function make(idea: string) -> string {
+function make(idea: string, props: string = "none") -> string {
     //# 1. Opus writes the brief
     log.info(`brief: asking Opus about "${idea}"`);
     let brief = Describe(idea);
     let run = Run.start(brief.name);
     run.save("brief.json", brief);
     log.info(`brief: ${brief.name} -> ${run.dir}`);
-    finish(run, brief)
+    finish(run, brief, props = props)
 }
 
 /// Steps 1-3 only (brief, picture, mesh): nothing touches Blender, so it's
@@ -40,12 +44,13 @@ function make_mesh(idea: string) -> string {
 }
 
 /// Picks up a stopped run at its first missing result.
-function resume(dir: string) -> string {
+function resume(dir: string, props: string = "none") -> string {
     let run = Run.open(dir);
-    finish(run, run.load<ObjectBrief>("brief.json"))
+    finish(run, run.load<ObjectBrief>("brief.json"), props = props)
 }
 
-function finish(run: Run, brief: ObjectBrief) -> string {
+function finish(run: Run, brief: ObjectBrief, props: string = "none") -> string {
+    let wanted = props_wanted(props);
     //# 2. Codex draws it
     if (!run.has("image.png")) {
         log.info("picture: codex is drawing");
@@ -75,6 +80,10 @@ function finish(run: Run, brief: ObjectBrief) -> string {
         log.info(`lowpoly: ${low.triangles} triangles, ${low.shape_typical}% off typically`);
     }
     //# 5. Sized versions for the web, games, ...
-    shape(run);
+    shape(run, wanted = profiles_for(brief, run));
+    //# 6. Props: each held thing as a small run of its own (off unless asked)
+    if (wanted != "none") {
+        make_props(brief, run, wanted);
+    }
     run.dir
 }

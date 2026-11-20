@@ -1,0 +1,71 @@
+{
+ "lizardkin-warrior": {
+  "gear": [{"name": "leather cuirass", "kind": "worn", "slot": "torso"}, {"name": "bronze pauldrons", "kind": "worn", "slot": "arms"}, {"name": "leather bracers", "kind": "worn", "slot": "arms"}, {"name": "war-skirt", "kind": "worn", "slot": "legs"}, {"name": "belt", "kind": "worn", "slot": "hip"}, {"name": "shin wraps", "kind": "worn", "slot": "legs"}, {"name": "spear", "kind": "held", "slot": "hand_right"}],
+  "wear": {"cuirass": "leather cuirass", "pauldron": "bronze pauldrons", "bracer": "leather bracers", "skirt": "war-skirt", "belt": "belt", "buckle": "belt", "shin wrap": "shin wraps"},
+  "under": ["cuirass", "shin wrap"],
+  "skin": [0.11, 0.19, 0.04],
+  "pieces": [
+   {"name": "buckle", "color": [0.48, 0.29, 0.07], "box": {"min": [-0.08, -0.55, 1.0], "max": [0.08, -0.47, 1.19]}},
+   {"name": "neck", "color": [0.11, 0.19, 0.04], "loft": "z", "sides": 8, "caps": [false, false], "rings": [[1.64, 0, -0.24, 0.15, 0.17], [1.72, 0, -0.27, 0.15, 0.16], [1.82, 0, -0.22, 0.12, 0.13]]},
+   {"name": "arm", "color": [0.11, 0.19, 0.04], "mirror": true, "loft": "x", "sides": 8, "square": 2.4, "caps": [false, true], "rings": [[0.24, -0.21, 1.52, 0.15, 0.13], [0.34, -0.21, 1.5, 0.14, 0.12], [0.47, -0.22, 1.465, 0.11, 0.1], [0.57, -0.23, 1.46, 0.1, 0.1], [0.72, -0.28, 1.458, 0.09, 0.08], [0.84, -0.37, 1.45, 0.15, 0.08], [1.03, -0.31, 1.435, 0.06, 0.03]]},
+   {"name": "bracer", "color": [0.16, 0.075, 0.03], "mirror": true, "loft": "x", "sides": 8, "square": 2.4, "caps": [false, false], "rings": [[0.56, -0.24, 1.458, 0.115, 0.11], [0.68, -0.265, 1.457, 0.125, 0.11], [0.78, -0.3, 1.46, 0.11, 0.085]]},
+   {"name": "foot", "color": [0.11, 0.19, 0.04], "mirror": true, "loft": "y", "sides": 6, "square": 3, "caps": [true, true], "rings": [[-0.17, 0.34, 0.075, 0.09, 0.07], [-0.3, 0.35, 0.072, 0.13, 0.07], [-0.46, 0.35, 0.058, 0.15, 0.055], [-0.59, 0.33, 0.035, 0.11, 0.03]]},
+   {"name": "belt", "color": [0.07, 0.035, 0.015], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, false], "rings": [[1.0, 0, -0.22, 0.315, 0.305, {"back": 0.27}], [1.18, 0, -0.22, 0.305, 0.305, {"back": 0.27}]]},
+   {"name": "pauldron", "color": [0.48, 0.29, 0.07], "mirror": true, "loft": "x", "sides": 8, "caps": [false, true], "rings": [[0.13, -0.24, 1.635, 0.24, 0.105], [0.25, -0.22, 1.615, 0.23, 0.1], [0.37, -0.2, 1.59, 0.19, 0.085], [0.48, -0.21, 1.55, 0.12, 0.045]]},
+   {"name": "cuirass", "color": [0.16, 0.075, 0.03], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, true], "rings": [[1.12, 0, -0.22, 0.28, 0.29, {"back": 0.27}], [1.32, 0, -0.21, 0.29, 0.3], [1.52, 0, -0.2, 0.3, 0.285], [1.66, 0, -0.24, 0.22, 0.27], [1.74, 0, -0.27, 0.15, 0.22]]},
+   {"name": "shin wrap", "color": [0.16, 0.075, 0.03], "mirror": true, "loft": "z", "sides": 8, "square": 2.4, "caps": [false, false], "rings": [[0.46, 0.28, -0.26, 0.13, 0.13], [0.3, 0.295, -0.25, 0.11, 0.105], [0.13, 0.325, -0.27, 0.09, 0.1]]},
+   {"name": "tail", "color": [0.11, 0.19, 0.04], "tube": [[0, -0.03, 0.68, 0.14, 0.15], [0, 0.1, 0.45, 0.1, 0.12], [0, 0.22, 0.28, 0.07, 0.085], [0, 0.36, 0.14, 0.05, 0.06], [0, 0.5, 0.065, 0.035, 0.04], [0, 0.62, 0.02, 0.012, 0.012]], "sides": 6, "caps": [false, true]},
+   {"name": "skirt", "color": [0.16, 0.075, 0.03], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, false], "rings": [[0.68, 0, -0.19, 0.35, 0.29], [0.85, 0, -0.19, 0.37, 0.32], [1.04, 0, -0.2, 0.31, 0.3]]},
+   {"name": "hips", "color": [0.08, 0.14, 0.03], "loft": "z", "sides": 8, "square": 2.2, "caps": [true, false], "rings": [[0.7, 0, -0.21, 0.19, 0.16], [0.86, 0, -0.21, 0.25, 0.19], [1.02, 0, -0.21, 0.24, 0.18]]},
+   {"name": "head", "color": [0.11, 0.19, 0.04], "loft": "y", "sides": 8, "square": 2.2, "caps": [true, true], "rings": [[-0.08, 0, 1.78, 0.11, 0.09], [-0.17, 0, 1.81, 0.16, 0.12], [-0.33, 0, 1.82, 0.165, 0.13], [-0.48, 0, 1.79, 0.14, 0.11], [-0.6, 0, 1.775, 0.09, 0.07]]},
+   {"name": "leg", "color": [0.11, 0.19, 0.04], "mirror": true, "loft": "z", "sides": 8, "square": 2.4, "caps": [false, false], "rings": [[0.92, 0.21, -0.24, 0.11, 0.14], [0.78, 0.23, -0.25, 0.125, 0.15], [0.62, 0.245, -0.27, 0.125, 0.145], [0.5, 0.265, -0.285, 0.125, 0.135], [0.43, 0.275, -0.27, 0.12, 0.125]]},
+   {"name": "spines", "color": [0.2, 0.24, 0.06], "tube": [[0, -0.12, 1.9, 0.02, 0.035], [0, 0.01, 1.72, 0.025, 0.065], [0, 0.08, 1.4, 0.025, 0.07], [0, 0.07, 1.12, 0.02, 0.05], [0, 0.05, 0.92, 0.015, 0.04]], "up": [0, 1, 0], "sides": 4, "caps": [true, true]}
+  ]
+ },
+ "stocky-pirate-deckhand": {
+  "gear": [{"name": "tricorn hat", "kind": "attached", "slot": "head"}, {"name": "bandana", "kind": "worn", "slot": "head"}, {"name": "navy coat", "kind": "worn", "slot": "torso"}, {"name": "belt", "kind": "worn", "slot": "hip"}, {"name": "striped trousers", "kind": "worn", "slot": "legs"}, {"name": "boots", "kind": "worn", "slot": "feet"}, {"name": "cutlass", "kind": "held", "slot": "hand_right"}],
+  "wear": {"hat": "tricorn hat", "bandana": "bandana", "torso": "navy coat", "arm": "navy coat", "button1": "navy coat", "button2": "navy coat", "button3": "navy coat", "belt": "belt", "buckle": "belt", "leg": "striped trousers", "stripe1": "striped trousers", "stripe2": "striped trousers", "boot": "boots", "foot": "boots"},
+  "under": ["torso", "arm", "leg", "boot", "foot"],
+  "skin": [0.85, 0.58, 0.44],
+  "pieces": [
+   {"name": "head", "color": [0.85, 0.58, 0.44], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, true], "rings": [[1.4, 0, 0.0, 0.13, 0.13], [1.46, 0, 0.0, 0.14, 0.14], [1.52, 0, 0.0, 0.16, 0.165], [1.59, 0, 0.02, 0.185, 0.18], [1.66, 0, 0.02, 0.17, 0.17]]},
+   {"name": "hat", "color": [0.07, 0.06, 0.06], "loft": "z", "sides": 6, "square": 2, "caps": [true, true], "rings": [[1.6, 0, 0.02, 0.2, 0.19], [1.655, 0, 0.0, 0.29, 0.26], [1.7, 0, 0.0, 0.29, 0.26], [1.73, 0, 0.0, 0.2, 0.2], [1.8, 0, -0.03, 0.13, 0.13]]},
+   {"name": "hand", "mirror": true, "color": [0.85, 0.58, 0.44], "loft": "x", "sides": 6, "square": 3, "caps": [true, true], "rings": [[0.68, 0.05, 1.285, 0.1, 0.07], [0.79, 0.035, 1.278, 0.12, 0.06], [0.89, 0.04, 1.283, 0.12, 0.04], [0.948, 0.048, 1.28, 0.07, 0.02]]},
+   {"name": "stripe1", "mirror": true, "color": [0.68, 0.1, 0.08], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, false], "rings": [[0.46, 0.177, 0.048, 0.127, 0.145], [0.5, 0.172, 0.04, 0.128, 0.15]]},
+   {"name": "stripe2", "mirror": true, "color": [0.68, 0.1, 0.08], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, false], "rings": [[0.6, 0.16, 0.025, 0.135, 0.15], [0.65, 0.153, 0.028, 0.142, 0.16]]},
+   {"name": "boot", "mirror": true, "color": [0.07, 0.06, 0.06], "loft": "z", "sides": 8, "square": 2.4, "caps": [false, true], "rings": [[0.1, 0.225, 0.06, 0.09, 0.11], [0.18, 0.215, 0.07, 0.095, 0.115], [0.27, 0.21, 0.074, 0.128, 0.143], [0.43, 0.195, 0.072, 0.125, 0.137]]},
+   {"name": "foot", "mirror": true, "color": [0.07, 0.06, 0.06], "loft": "y", "sides": 6, "square": 3.5, "caps": [true, true], "rings": [[-0.228, 0.247, 0.05, 0.08, 0.05], [-0.13, 0.248, 0.058, 0.09, 0.058], [-0.02, 0.238, 0.09, 0.088, 0.09], [0.18, 0.226, 0.09, 0.075, 0.09]]},
+   {"name": "belt", "color": [0.36, 0.2, 0.1], "loft": "z", "sides": 8, "square": 2.6, "caps": [false, false], "rings": [[0.885, 0, 0.005, 0.27, 0.225], [0.98, 0, 0.0, 0.27, 0.225]]},
+   {"name": "buckle", "color": [0.82, 0.62, 0.22], "box": {"min": [-0.075, -0.25, 0.87], "max": [0.08, -0.215, 1.0]}},
+   {"name": "button1", "color": [0.82, 0.62, 0.22], "box": {"min": [-0.02, -0.215, 1.06], "max": [0.02, -0.19, 1.1]}},
+   {"name": "button2", "color": [0.82, 0.62, 0.22], "box": {"min": [-0.02, -0.21, 1.16], "max": [0.02, -0.18, 1.2]}},
+   {"name": "button3", "color": [0.82, 0.62, 0.22], "box": {"min": [-0.02, -0.19, 1.26], "max": [0.02, -0.16, 1.3]}},
+   {"name": "torso", "color": [0.06, 0.08, 0.18], "loft": "z", "sides": 8, "square": 2.4, "caps": [true, false], "rings": [[0.72, 0, 0.01, 0.29, 0.22], [0.8, 0, 0.0, 0.28, 0.21], [0.93, 0, -0.005, 0.255, 0.2], [1.08, 0, 0.0, 0.275, 0.2], [1.22, 0, 0.01, 0.295, 0.195], [1.34, 0, 0.02, 0.285, 0.175], [1.42, 0, 0.0, 0.17, 0.14]]},
+   {"name": "bandana", "color": [0.68, 0.1, 0.08], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, false], "rings": [[1.6, 0, 0.02, 0.19, 0.183], [1.645, 0, 0.02, 0.185, 0.18]]},
+   {"name": "arm", "mirror": true, "color": [0.06, 0.08, 0.18], "loft": "x", "sides": 8, "square": 2.4, "caps": [false, true], "rings": [[0.25, 0.085, 1.265, 0.135, 0.135], [0.36, 0.085, 1.26, 0.125, 0.125], [0.47, 0.07, 1.255, 0.118, 0.118], [0.53, 0.065, 1.257, 0.12, 0.12], [0.6, 0.06, 1.258, 0.125, 0.125], [0.69, 0.055, 1.256, 0.118, 0.118]]},
+   {"name": "leg", "mirror": true, "color": [0.9, 0.84, 0.74], "loft": "z", "sides": 8, "square": 2.2, "caps": [false, false], "rings": [[0.4, 0.185, 0.06, 0.12, 0.135], [0.53, 0.168, 0.035, 0.122, 0.145], [0.6, 0.16, 0.025, 0.13, 0.145], [0.68, 0.152, 0.03, 0.138, 0.16], [0.8, 0.15, 0.01, 0.13, 0.165]]},
+   {"name": "beard", "color": [0.24, 0.14, 0.08], "lumps": [[0, -0.105, 1.475, 0.145, 0.085, 0.085]], "jitter": 0.08, "seed": 2}
+  ]
+ },
+ "shadow-ninja": {
+  "gear": [{"name": "hood and mask", "kind": "worn", "slot": "head"}, {"name": "cloth suit", "kind": "worn", "slot": "torso"}, {"name": "forearm guards", "kind": "worn", "slot": "arms"}, {"name": "wrist wraps", "kind": "worn", "slot": "arms"}, {"name": "shin wraps", "kind": "worn", "slot": "legs"}, {"name": "tabi boots", "kind": "worn", "slot": "feet"}, {"name": "sash", "kind": "worn", "slot": "hip"}, {"name": "forehead plate", "kind": "attached", "slot": "head"}, {"name": "katana", "kind": "held", "slot": "hand_right"}],
+  "wear": {"head": "hood and mask", "torso": "cloth suit", "arm": "cloth suit", "leg": "cloth suit", "forearm guard": "forearm guards", "wrist wrap": "wrist wraps", "shin wrap": "shin wraps", "boot": "tabi boots", "sash": "sash", "sash knot": "sash", "forehead plate": "forehead plate"},
+  "under": ["head", "torso", "arm", "leg", "forearm guard", "wrist wrap", "shin wrap", "boot"],
+  "skin": [0.62, 0.32, 0.2],
+  "pieces": [
+   {"name": "head", "color": [0.014, 0.014, 0.018], "loft": "z", "sides": 10, "square": 2.2, "caps": [false, true], "rings": [[1.42, 0, 0.0, 0.114, 0.15], [1.47, 0, -0.01, 0.142, 0.165], [1.52, 0, 0.012, 0.163, 0.183], [1.58, 0, 0.03, 0.162, 0.18], [1.65, 0, 0.035, 0.153, 0.168], [1.7, 0, 0.028, 0.132, 0.146], [1.75, 0, 0.032, 0.08, 0.095]]},
+   {"name": "torso", "color": [0.02, 0.02, 0.026], "loft": "z", "sides": 8, "square": 2.4, "caps": [true, false], "rings": [[0.8, 0, -0.005, 0.19, 0.15], [1.06, 0, 0.0, 0.195, 0.158], [1.18, 0, 0.015, 0.215, 0.168], [1.3, 0, 0.022, 0.225, 0.162], [1.39, 0, 0.015, 0.19, 0.15], [1.45, 0, 0.0, 0.11, 0.12]]},
+   {"name": "arm", "color": [0.02, 0.02, 0.026], "loft": "x", "mirror": true, "sides": 8, "square": 2.4, "caps": [false, false], "rings": [[0.17, 0.03, 1.27, 0.11, 0.12], [0.25, 0.055, 1.28, 0.097, 0.1], [0.31, 0.062, 1.284, 0.096, 0.09], [0.42, 0.074, 1.29, 0.09, 0.085], [0.47, 0.071, 1.294, 0.087, 0.085], [0.52, 0.067, 1.298, 0.075, 0.075]]},
+   {"name": "forearm guard", "color": [0.07, 0.07, 0.08], "loft": "x", "mirror": true, "sides": 8, "square": 2.4, "rings": [[0.5, 0.066, 1.298, 0.082, 0.08], [0.55, 0.06, 1.298, 0.086, 0.082], [0.6, 0.06, 1.297, 0.085, 0.075], [0.64, 0.057, 1.294, 0.077, 0.064]]},
+   {"name": "wrist wrap", "color": [0.045, 0.04, 0.035], "loft": "x", "mirror": true, "sides": 6, "square": 2.4, "caps": [false, false], "rings": [[0.635, 0.055, 1.294, 0.058, 0.055], [0.68, 0.046, 1.293, 0.061, 0.052], [0.73, 0.035, 1.288, 0.063, 0.046]]},
+   {"name": "hand", "color": [0.62, 0.32, 0.2], "loft": "x", "mirror": true, "sides": 6, "square": 4, "caps": [false, true], "rings": [[0.72, 0.025, 1.287, 0.075, 0.044], [0.8, 0.0, 1.285, 0.1, 0.038], [0.86, 0.02, 1.28, 0.08, 0.022], [0.925, 0.02, 1.279, 0.05, 0.012]]},
+   {"name": "leg", "color": [0.02, 0.02, 0.026], "loft": "z", "mirror": true, "sides": 8, "square": 2.4, "caps": [false, false], "rings": [[0.4, 0.165, 0.04, 0.092, 0.1], [0.48, 0.15, 0.02, 0.1, 0.12], [0.56, 0.135, 0.0, 0.108, 0.122], [0.62, 0.128, -0.004, 0.115, 0.124], [0.75, 0.12, -0.005, 0.12, 0.124], [0.9, 0.1, -0.009, 0.1, 0.15]]},
+   {"name": "shin wrap", "color": [0.045, 0.04, 0.035], "loft": "z", "mirror": true, "sides": 8, "square": 2.4, "caps": [false, false], "rings": [[0.11, 0.188, 0.05, 0.06, 0.075], [0.2, 0.184, 0.068, 0.07, 0.07], [0.28, 0.178, 0.071, 0.093, 0.082], [0.36, 0.177, 0.068, 0.098, 0.091], [0.44, 0.174, 0.06, 0.09, 0.091]]},
+   {"name": "boot", "color": [0.03, 0.024, 0.02], "loft": "y", "mirror": true, "sides": 6, "square": 3, "rings": [[-0.209, 0.216, 0.032, 0.063, 0.032], [-0.143, 0.22, 0.042, 0.078, 0.042], [-0.077, 0.221, 0.053, 0.078, 0.053], [-0.011, 0.212, 0.06, 0.072, 0.06], [0.055, 0.199, 0.06, 0.062, 0.06], [0.121, 0.19, 0.06, 0.048, 0.06]]},
+   {"name": "sash", "color": [0.22, 0.012, 0.012], "loft": "z", "sides": 8, "square": 2.4, "caps": [false, false], "rings": [[0.88, 0, -0.01, 0.192, 0.158], [0.96, 0, -0.022, 0.19, 0.168], [1.04, 0, -0.02, 0.186, 0.158]]},
+   {"name": "sash knot", "color": [0.22, 0.012, 0.012], "box": {"min": [-0.04, -0.2, 0.92], "max": [0.04, -0.15, 1.0]}},
+   {"name": "forehead plate", "color": [0.07, 0.07, 0.08], "box": {"min": [-0.09, -0.162, 1.57], "max": [0.09, -0.09, 1.65]}},
+   {"name": "eye strip", "color": [0.62, 0.32, 0.2], "box": {"min": [-0.1, -0.178, 1.515], "max": [0.1, -0.13, 1.565]}}
+  ]
+ }
+}

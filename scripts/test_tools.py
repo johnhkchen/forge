@@ -5,16 +5,20 @@
 RUNS_DIR (default: runs) must hold the cave-troll and iron-kettle runs. The
 live Blender is never touched: every case starts its own `blender -b`, loads
 a run's file through scripts/tidy_headless.py, and runs the same script text
-Claude would send, with PARAMS filled in. About a minute, one Blender at a
+Claude would send, with PARAMS filled in. A few minutes, one Blender at a
 time. Nothing is written into the runs; outputs go to a temp folder (--keep
-DIR to look at them afterwards).
+DIR to look at them afterwards). The midpoly cases copy a run's scene.blend
+into that folder and make real profiles of the copy.
 
 What each case shows is in its docstring; `--only build` runs the cases
 whose name contains "build".
 """
+import contextlib
 import glob
+import io
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
@@ -24,6 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.path.join(HERE, "..", ".claude", "skills", "tidy-mesh", "scripts")
 BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 sys.path.insert(0, HERE)
+import blockout_recipe  # noqa: E402
 import check_safe  # noqa: E402
 
 
@@ -479,7 +484,241 @@ def test_face_human(ctx):
     check("front and side: reference, plain, fitted, then the fitted head as wire over the reference: %s" % sheet, os.path.exists(sheet))
 
 
-TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human]
+def body_under(piece, color, by=0.88):
+    """A loft or tube a little thinner than `piece`, in a skin color: the body under that piece of gear."""
+    def thinner(row):
+        nums = [v * by if i in (3, 4) else v for i, v in enumerate(row) if not isinstance(v, dict)]
+        more = [dict(v, back=v["back"] * by) if "back" in v else v for v in row if isinstance(v, dict)]
+        return nums + more
+    key = "rings" if "loft" in piece else "tube"
+    return dict(piece, name=piece["name"] + " (body)", color=color, **{key: [thinner(r) for r in piece[key]]})
+
+
+def geared(case):
+    """One of test_blockouts.json's block-outs as Claude is now asked to build it: gear pieces say which
+    gear item they are, and there is a body under them. The saved block-outs predate that (the coat was
+    the torso), so the body under each piece in "under" is made here, a thinner copy in the skin color."""
+    pieces = []
+    for piece in case["pieces"]:
+        gear = case["wear"].get(piece["name"])
+        if piece["name"] in case["under"]:
+            pieces.append(body_under(piece, case["skin"]))
+        pieces.append(dict(piece, gear=gear) if gear else dict(piece))
+    return pieces
+
+
+TROLL_GEAR = [{"name": "hide kilt", "kind": "worn", "slot": "legs"}, {"name": "rope belt", "kind": "worn", "slot": "hip"},
+              {"name": "iron wrist band", "kind": "worn", "slot": "arms"}, {"name": "club", "kind": "held", "slot": "hand_right"}]
+TROLL_WEARS = {"kilt": "hide kilt", "belt": "rope belt", "wrist band": "iron wrist band"}
+SOCKETS = ["back", "hand_left", "hand_right", "head", "hip"]
+
+
+def troll_with_gear(head=None):
+    """The troll's block-out with its kilt, belt and wrist band named as gear. Its torso and legs were
+    already built whole under them. `head` swaps the hand-built head and tusks for a face.py one."""
+    pieces = [dict(p, gear=TROLL_WEARS[p["name"]]) if p["name"] in TROLL_WEARS else dict(p) for p in TROLL_PIECES]
+    if head:
+        pieces = [p for p in pieces if p["name"] not in ("head", "tusks")] + [dict(head, color=SKIN)]
+    return pieces
+
+
+def keep_recipe(glb):
+    """What the pipeline does right after the block-out: name the nodes for their tags, save lowpoly_build.json."""
+    with contextlib.redirect_stdout(io.StringIO()):
+        blockout_recipe.main(glb)
+
+
+def nodes_of(path):
+    """A .glb's nodes: {name: (its tags, where it is, how many triangles)}."""
+    doc = blockout_recipe.read(path)[0]
+    def triangles(node):
+        if "mesh" not in node:
+            return 0
+        return sum(doc["accessors"][p["indices"]]["count"] // 3 for p in doc["meshes"][node["mesh"]]["primitives"])
+    return {n["name"]: (n.get("extras") or {}, n.get("translation"), triangles(n)) for n in doc["nodes"]}
+
+
+def test_gear(ctx):
+    """Gear comes off: build.py keeps the troll's kilt, belt and wrist band as groups over a whole body and finds the sockets; export.py writes them apart."""
+    out = os.path.join(ctx["out"], "gear", "lowpoly.glb")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    built, again, exported = blender(ctx["troll"] + "/final.glb", [
+        ("build.py", {"parts": troll_with_gear(), "gear": TROLL_GEAR, "sockets": True, "name": "Troll (light)"}),
+        # a later round: one piece changes, one socket is moved by hand; the gear list and the other sockets are remembered
+        ("build.py", {"parts": [dict(TROLL_PIECES[7], name="tusks")], "sockets": {"head": [0, -0.4, 2.44]}, "name": "Troll (light)", "check": 0}),
+        ("export.py", {"object": "Troll (light)", "path": out, "materials": False}),
+    ])
+    groups = {g["name"]: g for g in built["groups"]}
+    check("four groups: the body and three gear items", list(groups) == ["body", "gear: hide kilt", "gear: rope belt", "gear: iron wrist band"], list(groups))
+    check("the body is everything else: %d of 1,254 triangles" % groups["body"]["triangles"],
+          groups["body"]["triangles"] == 1254 - 80 - 80 - 64 and built["triangles"] == 1254)
+    check("each gear group carries its kind and slot from the gear list",
+          (groups["gear: rope belt"]["kind"], groups["gear: rope belt"]["slot"]) == ("worn", "hip"), groups["gear: rope belt"])
+    check("nothing worn is missing; the held club is not expected on the body", built["gear_not_built"] == [])
+    check("the shape check still sees one object: %.2f%% typical" % built["shape_lost"]["p95_%"], built["shape_lost"]["p95_%"] < 2.6)
+    at = built["sockets"]
+    check("five sockets", sorted(at) == SOCKETS, sorted(at))
+    check("the right hand's is at -x, inside the hand (the arm ends at x = -1.93): x = %.2f" % at["hand_right"][0], -1.93 < at["hand_right"][0] < -1.6)
+    check("the left hand's mirrors it", at["hand_left"] == [-at["hand_right"][0]] + at["hand_right"][1:], at["hand_left"])
+    check("back: behind the spine at shoulder height (y = %.2f); hip: on the left side at belt height (x = %.2f, z = %.2f)"
+          % (at["back"][1], at["hip"][0], at["hip"][2]), at["back"][1] > 0.3 and 0.4 < at["hip"][0] < 0.7 and 1.0 < at["hip"][2] < 1.4)
+    check("a later call keeps the groups and sockets, and a socket moved by hand stays where it was put",
+          len(again["groups"]) == 4 and again["sockets"]["head"] == [0, -0.4, 2.44] and again["sockets"]["hip"] == at["hip"], again["sockets"])
+
+    found = nodes_of(out)
+    meshes = [n for n in found if found[n][2]]
+    check("the .glb has one mesh per group, named for it", meshes == ["body", "gear: hide kilt", "gear: iron wrist band", "gear: rope belt"], meshes)
+    check("each gear mesh is tagged with its name, kind and slot",
+          found["gear: hide kilt"][0] == {"forge": "gear", "gear": "hide kilt", "kind": "worn", "slot": "legs"}, found["gear: hide kilt"][0])
+    check("and has its own triangles (kilt 80, belt 80, band 64)", [found[n][2] for n in meshes[1:]] == [80, 64, 80])
+    check("five empties named socket: ...", sorted(n for n in found if n.startswith("socket: ")) == ["socket: " + k for k in SOCKETS])
+    x, y, z = again["sockets"]["hand_right"]
+    check("each where build.py put it (glTF has y up)", all(abs(a - b) < 1e-4 for a, b in zip(found["socket: hand_right"][1], [x, z, -y])), found["socket: hand_right"][1])
+    check("export.py's read-back counts 4 meshes and 5 empties and still says only_this_object",
+          exported["only_this_object"] is True and (exported["file"]["meshes"], exported["file"]["empties"]) == (4, 5), exported["file"])
+
+    # What outlives the session rides in the file: the recipe, and tags that put the names right.
+    doc, rest = blockout_recipe.read(out)
+    doc["nodes"][0]["name"] += ".001"  # what Blender writes when the session already holds an object of that name
+    blockout_recipe.write(out, doc, rest)
+    keep_recipe(out)
+    check("blockout_recipe.py puts a node name right from its tag", "body" in nodes_of(out))
+    with open(os.path.join(os.path.dirname(out), "lowpoly_build.json")) as f:
+        recipe = json.load(f)
+    check("and saves the recipe beside the .glb: %d pieces, the gear list, the sockets" % len(recipe["pieces"]),
+          len(recipe["pieces"]) == 10 and len(recipe["gear"]) == 4 and recipe["sockets"]["head"] == [0, -0.4, 2.44])
+    check("a recipe piece is what build.py was given", [p for p in recipe["pieces"] if p["name"] == "kilt"][0]["gear"] == "hide kilt")
+
+    try:
+        blender(ctx["troll"] + "/final.glb", [("build.py", {"parts": [dict(TROLL_PIECES[5], gear="cape")], "gear": TROLL_GEAR, "check": 0})])
+        refused = ""
+    except AssertionError as err:
+        refused = str(err)
+    check("a piece naming gear the list doesn't have is refused, with the names it could be", "which the gear list doesn't have: hide kilt, rope belt" in refused)
+
+
+def test_denser(ctx):
+    """The mid-poly rebuild's arithmetic, no Blender: more sides, rings eased in between, nothing bulging past the block-out."""
+    knob = {"name": "knob", "loft": "z", "sides": 8, "rings": [[0, 0, 0, 0.0], [1, 0, 0, 1.0], [2, 0, 0, 1.0, 1.2, {"back": 0.5}], [3, 0, 0, 0.2]]}
+    twice = blockout_recipe.denser(knob, 2, 2, 10)
+    check("8 sides become 16, 4 rings become 7", (twice["sides"], len(twice["rings"])) == (16, 7))
+    check("the block-out's own rings are all still there", [r[:4] for r in twice["rings"][::2]] == [r[:4] for r in knob["rings"]])
+    check("a ring eased in lies between the rings either side of it, never past them", all(min(a[3], b[3]) <= m[3] <= max(a[3], b[3])
+          for a, m, b in zip(twice["rings"][0::2], twice["rings"][1::2], twice["rings"][2::2])))
+    check("a ring's flat back is eased too", 0.5 < twice["rings"][3][5]["back"] < 1.0, twice["rings"][3][5])
+    band = {"name": "belt", "loft": "z", "sides": 10, "closed": True, "rings": [[1, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 0.9], [1, 0, 0, 0.9]]}
+    check("a band keeps its four rings and gets more sides", blockout_recipe.denser(band, 2, 2, 10) == dict(band, sides=20))
+    post = {"name": "post", "loft": "z", "sides": 4, "rings": [[0, 0, 0, 1], [1, 0, 0, 1]]}
+    check("a square post stays square", blockout_recipe.denser(post, 3, 1, 10)["sides"] == 4)
+    check("rocks and heads are split finer, boxes are left alone",
+          (blockout_recipe.denser({"lumps": []}, 2, 2, 1)["detail"], blockout_recipe.denser({"head": "-y"}, 2, 2, 1)["finer"],
+           blockout_recipe.denser({"box": {}}, 2, 2, 1)) == (2, 1, {"box": {}}))
+    close = {"name": "elbow", "loft": "x", "rings": [[0, 0, 0, 1], [0.05, 0, 0, 1], [1, 0, 0, 1]]}
+    check("two rings set close for a joint get nothing between them", len(blockout_recipe.denser(close, 2, 2, 10)["rings"]) == 4)
+
+
+def profiles(ctx, run, pieces, gear, names, before=()):
+    """A copy of `run` in the output folder with a fresh block-out made of `pieces`, then the named
+    profiles made from it by the real runner. Nothing is written into `run`. Returns the copy's folder,
+    {profile: its .json}, and build.py's result."""
+    copy = os.path.join(ctx["out"], "runs", os.path.basename(run))
+    os.makedirs(copy, exist_ok=True)
+    for name in ("scene.blend", "brief.json", "parts.json"):
+        if not os.path.exists(os.path.join(copy, name)):
+            shutil.copy(os.path.join(run, name), os.path.join(copy, name))
+    glb = os.path.join(copy, "lowpoly.glb")
+    results = blender(run + "/final.glb", list(before) + [
+        ("build.py", {"parts": pieces, "gear": gear, "sockets": True, "name": "Block-out (light)", "check": 0}),
+        ("export.py", {"object": "Block-out (light)", "path": glb, "materials": False}),
+    ])
+    keep_recipe(glb)
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                          os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles")] + names, capture_output=True, text=True)
+    records = {}
+    for name in names:
+        path = os.path.join(copy, "profiles", name + ".json")
+        if not os.path.exists(path):
+            raise AssertionError("no %s profile:\n%s" % (name, (out.stdout + out.stderr)[-1500:]))
+        with open(path) as f:
+            records[name] = json.load(f)
+    return copy, records, results[-2]
+
+
+def midpoly_checks(label, copy, records, built):
+    """What every mid-poly version must be, next to the low-poly one made from the same recipe."""
+    low, mid = records["lowpoly"], records["midpoly"]
+    steps = {s["script"]: s["result"] for s in mid["steps"]}
+    tris = steps["rebuild"]["triangles"]
+    check("%s: %s triangles, from a %s-triangle block-out (%s)" % (label, format(tris, ","), format(built["triangles"], ","), steps["rebuild"]["tried"]),
+          3000 <= tris <= 8000)
+    was, now = low["shape"]["shape_lost"], mid["shape"]["shape_lost"]
+    check("%s: strays %.2f%% typically, %.2f%% at worst (low poly: %.2f / %.2f)" % (label, now["p95_%"], now["max_%"], was["p95_%"], was["max_%"]),
+          now["p95_%"] <= was["p95_%"] + 0.25 and now["max_%"] <= was["max_%"] + 0.5)
+    check("%s: color, a normal map, metal and roughness baked at 1024; what the bake couldn't find is the block-out's own color, not black" % label,
+          steps["bake.py"]["maps"] == ["color", "metallic", "normal", "roughness"] and "1024 px" in steps["bake.py"]["done"][0]
+          and "own colors" in steps["bake.py"]["done"][1])
+    held = read_glb(os.path.join(copy, "profiles", "midpoly.glb"))
+    check("%s: the .glb has its three textures and no painted colors left to darken them" % label, held["images"] == 3 and not held["vertex_colors"], held)
+    check("%s: %.2f MB with WebP and Draco, made in %.0f s" % (label, mid["bytes"] / 1e6, mid["seconds"]), mid["bytes"] < 1.5e6)
+    held = [nodes_of(os.path.join(copy, "profiles", name + ".glb")) for name in ("lowpoly", "midpoly")]
+    check("%s: the same nodes as the low-poly version: %s" % (label, ", ".join(sorted(n for n in held[1] if not n.startswith("socket")))),
+          sorted(held[0]) == sorted(held[1]) and "body" in held[1] and len(held[1]) == len(built["groups"]) + 5)
+    check("%s: the gallery is told the gear and the sockets" % label,
+          sorted(g["gear"] for g in mid["gear"]) == sorted(g["gear"] for g in built["groups"] if g.get("gear")) and mid["sockets"] == SOCKETS, mid["gear"])
+    check("%s: sockets sit exactly where the block-out's do" % label,
+          all(max(abs(a - b) for a, b in zip(held[0][n][1], held[1][n][1])) < 1e-4 for n in held[1] if n.startswith("socket")))
+    under = mid["under_gear"]
+    check("%s: %d body faces under gear are plain skin, not a copy of the gear's texture" % (label, under["body_faces_under_gear"]),
+          under["body_faces_under_gear"] > 20 and under["plain_colors"] >= 1, under)
+    edges = blockout_recipe.read(os.path.join(copy, "profiles", "midpoly-edges.glb"))[0]
+    check("%s: the wireframe file has a set of lines per group, tagged like the group" % label,
+          sorted((n.get("extras") or {}).get("gear", "body") for n in edges["nodes"]) == sorted(g.get("gear", "body") for g in built["groups"]))
+    return tris, now
+
+
+def test_midpoly(ctx):
+    """The midpoly profile: the troll's block-out (with a measured head) built again denser and baked; gear and sockets as in the low-poly version."""
+    final = ctx["troll"] + "/final.glb"
+    head = blender(final, [("face.py", {"box": HEAD_BOX, "show": False})])[0]["head"]
+    copy, records, built = profiles(ctx, ctx["troll"], troll_with_gear(head), TROLL_GEAR, ["lowpoly", "midpoly"],
+                                    before=[("face.py", {"box": HEAD_BOX, "show": False})])
+    with open(os.path.join(copy, "lowpoly_build.json")) as f:
+        recipe = json.load(f)
+    check("the recipe carries the head's measured surface, so the head can be laid on it again", list(recipe["scans"]) == [head["scan"]], list(recipe["scans"]))
+    midpoly_checks("troll", copy, records, built)
+    was = {p["name"]: p["triangles"] for p in built["pieces"]}
+    mid = blender(final, [("face.py", {"box": HEAD_BOX, "show": False}),
+                          ("build.py", {"parts": [blockout_recipe.denser(p, 2, 2, 3.86) for p in recipe["pieces"]], "shading": "smooth", "crease": 40, "check": 0})])[1]
+    now = {p["name"]: p["triangles"] for p in mid["pieces"]}
+    check("the head goes from %d to %d triangles, the arms from %d to %d" % (was["head"], now["head"], was["arms"], now["arms"]),
+          3.5 * was["head"] <= now["head"] <= 4.5 * was["head"] and 3 * was["arms"] <= now["arms"] <= 4.2 * was["arms"])
+    check("the low-poly version in flat colors keeps the same groups and no textures",
+          records["lowpoly"].get("flat_colors") and read_glb(os.path.join(copy, "profiles", "lowpoly.glb"))["images"] == 0)
+    for view in ("midpoly.png", "lowpoly.png"):
+        shutil.copy(os.path.join(copy, "profiles", view), os.path.join(ctx["out"], "troll-" + view))
+    check("previews to compare: %s and troll-lowpoly.png" % os.path.join(ctx["out"], "troll-midpoly.png"), True)
+
+
+def test_midpoly_others(ctx):
+    """The same on the lizardkin, the pirate and the ninja, from their recorded block-outs (scripts/test_blockouts.json), where those runs are there."""
+    with open(os.path.join(HERE, "test_blockouts.json")) as f:
+        cases = json.load(f)
+    for who, case in cases.items():
+        runs = sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), "*" + who, "final.glb")))
+        if not runs:
+            print("    skipped: no %s run with a final.glb" % who)
+            continue
+        run = os.path.dirname(runs[-1])
+        copy, records, built = profiles(ctx, run, geared(case), case["gear"], ["lowpoly", "midpoly"])
+        label = who.split("-")[-2] if who.endswith("deckhand") else who.split("-")[0] if who.startswith("lizard") else who.split("-")[-1]
+        midpoly_checks(label, copy, records, built)
+        check("%s: nothing worn was left unbuilt" % label, built["gear_not_built"] == [], built["gear_not_built"])
+        for view in ("midpoly.png", "lowpoly.png"):
+            shutil.copy(os.path.join(copy, "profiles", view), os.path.join(ctx["out"], "%s-%s" % (label, view)))
+
+
+TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
+         test_gear, test_denser, test_midpoly, test_midpoly_others]
 
 
 def main(argv):

@@ -1,6 +1,6 @@
 """Serve the gallery on the local network: every run, before and after.
 
-    python3 scripts/gallery.py [--port 8028]
+    python3 scripts/gallery.py [--port 8028] [--runs DIR]
 
 Read-only. Serves gallery/ (the page) and runs/ (the files), plus
 /api/runs, a list of runs built from the folders on each request, so a new
@@ -19,7 +19,7 @@ from urllib.parse import unquote, urlparse
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PAGE = os.path.join(ROOT, "gallery")
 RUNS = os.path.join(ROOT, "runs")
-PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "lowpoly"]
+PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 
 mimetypes.add_type("model/gltf-binary", ".glb")
 mimetypes.add_type("text/javascript", ".js")
@@ -37,7 +37,8 @@ def profile_summary(run_dir, name):
     record = read_json(os.path.join(run_dir, "profiles", name + ".json")) or {}
     shape = record.get("shape") or {}
     steps = {s.get("script"): s.get("result") or {} for s in record.get("steps", [])}
-    light = steps.get("autoremesher") or steps.get("blockout") or steps.get("retopo.py") or steps.get("decimate.py") or {}
+    light = (steps.get("autoremesher") or steps.get("blockout") or steps.get("rebuild") or steps.get("retopo.py")
+             or steps.get("decimate.py") or {})
     bake = steps.get("bake.py") or {}
     export = record.get("export") or {}
     return {
@@ -53,6 +54,9 @@ def profile_summary(run_dir, name):
         "shape_worst": (shape.get("shape_lost") or {}).get("max_%"),
         "maps": bake.get("maps"),
         "seconds": record.get("seconds"),
+        # Low-poly and mid-poly characters: the gear that comes off, and where props attach.
+        "gear": record.get("gear") or [],
+        "sockets": record.get("sockets") or [],
     }
 
 
@@ -78,6 +82,9 @@ def run_summary(folder):
         "fixes": polish.get("fixes") or [],
         "problems": polish.get("problems") or [],
         "profiles": [profile_summary(run_dir, p) for p in names],
+        "props": [dict(p, run=os.path.basename(p.get("run", "").rstrip("/")))
+                  for p in (read_json(os.path.join(run_dir, "props.json")) or {}).get("props", [])],
+        "prop_of": os.path.basename(((read_json(os.path.join(run_dir, "prop_of.json")) or {}).get("character") or "").rstrip("/")) or None,
     }
 
 
@@ -143,7 +150,9 @@ def lan_address():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8028)
+    parser.add_argument("--runs", default=RUNS, help="the folder of runs to show (default: runs/)")
     args = parser.parse_args()
+    RUNS = os.path.abspath(args.runs)
     server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
     print("Forge gallery", flush=True)
     print("  on this Mac:   http://localhost:%d" % args.port)

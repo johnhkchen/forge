@@ -4,3 +4,4 @@ runs/
 .baml/
 tools/
 .claude/worktrees/
+__pycache__/

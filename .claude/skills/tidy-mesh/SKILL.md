@@ -1,6 +1,6 @@
 ---
 name: tidy-mesh
-description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile) of a finished object in runs/.
+description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props).
 ---
 
 # tidy-mesh
@@ -36,6 +36,7 @@ Measured on a real run (`runs/*-iron-kettle/mesh.glb`):
 | `web` | web pages, product viewers | ~8k adaptive quads, Draco | 1024 WebP + normal map | 0.36% / 2.4% |
 | `game` | real-time games | ~4k adaptive quads, Draco | 1024 WebP + normal map | 0.51% / 2.2% |
 | `mobile` | phones, AR | ~3k adaptive quads, Draco | 512 WebP + normal map | 0.89% / 2.7% |
+| `midpoly` | phone games on today's hardware | the block-out's pieces built again rounder and smooth, 3,000-8,000 triangles, Draco | 1024 WebP + normal map | about the block-out's own (2-2.5% / 4-7% on four characters) |
 | `lowpoly` | old-school real-time look (think early Warcraft) | 300-800 triangles Claude blocks out from simple shapes | one 256 px WebP: color with soft shadows baked in | see `lowpoly.json` |
 
 **What a good result looks like.** Mostly rectangular quads (~99%) in
@@ -99,6 +100,108 @@ If the brief's `lowpoly_style` asks for flat colors (old-school RuneScape
 and the like), the profile keeps Claude's per-part vertex colors and faceted
 shading instead and bakes nothing: the troll is 15 KB with no textures. A
 baked texture turns muddy at a few hundred triangles.
+
+## Mid poly: the block-out, built again denser
+
+A phone today draws a few thousand triangles per character without
+noticing, and a normal map does the rest. `midpoly` is for that: rounder
+than the low-poly version and textured from the detailed mesh, but still a
+handful of simple pieces a rigger can follow. It costs no extra time in
+Blender with Claude: it is made from what Claude already built.
+
+- **The block-out leaves a recipe.** `build.py` keeps every piece as it was
+  asked for (rings, tubes, the head's rows and its measured surface), and
+  `export.py` writes that into `lowpoly.glb` as glTF extras. The tools run
+  in safe mode and can't write a file of their own, so the .glb carries it;
+  right after step 4c `scripts/blockout_recipe.py` copies it out as
+  `runs/<run>/lowpoly_build.json`.
+- **The runner builds the recipe again** (`rebuild` step in
+  `scripts/tidy_profile.py`): twice the points around every loft and tube,
+  a new ring eased in between every two (on a smooth curve through the
+  rings, never bulging past either one), rocks and heads split in four,
+  smooth shading with edges sharper than 40 degrees kept crisp. If that
+  lands outside 3,000-8,000 triangles it tries a lighter or heavier mix.
+  Square posts stay square, belts keep their four rings, boxes stay boxes.
+  A head loses its sunk eye sockets: here the texture carries the eyes.
+- **Then it bakes** the detailed mesh's color, normal map, metal and
+  roughness at 1024 px (`bake.py` "onto"), WebP and Draco.
+- **A block-out sits off the detailed mesh in places** (a hat brim built
+  flat, a mitten for a hand), and a bake that only looks close finds
+  nothing there and leaves black. So this bake looks twice, at 2% of the
+  object's size and then at 7% for what the first look missed (`"reach":
+  [0.02, 0.07]`), and what is still missing takes the block-out's own
+  painted color (`"fill": true`).
+
+Measured on the four characters (`just test-tools`; the pirate, ninja and
+lizardkin with a body added under their gear, so their block-outs are
+heavier than the ones Claude made):
+
+| | Block-out | Mid poly | Strays, typical / worst | Low poly strays | File | Made in |
+|---|---|---|---|---|---|---|
+| Cave troll | 1,380 triangles | 5,064 | 2.51% / 4.44% | 2.39% / 4.55% | 0.3 MB | 8 s |
+| Lizardkin | 1,166 | 4,432 | 2.36% / 4.35% | 2.36% / 4.77% | 0.4 MB | 9 s |
+| Pirate | 1,574 | 5,958 | 2.50% / 6.62% | 2.55% / 7.23% | 0.3 MB | 8 s |
+| Ninja | 2,078 | 4,166 | 1.80% / 4.83% | 1.77% / 4.83% | 0.3 MB | 9 s |
+
+It is no closer to the detailed mesh than the block-out: the rings are
+where Claude put them, and rounding between them doesn't move them. What
+changes is the outline (no corners on a limb), the shading, and the
+texture. A run from before recipes were kept has none: `just recipe
+<run>` plays its transcript again in a background Blender to get one.
+
+## Gear comes off: separate gear, a whole body, sockets
+
+A game takes a character's coat off, or swaps its boots. If the coat is
+the torso there is nothing under it. So in the block-out (and the mid-poly
+version made from it):
+
+- **The brief lists the gear** (`gear` in `brief.json`): name, kind (worn,
+  attached, held), slot, look.
+- **Claude builds two layers** (`gear_steps` in
+  `baml_src/4_polish/lowpoly_prompt.baml`): the body whole, skin under the
+  clothes too, then each worn or attached item as its own piece or pieces
+  with `"gear": "<item's name>"`. Pieces without `"gear"` are the body.
+  The list goes to `build.py` once as `"gear"`; a piece naming gear that
+  isn't on it is refused.
+- **`build.py` keeps one object** to look at and check, and marks each face
+  with its group. Its result lists the `groups` and `gear_not_built`.
+- **`export.py` writes the groups apart**: one mesh per group, named
+  `body`, `gear: wool singlet`, `gear: boots`..., each gear mesh tagged in
+  glTF extras with `gear`, `kind` and `slot`. `"only_this_object"` now
+  means "these meshes and nothing else".
+- **Sockets**: `"sockets": True` adds five empties, `socket: hand_right`,
+  `hand_left`, `head`, `back`, `hip`, worked out from the body pieces of
+  the T-pose (the middle of each palm, the top of the head, between the
+  shoulder blades, the left hip at belt height). The character faces -y,
+  so its right hand is the one at -x. One that lands wrong is moved with
+  `"sockets": {"head": [x, y, z]}`. They are positions only, with no
+  turn of their own.
+- **Names in a busy Blender.** Blender keeps object names unique across
+  the whole file, so in a session that already holds another run's `body`
+  the exporter writes `body.001`. The tags say what each node is, and
+  `scripts/blockout_recipe.py` sets the names from them.
+- **Under a bake, the body would look like the coat** (a bake copies
+  whatever the detailed mesh shows at that spot). The runner gives body
+  faces that gear covers a plain material in the color Claude painted the
+  piece (`skin_under_gear`), so `midpoly`'s body is skin where it was hidden.
+- **Held things are not on the character at all.** The picture shows empty
+  hands. Pipeline step 6 (`baml_src/6_props`, off unless asked) writes a
+  brief for each held item, starts a run folder for it, and saves
+  `props.json` in the character's run: which gear item, which socket, the
+  prop's folder, and where on the prop the hand goes (`grip`, in words).
+  The prop's run is an ordinary run.
+- **The gallery** reads the gear and sockets from `<profile>.json` and
+  shows a chip per gear piece and a "Where props go" button.
+
+The detailed versions (`hero`, `quads`, `web`, `game`, `mobile`) keep the
+gear fused to the body: they are the picture's mesh, and the picture shows
+the character dressed. (A later idea, not built: draw the character a
+second time undressed, by editing the picture, and make a body from that.)
+
+What it doesn't do yet: the sockets have no rotation, a prop has no grip
+point of its own in its file (only the words in `props.json`), and nothing
+checks that the body really is whole under each gear piece: look with the
+gear hidden.
 
 ## Faces: a character's head is measured, not guessed
 
@@ -233,11 +336,11 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `retouch.py` | change metal, sheen, color or grain all over or in one area (a place, a color range, or both); say what the texture is like there | finish |
 | `frame.py` | put a wire box around a spot so `look` can frame a close-up without clipping | finish, parts |
 | `stage.py` | add the floor, three lights, sky and a camera that fits the object; set the render | finish |
-| `export.py` | write one object as a GLB and read the file back to prove nothing else came along | finish, low poly |
+| `export.py` | write one object as a GLB and read the file back to prove nothing else came along; a block-out with gear goes out as one mesh per group plus its sockets | finish, low poly |
 | `measure.py` | size a part without its neighbors, and slice it into rows of middle and half-width | parts, low poly |
 | `split.py` | paint or cut the parts from boxes: several boxes per part, tilted boxes, parts that wrap around | parts |
 | `face.py` | find the brow, eyes, nose, mouth and chin on a character's head and print it as a `"head"` piece for `build.py` | low poly (characters) |
-| `build.py` | block out a low-poly version from a list of lofts, tubes, lumps, boxes and a head; join, color and check it | low poly |
+| `build.py` | block out a low-poly version from a list of lofts, tubes, lumps, boxes and a head; join, color and check it; keep gear as groups, add sockets, keep the recipe | low poly |
 
 How they fit together:
 
@@ -298,6 +401,7 @@ person's open session:
 ```
 just tidy runs/<run folder> web game        # one or more profiles
 just tidy runs/<run folder> hero quads web game mobile
+just tidy runs/<run folder> lowpoly midpoly     # need the block-out (lowpoly.glb); midpoly also its recipe
 ```
 
 Each profile's `<profile>.json` records `shape` (from match.py): how far the
@@ -328,7 +432,7 @@ so they pass the add-on's safe mode (`just check-safe`).
 | `decimate.py` | shape-aware reduction to a triangle budget, keeping UVs; `as_copy` + `quadify` make a light "(light)" copy to bake onto | a few s |
 | `match.py` | how far a light mesh strays from the full one, and where (both directions, % of size); `"box"` scores one spot alone | ~2 s |
 | `retopo.py` | rebuilds each part as quads with QuadriFlow, on the part's own repaired surface when it can (voxel remesh only as a fallback for big parts), shrinkwrapped back onto the original; `routes` says which way each part went | 5–30 s, freezes Blender |
-| `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one | 5–60 s, freezes Blender |
+| `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one (`"reach"` and `"fill"` for a block-out that sits off the full mesh) | 5–60 s, freezes Blender |
 | `export.py` | writes one object as GLB (WebP, Draco optional), from the open scene only, and reads it back to check | ~1 s |
 | `preview.py` | renders a quick three-quarter PNG, optionally with wireframe; `"view"` and `"box"` make a straight-on close-up | ~2 s |
 | `split.py` | splits an object into named parts from boxes ("color" mode just paints them, to check the boxes) | ~1 s |
@@ -375,6 +479,13 @@ Rules for the live session:
   remain, raise the budget.
 - For close-up renders, `hero` (the cleaned dense mesh) stays the most
   faithful.
+- `midpoly` is as true to the shape as its block-out and no truer. Where
+  the block-out is far off (a tricorn's turned-up brim built flat), the
+  texture there is borrowed from farther away or is the block-out's flat
+  color.
+- A body face counts as "under gear" when gear lies within 4% of the
+  object's size straight out from it. A face only partly covered (a neck
+  at a collar) goes one way or the other, so the edge is stepped.
 
 ## Testing a script change
 
@@ -393,7 +504,11 @@ cave-troll and iron-kettle runs the same way, about a minute: the troll's
 import and cleanup, its part sizes against `parts.json`, both block-outs
 rebuilt, each exported file opened to count what is in it, old part plans
 cut exactly as before, and the troll's face measured and rebuilt next to
-its old head (and the pirate's, if that run is there). With `--keep DIR`
+its old head (and the pirate's, if that run is there); the troll's gear
+written apart with its sockets; and the `midpoly` profile made for real on
+copies of the troll, lizardkin, pirate and ninja runs (the last three from
+their recorded block-outs in `scripts/test_blockouts.json`). A few minutes
+in all. With `--keep DIR`
 the face cases leave `troll-head-compared.png` and
 `pirate-head-compared.png`: front and side of the reference, each head, and
 the fitted head as wire over the reference. `just check-safe` checks every script against safe
