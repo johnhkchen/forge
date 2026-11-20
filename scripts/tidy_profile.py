@@ -22,6 +22,13 @@ steps only this runner can do:
 
 A character's gear stays apart in both: the .glb gets one mesh per group
 ("body", "gear: wool singlet"...) and an empty per attachment point.
+
+The "walk" profile is different in kind: it takes the low-poly and mid-poly
+versions already in OUT_DIR and writes each again with a skeleton and a walk,
+<version>-walk.glb and <version>-walk.json (rig.py, walk.py, animate.py). It
+reads the run's gait.json (how the character carries itself, from Opus) and
+lowpoly_build.json (the block-out's recipe, to place the joints) when they
+are there, and manages without either.
 """
 import json
 import os
@@ -528,7 +535,53 @@ def read_plan(source):
         return json.load(f)
 
 
+def walk(source, out_dir, profile, spec):
+    """Each block-out version in OUT_DIR again, with a skeleton, joint limits and a walk that fits the build."""
+    run_dir = os.path.dirname(source)
+    traits = None
+    if os.path.exists(os.path.join(run_dir, "gait.json")):
+        with open(os.path.join(run_dir, "gait.json")) as f:
+            said = json.load(f)
+        traits = {k: said[k] for k in ("weight", "stealth", "swagger", "stiffness") if isinstance(said.get(k), (int, float))}
+    recipe = read_recipe(run_dir)
+    versions = [v for v in spec["of"] if os.path.exists(os.path.join(out_dir, v + ".glb"))]
+    if not versions:
+        raise Skip("no %s in %s yet: the walk is added to those" % (" or ".join(v + ".glb" for v in spec["of"]), out_dir))
+    for version in versions:
+        started = time.time()
+        made = {}
+        if os.path.exists(os.path.join(out_dir, version + ".json")):
+            with open(os.path.join(out_dir, version + ".json")) as f:
+                made = json.load(f)
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(out_dir, version + ".glb"))
+        name = version + "-walk"
+        record = {"profile": name, "about": spec["about"], "source": os.path.join(out_dir, version + ".glb"), "of": version}
+        try:
+            record["rig"] = run_script("rig.py", dict(spec.get("rig", {}), recipe=recipe["pieces"] if recipe else None))
+        except ValueError as why:  # not a T-pose character: nothing to fit a skeleton to
+            raise Skip(str(why))
+        record["walk"] = run_script("walk.py", dict(spec.get("walk", {}), traits=traits or None))
+        record["animation"] = run_script("animate.py", {})
+        glb = os.path.join(out_dir, name + ".glb")
+        record["export"] = run_script("export.py", dict(spec["export"], rig=True, path=glb, materials=not made.get("flat_colors")))
+        doc, rest = blockout_recipe.read(glb)
+        if blockout_recipe.tidy_names(doc):
+            blockout_recipe.write(glb, doc, rest)
+        record["gear"], record["sockets"] = made.get("gear") or [], made.get("sockets") or []
+        record["bytes"] = os.path.getsize(glb)
+        record["seconds"] = round(time.time() - started, 1)
+        with open(os.path.join(out_dir, name + ".json"), "w") as f:
+            json.dump(record, f, indent=2)
+        gait, check = record["walk"]["gait"], record["animation"]["check"]
+        print("PROFILE %s: %d bones, %s weights, %.2f m/s at %d steps a minute, feet slide %.2f cm a step, %.2f MB, %.0fs -> %s" % (
+            name, len(record["rig"]["bones"]), record["rig"]["weights"], gait["speed_m_s"], gait["cadence_steps_per_min"],
+            check["foot_slide_cm_per_step"], record["bytes"] / 1e6, record["seconds"], glb))
+
+
 def make(source, out_dir, profile, spec):
+    if spec.get("of"):
+        return walk(source, out_dir, profile, spec)
     started = time.time()
     load(source)
     record = {"profile": profile, "about": spec["about"], "source": source, "steps": []}
@@ -605,7 +658,7 @@ os.makedirs(out_dir, exist_ok=True)
 # The raw mesh as the scene placed it (real size, Claude's orientation), so a
 # before/after view lines up. Same TRELLIS.2 geometry as mesh.glb.
 raw = os.path.join(out_dir, "raw.glb")
-if not os.path.exists(raw):
+if not os.path.exists(raw) and any(not profiles[p].get("of") for p in wanted):
     load(source)
     run_script("export.py", {"path": raw, "image_format": "WEBP", "draco": False})
 for profile in wanted:

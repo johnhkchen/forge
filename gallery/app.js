@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 
 const app = document.getElementById("app");
 const VERSION_NAMES = { raw: "Raw TRELLIS.2", hero: "Hero", quads: "Quads", web: "Web", game: "Game", mobile: "Mobile", midpoly: "Mid poly", lowpoly: "Low poly" };
@@ -69,19 +70,22 @@ function facts(run, v) {
     ];
   }
   const quadShare = v.quads && v.faces ? Math.round((100 * v.quads) / v.faces) : null;
-  return [
+  const rows = [
     ["Faces", num(v.faces), quadShare !== null ? `${quadShare}% quads` : "triangles"],
     ["Off the original", v.shape_typical !== null && v.shape_typical !== undefined ? `${v.shape_typical}%` : "—", v.shape_worst ? `typically · ${v.shape_worst}% at worst` : ""],
     ["File", mb(v.bytes), ""],
     ["Textures", v.maps ? v.maps.length : "—", v.maps ? v.maps.join(", ") : ""],
   ];
+  // How it walks, worked out from its own build: pace, then the steps behind it.
+  if (v.walk && v.gait?.speed_m_s) rows.push(["Walks at", `${v.gait.speed_m_s} m/s`, `${v.gait.cadence_steps_per_min} steps a minute · ${v.gait.stride_m} m stride`]);
+  return rows;
 }
 
 function objectPage(run, wanted) {
   const versions = versionsOf(run);
   const start = versions.find((v) => v.name === wanted) || versions.find((v) => v.name === "web") || versions[versions.length - 1];
   // `off` holds the gear the visitor took off; it carries over between the versions that have gear.
-  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false };
+  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, walk: true };
   const hasGear = versions.some((v) => v.gear?.length);
 
   const stage = h("div", { class: "stage clay-well" });
@@ -94,12 +98,15 @@ function objectPage(run, wanted) {
   const wireBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.wire), onclick: () => { state.wire = !state.wire; wireBtn.setAttribute("aria-pressed", String(state.wire)); viewer?.setWire(state.wire); } }, "Wireframe");
 
   const socketsBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => { state.sockets = !state.sockets; socketsBtn.setAttribute("aria-pressed", String(state.sockets)); viewer?.setSockets(state.sockets); } }, "Where props go");
+  // Pressed in, the character walks on the spot; let go, it stands still in its T-pose.
+  const walkBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.walk), onclick: () => { state.walk = !state.walk; walkBtn.setAttribute("aria-pressed", String(state.walk)); render(); } }, "Walk");
   const gearRow = h("div", { class: "gear", role: "group", "aria-label": "Gear" });
 
   // One chip per piece of gear: pressed in means it's on. Only the low-poly and mid-poly versions have gear that comes off.
   function showGear() {
     const gear = state.version.gear || [];
     socketsBtn.hidden = !(state.version.sockets || []).length;
+    walkBtn.hidden = !state.version.walk;
     gearRow.hidden = !hasGear;
     if (!gear.length) {
       gearRow.replaceChildren(h("span", { class: "hint" }, "Gear comes off in the Low poly and Mid poly versions."));
@@ -134,6 +141,7 @@ function objectPage(run, wanted) {
     viewer = new Viewer(stage, panes.map((x) => ({
       label: panes.length > 1 ? (x === raw ? "Before" : `After · ${VERSION_NAMES[x.name]}`) : VERSION_NAMES[x.name],
       glb: file(run, x.glb),
+      walk: x.walk && state.walk ? file(run, x.walk) : null,
       edges: x.edges ? file(run, x.edges) : null,
       onTriangles: x === raw ? (n) => { raw.triangles = n; if (state.version === raw) showFacts(); } : null,
     })), state.wire, state.off, state.sockets);
@@ -154,7 +162,7 @@ function objectPage(run, wanted) {
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, socketsBtn)),
+    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, walkBtn, socketsBtn)),
     gearRow,
     stage,
     factsBox,
@@ -219,16 +227,17 @@ class Viewer {
     const controls = new OrbitControls(this.camera, renderer.domElement);
     controls.enableDamping = false;
     controls.addEventListener("change", () => this.draw());
-    const pane = { el, renderer, scene, controls, wire: null, model: null, markers: null, status };
+    const pane = { el, renderer, scene, controls, wire: null, model: null, markers: null, mixer: null, status };
     this.fill(pane, spec);
     return pane;
   }
 
   async fill(pane, spec) {
     try {
-      const gltf = await load(spec.glb);
+      const gltf = await load(spec.walk || spec.glb);
       if (!this.panes.includes(pane)) return;
-      const model = gltf.scene.clone(true);
+      // A model with a skeleton needs its bones copied along with it.
+      const model = spec.walk ? cloneSkinned(gltf.scene) : gltf.scene.clone(true);
       let triangles = 0;
       model.traverse((o) => {
         if (!o.isMesh) return;
@@ -240,10 +249,15 @@ class Viewer {
       spec.onTriangles?.(Math.round(triangles));
       pane.scene.add(model);
       pane.model = model;
-      pane.wire = await this.wireFor(model, spec, triangles);
-      if (pane.wire) { pane.wire.visible = this.wire; pane.scene.add(pane.wire); }
-      pane.markers = this.markersFor(model);
-      if (pane.markers) { pane.markers.visible = this.sockets; pane.scene.add(pane.markers); }
+      pane.wire = spec.walk ? this.walkingWire(model, triangles) : await this.wireFor(model, spec, triangles);
+      if (pane.wire) { pane.wire.visible = this.wire; if (!spec.walk) pane.scene.add(pane.wire); }
+      pane.markers = this.markersFor(model, Boolean(spec.walk));
+      if (pane.markers) { pane.markers.visible = this.sockets; if (!spec.walk) pane.scene.add(pane.markers); }
+      if (spec.walk && gltf.animations.length) {
+        pane.mixer = new THREE.AnimationMixer(model);
+        pane.mixer.clipAction(gltf.animations[0]).play();
+        this.play();
+      }
       this.setGear(this.off);
       pane.status.remove();
       if (!this.framed) this.frame(model);
@@ -287,8 +301,42 @@ class Viewer {
     return group;
   }
 
+  // A walking model's lines have to move with it: a second, see-through copy of each mesh on the
+  // same bones, drawn as wire. (These are the file's triangles; the standing version shows the real quads.)
+  walkingWire(model, triangles) {
+    const opacity = Math.min(0.75, Math.max(0.07, 0.75 * Math.sqrt(4000 / Math.max(triangles, 1))));
+    const material = new THREE.MeshBasicMaterial({ color: 0x5b84c4, wireframe: true, transparent: true, opacity });
+    const skinned = [];
+    model.traverse((o) => { if (o.isSkinnedMesh) skinned.push(o); });
+    const lines = skinned.map((o) => {
+      const copy = new THREE.SkinnedMesh(o.geometry, material);
+      copy.bind(o.skeleton, o.bindMatrix);
+      copy.userData.gear = gearOf(o);
+      o.parent.add(copy);
+      return copy;
+    });
+    return together(lines);
+  }
+
+  // Keep the picture moving while anything on the stage is walking.
+  play() {
+    if (this.playing) return;
+    this.playing = true;
+    let last = performance.now();
+    const step = (now) => {
+      const moving = this.panes.filter((p) => p.mixer);
+      if (!moving.length) { this.playing = false; return; }
+      moving.forEach((p) => p.mixer.update(Math.min((now - last) / 1000, 0.1)));
+      last = now;
+      this.draw();
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
   // A small ball and a label at each point the file marks for props ("socket: hand_right"...).
-  markersFor(model) {
+  // On a walking model each one rides on its socket, which rides on a bone.
+  markersFor(model, riding = false) {
     const sockets = [];
     model.updateMatrixWorld(true);
     model.traverse((o) => { if (o.userData.socket) sockets.push(o); });
@@ -297,17 +345,18 @@ class Viewer {
     const group = new THREE.Group();
     const ball = new THREE.SphereGeometry(size * 0.009, 16, 12);
     const paint = new THREE.MeshBasicMaterial({ color: 0x44679b, depthTest: false });
+    const riders = [];
     for (const socket of sockets) {
-      const at = socket.getWorldPosition(new THREE.Vector3());
+      const at = riding ? new THREE.Vector3() : socket.getWorldPosition(new THREE.Vector3());
       const dot = new THREE.Mesh(ball, paint);
       dot.position.copy(at);
       dot.renderOrder = 2;
       const label = labelSprite(SOCKET_NAMES[socket.userData.socket] || socket.userData.socket);
       label.position.copy(at).add(new THREE.Vector3(0, size * 0.028, 0));
       label.scale.multiplyScalar(size * 0.026);
-      group.add(dot, label);
+      if (riding) { socket.add(dot, label); riders.push(dot, label); } else group.add(dot, label);
     }
-    return group;
+    return riding ? together(riders) : group;
   }
 
   // Show or hide each gear piece, by the name its node carries in the file.
@@ -315,7 +364,7 @@ class Viewer {
     this.off = off;
     this.panes.forEach((p) => {
       p.model?.traverse((o) => { if (o.userData.gear) o.visible = !off.has(o.userData.gear); });
-      p.wire?.children.forEach((o) => { if (o.userData.gear) o.visible = !off.has(o.userData.gear); });
+      p.wire?.children.forEach((o) => { if (o.userData.gear) o.visible = !off.has(o.userData.gear) && (!o.isSkinnedMesh || p.wire.visible); });
     });
     this.draw();
   }
@@ -342,7 +391,7 @@ class Viewer {
   setWire(on) {
     this.wire = on;
     this.panes.forEach((p) => { if (p.wire) p.wire.visible = on; });
-    this.draw();
+    this.setGear(this.off);
   }
 
   layout() {
@@ -370,10 +419,21 @@ class Viewer {
   }
 
   dispose() {
+    this.panes.forEach((p) => { p.mixer?.stopAllAction(); p.mixer = null; });
     this.resize.disconnect();
     this.panes.forEach((p) => { p.controls.dispose(); p.renderer.dispose(); });
     this.panes = [];
   }
+}
+
+// Several things already placed in the scene, shown and hidden as one (what a Group does for things it holds).
+function together(children) {
+  let shown = true;
+  return {
+    children,
+    get visible() { return shown; },
+    set visible(on) { shown = on; children.forEach((o) => { o.visible = on; }); },
+  };
 }
 
 // The gear piece a mesh belongs to: the tag on it or on the node above it.

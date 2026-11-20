@@ -1,6 +1,6 @@
 ---
 name: tidy-mesh
-description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props).
+description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate).
 ---
 
 # tidy-mesh
@@ -203,6 +203,160 @@ point of its own in its file (only the words in `props.json`), and nothing
 checks that the body really is whole under each gear piece: look with the
 gear hidden.
 
+## Walking: a skeleton, joint limits and a walk that fits the build
+
+The low-poly and mid-poly characters are a handful of simple pieces in a
+T-pose, which is the easiest thing there is to put bones in. The `walk`
+profile does it: it takes `profiles/lowpoly.glb` and `profiles/midpoly.glb`
+and writes each again as `lowpoly-walk.glb` / `midpoly-walk.glb`, with a
+skeleton, every mesh bound to it, limits on every joint and one looping
+animation, `walk`. Nothing is tuned by hand per character. Three scripts,
+run in this order (the runner does it; so can Claude over MCP):
+
+    just tidy runs/<run folder> walk          # after lowpoly (and midpoly) exist
+    just walk-strip runs/<run>/profiles/lowpoly-walk.glb strip.png side
+
+**`rig.py`: bones from the model.** One set of names on every character, so
+an animation made for one fits all:
+
+    hips > spine > chest > neck > head
+    chest > shoulder_l > upper_arm_l > forearm_l > hand_l      (and _r)
+    hips > thigh_l > shin_l > foot_l > toe_l                   (and _r)
+    hips > tail_1 > tail_2 ...                                 only with a tail
+
+- **Where the joints go is read off the pieces.** With the block-out's
+  recipe (`lowpoly_build.json`) it reads the pieces as they were asked for;
+  without one it finds each connected piece in the mesh and gathers its
+  points back into rings. Either way: the hands' reach and height give the
+  arm line; the trunk's width there gives the shoulders; the wrist is the
+  narrowest ring before the hand; the elbow and knee are where rings were
+  set close together for bending (or the narrowest ring, or the ring
+  nearest where the joint usually is); the hip is at the top of the leg
+  piece; the ankle sits over the foot piece; a long piece running out
+  behind the hips is a tail and gets 2 to 5 bones. `found_by` in the result
+  says which rule placed each.
+- **Elbows and knees sit on the straight line** from shoulder to wrist and
+  hip to ankle, so they are true one-way hinges. A knee is never placed
+  outside the middle of the leg (44-56%): the troll's knee rings are lower
+  than that, and a leg that lopsided can't take a stride.
+- **Binding.** It tries Blender's automatic weights first and keeps them
+  only if every point got a weight. On block-outs they don't hold: the
+  pieces overlap and hide each other, and Blender left every point of all
+  six test characters unweighted. The fallback, by piece: each connected
+  piece goes to the limb most of its points are nearest; a small piece (a
+  buckle, a tusk, a hand) follows one bone rigidly; a longer one blends
+  from bone to bone over about one limb-width at each joint. A skirt or
+  belt around both legs stays half with the hips. The sole is all foot
+  behind the ball and all toe ahead of it. At most four bones a point.
+  `weights` and `why_not_automatic` in the result say what happened.
+- **Limits** go on as Limit Rotation constraints and ride on each bone as
+  `limit_deg` (in the .glb too, as glTF extras): knee 0-150 and elbow 0-150
+  one way only; hip 120 forward, 30 back, 40 out and 40 of twist; shoulder,
+  spine, neck, wrist, ankle and toes their usual reach. They are scaled by
+  the build: the troll's joints get 0.81 of a person's reach, the ninja's
+  1.10 (`flexibility`; hinges keep their full fold).
+- **Sockets** are hung on their bones (hands, head, chest, hips), so a prop
+  put there follows. Gear meshes stay separate and tagged.
+- It also **measures the build** (`measure`): leg, arm and foot length, hip
+  and thigh width, how wide the body is at each height, and bulk (volume
+  over height cubed).
+
+**`walk.py`: the gait, from those measurements.** Plus four traits from 0
+to 1 that a tape measure can't tell: weight, stealth, swagger, stiffness.
+The pipeline asks Opus for them once per character from its brief
+(`HowItWalks` in `baml_src/7_walk`, saved as `gait.json`; `just gait
+runs/<run>` shows the answer without saving). Without them they are guessed
+from bulk alone.
+
+- **Speed from leg length.** Walkers of any size move alike at the same
+  Froude number, speed squared over gravity times leg length; 0.25 is an
+  easy human walk, and weight and stealth bring it down. Stride follows
+  (stride / leg = 2.3 x Froude^0.3), cadence is speed over stride, slowed
+  again by weight. The loop is rounded to whole frames and the speed set to
+  match.
+- **Stance** near the hip joints, wider with weight and swagger, never
+  narrower than the thighs are thick. **Bob** like an upside-down pendulum
+  over each planted foot. **Sway** a share of the stance that grows with
+  weight.
+- **Arms** hang just clear of the body (from its measured width) and swing
+  against the legs. **Spine** leans and twists against the hips. A **tail**
+  repeats the hips' turn a moment late, more toward its tip, and is lifted
+  clear of the floor.
+- **Feet**: heavy ones land flat and toe out; light ones peel off the heel;
+  stealthy ones land on the ball and lift higher.
+
+**`animate.py`: fit, plant, clamp, bake.** walk.py only writes a motion:
+where the hips go, where the ball of each foot is and whether it is
+planted, and how far each bone has turned from the T-pose, in units of the
+hip height. animate.py is what plays any such motion on a character:
+
+1. **Fit**: scale by this character's hip height, turn each bone from its
+   own rest pose.
+2. **Plant the feet**: each leg is solved exactly from hip joint to foot
+   (two bones and a hinge), so a planted foot's ball stays on the floor and
+   moves back at exactly walking speed. If the legs can't reach, the hips
+   come down for the whole loop. If an ankle hits its limit the heel lifts
+   and the leg is solved again.
+3. **Limits**: every turn is clamped to the bone's `limit_deg`; `clamped`
+   lists what needed it.
+4. **Bake** one key a frame into an action named for the motion, then play
+   it back and measure it (`check`).
+
+So the walk is one source of motion among others to come. A clip from a
+motion model (NVIDIA MotionBricks writes its 30-joint SOMA skeleton) or
+from Mixamo would be renamed with `bones.json`, turned into the same plain
+form, and go through the same four steps. That importer is not built.
+
+`export.py` with `"rig": true` writes the skeleton, its meshes, the sockets
+on their bones and the action as one .glb (not Draco-packed: at this size
+it saves little, and plain files can be checked without a decoder).
+
+Measured on four characters (`just test-tools`, traits from Opus in
+`scripts/test_gaits.json`):
+
+| | Cave troll | Ninja | Pirate | Lizardkin |
+|---|---|---|---|---|
+| Leg (hip height) | 0.99 m | 0.88 m | 0.77 m | 0.89 m |
+| Arm / leg | 1.39 | 0.82 | 0.88 | 0.85 |
+| Bulk | 0.169 | 0.039 | 0.060 | 0.089 |
+| Weight, stealth, swagger, stiffness | .95 .05 .6 .7 | .35 .8 .12 .2 | .6 .15 .7 .35 | .65 .25 .45 .5 |
+| Speed | 0.93 m/s | 1.26 | 1.14 | 1.10 |
+| Stride | 1.11 m | 1.17 | 1.03 | 1.10 |
+| Steps a minute | 100 | 129 | 133 | 120 |
+| Feet apart | 0.83 m | 0.21 | 0.29 | 0.41 |
+| Bob / sway | 10.8 / 43.9 cm | 4.8 / 3.7 | 8.0 / 11.5 | 8.9 / 16.2 |
+| Arm swing, hands travel | 16 deg, 0.78 m | 10 deg, 0.24 m | 22 deg, 0.51 m | 16 deg, 0.42 m |
+| Planted foot slides, a step | 0.14 cm | 0.01 | 0.01 | 0.02 |
+| Through the floor | 0.06 cm | 0.01 | 0.01 | 0.00 |
+| Turns outside a limit | 0 | 0 | 0 | 0 |
+
+The troll is slow, wide and rolling because its build is (bulk four times
+the ninja's, thighs 0.4 m thick, arms longer than its legs); the ninja is
+narrow, low and quiet mostly because of what Opus said about it. The
+lizardkin's tail has five bones.
+
+What is weak, most visible first:
+
+- **Skin shows through clothes on a stride.** The body and a gear piece
+  over it have their rings at different heights, so they bend differently;
+  on the wrestlers a bare thigh pokes through the trousers. The fix is to
+  hide the body's faces under gear while it is worn (the runner already
+  knows which they are: `skin_under_gear`).
+- **Bending is by nearest bone.** No twist bones, no corrective shapes:
+  an elbow or knee folds like a paper tube, and a kilt follows the thighs
+  in facets.
+- **The troll's ankles run out.** Its shins are short, so in late stance
+  the ankle hits its limit and the heel comes up as much as 42 degrees;
+  on one frame a foot and its toes are clamped (0.14 cm of slide).
+- **Joint finding is rules of thumb.** It expects a T-pose facing -y, two
+  legs, arms held out, and pieces built along the axes. A head is "the
+  lowest sizeable piece above the arms"; a cape that hangs behind the hips
+  could be taken for a tail.
+- **One gait.** No start, stop, turn or run, no uneven ground, and the walk
+  stays in place (the speed is in `<version>-walk.json` for whoever moves
+  the character).
+- **Hands and face don't move**: one bone per hand, none in the face.
+
 ## Faces: a character's head is measured, not guessed
 
 Left to itself, Claude spends a low-poly character's triangles on the
@@ -340,6 +494,9 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `measure.py` | size a part without its neighbors, and slice it into rows of middle and half-width | parts, low poly |
 | `split.py` | paint or cut the parts from boxes: several boxes per part, tilted boxes, parts that wrap around | parts |
 | `face.py` | find the brow, eyes, nose, mouth and chin on a character's head and print it as a `"head"` piece for `build.py` | low poly (characters) |
+| `rig.py` | give a T-pose character bones placed from its own build, bind every mesh, set each joint's limits, hang the sockets on bones | walk |
+| `walk.py` | work out a walk from the measured build and four traits; leaves it on the rig as a motion | walk |
+| `animate.py` | play a motion on the rig: fit it, plant the feet, clamp to the limits, bake keyframes, measure the result | walk |
 | `build.py` | block out a low-poly version from a list of lofts, tubes, lumps, boxes and a head; join, color and check it; keep gear as groups, add sockets, keep the recipe | low poly |
 
 How they fit together:
@@ -402,6 +559,7 @@ person's open session:
 just tidy runs/<run folder> web game        # one or more profiles
 just tidy runs/<run folder> hero quads web game mobile
 just tidy runs/<run folder> lowpoly midpoly     # need the block-out (lowpoly.glb); midpoly also its recipe
+just tidy runs/<run folder> walk                # needs lowpoly (and midpoly) made first; adds <version>-walk.glb
 ```
 
 Each profile's `<profile>.json` records `shape` (from match.py): how far the
@@ -507,7 +665,9 @@ cut exactly as before, and the troll's face measured and rebuilt next to
 its old head (and the pirate's, if that run is there); the troll's gear
 written apart with its sockets; and the `midpoly` profile made for real on
 copies of the troll, lizardkin, pirate and ninja runs (the last three from
-their recorded block-outs in `scripts/test_blockouts.json`). A few minutes
+their recorded block-outs in `scripts/test_blockouts.json`); and the walk: each of the four
+rigged, walked and exported, with the foot slide, floor, limits, loop and
+weights checked both in Blender and in the written file. A few minutes
 in all. With `--keep DIR`
 the face cases leave `troll-head-compared.png` and
 `pirate-head-compared.png`: front and side of the reference, each head, and

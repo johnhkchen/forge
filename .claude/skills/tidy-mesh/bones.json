@@ -1,0 +1,39 @@
+{
+  "about": "What each bone rig.py makes is called on two skeletons motion often comes on: NVIDIA's SOMA (the 30 joints MotionBricks writes, github.com/NVlabs/motionbricks, motionbricks/assets/onnx/soma/soma_n1.json) and Mixamo. A motion from either can be renamed bone for bone with this table, turned into the plain form animate.py takes (how far each bone has turned from the T-pose, where the hips and feet are), and played on any character here. A tail and other extras are outside the table: a humanoid motion leaves them to follow the hips.",
+  "rest_pose": "T-pose, z up, facing -y, so left (_l) is +x. Each bone's y axis runs along it; x is the bend axis.",
+  "bones": {
+    "hips": {"soma": "Hips", "mixamo": "mixamorig:Hips"},
+    "spine": {"soma": "Spine1", "soma_also": ["Spine2"], "mixamo": "mixamorig:Spine", "mixamo_also": ["mixamorig:Spine1"]},
+    "chest": {"soma": "Chest", "mixamo": "mixamorig:Spine2"},
+    "neck": {"soma": "Neck1", "soma_also": ["Neck2"], "mixamo": "mixamorig:Neck"},
+    "head": {"soma": "Head", "mixamo": "mixamorig:Head"},
+    "shoulder_l": {"soma": "LeftShoulder", "mixamo": "mixamorig:LeftShoulder"},
+    "upper_arm_l": {"soma": "LeftArm", "mixamo": "mixamorig:LeftArm"},
+    "forearm_l": {"soma": "LeftForeArm", "mixamo": "mixamorig:LeftForeArm"},
+    "hand_l": {"soma": "LeftHand", "mixamo": "mixamorig:LeftHand"},
+    "thigh_l": {"soma": "LeftLeg", "mixamo": "mixamorig:LeftUpLeg"},
+    "shin_l": {"soma": "LeftShin", "mixamo": "mixamorig:LeftLeg"},
+    "foot_l": {"soma": "LeftFoot", "mixamo": "mixamorig:LeftFoot"},
+    "toe_l": {"soma": "LeftToeBase", "mixamo": "mixamorig:LeftToeBase"},
+    "shoulder_r": {"soma": "RightShoulder", "mixamo": "mixamorig:RightShoulder"},
+    "upper_arm_r": {"soma": "RightArm", "mixamo": "mixamorig:RightArm"},
+    "forearm_r": {"soma": "RightForeArm", "mixamo": "mixamorig:RightForeArm"},
+    "hand_r": {"soma": "RightHand", "mixamo": "mixamorig:RightHand"},
+    "thigh_r": {"soma": "RightLeg", "mixamo": "mixamorig:RightUpLeg"},
+    "shin_r": {"soma": "RightShin", "mixamo": "mixamorig:RightLeg"},
+    "foot_r": {"soma": "RightFoot", "mixamo": "mixamorig:RightFoot"},
+    "toe_r": {"soma": "RightToeBase", "mixamo": "mixamorig:RightToeBase"}
+  },
+  "soma_also": "A joint listed under soma_also or mixamo_also has no bone of its own here: its turn is added to the bone it is listed under.",
+  "soma_unused": {
+    "Jaw": "no jaw bone: the low-poly face is fixed",
+    "LeftEye": "no eye bones",
+    "RightEye": "no eye bones",
+    "LeftHandThumbEnd": "hands are mittens: one bone each",
+    "LeftHandMiddleEnd": "hands are mittens: one bone each",
+    "RightHandThumbEnd": "hands are mittens: one bone each",
+    "RightHandMiddleEnd": "hands are mittens: one bone each"
+  },
+  "soma_joints": ["Hips", "Spine1", "Spine2", "Chest", "Neck1", "Neck2", "Head", "Jaw", "LeftEye", "RightEye", "LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand", "LeftHandThumbEnd", "LeftHandMiddleEnd", "RightShoulder", "RightArm", "RightForeArm", "RightHand", "RightHandThumbEnd", "RightHandMiddleEnd", "LeftLeg", "LeftShin", "LeftFoot", "LeftToeBase", "RightLeg", "RightShin", "RightFoot", "RightToeBase"],
+  "extras": "tail_1, tail_2, ... (hips > tail_1 > tail_2 ...), only on a model with a tail"
+}

@@ -6,7 +6,11 @@
 const DEFAULT_PROFILES: string[] = ["web", "game", "lowpoly"];
 // A character also gets the mid-poly version: its block-out built again
 // denser, with the detail baked on, for phone games on today's hardware.
-const CHARACTER_PROFILES: string[] = ["web", "game", "lowpoly", "midpoly"];
+// Last comes its walk: the low-poly and mid-poly versions again, each with a
+// skeleton and a walk that fits its build (profiles/lowpoly-walk.glb,
+// profiles/midpoly-walk.glb).
+const WALK = "walk";
+const CHARACTER_PROFILES: string[] = ["web", "game", "lowpoly", "midpoly", WALK];
 const RECIPE_FILE = "lowpoly_build.json";
 const BLENDER_APP = "/Applications/Blender.app/Contents/MacOS/Blender";
 const PROFILE_TIMEOUT_MINUTES = 15;
@@ -24,8 +28,18 @@ class ProfilesFailed {
 /// The profiles this run doesn't have yet.
 function missing_profiles(run: Run, wanted: string[]) -> string[] {
     wanted.filter((p) -> {
-        !run.has(`profiles/${p}.glb`)
+        !run.has(profile_file(p))
     })
+}
+
+/// The file that shows a profile was made. The walk has no file of its own
+/// name: it writes one per block-out version, the low-poly one first.
+function profile_file(profile: string) -> string {
+    if (profile == WALK) {
+        "profiles/lowpoly-walk.glb"
+    } else {
+        `profiles/${profile}.glb`
+    }
 }
 
 /// The profiles a run gets by default. `midpoly` is built from the
@@ -83,7 +97,12 @@ function shape(run: Run, wanted: string[] = DEFAULT_PROFILES) -> void {
     ) {
         log.info(`profiles: ${line.slice(8, line.length())}`);
     }
-    if (!out.ok() || missing_profiles(run, todo)) {
+    // A character the skeleton can't be fitted to (not standing in a T-pose,
+    // say) keeps its other versions: the runner skips the walk with a note.
+    let required = todo.filter((p) -> {
+        p != WALK
+    });
+    if (!out.ok() || missing_profiles(run, required)) {
         let tail = lines.slice(baml.Int.max(0, lines.length() - 15), lines.length()).join("\n");
         throw ProfilesFailed { reason: `Blender exited ${out.exit_code}:\n${tail}` }
     }

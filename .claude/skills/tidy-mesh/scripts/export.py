@@ -17,6 +17,12 @@
 # ("forge_build"), which the mid-poly profile rebuilds from. "file" in the
 # result lists what was written; "only_this_object" is still the check.
 #
+# A rigged character (rig.py, then animate.py) goes out whole with "rig": the
+# skeleton, every mesh bound to it, the sockets riding on their bones, and
+# the baked action as the file's animation ("walk"). Each joint carries its
+# "limit_deg" in glTF extras. "file" then also counts the bones and names
+# the animations.
+#
 # Send this whole file through the blender MCP `execute_blender_code` tool
 # after editing PARAMS. Prints RESULT {json}. About a second.
 # Safe-mode compatible.
@@ -28,6 +34,7 @@ PARAMS = {
     "image_format": "AUTO",  # "AUTO" (PNG/JPEG as given), "JPEG" or "WEBP" (smallest)
     "draco": False,          # Draco-compress the mesh (web viewers need a Draco decoder)
     "apart": True,           # a block-out with gear or sockets: one mesh per group and the socket empties
+    "rig": None,             # the armature's name (True = the scene's first): export it, its meshes, sockets and animation instead of one object
     "check": True,           # read the file back to confirm it holds just this object
 }
 
@@ -55,15 +62,20 @@ def read_back(path):
     window = bpy.context.window
     if not window:
         return None
-    kinds = (bpy.data.objects, bpy.data.meshes, bpy.data.materials, bpy.data.images, bpy.data.collections)
+    kinds = (bpy.data.objects, bpy.data.meshes, bpy.data.materials, bpy.data.images, bpy.data.collections, bpy.data.actions, bpy.data.armatures)
     before = [set(kind) for kind in kinds]
     home = window.scene
     scratch = bpy.data.scenes.new("export check")
     window.scene = scratch
     try:
-        bpy.ops.import_scene.gltf(filepath=path)
+        if "disable_bone_shape" in bpy.ops.import_scene.gltf.get_rna_type().properties.keys():
+            bpy.ops.import_scene.gltf(filepath=path, disable_bone_shape=True)
+        else:
+            bpy.ops.import_scene.gltf(filepath=path)
         found = [o for o in scratch.objects if o.type == "MESH"]
         held = {"meshes": len(found), "names": [o.name for o in found][:24],
+                "bones": sum(len(o.data.bones) for o in scratch.objects if o.type == "ARMATURE"),
+                "animations": sorted(a.name for a in bpy.data.actions if a not in before[5]),
                 "empties": sum(1 for o in scratch.objects if o.type == "EMPTY"),
                 "triangles": sum(len(p.vertices) - 2 for o in found for p in o.data.polygons),
                 "vertex_colors": any(len(o.data.color_attributes) for o in found)}
@@ -103,20 +115,34 @@ def split_groups(obj, scene):
 
 if not PARAMS["path"]:
     raise ValueError("set PARAMS['path'] to where the .glb should go")
-obj = pick_object(PARAMS["object"])
 scene = bpy.context.scene
+rig = None
+if PARAMS["rig"]:
+    rigs = [o for o in scene.objects if o.type == "ARMATURE" and (PARAMS["rig"] is True or o.name == PARAMS["rig"])]
+    if not rigs:
+        raise ValueError("no armature %s in the open scene: run rig.py first" % ("" if PARAMS["rig"] is True else repr(PARAMS["rig"])))
+    rig = rigs[0]
+    bound = [o for o in scene.objects if o.type == "MESH" and o.find_armature() == rig]
+    if not bound:
+        raise ValueError("no mesh is bound to %r" % rig.name)
+    PARAMS["object"] = sorted(bound, key=face_count)[-1].name
+obj = pick_object(PARAMS["object"])
 if obj.name not in scene.objects:
     raise ValueError("%r is not in the open scene %r; switch to its scene first "
                      "(bpy.context.window.scene = ...)" % (obj.name, scene.name))
 sockets = [o for o in scene.objects if o.get("socket_of") == obj.name]
 groups = json.loads(obj.get("forge_groups", "[]")) if obj.type == "MESH" else []
-parts = split_groups(obj, scene) if PARAMS["apart"] and groups and (len(groups) > 1 or sockets) else []
+parts = split_groups(obj, scene) if PARAMS["apart"] and groups and (len(groups) > 1 or sockets) and not rig else []
 for o in bpy.context.selected_objects:
     o.select_set(False)
-for o in (parts + sockets) if parts else [obj]:
+whole = []
+if rig:
+    sockets = [o for o in scene.objects if o.type == "EMPTY" and o.parent == rig and o.get("forge") == "socket"]
+    whole = [rig] + bound + sockets
+for o in whole or ((parts + sockets) if parts else [obj]):
     o.hide_set(False)
     o.select_set(True)
-bpy.context.view_layer.objects.active = parts[0] if parts else obj
+bpy.context.view_layer.objects.active = rig or (parts[0] if parts else obj)
 options = {
     "filepath": PARAMS["path"],
     "export_format": "GLB",
@@ -124,17 +150,27 @@ options = {
     "use_active_scene": True,  # without this, every scene in the file is written
     "export_apply": True,
     "export_draco_mesh_compression_enable": PARAMS["draco"],
-    "export_extras": bool(groups),  # the tags and the recipe travel as custom properties
+    "export_extras": bool(groups) or bool(rig),  # the tags and the recipe travel as custom properties
 }
+if rig:
+    options.update({"export_animations": True, "export_skins": True, "export_animation_mode": "ACTIONS",
+                    "export_force_sampling": True, "export_optimize_animation_size": False, "export_anim_single_armature": True})
 if PARAMS["materials"]:
     options["export_image_format"] = PARAMS["image_format"]
 else:
     options["export_materials"] = "NONE"
     if "export_vertex_color" in bpy.ops.export_scene.gltf.get_rna_type().properties.keys():
         options["export_vertex_color"] = "ACTIVE"
+stowed = {}
+if rig:  # the motions a source left on the rig are working data, far too long for the file
+    for key in [k for k in rig.keys() if k.startswith("forge_motion")]:
+        stowed[key] = rig[key]
+        del rig[key]
 try:
     bpy.ops.export_scene.gltf(**options)
 finally:
+    for key, value in stowed.items():
+        rig[key] = value
     for o in parts:
         spare = o.data
         bpy.data.objects.remove(o, do_unlink=True)
@@ -143,21 +179,27 @@ finally:
         o.select_set(False)
 
 deps = bpy.context.evaluated_depsgraph_get()
-shown = obj.evaluated_get(deps)
-triangles = sum(len(p.vertices) - 2 for p in shown.to_mesh().polygons)
-shown.to_mesh_clear()
+triangles = 0
+for o in (bound if rig else [obj]):
+    shown = o.evaluated_get(deps)
+    triangles += sum(len(p.vertices) - 2 for p in shown.to_mesh().polygons)
+    shown.to_mesh_clear()
 result = {
     "object": obj.name,
     "path": PARAMS["path"],
-    "faces": len(obj.data.polygons),
+    "faces": sum(len(o.data.polygons) for o in bound) if rig else len(obj.data.polygons),
     "triangles": triangles,
 }
 if PARAMS["check"]:
     held = read_back(PARAMS["path"])
     if held:
         result["file"] = held
-        result["only_this_object"] = (held["meshes"] == max(len(parts), 1) and held["triangles"] == triangles
-                                      and held["empties"] == (len(sockets) if parts else 0))
+        result["only_this_object"] = (held["meshes"] == (len(bound) if rig else max(len(parts), 1)) and held["triangles"] == triangles
+                                      and held["empties"] == (len(sockets) if parts or rig else 0)
+                                      and held["bones"] == (len(rig.data.bones) if rig else 0))
+if rig:
+    result["rig"] = {"name": rig.name, "bones": len(rig.data.bones), "meshes": [o.name for o in bound], "sockets": [o["socket"] for o in sockets],
+                     "animation": rig.animation_data.action.name if rig.animation_data and rig.animation_data.action else None}
 if parts:
     result["groups"] = [g["name"] for g in groups]
     result["sockets"] = [o["socket"] for o in sockets]
