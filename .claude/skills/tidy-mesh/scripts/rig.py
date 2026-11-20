@@ -599,6 +599,13 @@ def piece_weights(obj):
             if home.startswith("leg") and side_of(piece["lo"], piece["hi"]) == 0:
                 allowed = {"leg_l", "leg_r", "trunk"}
         size = piece["hi"] - piece["lo"]
+        # A face must not bend: the head piece, and whatever sits wholly on it (hair, a hat, glasses, a
+        # mustache), goes with the head bone alone. Blended with the neck, a nod squashed the jaw
+        # (the head's points moved up to 11% of its height against the bone on the low-poly ninja).
+        if home == "trunk" and heads and piece["lo"].z >= head_lo - 0.01 * tall:
+            for i in piece["verts"]:
+                done[i] = [("head", 1.0)]
+            continue
         if size.length < 0.12 * tall:
             one = nearest_bone((piece["lo"] + piece["hi"]) / 2, allowed)
             for i in piece["verts"]:

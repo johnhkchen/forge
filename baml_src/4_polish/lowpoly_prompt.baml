@@ -41,6 +41,14 @@ const CHARACTER_STEPS = `
       rest. Add the ears, tusks, hair or beard the description names, and
       use its "color" as the skin color of the body pieces too. A hat,
       helmet or horns are pieces of their own.
+    - Unless the style asks for flat colors, a texture is laid over this
+      head afterwards, and the texture carries the eyes, brows and lips,
+      painted from the character's picture. Then give the head piece
+      "eyes": "flat", so no dark pocket is cut where the painted eye goes,
+      and don't build eyes, eyebrows or lips as pieces of their own. What
+      stands off the face (glasses, a mustache, an eye patch) is still a
+      piece: keep it as thin and as small as on the reference, or it
+      covers the face behind it.
     - In step 4, also \`look\` at the head alone (target ["Look: face"])
       front-on and from the side, next to the reference and without it. At
       the size the whole figure is seen, the brow, eyes, nose and mouth must

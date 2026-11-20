@@ -45,7 +45,11 @@ class PictureFailed {
 }
 
 function picture_request(brief: ObjectBrief) -> string {
-    let rules = if (brief.character ?? false) { CHARACTER_RULES } else { PICTURE_RULES };
+    let rules = if (brief.character ?? false) {
+        CHARACTER_RULES
+    } else {
+        PICTURE_RULES
+    };
     `
         Use your built-in image_gen tool to generate exactly one square image,
         then reply with the single word: done. Do not run shell commands and do
@@ -68,13 +72,22 @@ function codex_thread(events: string) -> string throws PictureFailed {
         ?? throw PictureFailed { reason: `first event has no thread id: ${first}` }
 }
 
-/// Draws the brief's subject and saves it as image.png in the run folder.
-function draw(brief: ObjectBrief, run: Run) -> string {
+/// Asks codex for one picture and returns the file it drew, in codex's own
+/// thread folder. `from` is a picture to work from (the head sheet is drawn
+/// from the character's picture); `dir` is where codex runs.
+function codex_draws(request: string, dir: string, from: string? = null) -> string {
     //# Ask codex for one picture
+    let shown: string[] = if let picture: string = from {
+        ["-i", picture]
+    } else {
+        []
+    };
     let out = baml.sys.run(
         "codex",
-        args = ["exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only", "-C", run.dir, "-"],
-        input = picture_request(brief),
+        args = ["exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only", "-C", dir]
+            .concat(shown)
+            .concat(["-"]),
+        input = request,
         timeout = baml.time.Duration.from_seconds(PICTURE_TIMEOUT_S),
         capture_output = true,
     ) catch (e) {
@@ -88,7 +101,7 @@ function draw(brief: ObjectBrief, run: Run) -> string {
         throw PictureFailed { reason: `codex exited ${out.exit_code}: ${string.from_utf8(out.stderr)}` }
     }
 
-    //# Copy the picture out of codex's thread folder
+    //# Find the picture in codex's thread folder
     let home = baml.sys.home_dir() ?? throw PictureFailed { reason: "no home directory" };
     let folder = `${home}/.codex/generated_images/${codex_thread(events)}`;
     let drawn = (
@@ -101,8 +114,14 @@ function draw(brief: ObjectBrief, run: Run) -> string {
         })
         .at(0)
         ?? throw PictureFailed { reason: `no .png in ${folder}` };
+    `${folder}/${drawn.name}`
+}
+
+/// Draws the brief's subject and saves it as image.png in the run folder.
+function draw(brief: ObjectBrief, run: Run) -> string {
+    let drawn = codex_draws(picture_request(brief), run.dir);
     let target = run.path("image.png");
-    baml.fs.write_bytes(target, baml.fs.open(`${folder}/${drawn.name}`, "r").bytes());
+    baml.fs.write_bytes(target, baml.fs.open(drawn, "r").bytes());
     target
 }
 

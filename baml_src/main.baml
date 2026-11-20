@@ -2,6 +2,7 @@
 //
 //   1. Opus writes a short brief                     (1_describe)
 //   2. Codex draws the object                        (2_picture)
+//      and a character's head again, from three sides
 //   3. TRELLIS.2 on RunPod lifts it into a mesh      (3_mesh)
 //   4. Claude finishes it in Blender over MCP        (4_polish)
 //      finds its parts (lid, knob, spout...) and blocks out a low-poly version
@@ -56,6 +57,19 @@ function finish(run: Run, brief: ObjectBrief, props: string = "none") -> string 
     if (!run.has("image.png")) {
         log.info("picture: codex is drawing");
         draw(brief, run);
+    }
+    //# 2b. A character's head again, large, from three sides (for its face)
+    if (wants_head_sheet(brief) && !run.has(HEAD_SHEET)) {
+        log.info("head sheet: codex is drawing the head from three sides");
+        // Nothing depends on it: without one the face is painted from image.png.
+        let sheet: string? = head_sheet(brief, run) catch (e) {
+            _ => {
+                log.warn(
+                    "head sheet: codex did not draw one; the face will be painted from image.png",
+                );
+                null
+            },
+        };
     }
     //# 3. TRELLIS.2 builds the mesh
     if (!run.has("mesh.glb")) {
