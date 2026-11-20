@@ -214,6 +214,14 @@
           {
             "keep_colors": true
           }
+        ],
+        [
+          "bake.py",
+          {
+            "mode": "onto",
+            "texture_size": 256,
+            "repaint": true
+          }
         ]
       ],
       "export": {

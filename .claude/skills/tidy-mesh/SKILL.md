@@ -98,8 +98,10 @@ metal or roughness maps. Without `lowpoly.glb` the profile is skipped.
 
 If the brief's `lowpoly_style` asks for flat colors (old-school RuneScape
 and the like), the profile keeps Claude's per-part vertex colors and faceted
-shading instead and bakes nothing: the troll is 15 KB with no textures. A
-baked texture turns muddy at a few hundred triangles.
+shading instead and keeps no texture: the troll is 15 KB. A baked
+texture turns muddy at a few hundred triangles. The colors themselves are
+then set from the detailed mesh, piece by piece (`"repaint"`; see "Clothes
+get their own colors").
 
 ## Mid poly: the block-out, built again denser
 
@@ -130,7 +132,9 @@ Blender with Claude: it is made from what Claude already built.
   nothing there and leaves black. So this bake looks twice, at 2% of the
   object's size and then at 7% for what the first look missed (`"reach":
   [0.02, 0.07]`), and what is still missing takes the block-out's own
-  painted color (`"fill": true`).
+  painted color (`"fill": true`). A block-out with gear is baked by
+  group instead, which does the same and more: see "Clothes get their own
+  colors".
 
 Measured on the four characters (`just test-tools`; the pirate, ninja and
 lizardkin with a body added under their gear, so their block-outs are
@@ -183,9 +187,10 @@ version made from it):
   the exporter writes `body.001`. The tags say what each node is, and
   `scripts/blockout_recipe.py` sets the names from them.
 - **Under a bake, the body would look like the coat** (a bake copies
-  whatever the detailed mesh shows at that spot). The runner gives body
-  faces that gear covers a plain material in the color Claude painted the
-  piece (`skin_under_gear`), so `midpoly`'s body is skin where it was hidden.
+  whatever the detailed mesh shows at that spot). So bake.py bakes a
+  dressed block-out by group: skin that gear covers copies nothing and
+  gets the body's own average skin color, in the same texture (see
+  "Clothes get their own colors").
 - **Held things are not on the character at all.** The picture shows empty
   hands. Pipeline step 6 (`baml_src/6_props`, off unless asked) writes a
   brief for each held item, starts a run folder for it, and saves
@@ -536,6 +541,147 @@ What is weak, most visible first:
 - **Old block-outs are guessed.** Without `"fit"` on the pieces, a coat
   called "torso" is taken for tight cloth. Check `"pieces"`.
 
+## Clothes get their own colors: the bake by group
+
+A bake copies whatever the detailed mesh shows nearest each spot. On a
+dressed block-out that went wrong in three ways (seen on the troll, and
+measured on all six characters):
+
+- **Legs on the kilt.** A block-out's kilt is a little longer and wider
+  than the real one. Below the real hem the nearest surface is the leg, so
+  the kilt's lower corners were painted leg. A third of the troll's kilt
+  was nearer its skin's color than the kilt's.
+- **A lining painted with whatever is inside.** The inside of a kilt or a
+  coat's skirts faces the legs and copied them, or the mesh's insides.
+- **Skin under clothes in the wrong color, and showing.** The skin a piece
+  hides was given the flat color Claude painted the body with, which is
+  rarely the texture's skin (the troll: a pale gray-green beside olive, 38
+  dE apart). And the test for "under gear" was not the one drape.py uses
+  to hide faces, so some of those flat faces showed with the clothes on:
+  a pale band over the troll's belt, patches on Roosevelt's back.
+
+So when the target has gear, `bake.py` "onto" bakes **by group** (it does
+this by itself; `"by_group": False` gives the plain bake):
+
+1. **It works out, point by point, which surface is that piece's own**
+   (`plan`). Along each point's normal it lists the detailed mesh's
+   surfaces you could see from outside: facing the same way, with air over
+   them, so never the far side of a limb or a layer buried in the body.
+   It takes the outermost one within 2% of the size, and looks as far as
+   the `"reach"` (7%) only when nothing is that close. It never looks past
+   the next limb, so a shirt's side doesn't take the arm.
+2. **What is under another piece copies nothing.** Skin with gear close
+   over it, every body face drape.py hides, a kilt's top under its belt:
+   the picture showed the character dressed, so the detailed mesh has the
+   piece on top there, not this one.
+3. **The part boxes help** (`"parts"`: the runner passes parts.json). A
+   box named like a piece of gear ("kilt front" for "hide kilt", "boot_l"
+   for "boots") says where that piece is on the detailed mesh. A piece
+   with boxes takes a surface outside every gear's box only if it is
+   within 1.5% of the size: the leg below the real hem is not.
+4. **Where shape can't tell, color does.** A point of gear that found its
+   surface deeper than its own lining, or about where the body is under
+   cloth that hangs clear of it, is "in doubt". Its pixels are kept only
+   if they look more like the rest of the piece than like the body.
+5. **The rays start just above the chosen surface.** The bake gets a cage:
+   a copy of the target swollen, point by point, to just over what each
+   point (and the middle of each face) found. A second quick bake records
+   where every ray landed, and a pixel is kept only if that is within 2%
+   of the size of where its piece was looking.
+6. **Everything else is filled in, never left to chance.** Next to kept
+   pixels of the same piece the fill continues their color; further off it
+   fades to the piece's average (the color most of its kept pixels agree
+   on). Skin under gear gets the body's average for its painted color, so
+   with the kilt off the troll's hips are the olive of its legs. If less
+   than a quarter of a painted color was copied (a ninja's body, nearly
+   all under cloth) the painted color stays. Filled pixels get a flat
+   normal.
+
+The result lists each group's `copied_%`. A low one is not a fault: half a
+kilt's texture is its lining.
+
+**Flat colors too.** A flat-color low poly bakes nothing, but its colors
+were Claude's guesses, and they were far off (the troll 41 dE from its
+own texture, the ninja's black suit painted gray). `"repaint": True` (in
+the `lowpoly` profile's flat-color steps) runs the same bake at 256 px,
+keeps no texture, and sets the painted colors from it: each of the body's
+becomes the average found for it (skin, hair), and a piece of gear's all
+move by the same amount, so the kilt turns kilt-brown and stripes painted
+on trousers stay stripes. Delete that step from `profiles.json` to keep
+Claude's colors as painted.
+
+**Measured** with `scripts/bake_check.py` (`just bake-check <run>
+<file.glb>...`): the detailed mesh and the version are looked at straight
+on from four sides, color only, and compared spot by spot (dE in CIELAB:
+under 5 is hard to see, over 25 is another color). "Takes skin" is the
+share of a piece nearer the body's color than its own. Before is the
+plain bake (two looks and a fill) with flat skin under gear; the pirate,
+lizardkin and troll are the recorded block-outs with gear named.
+
+| Mid poly | Takes skin, before | after | Skin under it, dE from the skin that shows, before | after |
+|---|---|---|---|---|
+| Troll: hide kilt | 33% | 14% | 38 | 1 |
+| Troll: rope belt | 41% | 14% | 39 | 4 |
+| Troll: iron wrist band | 6% | 1% | 29 | 2 |
+| Lizardkin: war-skirt | 36% | 30% | 17 | 8 |
+| Lizardkin: leather cuirass | 31% | 27% | 19 | 3 |
+| Lizardkin: bronze pauldrons | 5% | 3% | 19 | 2 |
+| Lincoln: wool trousers | 3% | 3% | 5 | 1 |
+| Lincoln: linen work shirt | 17% | 16% | 5 | 1 |
+| Roosevelt: wool singlet | 8% | 6% | 17 | 5 |
+| Roosevelt: wool tights | 47% | 47% | 16 | 4 |
+| Pirate: navy coat | 8% | 9% | 47 | 47 |
+| Pirate: tricorn hat | 24% | 19% | 41 | 46 |
+| Ninja: cloth suit | 0% | 0% | 13 | 13 |
+| Ninja: hood and mask | 4% | 1% | 17 | 16 |
+
+Where the detailed mesh shows the piece itself, the color was already
+close and still is (2 to 7 dE either way), and the share of spots that
+are a different color altogether went from 1.5% to 0.5% on the troll and
+stayed within half a point on the others. A mid-poly bake takes a second
+or two longer.
+
+| Low poly, flat colors, dE all over | as painted | set from the mesh |
+|---|---|---|
+| Troll | 41 | 8 |
+| Pirate | 36 | 18 |
+| Ninja | 22 | 7 |
+| Lizardkin | 21 | 13 |
+| Roosevelt | 13 | 12 |
+
+What is weak, most visible first:
+
+- **Fill is a smear, not cloth.** Where a block-out's kilt hangs below the
+  real hem there is nothing to copy, so its lower edge is the kilt's
+  colors drawn out and fading to one brown. It reads as kilt, not as
+  leather with stitches.
+- **A block-out piece that covers skin the real garment doesn't.**
+  Roosevelt's tights are built down to his boots; the real ones stop at
+  the knee. Tight cloth lies on the body, so shape can't tell and there
+  are no boxes for it: the shins of his tights are skin-colored, as
+  before (47%). The lizardkin's skirt and cuirass have the same between
+  their straps.
+- **Skin under gear is one flat color**, with a hard edge where the
+  textured skin starts. It is the right color now, and only seen with
+  the gear off.
+- **A body nearly all under clothes keeps Claude's skin color** under
+  them (the pirate, the ninja), which can be far from the face's (47 dE
+  on the pirate's recorded block-out).
+- **Skin right at a piece's edge can still take the piece.** The troll's
+  belly has a strip of rope where the detailed belt is wider than the
+  block-out's. The pirate's hands got a little worse (6 to 8 dE).
+- **Flat colors lose what Claude did well.** Where its colors were
+  already close (Roosevelt) setting them from the mesh changes little
+  and makes the singlet a shade purple and the spectacles worse. One
+  average per piece also means a piece and the skin can end up close
+  (the troll's kilt and legs are both dark olive-brown, as in its
+  texture).
+- **Names have to match.** "leather brogans" has no box called shoes, so
+  Lincoln's shoes go by shape alone.
+- **A run's base body and cut garments are not used yet.** Where a run
+  has them, each piece could copy from its own garment mesh and the body
+  from the base; bake.py still takes one detailed mesh.
+
 ## Faces: a character's head is measured, not guessed
 
 Left to itself, Claude spends a low-poly character's triangles on the
@@ -772,7 +918,7 @@ so they pass the add-on's safe mode (`just check-safe`).
 | `decimate.py` | shape-aware reduction to a triangle budget, keeping UVs; `as_copy` + `quadify` make a light "(light)" copy to bake onto | a few s |
 | `match.py` | how far a light mesh strays from the full one, and where (both directions, % of size); `"box"` scores one spot alone | ~2 s |
 | `retopo.py` | rebuilds each part as quads with QuadriFlow, on the part's own repaired surface when it can (voxel remesh only as a fallback for big parts), shrinkwrapped back onto the original; `routes` says which way each part went | 5–30 s, freezes Blender |
-| `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one (`"reach"` and `"fill"` for a block-out that sits off the full mesh) | 5–60 s, freezes Blender |
+| `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one (`"reach"` and `"fill"` for a block-out that sits off the full mesh; by group for one with gear; `"repaint"` for flat colors) | 5–60 s, freezes Blender |
 | `export.py` | writes one object as GLB (WebP, Draco optional), from the open scene only, and reads it back to check | ~1 s |
 | `preview.py` | renders a quick three-quarter PNG, optionally with wireframe; `"view"` and `"box"` make a straight-on close-up | ~2 s |
 | `split.py` | splits an object into named parts from boxes ("color" mode just paints them, to check the boxes) | ~1 s |
@@ -823,9 +969,9 @@ Rules for the live session:
   the block-out is far off (a tricorn's turned-up brim built flat), the
   texture there is borrowed from farther away or is the block-out's flat
   color.
-- A body face counts as "under gear" when gear lies within 4% of the
-  object's size straight out from it. A face only partly covered (a neck
-  at a collar) goes one way or the other, so the edge is stepped.
+- Skin counts as "under gear" where gear lies within 4% of the object's
+  size straight out from it, or drape.py hid the face. The edge between
+  flat skin and textured skin runs through faces, not along them.
 
 ## Testing a script change
 
@@ -853,7 +999,10 @@ weights checked both in Blender and in the written file; and the clothes:
 drape.py on the troll, then Lincoln, the ninja, Roosevelt, the troll and
 the pirate made low poly, mid poly and walking by the real runner and
 measured with `scripts/cloth_check.py` over every frame (skin through
-cloth, the gap, the cloth bones' limits and seam, triangles). About ten
+cloth, the gap, the cloth bones' limits and seam, triangles); and the
+colors: the troll's kilt must not take the color of the leg behind it,
+the skin under it must be skin, and its flat colors must be its
+texture's (`scripts/bake_check.py`). About eleven
 minutes in all. With `--keep DIR`
 the face cases leave `troll-head-compared.png` and
 `pirate-head-compared.png`: front and side of the reference, each head, and

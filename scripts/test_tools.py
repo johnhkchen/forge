@@ -669,10 +669,10 @@ def midpoly_checks(label, copy, records, built):
     was, now = low["shape"]["shape_lost"], mid["shape"]["shape_lost"]
     check("%s: strays %.2f%% typically, %.2f%% at worst (low poly: %.2f / %.2f)" % (label, now["p95_%"], now["max_%"], was["p95_%"], was["max_%"]),
           now["p95_%"] <= was["p95_%"] + 0.25 and now["max_%"] <= was["max_%"] + 0.5)
-    check("%s: color, a normal map, metal and roughness baked at 1024; what the bake couldn't find is the block-out's own color, not black" % label,
+    check("%s: color, a normal map, metal and roughness baked at 1024, by group; what a piece couldn't copy is its own average color, not black" % label,
           steps["bake.py"]["maps"] == ["color", "metallic", "normal", "roughness"] and "1024 px" in steps["bake.py"]["done"][0]
-          and "own colors" in steps["bake.py"]["done"][1])
-    held = read_glb(os.path.join(copy, "profiles", "midpoly.glb"))
+          and "by group" in steps["bake.py"]["done"][1])
+    held = baked_file = read_glb(os.path.join(copy, "profiles", "midpoly.glb"))
     check("%s: the .glb has its three textures and no painted colors left to darken them" % label, held["images"] == 3 and not held["vertex_colors"], held)
     check("%s: %.2f MB with WebP and Draco, made in %.0f s" % (label, mid["bytes"] / 1e6, mid["seconds"]), mid["bytes"] < 1.5e6)
     held = [nodes_of(os.path.join(copy, "profiles", name + ".glb")) for name in ("lowpoly", "midpoly")]
@@ -686,9 +686,12 @@ def midpoly_checks(label, copy, records, built):
           sorted(g["gear"] for g in mid["gear"]) == sorted(g["gear"] for g in built["groups"] if g.get("gear")) and mid["sockets"] == SOCKETS, mid["gear"])
     check("%s: sockets sit exactly where the block-out's do" % label,
           all(max(abs(a - b) for a, b in zip(held[0][n][1], held[1][n][1])) < 1e-4 for n in held[1] if n.startswith("socket")))
-    under = mid["under_gear"]
-    check("%s: %d body faces under gear are plain skin, not a copy of the gear's texture" % (label, under["body_faces_under_gear"]),
-          under["body_faces_under_gear"] > 20 and under["plain_colors"] >= 1, under)
+    by = mid["by_group"]
+    copied = {g["name"]: g["copied_%"] for g in by["groups"]}
+    check("%s: baked by group: every piece copied its own surface (%s); %d faces under another piece copied nothing" % (
+          label, ", ".join("%s %.0f%%" % (n, c) for n, c in copied.items()), by["faces_hidden_under_another_piece"]),
+          sorted(copied) == sorted(g["name"] for g in built["groups"]) and copied["body"] > 5 and by["faces_hidden_under_another_piece"] > 20
+          and baked_file["materials"] == 1, by)
     edges = blockout_recipe.read(os.path.join(copy, "profiles", "midpoly-edges.glb"))[0]
     check("%s: the wireframe file has lines for every group, tagged like the group, the body's split where its mesh is" % label,
           {(n.get("extras") or {}).get("gear", "body") for n in edges["nodes"]} == {g.get("gear", "body") for g in built["groups"]}
@@ -1144,8 +1147,43 @@ def test_cloth(ctx):
                 check("%s: nothing hangs, so no cloth bones" % who, cloth["cloth_bones"] == [] and walked["animation"]["then"] == [])
 
 
+def bake_numbers(scene, paths):
+    """scripts/bake_check.py on some .glb files of one run, in one background Blender: one dict a file."""
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "bake_check.py"), "--", scene] + list(paths), capture_output=True, text=True)
+    rows = [json.loads(line[5:]) for line in out.stdout.splitlines() if line.startswith("BAKE ")]
+    if len(rows) != len(paths):
+        raise AssertionError("bake_check.py measured %d of %d files:\n%s" % (len(rows), len(paths), (out.stdout + out.stderr)[-1500:]))
+    return rows
+
+
+def test_gearbake(ctx):
+    """Clothes get their own colors: the troll's kilt must not take the color of the leg behind it, and the skin under it must be skin. Measured against the detailed mesh (scripts/bake_check.py)."""
+    copy, records, built = profiles(ctx, ctx["troll"], troll_with_gear(), TROLL_GEAR, ["lowpoly", "midpoly"])
+    mid, low = bake_numbers(os.path.join(copy, "scene.blend"), [os.path.join(copy, "profiles", v + ".glb") for v in ("midpoly", "lowpoly")])
+    by = records["midpoly"]["by_group"]
+    check("the part boxes named like a piece of gear say where it is on the detailed mesh: %s" % ", ".join(by["found_by_part_boxes"]),
+          by["found_by_part_boxes"] == ["gear: hide kilt", "gear: rope belt", "gear: iron wrist band"])
+    kilt = mid["gear"]["hide kilt"]
+    check("mid poly: %.0f%% of the kilt is nearer the skin's color than the kilt's (it was 33%% when the hem took the leg behind it); where the detailed mesh shows kilt it is %.1f dE off"
+          % (kilt["takes_skin_%"], kilt["dE"]), kilt["takes_skin_%"] < 22 and kilt["dE"] < 6, kilt)
+    belt = mid["gear"]["rope belt"]
+    check("mid poly: the same for the belt: %.0f%% (it was 41%%)" % belt["takes_skin_%"], belt["takes_skin_%"] < 25, belt)
+    under = mid["under"]["hide kilt"]
+    check("mid poly: with the kilt off, the skin it hid is %.1f dE from the skin that shows (it was 38: a pale flat color), and %.0f%% of it looks like kilt"
+          % (under["dE_from_the_skin_that_shows"], under["takes_cloth_%"]), under["dE_from_the_skin_that_shows"] < 8 and under["takes_cloth_%"] < 8, under)
+    check("mid poly: the rest is no worse for it: legs %.1f dE, trunk %.1f, arms %.1f, everything %.1f with %.1f%% a different color"
+          % (mid["body"]["legs"]["dE"], mid["body"]["trunk"]["dE"], mid["body"]["arms"]["dE"], mid["all"]["dE"], mid["all"]["wrong_%"]),
+          mid["body"]["legs"]["dE"] < 5 and mid["body"]["trunk"]["dE"] < 6 and mid["all"]["dE"] < 6 and mid["all"]["wrong_%"] < 1.5, mid["body"])
+    flat = [s["result"] for s in records["lowpoly"]["steps"] if s["script"] == "bake.py"][0]
+    check("low poly, flat colors: the painted colors of %d pieces were set from the detailed mesh, and the file still has no texture"
+          % len(flat["repainted"]), len(flat["repainted"]) == 4 and flat["maps"] == [] and read_glb(os.path.join(copy, "profiles", "lowpoly.glb"))["images"] == 0
+          and read_glb(os.path.join(copy, "profiles", "lowpoly.glb"))["vertex_colors"], flat["repainted"])
+    check("low poly, flat colors: %.1f dE from the detailed mesh all over (41 with the colors as painted), the kilt %.1f"
+          % (low["all"]["dE"], low["gear"]["hide kilt"]["dE"]), low["all"]["dE"] < 12 and low["gear"]["hide kilt"]["dE"] < 10, low["all"])
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile, test_drape, test_cloth]
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_drape, test_cloth]
 
 
 def main(argv):
