@@ -6,3 +6,8 @@ tools/
 .claude/worktrees/
 __pycache__/
 /shots/
+comics/_*/
+comics/kit.json
+comics/*/panels/*.png
+comics/style/
+comics/cast/*/faces.png

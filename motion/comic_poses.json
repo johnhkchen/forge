@@ -1,0 +1,58 @@
+{
+  "format": "forge-comic-poses/1",
+  "about": "Poses for comic panels, written by hand as turns of our own 21 plain bones away from the T-pose. A turn is [x, y, z] in degrees about the character's own axes as it stands in the T-pose (it faces -y, +x is its left, z is up), carried along by the bones above it. A bone named without _l or _r means both sides, mirrored; write the left side. x+ leans or nods forward (a thigh: x- lifts it forward). y+ lowers the left arm. z- swings the left arm forward. After the turns the character is set down so its lowest point is on the floor.",
+  "poses": {
+    "stand": {
+      "about": "standing easy, arms at the sides",
+      "bones": {"upper_arm": [0, 74, -4], "forearm": [0, 0, -14]}
+    },
+    "talk": {
+      "about": "standing, one hand raised palm-up while talking",
+      "bones": {"upper_arm_l": [0, 74, -4], "forearm_l": [0, 0, -14], "upper_arm_r": [0, 58, -28], "forearm_r": [0, -20, -80], "head": [-4, 0, 0]}
+    },
+    "point": {
+      "about": "pointing straight ahead with one arm",
+      "bones": {"upper_arm_l": [0, 74, -4], "forearm_l": [0, 0, -14], "upper_arm_r": [0, 6, -84], "forearm_r": [0, 0, -4], "chest": [4, 0, 0]}
+    },
+    "cheer": {
+      "about": "both arms thrown up in triumph",
+      "bones": {"upper_arm": [0, -58, -6], "forearm": [0, -22, 0], "head": [-10, 0, 0], "chest": [-6, 0, 0]}
+    },
+    "flex": {
+      "about": "a strongman's double-biceps flex",
+      "bones": {"upper_arm": [0, -4, 0], "forearm": [0, -112, 0], "chest": [-5, 0, 0], "head": [-5, 0, 0]}
+    },
+    "hands_on_hips": {
+      "about": "hands on hips, elbows out, sure of itself",
+      "bones": {"upper_arm": [0, 46, 14], "forearm": [0, 92, -14]}
+    },
+    "shrug": {
+      "about": "a shrug: shoulders up, palms out to the sides",
+      "bones": {"shoulder": [0, -12, 0], "upper_arm": [0, 76, -4], "forearm": [0, -108, -24], "head": [0, 8, 0]}
+    },
+    "think": {
+      "about": "one hand at the chin, thinking",
+      "bones": {"upper_arm_l": [0, 74, -4], "forearm_l": [0, 0, -14], "upper_arm_r": [0, 74, -30], "forearm_r": [0, 10, -138], "head": [8, 0, 0]}
+    },
+    "guard": {
+      "about": "a wrestler's ready stance: knees bent, leaning in, hands out in front",
+      "bones": {"thigh": [-46, 10, 0], "shin": [74, 0, 0], "foot": [-28, 0, 0], "spine": [16, 0, 0], "chest": [10, 0, 0], "head": [-20, 0, 0], "upper_arm": [0, 44, -52], "forearm": [0, -10, -58]}
+    },
+    "slump": {
+      "about": "shoulders dropped, head down, beaten or sad",
+      "bones": {"spine": [10, 0, 0], "chest": [12, 0, 0], "neck": [10, 0, 0], "head": [18, 0, 0], "shoulder": [0, 8, 0], "upper_arm": [0, 80, -10], "forearm": [0, 0, -6]}
+    },
+    "laugh": {
+      "about": "leaning back with the arms folded over the belly, laughing or unimpressed",
+      "bones": {"spine": [-8, 0, 0], "chest": [-8, 0, 0], "head": [-14, 0, 0], "upper_arm": [0, 62, -20], "forearm": [0, 30, -86]}
+    },
+    "startled": {
+      "about": "jerked back in surprise, arms flung out",
+      "bones": {"spine": [-8, 0, 0], "chest": [-6, 0, 0], "head": [-6, 0, 0], "upper_arm": [0, 52, 12], "forearm": [0, -98, -12], "thigh": [0, 6, 0]}
+    },
+    "bow": {
+      "about": "a polite bow from the waist, arms at the sides",
+      "bones": {"spine": [24, 0, 0], "chest": [18, 0, 0], "head": [12, 0, 0], "upper_arm": [0, 76, -6], "forearm": [0, 0, -8]}
+    }
+  }
+}

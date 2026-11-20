@@ -1619,9 +1619,238 @@ def test_face_versions(ctx):
     check("the face sheet is kept: %s" % os.path.basename(sheet), os.path.getsize(sheet) > 50000)
 
 
+def read_png(path):
+    """An 8-bit RGB or RGBA .png as (wide, tall, rows of (r, g, b, a) tuples), read with nothing but zlib."""
+    import zlib
+    with open(path, "rb") as f:
+        data = f.read()
+    at, chunks, packed = 8, {}, b""
+    while at < len(data):
+        size, kind = struct.unpack(">I4s", data[at:at + 8])
+        if kind == b"IDAT":
+            packed += data[at + 8:at + 8 + size]
+        else:
+            chunks[kind] = data[at + 8:at + 8 + size]
+        at += 12 + size
+    wide, tall, depth, color = struct.unpack(">IIBB", chunks[b"IHDR"][:10])
+    if depth != 8 or color not in (2, 6):
+        raise AssertionError("%s is not an 8-bit RGB(A) png" % path)
+    step = 4 if color == 6 else 3
+    raw = zlib.decompress(packed)
+    line = wide * step
+    rows, before = [], bytearray(line)
+    for y in range(tall):
+        kind = raw[y * (line + 1)]
+        row = bytearray(raw[y * (line + 1) + 1:(y + 1) * (line + 1)])
+        for i in range(line):
+            left = row[i - step] if i >= step else 0
+            up = before[i]
+            corner = before[i - step] if i >= step else 0
+            if kind == 1:
+                row[i] = (row[i] + left) & 255
+            elif kind == 2:
+                row[i] = (row[i] + up) & 255
+            elif kind == 3:
+                row[i] = (row[i] + (left + up) // 2) & 255
+            elif kind == 4:
+                guess = left + up - corner
+                a, b, c = abs(guess - left), abs(guess - up), abs(guess - corner)
+                row[i] = (row[i] + (left if a <= b and a <= c else up if b <= c else corner)) & 255
+        rows.append([tuple(row[i:i + 3]) + ((row[i + 3],) if step == 4 else (255,)) for i in range(0, line, step)])
+        before = row
+    return wide, tall, rows
+
+
+def ink_and_palette(path, paper=(255, 255, 255)):
+    """What a comic-style picture is made of: how wide its ink lines run, and how few colors paint the rest."""
+    wide, tall, rows = read_png(path)
+    runs, colors, figure = [], {}, 0
+    for row in rows[::2]:
+        run = 0
+        for r, g, b, _a in row:
+            dark = r + g + b < 150
+            if dark:
+                run += 1
+            else:
+                if run:
+                    runs.append(run)
+                run = 0
+                if abs(r - paper[0]) + abs(g - paper[1]) + abs(b - paper[2]) > 24:
+                    figure += 1
+                    key = (r >> 4, g >> 4, b >> 4)
+                    colors[key] = colors.get(key, 0) + 1
+    runs.sort()
+    counts = sorted(colors.values(), reverse=True)
+    covered, needed = 0, 0
+    for count in counts:
+        if covered >= figure * 0.9:
+            break
+        covered += count
+        needed += 1
+    return {"line_px": runs[len(runs) // 2] if runs else 0, "lines": len(runs), "colors_for_90pct": needed, "figure_px": figure}
+
+
+def test_comic_style(ctx):
+    """toon.py draws a rigged troll the comic way: a few flat colors, an ink line that stays as wide on screen from twice as far, and it comes off again."""
+    out = ctx["out"]
+    walk = ctx["troll"] + "/profiles/lowpoly-walk.glb"
+    near, far, plain = (os.path.join(out, "comic-style-%s.png" % n) for n in ("near", "far", "plain"))
+    look = {"size": [480, 480], "background": [1.0, 1.0, 1.0], "line_px": 4.0}
+    results = blender(walk, [
+        ("stage.py", {"floor": None, "size": [480, 480], "margin": 1.15}),
+        ("toon.py", dict(look, path=near)),
+        ("stage.py", {"floor": None, "size": [480, 480], "margin": 2.3}),
+        ("toon.py", dict(look, path=far)),
+        ("toon.py", {"undo": True}),
+        ("preview.py", {"path": plain, "size": 480}),
+    ])
+    first, again, undone = results[1], results[3], results[4]
+    check("every material gets the comic paint, every mesh an ink line (%d materials, %d meshes)" % (first["materials"]["painted"], first["materials"]["lines"]),
+          first["materials"]["painted"] >= 1 and first["materials"]["lines"] == first["meshes"] and first["materials"]["skipped"] == 0, first["materials"])
+    check("a second run reuses the paint instead of stacking it", again["materials"]["painted"] == 0 and again["materials"]["kept"] >= 1, again["materials"])
+    check("the line is given in pixels and worked out per unit of distance, so it is the same width near and far",
+          first["line"]["per_distance"] > 0 and abs(first["line"]["per_distance"] - again["line"]["per_distance"]) < 1e-9, (first["line"], again["line"]))
+    a, b, c = ink_and_palette(near), ink_and_palette(far), ink_and_palette(plain)
+    check("the ink line is about the %.0f px asked for (%d px across, measured on %d crossings)" % (look["line_px"], a["line_px"], a["lines"]),
+          a["lines"] > 150 and 2 <= a["line_px"] <= 8, a)
+    check("from twice as far the figure is a quarter the size (%d to %d px) and the line is still %d px" % (a["figure_px"], b["figure_px"], b["line_px"]),
+          b["figure_px"] < a["figure_px"] * 0.45 and abs(b["line_px"] - a["line_px"]) <= 2 and b["lines"] > 60, (a, b))
+    check("a few flat colors paint 90%% of it: %d, where the plain render needs %d" % (a["colors_for_90pct"], c["colors_for_90pct"]),
+          a["colors_for_90pct"] <= 12 and a["colors_for_90pct"] * 2 <= c["colors_for_90pct"], (a, c))
+    check("the plain render has no ink line at all, and undo put the materials back (%d)" % undone["undone_materials"],
+          c["lines"] < a["lines"] * 0.5 and undone["undone_materials"] >= 1, (c, undone))
+
+
+def comic_folder(ctx, name, panels, layout="scroll"):
+    folder = os.path.join(ctx["out"], name)
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, "comic.json"), "w") as f:
+        json.dump({"title": name, "premise": "a test", "layout": layout, "panels": panels}, f)
+    return folder
+
+
+def draw_comic(ctx, folder, width=600):
+    runs = os.path.dirname(ctx["troll"])
+    drawn = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "comic", "render_panels.py"), "--", folder,
+                            "--runs", runs, "--width", str(width)], capture_output=True, text=True)
+    if not os.path.exists(os.path.join(folder, "panels.json")):
+        raise AssertionError("the panels were not drawn:\n%s" % (drawn.stdout + drawn.stderr)[-1500:])
+    paged = subprocess.run([sys.executable, os.path.join(HERE, "comic", "layout.py"), folder, "--no-png"], capture_output=True, text=True)
+    if not os.path.exists(os.path.join(folder, "reader.json")):
+        raise AssertionError("the page was not laid out:\n%s" % (paged.stdout + paged.stderr)[-1500:])
+    with open(os.path.join(folder, "panels.json")) as f:
+        panels = json.load(f)
+    with open(os.path.join(folder, "reader.json")) as f:
+        reader = json.load(f)
+    return panels, reader
+
+
+def test_comic_panels(ctx):
+    """A comic drawn for real: two characters posed and placed in the ring, the same panel again with one face swapped, and the lettering laid over what was drawn (tails at heads, faces clear)."""
+    sys.path.insert(0, os.path.join(HERE, "comic"))
+    import kit as comic_kit
+    import lettering
+    import test_comic
+    runs = os.path.dirname(ctx["troll"])
+    have = comic_kit.kit(runs)
+    cast = {m["id"]: m for m in have["cast"]}
+    if not {"lincoln", "roosevelt"} <= set(cast) or "ring" not in {p["name"] for p in have["places"]} or not cast["lincoln"]["expressions"]:
+        print("    skipped: needs the Lincoln, Roosevelt and wrestling-ring runs, and Lincoln's expression sheet in comics/cast")
+        return
+
+    def two(lincoln_face, lines, framing="two-shot"):
+        return {"framing": framing, "place": "ring", "camera": None, "shape": "square",
+                "cast": [{"who": "lincoln", "at": "left", "facing": "right", "pose": "stand", "expression": lincoln_face},
+                         {"who": "roosevelt", "at": "right", "facing": "left", "pose": "flex", "expression": "happy"}],
+                "lines": lines, "caption": None, "sfx": None}
+
+    talk = [{"who": "roosevelt", "says": "Observe the arms, Abe!", "how": "shout"}, {"who": "lincoln", "says": "I am observing.", "how": "say"}]
+    panels = [two("neutral", talk), two("shouting", talk), two("neutral", [{"who": "lincoln", "says": "Hm.", "how": "think"}], "wide"),
+              {"framing": "close-up", "place": "plain", "camera": None, "shape": "wide",
+               "cast": [{"who": "roosevelt", "at": "center", "facing": "camera", "pose": "run@0.3", "expression": "shouting"}],
+               "lines": [{"who": "roosevelt", "says": "Bully!", "how": "shout"}], "caption": "Later.", "sfx": "THUD!"}]
+    check("the comic's panels pass the checks against what the runs hold", comic_kit.problems({"panels": panels}, have) == [])
+    folder = comic_folder(ctx, "comic-panels", panels)
+    drawn, reader = draw_comic(ctx, folder)
+    seconds = [p["seconds"] for p in drawn["panels"]]
+    check("four panels drawn in one Blender in %.1f s; after the first (%.1f s, with loading) a panel takes %.2f s" % (
+          drawn["seconds"], seconds[0], max(seconds[1:])), len(seconds) == 4 and max(seconds[1:]) < 5.0, seconds)
+    first = drawn["panels"][0]
+    wide, tall = first["size"]
+    heads = first["heads"]
+    check("both heads land inside the picture, Lincoln at the left and Roosevelt at the right as asked",
+          all(0 < h["center"][0] < wide and 0 < h["center"][1] < tall for h in heads.values()) and heads["lincoln"]["center"][0] < heads["roosevelt"]["center"][0], heads)
+    check("the taller man's head is the higher one, and both are the size of a head (%.0f and %.0f px across)" % (heads["lincoln"]["radius"] * 2, heads["roosevelt"]["radius"] * 2),
+          heads["lincoln"]["center"][1] < heads["roosevelt"]["center"][1] and all(wide * 0.03 < h["radius"] < wide * 0.2 for h in heads.values()), heads)
+    check("each was frozen as asked: a hand-written pose, a clip moment, the face that was named",
+          [c.get("pose") for c in first["cast"]] == ["stand", "flex"] and drawn["panels"][3]["cast"][0].get("clip") == "run"
+          and first["cast"][0]["expression"] == "neutral" and drawn["panels"][1]["cast"][0]["expression"] == "shouting", (first["cast"], drawn["panels"][3]["cast"]))
+
+    # The same body and pose, one face swapped: the pictures differ on Lincoln's head and hardly anywhere else.
+    _w, _h, one = read_png(os.path.join(folder, "panels", "01.png"))
+    _w, _h, two_ = read_png(os.path.join(folder, "panels", "02.png"))
+    cx, cy, r = heads["lincoln"]["center"][0], heads["lincoln"]["center"][1], heads["lincoln"]["radius"]
+    on_head = off_head = changed_on = changed_off = 0
+    for y in range(0, tall, 2):
+        for x in range(0, wide, 2):
+            a, b = one[y][x], two_[y][x]
+            differs = abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]) > 60
+            if (x - cx) ** 2 + (y - cy) ** 2 < r * r:
+                on_head += 1
+                changed_on += differs
+            else:
+                off_head += 1
+                changed_off += differs
+    check("swapping Lincoln's face changes %.0f%% of his head and %.2f%% of the rest of the picture" % (100.0 * changed_on / on_head, 100.0 * changed_off / off_head),
+          changed_on > on_head * 0.03 and changed_off < off_head * 0.002, (changed_on, on_head, changed_off, off_head))
+
+    for number, (panel, meta) in enumerate(zip(panels, drawn["panels"]), 1):
+        layout = lettering.letter(meta, panel)
+        before = len(test_comic.FAILED)
+        with contextlib.redirect_stdout(io.StringIO()) as said:
+            test_comic.lettering_rules(meta, panel, layout, "panel %d" % number)
+        failed = test_comic.FAILED[before:]
+        check("panel %d (%s): %d balloon(s) on the real picture; tails end at their speakers' heads, no face is covered, all inside the panel" % (
+              number, panel["framing"], len(layout["balloons"])), not failed and len(layout["balloons"]) == len(panel["lines"]), failed)
+    check("the page keeps the words as text over the pictures (%d panels, %d text elements)" % (len(reader["panels"]), sum(p["svg"].count("<text") for p in reader["panels"])),
+          len(reader["panels"]) == 4 and all("<svg" in p["svg"] for p in reader["panels"]) and "Observe" in reader["panels"][0]["svg"]
+          and os.path.getsize(os.path.join(folder, "page.html")) > 20000 and not reader["problems"], reader["problems"])
+    with open(os.path.join(folder, "page.html")) as f:
+        page = f.read()
+    check("page.html stands alone: the pictures and the comic font are inside it, on the clay page",
+          page.count("data:image/") >= 4 and "data:font/woff2" in page and "Comic Neue" in page and "--clay-bg" in page and "<script" not in page)
+
+
+def test_comic_script(ctx):
+    """The script step with no model: a saved Opus reply parses into panels and passes the checks; the two demo comics still fit what the runs hold."""
+    sys.path.insert(0, os.path.join(HERE, "comic"))
+    import kit as comic_kit
+    root = os.path.join(HERE, "..")
+    tried = subprocess.run([sys.executable, os.path.join(HERE, "comic", "test_comic.py")], capture_output=True, text=True)
+    check("the lettering, panel checks and set adapter pass with no Blender (%s)" % tried.stdout.strip().splitlines()[-1], tried.returncode == 0, "" if tried.returncode == 0 else tried.stdout[-600:])
+    names = ["WriteComic parses a saved script into panels, and it passes every check", "a script that names what the kit does not have is told so, panel by panel",
+             "dialogue has to fit the balloon space its framing leaves", "a strip is four square panels; a scroll episode is six to ten"]
+    cmd = ["baml", "test"]
+    for name in names:
+        cmd += ["-i", "root::" + name]
+    ran = subprocess.run(cmd, capture_output=True, text=True, cwd=root)
+    passed = [n for n in names if ("PASS root::" + n) in ran.stdout + ran.stderr]
+    check("a saved reply parses into typed panels and the checks catch a bad pose, face, place and too many words (%d of %d baml tests)" % (len(passed), len(names)),
+          len(passed) == len(names), "" if len(passed) == len(names) else (ran.stdout + ran.stderr)[-600:])
+    have = comic_kit.kit(os.path.dirname(ctx["troll"]))
+    for name in ("ring-strip", "rooftop-ninja"):
+        path = os.path.join(root, "comics", name, "comic.json")
+        if not os.path.exists(path):
+            continue
+        with open(path) as f:
+            comic = json.load(f)
+        wrong = comic_kit.problems(comic, have)
+        check("%s (%d panels, written by Opus) names only poses, faces and places the runs have" % (name, len(comic["panels"])), not wrong, wrong)
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_contact, test_drape, test_cloth,
-         test_garment_made_up, test_garment_dancer, test_follow, test_open_add]
+         test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_script]
 
 
 def main(argv):

@@ -36,6 +36,7 @@ check:
     python3 scripts/motion/author_poses.py --check | tail -1
     python3 scripts/motion/test_timeline.py | tail -1
     python3 scripts/motion/test_run_clip.py | tail -1
+    python3 scripts/comic/test_comic.py | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -179,6 +180,46 @@ autoremesher:
     mnt=$(mktemp -d); hdiutil attach -nobrowse -readonly -mountpoint "$mnt" autoremesher-1.2.0.dmg >/dev/null
     rm -rf autoremesher.app; cp -R "$mnt/autoremesher.app" .; hdiutil detach "$mnt" >/dev/null
     ./autoremesher.app/Contents/MacOS/autoremesher --version
+
+# Make a comic from a premise: Opus writes it as panels of data, one background Blender draws every panel in the comic style, code letters it and lays out the page (comics/<name>/page.html and a .png). layout: strip (4 panels) or scroll (6 to 10, for a phone). cast and place narrow what Opus may use ("lincoln, roosevelt", "ring")
+comic premise layout="strip" cast="" place="" name="" runs="runs":
+    baml run comic -- --premise "{{premise}}" --layout "{{layout}}" --cast "{{cast}}" --place "{{place}}" --name "{{name}}" --runs "{{runs}}"
+
+# Draw and letter a comic again from its comics/<name>/comic.json, after editing it by hand (asks no model anything)
+comic-again name runs="runs":
+    baml run draw_comic -- --name "{{name}}" --runs "{{runs}}"
+
+# Only letter and lay out a drawn comic again (after changing the lettering or the page, not the pictures)
+comic-page name:
+    python3 scripts/comic/layout.py "comics/{{name}}"
+
+# What a comic can be made from right now: the cast, each one's poses, clip moments and expressions, the places
+comic-kit runs="runs":
+    python3 scripts/comic/kit.py --runs "{{runs}}"
+
+# Give a cast member (comics/cast.json) its expressions: draw its head in the comic style, have Codex draw the sheet of eight faces from it (one Codex image), cut the sheet and fit each face to the head. comics/cast/<who>/faces.png shows the fit
+expressions who runs="runs":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    fit() { "{{blender_bin}}" -b --factory-startup -P scripts/comic/face_fit.py -- "$1" "{{who}}" --runs "{{runs}}" 2>&1 | grep -E '^FACE|Error|Traceback' | cut -c1-240; }
+    fit head
+    baml run expression_sheet -- --who "{{who}}" --runs "{{runs}}"
+    fit cut
+    fit show
+
+# Only cut and fit a cast member's expression sheet again (after changing its face region in comics/cast.json); no Codex
+expressions-fit who runs="runs":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for step in cut show; do "{{blender_bin}}" -b --factory-startup -P scripts/comic/face_fit.py -- "$step" "{{who}}" --runs "{{runs}}" 2>&1 | grep -E '^FACE|Error|Traceback' | cut -c1-240; done
+
+# Before and after: each rigged character file as a plain render and in the comic style, side by side (out/<name>.png)
+comic-style out +files:
+    "{{blender_bin}}" -b --factory-startup -P scripts/comic/style_stills.py -- "{{out}}" {{files}} 2>&1 | grep -E '^STILLS|Error|Traceback'
+
+# Picture every comic pose (motion/comic_poses.json) on one rigged character, to check a new pose
+comic-poses file out:
+    "{{blender_bin}}" -b --factory-startup -P scripts/comic/pose_sheet.py -- "{{file}}" "{{out}}" 2>&1 | grep -E '^POSES|Error|Traceback'
 
 # Vendor the b28 clay style kit into the gallery
 sync-kit:
