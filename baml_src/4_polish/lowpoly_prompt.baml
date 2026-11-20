@@ -18,7 +18,7 @@ class LowPolyReport {
     notes: string @description("What reads well, and what was simplified away")
 }
 
-function BlockOut(brief: ObjectBrief, mesh: string, out: string, parts: string, match_script: string) -> LowPolyReport {
+function BlockOut(brief: ObjectBrief, mesh: string, out: string, parts: string, match_script: string, budget: string) -> LowPolyReport {
     client: Finisher
     prompt: `
         ${role("system")}
@@ -36,6 +36,9 @@ function BlockOut(brief: ObjectBrief, mesh: string, out: string, parts: string, 
         whatever isn't in a box):
         ${parts}
 
+        ${if (brief.character ?? false) { "It is a character in a T-pose, to be rigged later: keep the T-pose, build it symmetric (model one half and mirror it across x = 0 if the reference is centered there), and give elbows, knees, shoulders, hips and the neck an extra edge loop so they can bend. Keep hands and feet as simple blocks; no separate fingers." } else { "" }}
+        Style: ${brief.lowpoly_style ?? "early real-time game prop: clean simple shapes, smooth-shaded"}.
+
         1. Make a new scene "Low poly" (bpy.data.scenes.new, set it as the
            window's scene). Import ${mesh} with bpy.ops.import_scene.gltf,
            join its meshes into one object named "Reference", and print its
@@ -46,7 +49,7 @@ function BlockOut(brief: ObjectBrief, mesh: string, out: string, parts: string, 
            bmesh (scale rings to taper, move rings to bulge, bend a handle
            as a short chain of segments). Measure the reference's vertices
            inside each part's box to size and place the shapes.
-           Budget: 300-800 triangles in total. Spend them on the silhouette
+           Budget: ${budget}. Spend them on the silhouette
            (outline, profile curves, things that stick out); flat or hidden
            areas get as few as possible. Parts may overlap where they join,
            as on any game prop. No floating or inside-out faces.

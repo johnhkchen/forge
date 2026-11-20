@@ -15,6 +15,16 @@ class ObjectBrief {
     ),
     materials: Material[] @description("The 1 to 4 visually distinct materials, largest area first"),
     size_m: float @description("The object's largest real-world dimension, in meters"),
+    // Optional so briefs from earlier runs still load.
+    character: bool? @description(
+        "true if it is a creature or person meant to be rigged and animated; it is then drawn and built standing in a T-pose, facing front",
+    ),
+    lowpoly_triangles: int? @description(
+        "Triangle budget for the low-poly version, from the style the idea asks for (early real-time props 300-800; old-school RuneScape-like characters 600-1500)",
+    ),
+    lowpoly_style: string? @description(
+        "One line on the low-poly look the idea calls for, like 'faceted flat-shaded, chunky proportions, colors painted in'",
+    ),
 }
 
 class Material {
@@ -35,6 +45,12 @@ function Describe(idea: string) -> ObjectBrief {
         Pick ONE concrete, physical object that fits the idea. Favor a clear,
         readable silhouette and a few chunky parts over thin wires, glass,
         fur, smoke or text, since image-to-3D reconstructs those badly.
+
+        For a character (a creature or person to be rigged): describe it
+        standing in a T-pose, arms straight out to the sides, legs slightly
+        apart, empty hands, nothing loose (no capes, loose hair strands,
+        dangling straps or held weapons). Clothing and gear fit close to the
+        body. Size is its standing height.
 
         ${ctx.output_format()}
 

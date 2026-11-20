@@ -154,7 +154,9 @@
           "mode": "onto",
           "texture_size": 256,
           "maps": [
-            "color"
+            "color",
+            "metallic",
+            "roughness"
           ],
           "ao": true,
           "roughness": 0.85

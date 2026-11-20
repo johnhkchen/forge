@@ -21,7 +21,7 @@ test "FindParts parses a plan" {
     `;
     let brief = ObjectBrief {
         name: "Iron Kettle", description: "A kettle.", subject: "A kettle.",
-        materials: [], size_m: 0.24,
+        materials: [], size_m: 0.24, character: null, lowpoly_triangles: null, lowpoly_style: null,
     };
     let plan = FindParts@spec(brief, "final.glb", "script").parse(reply);
     assert.equal(plan.parts.at(0)?.name, "knob")

@@ -12,6 +12,19 @@
 
 const PICTURE_TIMEOUT_S = 300;
 
+// Characters are drawn front-on in a T-pose: image-to-3D reads a symmetric,
+// front-facing figure far better than a turned one, and a T-pose is what
+// rigging starts from.
+const CHARACTER_RULES = `
+    Full-body character model sheet: ONE figure standing in a T-pose, arms
+    straight out to the sides with palms down, legs slightly apart, facing
+    the camera straight on, eye level, whole body in frame from head to feet
+    with an empty margin on every side. Plain, solid light-gray background.
+    Soft, even lighting with no cast shadows, no ground plane, nothing held,
+    no other figures, no text. Sharp focus, clear readable shapes and
+    colors.
+`;
+
 const PICTURE_RULES = `
     Studio product photo of ONE object, alone. The whole object is in frame,
     centered with an empty margin on every side, filling about 75% of a square image, seen from a three-quarter
@@ -31,15 +44,16 @@ class PictureFailed {
     }
 }
 
-function picture_request(subject: string) -> string {
+function picture_request(brief: ObjectBrief) -> string {
+    let rules = if (brief.character ?? false) { CHARACTER_RULES } else { PICTURE_RULES };
     `
         Use your built-in image_gen tool to generate exactly one square image,
         then reply with the single word: done. Do not run shell commands and do
         not edit files.
 
-        Image: ${PICTURE_RULES}
+        Image: ${rules}
 
-        The object: ${subject}
+        The subject: ${brief.subject}
     `
 }
 
@@ -54,13 +68,13 @@ function codex_thread(events: string) -> string throws PictureFailed {
         ?? throw PictureFailed { reason: `first event has no thread id: ${first}` }
 }
 
-/// Draws `subject` and saves it as image.png in the run folder.
-function draw(subject: string, run: Run) -> string {
+/// Draws the brief's subject and saves it as image.png in the run folder.
+function draw(brief: ObjectBrief, run: Run) -> string {
     //# Ask codex for one picture
     let out = baml.sys.run(
         "codex",
         args = ["exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only", "-C", run.dir, "-"],
-        input = picture_request(subject),
+        input = picture_request(brief),
         timeout = baml.time.Duration.from_seconds(PICTURE_TIMEOUT_S),
         capture_output = true,
     ) catch (e) {

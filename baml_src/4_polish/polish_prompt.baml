@@ -56,6 +56,7 @@ function Polish(brief: ObjectBrief, reference: image, files: PolishFiles) -> Pol
         1. Start from an empty scene: remove every object, then import
            ${files.mesh} with bpy.ops.import_scene.gltf. Join its meshes into
            one object named "${brief.name}". Report its triangle count.
+        ${if (brief.character ?? false) { "This is a character in a T-pose: keep the pose exactly, feet flat on the ground, facing -Y, and scale it so its standing height (z) is the size above." } else { "" }}
         2. Orientation and size. Compare against the reference with
            \`look\` (mode "angles", shading "material"). Make sure it stands upright the way the
            real object would and faces -Y (Blender's front). Scale it so its

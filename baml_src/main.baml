@@ -33,7 +33,7 @@ function make_mesh(idea: string) -> string {
     run.save("brief.json", brief);
     log.info(`brief: ${brief.name} -> ${run.dir}`);
     log.info("picture: codex is drawing");
-    draw(brief.subject, run);
+    draw(brief, run);
     log.info("mesh: sending the picture to TRELLIS.2 on RunPod");
     sculpt(run);
     run.dir
@@ -49,7 +49,7 @@ function finish(run: Run, brief: ObjectBrief) -> string {
     //# 2. Codex draws it
     if (!run.has("image.png")) {
         log.info("picture: codex is drawing");
-        draw(brief.subject, run);
+        draw(brief, run);
     }
     //# 3. TRELLIS.2 builds the mesh
     if (!run.has("mesh.glb")) {
