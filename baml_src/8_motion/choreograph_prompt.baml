@@ -80,24 +80,65 @@ class Move {
     ),
 }
 
-// A shot is a row of segments, one per beat, and each says where its motion
-// comes from. Today every beat is "poses": our own poses, with MotionBricks
-// filling in between them. The other two are named so a shot list can already
-// say them: "text" (a sentence for a text-to-motion model such as NVIDIA
-// Kimodo) and "walk" (the procedural walk in walk.py). Where two segments
-// meet is a seam, and plan_shot.py writes each seam down (plan.json): the
-// last four frames of the one, the first poses of the other, and the tween
-// MotionBricks makes across it. So redoing one segment only redoes the tween
-// at each of its ends.
+// A shot is a row of pieces, one per beat, and each says where its motion
+// comes from: "poses" (our own poses, with MotionBricks filling in between
+// them) or "text" (a sentence, made into motion by NVIDIA Kimodo and held to
+// the shot's path). "walk" (the procedural walk in walk.py) is named for
+// later and cannot be made yet. A shot whose beats are not all "poses" is
+// made in pieces: where two pieces meet is a seam, and MotionBricks makes a
+// tween across every seam (scripts/motion/timeline.py). Redoing one piece
+// only redoes the tween at each of its ends.
 type MotionSource = "poses" | "text" | "walk";
+
+/// A moment in a text beat where one of our poses says how the body must be.
+class TextKey {
+    pose: PoseName @description("The library pose"),
+    at_seconds: float @description("When, in seconds from the beat's start"),
+    at_m: float @description("Where the pose stands: metres along the path from its start"),
+    side_m: float @description("Metres to the left of the path there (negative: right). Usually 0"),
+    facing_deg: float @description("Degrees turned to the left of the path's direction. Usually 0"),
+    only: Pin[] @description(
+        "Empty: the whole body takes the pose. Otherwise only these hands and feet are held where the pose has them (a hand on a wall top) and the rest of the body is free",
+    ),
+}
 
 class ShotBeat {
     name: string @description("The beat, in two to five plain words"),
     seconds: float @description("How long the beat lasts"),
     source: MotionSource @description(
-        "Where the beat's motion comes from. Always \"poses\" for now: library poses with the motion model filling in between them",
+        "Where the beat's motion comes from. \"poses\": library poses with the motion model filling in between them. \"text\": one sentence, for ordinary movement a sentence says well (walking, sneaking, running, jumping, vaulting). Never \"walk\"",
     ),
-    moves: Move[] @description("One or more moves, played in order. Their lengths add up to the beat's seconds"),
+    moves: Move[] @description(
+        "For a poses beat: one or more moves, played in order; their lengths add up to the beat's seconds. Empty for a text beat",
+    ),
+    prompt: string? @description(
+        "For a text beat: what happens, as one sentence starting \"A person ...\", with one or two actions and a medium amount of detail. null for a poses beat",
+    ),
+    from_m: float? @description(
+        "For a text beat: where it starts, in metres along the path. null for a poses beat",
+    ),
+    to_m: float? @description("For a text beat: where it ends, in metres along the path. null for a poses beat"),
+    speed_in_mps: float? @description(
+        "For a text beat: how fast it is going as the beat starts, 0 if it starts from a hold. null to keep an even speed",
+    ),
+    speed_out_mps: float? @description(
+        "For a text beat: how fast it is going as the beat ends. null to keep an even speed",
+    ),
+    keys: TextKey[]? @description(
+        "For a text beat: the few moments where a library pose says how the body must be. At most 4. null or empty if none",
+    ),
+    // The rest is set by hand in a kept shot list, not by Opus. frames: the
+    // beat's exact length. lead_frames / tail_frames: a run-up and a
+    // follow-through that are made and then thrown away, so the kept part
+    // starts and ends in full flow. join_in_frames / join_out_frames: how many
+    // of the beat's own first and last frames a seam's tween may replace.
+    // seed: which of the many motions a sentence could become.
+    frames: int?,
+    lead_frames: int?,
+    tail_frames: int?,
+    join_in_frames: int?,
+    join_out_frames: int?,
+    seed: int?,
 }
 
 /// Where a carried prop sits from a moment on.
@@ -167,6 +208,19 @@ function Choreograph(brief: string, beats: BeatPlan[]) -> ShotList {
           from that (for example to end facing a camera).
         - Obstacles are not known to the motion model. Poses that touch something (a hand on
           a wall top, a landing) must be placed where that thing is, and pinned.
+
+        HOW A TEXT BEAT WORKS
+        - A beat's motion can instead come from one sentence (source "text"). Use "poses"
+          unless THE SHOT asks for text beats; then use "text" for the beats it names.
+        - A text beat has no moves. It has a prompt ("A person sneaks forward in a low
+          crouch."), where it starts and ends along the path (from_m, to_m), and how fast it
+          is going at each end. The distance must fit the time: (to_m - from_m) / seconds is
+          its average speed.
+        - It follows the path by itself. Add a key only where the body must match the set or
+          the beat before: its first frame in the pose the last beat ended in (at_seconds 0),
+          or one hand on a wall top (only: ["right_hand"], at the moment the hips pass over).
+        - A poses beat that follows a text beat starts with a move into its first pose, as
+          usual; that move is where the two are joined.
 
         ${ctx.output_format()}
     `

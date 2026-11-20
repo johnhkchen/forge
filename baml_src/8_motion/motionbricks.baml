@@ -1,6 +1,7 @@
-// Motion: NVIDIA MotionBricks fills in the movement between poses. It runs on
-// its own RunPod Serverless endpoint (motionbricks_worker/), which scales to
-// zero like the TRELLIS.2 one.
+// Motion: the motion worker on RunPod Serverless (motionbricks_worker/), which
+// scales to zero like the TRELLIS.2 one. It holds two NVIDIA models and sorts
+// jobs by kind: MotionBricks fills in the movement between poses
+// ("inbetween"), and Kimodo makes motion from a sentence ("text").
 //
 // The worker answers the same way the TRELLIS.2 worker does: poll
 // /stream/{job} until the job ends, join the base64 chunks in order, and check
@@ -9,9 +10,11 @@
 // Needs RUNPOD_API_KEY and MOTIONBRICKS_ENDPOINT_ID in the environment (.env).
 
 const MOTION_POLL_SECONDS = 2;
-// The first job on a fresh volume waits while the worker fetches the model
-// and builds its TensorRT plan; after that a job takes seconds.
-const MOTION_TIMEOUT_MINUTES = 25n;
+// The first job on a fresh volume waits while the worker fetches a model: a
+// few minutes for MotionBricks, and up to half an hour the first time Kimodo
+// is asked for (17 GB, most of it the encoder that reads the sentence). After
+// that a job takes seconds.
+const MOTION_TIMEOUT_MINUTES = 40n;
 
 class MotionFailed {
     reason: string,
@@ -23,14 +26,23 @@ class MotionFailed {
     }
 }
 
-/// How the worker that answered was set up.
+/// How the model that answered was set up. Each model says what it has to
+/// say: MotionBricks its TensorRT plan, Kimodo what it fetched.
 class WorkerBoot {
     gpu: string,
-    driver: string,
-    tensorrt: string,
     fetched_this_boot: bool,
-    plan_was_cached: bool,
-    plan_dir: string,
+    driver: string?,
+    tensorrt: string?,
+    plan_was_cached: bool?,
+    plan_dir: string?,
+    torch: string?,
+    kimodo: KimodoCard?,
+}
+
+class KimodoCard {
+    model: string,
+    license: string,
+    code_commit: string,
 }
 
 /// What the worker sends on /stream, one item at a time.
@@ -236,6 +248,13 @@ function motion_selftest() -> string {
     `${reply.text}\n${baml.json.stringify(reply.record, indent = 2)}`
 }
 
+/// What Kimodo has fetched and loaded, with revisions and timings. The first
+/// call on a fresh volume is the one that fetches.
+function text_info() -> string {
+    let reply = MotionBricks.from_env().call("text_info", `{"kind": "text_info"}`);
+    `${baml.json.stringify(baml.json.parse(reply.text), indent = 2)}\n${baml.json.stringify(reply.record, indent = 2)}`
+}
+
 /// Which worker answers, and how long it took to boot.
 function motion_info() -> string {
     let reply = MotionBricks.from_env().call("info", `{"kind": "info"}`);
@@ -282,6 +301,23 @@ test "join_chunks joins chunks in order and checks the hash" {
         let f: MotionFailed => f.reason.slice(0, 15),
     };
     assert.equal(caught, "sha256 mismatch")
+}
+
+test "a Kimodo job's boot card decodes too" {
+    let poll = baml.json.decode<MotionPoll>(
+        `
+            {"status": "COMPLETED", "stream": [{"output": {"kind": "info", "stage": "starting kimodo"}},
+              {"output": {"kind": "done", "bytes": 12, "sha256": "ab",
+              "seconds": {"work": 9.5, "boot_fetch": 0.4, "boot_model": 6.0},
+              "boot": {"gpu": "NVIDIA GeForce RTX 4090", "torch": "2.5.1+cu124",
+                       "kimodo": {"model": "Kimodo-SOMA-RP-v1.2", "license": "NVIDIA Open Model License", "code_commit": "e1c2"},
+                       "fetched_this_boot": false, "fetched": {"code": {}, "weights": {}}, "text_cache": "/runpod-volume/kimodo/text-cache"}}}]}
+        `,
+    );
+    let done = poll.stream?.at(1)?.output;
+    assert.equal(done?.boot?.kimodo?.model, "Kimodo-SOMA-RP-v1.2");
+    assert.equal(done?.boot?.plan_was_cached, null);
+    assert.equal(poll.stream?.at(0)?.output.stage, "starting kimodo")
 }
 
 test "a motion stream poll decodes, boot card included" {

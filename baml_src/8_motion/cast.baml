@@ -9,7 +9,9 @@
 //   baml run cast -- --shot hero-rooftop --character runs/<character> --prop runs/<prop>
 //
 // Writes into shots/<shot>/: lowpoly-hero.glb, midpoly-hero.glb, what each
-// step measured (.json), and a film and strip of the low-poly one. The
+// step measured (.json), and a film and strip of the low-poly one. A second
+// cut of a shot is cast under a name of its own (--clip hero-mixed), so a
+// character can carry both. The
 // character's own folder is only read; `just clip-to-gallery` copies the
 // clips into it when you want them in the gallery.
 
@@ -52,7 +54,12 @@ function motion_blender(step: string, script: string, args: string[], mark: stri
 }
 
 /// Plays a finished shot on a character (a run folder with a low-poly block-out); returns the shot folder.
-function cast(shot: string, character: string, prop: string = "") -> string {
+function cast(
+    shot: string,
+    character: string,
+    prop: string = "",
+    clip: string = CLIP_NAME,
+) -> string {
     let run = Run { dir: `${SHOTS_DIR}/${shot}` };
     if (!run.has("motion.json")) {
         throw ShotFailed { step: "cast", reason: `no motion in ${run.dir} yet: run shoot first` }
@@ -63,17 +70,17 @@ function cast(shot: string, character: string, prop: string = "") -> string {
     } else {
         []
     };
-    motion_blender("cast", "apply_shot.py", [run.dir, character, "--name", CLIP_NAME].concat(with_prop), "APPLY");
-    let clip = `lowpoly-${CLIP_NAME}`;
-    if (!run.has(`${clip}.glb`)) {
-        throw ShotFailed { step: "cast", reason: `${clip}.glb was not written` }
+    motion_blender("cast", "apply_shot.py", [run.dir, character, "--name", clip].concat(with_prop), "APPLY");
+    let filmed = `lowpoly-${clip}`;
+    if (!run.has(`${filmed}.glb`)) {
+        throw ShotFailed { step: "cast", reason: `${filmed}.glb was not written` }
     }
     //# 2. Film the low-poly one in the set, at the character's size
-    let size = run.load<CastRecord>(`${clip}.json`).size_against_soma;
+    let size = run.load<CastRecord>(`${filmed}.json`).size_against_soma;
     motion_blender(
         "film",
         "render_shot.py",
-        [run.dir, "--character", `${clip}.glb`, "--scale", `${size}`, "--out", clip],
+        [run.dir, "--character", `${filmed}.glb`, "--scale", `${size}`, "--out", filmed],
         "RENDER",
     );
     run.dir

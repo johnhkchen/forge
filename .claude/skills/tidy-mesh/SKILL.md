@@ -303,8 +303,13 @@ hip height. animate.py is what plays any such motion on a character:
    it back and measure it (`check`).
 
 So the walk is one source of motion among others. A clip from a motion
-model on NVIDIA's SOMA skeleton (MotionBricks writes 30 joints) is the
-second: `scripts/motion/soma_to_plain.py` renames it with `bones.json`,
+model on NVIDIA's SOMA skeleton is the second. Two models write it, both on
+the same 30 joints and in the same file format: MotionBricks (the movement
+between our own poses) and Kimodo (movement from a sentence). A shot can use
+both, a beat from each, joined by `scripts/motion/timeline.py`; by the time
+it gets here it is one motion like any other, and a second cut of a shot is
+cast under a name of its own (`just cast <shot> <run> <prop run> hero-mixed`).
+`scripts/motion/soma_to_plain.py` renames it with `bones.json`,
 turns it into the same plain form, and `scripts/motion/apply_shot.py` sends
 it through the same four steps (`just cast <shot> <run> [prop run]`; README,
 "Shots"). It looks joints up by name, so a skeleton with more joints than

@@ -26,6 +26,7 @@ check:
     baml check
     baml test
     python3 scripts/motion/author_poses.py --check | tail -1
+    python3 scripts/motion/test_timeline.py | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -71,26 +72,30 @@ motion-selftest:
 motion-skeleton:
     baml run motion_skeleton
 
-# Make a shot from its plan in motion/shots/<shot>.json: choreograph, place our poses, generate the motion, measure it, film it
+# Make a shot from its plan in motion/shots/<shot>.json: choreograph, place our poses, generate the motion (in pieces, if a beat is made from a sentence), measure it, film it
 shoot shot="hero-rooftop":
     baml run shoot -- --shot "{{shot}}"
 
-# Put a character in a finished shot: its skeleton, limits and planted feet, plus a prop on its sockets (writes into shots/<shot>/)
-cast shot character prop="":
-    baml run cast -- --shot "{{shot}}" --character "{{character}}" --prop "{{prop}}"
+# Put a character in a finished shot: its skeleton, limits and planted feet, plus a prop on its sockets (writes into shots/<shot>/). clip names the cut: hero, or hero-mixed for a second cut
+cast shot character prop="" clip="hero":
+    baml run cast -- --shot "{{shot}}" --character "{{character}}" --prop "{{prop}}" --clip "{{clip}}"
 
-# Copy a shot's clips into the character's own folder, so the gallery shows a Hero button for it
-clip-to-gallery shot character:
+# Copy a shot's clips into the character's own folder, so the gallery shows a Hero button for it (clip as for cast). Never writes over another cut's files
+clip-to-gallery shot character clip="hero":
     #!/usr/bin/env bash
     set -euo pipefail
     for version in lowpoly midpoly; do
         for kind in glb json; do
-            [ -f "shots/{{shot}}/$version-hero.$kind" ] && cp "shots/{{shot}}/$version-hero.$kind" "{{character}}/profiles/$version-hero.$kind"
+            [ -f "shots/{{shot}}/$version-{{clip}}.$kind" ] && cp "shots/{{shot}}/$version-{{clip}}.$kind" "{{character}}/profiles/$version-{{clip}}.$kind"
         done
     done
-    ls "{{character}}/profiles" | grep -- '-hero\.'
+    ls "{{character}}/profiles" | grep -- '-{{clip}}\.'
 
-# Point the MotionBricks endpoint at another image tag (after the worker image is rebuilt)
+# What Kimodo (text to motion) has fetched onto the volume and loaded, with revisions and timings; the first call on a fresh volume is the one that fetches
+text-info:
+    baml run text_info
+
+# Point the motion endpoint at another image tag (after the worker image is rebuilt)
 motion-image tag:
     #!/usr/bin/env bash
     set -euo pipefail

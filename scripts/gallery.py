@@ -48,6 +48,8 @@ def profile_summary(run_dir, name):
     # ...and with a hero shot: a longer clip from poses of our own, with its prop (scripts/motion/apply_shot.py).
     hero = read_json(os.path.join(run_dir, "profiles", name + "-hero.json")) or {}
     has_hero = os.path.exists(os.path.join(run_dir, "profiles", name + "-hero.glb"))
+    # ...and maybe a second cut of it, where some beats were made from a sentence instead of our poses.
+    has_mixed = os.path.exists(os.path.join(run_dir, "profiles", name + "-hero-mixed.glb"))
     return {
         "name": name,
         "about": record.get("about"),
@@ -68,6 +70,7 @@ def profile_summary(run_dir, name):
         "gait": {k: gait.get(k) for k in ("speed_m_s", "stride_m", "cadence_steps_per_min", "stance_width_m", "bob_cm", "sway_cm")} if has_walk else None,
         "bones": len((walking.get("rig") or {}).get("bones") or []) or None,
         "hero": "profiles/%s-hero.glb" % name if has_hero else None,
+        "hero_mixed": "profiles/%s-hero-mixed.glb" % name if has_mixed else None,
         "hero_seconds": (hero.get("animation") or {}).get("seconds") if has_hero else None,
         "hero_prop": (hero.get("prop") or {}).get("prop") if has_hero else None,
     }

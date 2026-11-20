@@ -6,6 +6,12 @@
 //   4. Code measures the result and puts it on a box mannequin    (checks.py, to_gltf.py)
 //   5. A background Blender films it                              (render_shot.py)
 //
+// A shot with a beat made from a sentence ("source": "text") is made in
+// pieces at step 3: each beat on its own (Kimodo for a sentence, MotionBricks
+// between our poses), then a MotionBricks tween across every seam, then the
+// join (scripts/motion/timeline.py). Each request to a worker is kept under
+// the hash of its content, so only what changed is ever made again.
+//
 // A shot's plan lives in motion/shots/<name>.json (the brief, the beats, the
 // set). Everything a shot makes goes into shots/<name>/, and a step whose
 // file is already there is skipped, so a shot can be picked up where it
@@ -21,6 +27,13 @@ const MOTION_FPS = 30.0;
 // How far a beat's moves may add up from the beat's planned length.
 const BEAT_SLACK_SECONDS = 0.25;
 const RENDER_TIMEOUT_MINUTES = 30;
+// What Kimodo, the text-to-motion model, does well: prompts that start this
+// way, up to ten seconds each, with only a few moments pinned to a pose.
+const TEXT_PROMPT_START = "A person ";
+const TEXT_BEAT_MAX_SECONDS = 10.0;
+const TEXT_BEAT_MAX_KEYS = 4;
+// Pieces, then seams, then the join; one more in case a pass only planned.
+const TIMELINE_PASSES = 4;
 
 /// motion/shots/<name>.json. (Its `set` is read by plan_shot.py, not here.)
 class ShotBrief {
@@ -64,39 +77,88 @@ function shot_problems(shot: ShotList) -> string[] {
     let moves = shot.beats.flat_map((b) -> {
         b.moves
     });
-    if (!moves) {
-        problems.push("there are no moves");
+    if (!shot.beats) {
+        problems.push("there are no beats");
     }
-    for (let beat in shot.beats) {
-        if (beat.source != "poses") {
+    let in_beats = shot.beats.flat_map((beat) -> {
+        match (beat.source) {
+            "poses" => poses_beat_problems(beat),
+            "text" => text_beat_problems(beat),
+            "walk" => {
+                [`beat "${beat.name}": a "walk" beat cannot be made yet; use "poses" or "text"`]
+            },
+        }
+    });
+    problems.concat(in_beats).concat(steps_back(moves))
+}
+
+/// What is wrong with a beat made from our poses.
+function poses_beat_problems(beat: ShotBeat) -> string[] {
+    let problems: string[] = [];
+    let seconds = beat_seconds(beat);
+    if ((seconds - beat.seconds).abs() > BEAT_SLACK_SECONDS) {
+        problems.push(
+            `beat "${beat.name}" should last ${beat.seconds} s but its moves add up to ${seconds} s`,
+        );
+    }
+    for (let move in beat.moves) {
+        if (move.tokens < 6 || move.tokens > 16) {
             problems.push(
-                `beat "${beat.name}": only "poses" beats can be made so far, not "${beat.source}"`,
+                `beat "${beat.name}", ${move.pose}: tokens must be 6 to 16, not ${move.tokens}`,
             );
         }
-        let seconds = beat_seconds(beat);
-        if ((seconds - beat.seconds).abs() > BEAT_SLACK_SECONDS) {
+        if (move.early_frames < 0 || move.early_frames > 20) {
             problems.push(
-                `beat "${beat.name}" should last ${beat.seconds} s but its moves add up to ${seconds} s`,
+                `beat "${beat.name}", ${move.pose}: early_frames must be 0 to 20, not ${move.early_frames}`,
             );
         }
-        for (let move in beat.moves) {
-            if (move.tokens < 6 || move.tokens > 16) {
-                problems.push(
-                    `beat "${beat.name}", ${move.pose}: tokens must be 6 to 16, not ${move.tokens}`,
-                );
-            }
-            if (move.early_frames < 0 || move.early_frames > 20) {
-                problems.push(
-                    `beat "${beat.name}", ${move.pose}: early_frames must be 0 to 20, not ${move.early_frames}`,
-                );
-            }
-            if (move.speed_mps < 0.0) {
-                problems.push(`beat "${beat.name}", ${move.pose}: speed_mps cannot be negative`);
-            }
+        if (move.speed_mps < 0.0) {
+            problems.push(`beat "${beat.name}", ${move.pose}: speed_mps cannot be negative`);
         }
     }
-    for (let pair in steps_back(moves)) {
-        problems.push(pair);
+    problems
+}
+
+/// What is wrong with a beat made from a sentence.
+function text_beat_problems(beat: ShotBeat) -> string[] {
+    let problems: string[] = [];
+    let prompt = beat.prompt ?? "";
+    if (!prompt.trim()) {
+        problems.push(`beat "${beat.name}": a text beat needs a prompt`);
+    } else if (!prompt.trim().starts_with(TEXT_PROMPT_START)) {
+        problems.push(`beat "${beat.name}": the prompt should start "${TEXT_PROMPT_START}..."`);
+    }
+    if (beat.moves) {
+        problems.push(
+            `beat "${beat.name}": a text beat has no moves; put poses it must pass through in keys`,
+        );
+    }
+    let from = beat.from_m;
+    let to = beat.to_m;
+    if (from == null || to == null) {
+        problems.push(
+            `beat "${beat.name}": a text beat says where it starts and ends on the path (from_m, to_m)`,
+        );
+    } else if (to < from - 0.001) {
+        problems.push(`beat "${beat.name}": it ends (${to} m) behind where it starts (${from} m)`);
+    }
+    if (beat.seconds <= 0.0 || beat.seconds > TEXT_BEAT_MAX_SECONDS) {
+        problems.push(
+            `beat "${beat.name}": a text beat lasts up to ${TEXT_BEAT_MAX_SECONDS} s, not ${beat.seconds} s`,
+        );
+    }
+    let keys = beat.keys ?? [];
+    if (keys.length() > TEXT_BEAT_MAX_KEYS) {
+        problems.push(
+            `beat "${beat.name}": at most ${TEXT_BEAT_MAX_KEYS} keys, not ${keys.length()}`,
+        );
+    }
+    for (let key in keys) {
+        if (key.at_seconds < 0.0 || key.at_seconds > beat.seconds + BEAT_SLACK_SECONDS) {
+            problems.push(
+                `beat "${beat.name}", key ${key.pose}: at ${key.at_seconds} s is outside the beat (0 to ${beat.seconds} s)`,
+            );
+        }
     }
     problems
 }
@@ -188,6 +250,42 @@ function film(run: Run) -> void {
     }
 }
 
+/// The part of plan.json that says whether the shot is made in pieces.
+class ShotPlan {
+    pieces: json[]?,
+}
+
+/// One request timeline.py still needs an answer to (todo.json).
+class PieceToMake {
+    request: string @description("The request's name in the shot's cache: the hash of its content"),
+    kind: "inbetween" | "text",
+    what: string,
+}
+
+/// Sends what timeline.py asks for until it has joined the shot: the pieces,
+/// then the seams. An answer already in the cache is never asked for again.
+function join_pieces(run: Run) -> void {
+    let passes = 0;
+    while (passes < TIMELINE_PASSES) {
+        passes += 1;
+        motion_script("join", "timeline.py", [run.dir], "TIMELINE");
+        let todo = baml.json.decode<PieceToMake[]>(baml.fs.read(run.path("todo.json")));
+        if (!todo) {
+            return;
+        }
+        for (let piece in todo) {
+            log.info(`motion: making ${piece.what} (${piece.kind}) on RunPod`);
+            let reply = MotionBricks.from_env().call(
+                piece.kind,
+                baml.fs.read(run.path(`cache/${piece.request}.request.json`)),
+            );
+            baml.fs.write(run.path(`cache/${piece.request}.json`), reply.text);
+            run.save(`cache/${piece.request}.record.json`, reply.record);
+        }
+    }
+    throw ShotFailed { step: "join", reason: `still not joined after ${TIMELINE_PASSES} passes` }
+}
+
 /// Makes one shot from its plan in motion/shots/<shot>.json; returns its folder.
 function shoot(shot: string) -> string {
     let plan_file = `${SHOT_PLANS}/${shot}.json`;
@@ -208,7 +306,10 @@ function shoot(shot: string) -> string {
     //# 2. Stand our poses along the path
     motion_script("plan", "plan_shot.py", [run.dir, "--brief", plan_file], "PLAN");
     //# 3. MotionBricks fills in the movement
-    if (!run.has("motion.json")) {
+    if (run.load<ShotPlan>("plan.json").pieces) {
+        //# 3. Made in pieces: each beat, then a tween across every seam, then the join
+        join_pieces(run);
+    } else if (!run.has("motion.json")) {
         log.info("motion: sending the poses to MotionBricks on RunPod");
         let reply = MotionBricks.from_env().call("inbetween", baml.fs.read(run.path("request.json")));
         baml.fs.write(run.path("motion.json"), reply.text);
@@ -312,6 +413,71 @@ test "an unsound shot list is told what is wrong with it" {
     assert.contains(problems, "should last 1.0 s but its moves add up to");
     assert.contains(problems, "tokens must be 6 to 16, not 17");
     assert.contains(problems, "sneak_right at 0.2 m is behind the move before it (0.5 m)")
+}
+
+const TEXT_BEAT_REPLY = `
+    {
+      "name": "sneak forward", "source": "text", "seconds": 3.0, "moves": [],
+      "prompt": "A person sneaks forward in a low crouch.",
+      "from_m": 0.0, "to_m": 2.2, "speed_in_mps": 0.0, "speed_out_mps": 0.8,
+      "keys": [{ "pose": "crouch", "at_seconds": 0, "at_m": 0, "side_m": 0, "facing_deg": 0, "only": [] }]
+    }
+`;
+
+test "a beat can be made from a sentence" {
+    let shot = Choreograph@spec("a rooftop", TEST_BEATS).parse(TEST_REPLY);
+    shot.beats
+        = [shot.beats.at(0) ?? throw "no first beat", baml.json.decode<ShotBeat>(TEXT_BEAT_REPLY)];
+    assert.equal(shot_problems(shot), []);
+    let sneak = shot.beats.at(1) ?? throw "no text beat";
+    assert.equal(sneak.keys?.at(0)?.pose, "crouch");
+    assert.equal(sneak.lead_frames, null)
+}
+
+test "an unsound text beat is told what is wrong with it" {
+    let beat = baml.json.decode<ShotBeat>(TEXT_BEAT_REPLY);
+    beat.prompt = "sneaks forward";
+    beat.to_m = -1.0;
+    beat.seconds = 12.0;
+    let problems = text_beat_problems(beat).join("\n");
+    assert.contains(problems, `the prompt should start "A person ..."`);
+    assert.contains(problems, "behind where it starts");
+    assert.contains(problems, "lasts up to 10.0 s");
+    let walk = ShotBeat { ...beat, source: "walk" };
+    let shot = Choreograph@spec("a rooftop", TEST_BEATS).parse(TEST_REPLY);
+    shot.beats = [walk];
+    assert.contains(shot_problems(shot).join("\n"), `a "walk" beat cannot be made yet`)
+}
+
+test "Choreograph is told how a text beat works" {
+    let asked = Choreograph@spec("a rooftop at night", TEST_BEATS).prompt().to_string();
+    assert.contains(asked, "HOW A TEXT BEAT WORKS");
+    assert.contains(asked, "A person sneaks forward")
+}
+
+test "the mixed hero shot list kept with its plan is sound" {
+    let shot = baml.json.decode<ShotList>(baml.fs.read(`${SHOT_PLANS}/hero-rooftop-mixed.shotlist.json`));
+    assert.equal(shot_problems(shot), []);
+    assert.equal(
+        shot.beats.map((b) -> {
+            b.source
+        }),
+        ["poses", "text", "text", "text", "poses", "poses"],
+    );
+    // The same beats as the in-house cut, frame for frame: 62 + 89 + 58 + 46 + 46 + 59.
+    let frames = shot.beats.map((b) -> {
+        b.frames
+            ?? b.moves.reduce(
+                (total, m) -> {
+                    total + move_frames(m)
+                },
+                0,
+            )
+    });
+    assert.equal(frames, [62, 89, 58, 46, 46, 59]);
+    let vault = shot.beats.at(3) ?? throw "no vault";
+    assert.equal(vault.keys?.at(0)?.only, ["right_hand"]);
+    assert.equal(vault.join_out_frames, 0)
 }
 
 /// The names in motion/poses.json.

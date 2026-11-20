@@ -10,8 +10,14 @@ speed is sent as four poses 1/30 s apart, sliding along the curve at that speed
 and easing toward the next pose of its gait, so the motion model knows how the
 body is moving there, not only where it is.
 
+A shot whose beats all come from our poses is made in one go. If any beat
+comes from somewhere else (`"source": "text"`), the shot is made in pieces and
+joined: see timeline.py, which this hands the planning to.
+
 Writes:
-    <shot>/request.json   the worker's input (seed pose and targets)
+    <shot>/request.json   the worker's input (seed pose and targets); for a
+                          shot made in pieces, <shot>/cache/<hash>.request.json
+                          per piece instead
     <shot>/plan.json      where and when each move should end, for the checks:
                           frames, ground points, headings, pins, the curve,
                           and the set (ledge, roof, wall) as plain blocks,
@@ -110,86 +116,108 @@ def blend(a: dict, b: dict, t: float) -> dict:
     }
 
 
-def plan(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> tuple:
-    poses = library["poses"]
-    path = Path(shot["path"])
+class Stage:
+    """The pose library stood along a shot's path: where a move's pose goes, and what the body looks like there."""
 
-    def placed(move: dict):
-        x, z, along = path.at(float(move["at_m"]))
+    def __init__(self, shot: dict, library: dict, sk: Skeleton):
+        self.poses, self.sk = library["poses"], sk
+        self.path = Path(shot["path"])
+
+    def placed(self, move: dict):
+        """(x, z, the path's heading there, the heading the body faces) for a move or anything with at_m."""
+        x, z, along = self.path.at(float(move["at_m"]))
         left = float(move.get("side_m", 0.0))
         # Left of a heading h is (cos h, -sin h) on the ground.
         x += left * math.cos(math.radians(along))
         z -= left * math.sin(math.radians(along))
         return x, z, along, along + float(move.get("facing_deg", 0.0))
 
-    def target_poses(move: dict):
-        pose = poses[move["pose"]]
-        x, z, along, heading = placed(move)
+    def target_poses(self, move: dict):
+        pose = self.poses[move["pose"]]
+        x, z, along, heading = self.placed(move)
         speed = float(move.get("speed_mps", 0.0))
         if speed <= 0.0:
             return [stand(pose, x, z, heading)]
-        nxt = poses.get(pose.get("next") or "")
+        nxt = self.poses.get(pose.get("next") or "")
         step_seconds = float(pose.get("step_seconds") or 0.0)
-        x0, z0, _ = path.at(float(move["at_m"]))
+        x0, z0, _ = self.path.at(float(move["at_m"]))
         out = []
         for k in range(4):
             t = k / FPS
             body = blend(pose, nxt, min(1.0, t / step_seconds)) if nxt and step_seconds > 0 else pose
-            xk, zk, _ = path.at(float(move["at_m"]) + speed * t)
+            xk, zk, _ = self.path.at(float(move["at_m"]) + speed * t)
             out.append(stand(body, x + xk - x0, z + zk - z0, heading))
         return out
 
-    def body_of(placed_pose: dict):
+    def body_of(self, placed_pose: dict):
         """Joint positions and rotations of a placed pose, in the scene."""
+        sk = self.sk
         turn = yaw(placed_pose["heading"])
         rotations = sk.rotation_list(placed_pose["rotations"])
         rotations[0] = qmul(turn, rotations[0])
         return sk.fk(add(tuple(placed_pose["at"]), qrot(turn, tuple(placed_pose["root"]))), rotations)
 
-    def pin_points(move: dict, pos) -> dict:
+    def pin_points(self, pins: list, pos) -> dict:
         """Where the placed pose puts each pinned hand or foot, in the scene."""
-        return {pin: [round(v, 4) for v in pos[sk.index[PIN_JOINT[pin]]]] for pin in move.get("pins") or []}
+        return {pin: [round(v, 4) for v in pos[self.sk.index[PIN_JOINT[pin]]]] for pin in pins or []}
 
+    def mark(self, name: str, beat: str, move: dict, frame: int, placed_pose: dict) -> dict:
+        """What the checks need to know about a moment: where the hips should be, facing where, and what is pinned."""
+        sk = self.sk
+        x, z, _, _ = self.placed(move)
+        pos, rot = self.body_of(placed_pose)
+        return {
+            "name": name,
+            "beat": beat,
+            "pose": move["pose"],
+            "frame": frame,
+            # Where the hips themselves should be, and which way the pelvis should face:
+            # the pose's own offset and turn, on top of where it stands.
+            "x": round(pos[0][0], 4),
+            "z": round(pos[0][2], 4),
+            "heading": round(heading_of(qmul(rot[0], qconj(sk.rest_rot[0]))), 2),
+            "stands_at": [round(x, 4), round(z, 4)],
+            "speed_mps": float(move.get("speed_mps", 0.0)),
+            "early_frames": int(move.get("early_frames", 0)),
+            "pins": move.get("pins") or [],
+            "pin_points": self.pin_points(move.get("pins"), pos),
+            "hold_pins_frames": int(move.get("hold_pins_frames", 0)),
+        }
+
+    def target(self, name: str, move: dict) -> dict:
+        """One move as a target of the worker's `inbetween`."""
+        tokens, early = int(move["tokens"]), int(move.get("early_frames", 0))
+        if not 6 <= tokens <= 16 or not 0 <= early <= 20:
+            raise ValueError(f"{name}: tokens are 6..16 and early_frames 0..20")
+        target = {"name": name, "poses": self.target_poses(move), "tokens": tokens, "transition_early_by": early}
+        if move.get("pins"):
+            target["pins"] = move["pins"]
+        if move.get("hold_pins_frames"):
+            target["hold_pins"] = int(move["hold_pins_frames"])
+        return target
+
+
+def move_frames(move: dict) -> int:
+    """How many frames a move plays for."""
+    return 4 * int(move["tokens"]) - 7 - int(move.get("early_frames", 0))
+
+
+def plan(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> tuple:
+    stage = Stage(shot, library, sk)
+    poses, path = stage.poses, stage.path
     start = dict(at_m=0.0, side_m=0.0, facing_deg=float(shot.get("start_facing_deg", 0.0)))
-    sx, sz, _, sheading = placed(start)
+    sx, sz, _, sheading = stage.placed(start)
     request = {"kind": "inbetween", "positions": True, "seed": stand(poses[shot["start_pose"]], sx, sz, sheading), "targets": []}
     marks, beats = [], []
     frame = 0
     for beat in shot["beats"]:
         first = frame
         for number, move in enumerate(beat["moves"]):
-            tokens, early = int(move["tokens"]), int(move.get("early_frames", 0))
-            if not 6 <= tokens <= 16 or not 0 <= early <= 20:
-                raise ValueError(f"{beat['name']}: tokens are 6..16 and early_frames 0..20")
-            frame += 4 * tokens - 7 - early
-            x, z, along, heading = placed(move)
             name = f"{beat['name']} {number + 1}: {move['pose']}"
-            target = {"name": name, "poses": target_poses(move), "tokens": tokens, "transition_early_by": early}
-            if move.get("pins"):
-                target["pins"] = move["pins"]
-            if move.get("hold_pins_frames"):
-                target["hold_pins"] = int(move["hold_pins_frames"])
+            target = stage.target(name, move)
+            frame += move_frames(move)
             request["targets"].append(target)
-            pos, rot = body_of(target["poses"][0])
-            marks.append(
-                {
-                    "name": name,
-                    "beat": beat["name"],
-                    "pose": move["pose"],
-                    "frame": frame,
-                    # Where the hips themselves should be, and which way the pelvis should face:
-                    # the pose's own offset and turn, on top of where it stands.
-                    "x": round(pos[0][0], 4),
-                    "z": round(pos[0][2], 4),
-                    "heading": round(heading_of(qmul(rot[0], qconj(sk.rest_rot[0]))), 2),
-                    "stands_at": [round(x, 4), round(z, 4)],
-                    "speed_mps": float(move.get("speed_mps", 0.0)),
-                    "early_frames": early,
-                    "pins": move.get("pins") or [],
-                    "pin_points": pin_points(move, pos),
-                    "hold_pins_frames": int(move.get("hold_pins_frames", 0)),
-                }
-            )
+            marks.append(stage.mark(name, beat["name"], move, frame, target["poses"][0]))
         beats.append(
             {
                 "name": beat["name"],
@@ -296,7 +324,23 @@ def main() -> None:
     if args.brief:
         with open(args.brief) as f:
             set_card = json.load(f).get("set")
-    request, record = plan(shot, library, Skeleton.load(), set_card)
+    sk = Skeleton.load()
+    if any(beat.get("source", "poses") != "poses" for beat in shot["beats"]):
+        # Beats from more than one maker: the shot is made in pieces and joined (timeline.py).
+        import timeline
+
+        record, requests = timeline.lay_out(shot, library, sk, set_card)
+        for request in requests.values():
+            timeline.keep_request(args.shot, request)
+        with open(os.path.join(args.shot, "plan.json"), "w") as f:
+            json.dump(record, f, indent=1)
+        for beat in record["beats"]:
+            print(f"PLAN {beat['name']} ({beat['source']}): {beat['seconds']} s (planned {beat['planned_seconds']} s), frames {beat['first_frame']}-{beat['last_frame']}")
+        for seam in record["seams"]:
+            print(f"PLAN seam {seam['from']} to {seam['to']}: MotionBricks fills frames {seam['tween_frames'][0]}-{seam['tween_frames'][1]}")
+        print(f"PLAN {len(record['pieces'])} pieces, {len(record['seams'])} seams, {record['frames']} frames, {record['seconds']} s, path {record['path_length_m']} m")
+        return
+    request, record = plan(shot, library, sk, set_card)
     with open(os.path.join(args.shot, "request.json"), "w") as f:
         json.dump(request, f, separators=(",", ":"))
     with open(os.path.join(args.shot, "plan.json"), "w") as f:

@@ -11,8 +11,17 @@
 # shared volume at once.
 #
 # initTimeout is 20 minutes because the very first worker fetches the model
-# (~760 MB) and builds the plan (minutes) before it is ready. A job itself
-# takes seconds, so jobs time out after 5 minutes.
+# (~760 MB) and builds the plan (minutes) before it is ready.
+#
+# A job itself takes seconds, but jobs time out after 30 minutes: Kimodo (text
+# to motion) starts inside the first job that asks for it, and the first time
+# ever that job also fetches 17.5 GB onto the volume.
+#
+# HF_TOKEN comes from the RunPod secret `hf_token` (Settings -> Secrets), the
+# same one the TRELLIS.2 endpoint uses. Kimodo's text encoder is built on
+# Meta's Llama 3, which is gated: that account must have been given access at
+# https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct. MotionBricks
+# needs no token.
 set -euo pipefail
 : "${RUNPOD_API_KEY:?set RUNPOD_API_KEY in .env}"
 : "${RUNPOD_VOLUME_ID:?set RUNPOD_VOLUME_ID in .env}"
@@ -29,9 +38,9 @@ body=$(cat <<JSON
   "dataCenterIds": ["EU-RO-1"],
   "mounts": { "network": [{ "volumeId": "${RUNPOD_VOLUME_ID}" }] },
   "flashboot": "FLASHBOOT",
-  "timeout": 300000,
+  "timeout": 1800000,
   "disk": 15,
-  "env": {}
+  "env": { "HF_TOKEN": "{{ RUNPOD_SECRET_hf_token }}" }
 }
 JSON
 )

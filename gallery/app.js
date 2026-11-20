@@ -77,7 +77,7 @@ function facts(run, v) {
     ["Textures", v.maps ? v.maps.length : "—", v.maps ? v.maps.join(", ") : ""],
   ];
   // How it walks, worked out from its own build: pace, then the steps behind it.
-  if (v.hero && v.hero_seconds) rows.push(["Hero shot", `${Math.round(v.hero_seconds)} s`, v.hero_prop ? `with its ${v.hero_prop}` : "from poses of our own"]);
+  if (v.hero && v.hero_seconds) rows.push(["Hero shot", `${Math.round(v.hero_seconds)} s`, v.hero_mixed ? "two cuts: all our poses, or some beats from a sentence" : v.hero_prop ? `with its ${v.hero_prop}` : "from poses of our own"]);
   if (v.walk && v.gait?.speed_m_s) rows.push(["Walks at", `${v.gait.speed_m_s} m/s`, `${v.gait.cadence_steps_per_min} steps a minute · ${v.gait.stride_m} m stride`]);
   return rows;
 }
@@ -86,7 +86,7 @@ function objectPage(run, wanted) {
   const versions = versionsOf(run);
   const start = versions.find((v) => v.name === wanted) || versions.find((v) => v.name === "web") || versions[versions.length - 1];
   // `off` holds the gear the visitor took off; it carries over between the versions that have gear.
-  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, walk: true, hero: false };
+  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, clip: "walk" };
   const hasGear = versions.some((v) => v.gear?.length);
 
   const stage = h("div", { class: "stage clay-well" });
@@ -99,22 +99,25 @@ function objectPage(run, wanted) {
   const wireBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.wire), onclick: () => { state.wire = !state.wire; wireBtn.setAttribute("aria-pressed", String(state.wire)); viewer?.setWire(state.wire); } }, "Wireframe");
 
   const socketsBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => { state.sockets = !state.sockets; socketsBtn.setAttribute("aria-pressed", String(state.sockets)); viewer?.setSockets(state.sockets); } }, "Where props go");
-  // Pressed in, the character walks on the spot; let go, it stands still in its T-pose.
-  const walkBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.walk), onclick: () => { state.walk = !state.walk; if (state.walk) state.hero = false; showClips(); render(); } }, "Walk");
-  // Pressed in, it plays its hero shot from start to end, over and over, and the view follows it. One clip at a time.
-  const heroBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.hero), onclick: () => { state.hero = !state.hero; if (state.hero) state.walk = false; showClips(); render(); } }, "Hero");
+  // One clip at a time. Pressed in, the character walks on the spot, or plays a hero shot from start
+  // to end, over and over, with the view following it; let go, it stands still in its T-pose.
+  // A character can have two cuts of its hero shot: every beat from our own poses, or some beats
+  // made from a sentence.
+  const clipBtn = (clip, label) => h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.clip === clip), onclick: () => { state.clip = state.clip === clip ? null : clip; showClips(); render(); } }, label);
+  const clipBtns = { walk: clipBtn("walk", "Walk"), hero: clipBtn("hero", "Hero"), hero_mixed: clipBtn("hero_mixed", "Hero: text + poses") };
   function showClips() {
-    walkBtn.setAttribute("aria-pressed", String(state.walk));
-    heroBtn.setAttribute("aria-pressed", String(state.hero));
+    for (const [clip, btn] of Object.entries(clipBtns)) btn.setAttribute("aria-pressed", String(state.clip === clip));
   }
+  // The clip to play on a version: the one pressed in, if that version has it.
+  const playing = (x) => (state.clip && x[state.clip] ? state.clip : null);
   const gearRow = h("div", { class: "gear", role: "group", "aria-label": "Gear" });
 
   // One chip per piece of gear: pressed in means it's on. Only the low-poly and mid-poly versions have gear that comes off.
   function showGear() {
     const gear = state.version.gear || [];
     socketsBtn.hidden = !(state.version.sockets || []).length;
-    walkBtn.hidden = !state.version.walk;
-    heroBtn.hidden = !state.version.hero;
+    for (const [clip, btn] of Object.entries(clipBtns)) btn.hidden = !state.version[clip];
+    clipBtns.hero.textContent = state.version.hero_mixed ? "Hero: our poses" : "Hero";
     gearRow.hidden = !hasGear;
     if (!gear.length) {
       gearRow.replaceChildren(h("span", { class: "hint" }, "Gear comes off in the Low poly and Mid poly versions."));
@@ -149,8 +152,8 @@ function objectPage(run, wanted) {
     viewer = new Viewer(stage, panes.map((x) => ({
       label: panes.length > 1 ? (x === raw ? "Before" : `After · ${VERSION_NAMES[x.name]}`) : VERSION_NAMES[x.name],
       glb: file(run, x.glb),
-      walk: x.hero && state.hero ? file(run, x.hero) : x.walk && state.walk ? file(run, x.walk) : null,
-      follow: Boolean(x.hero && state.hero),
+      walk: playing(x) ? file(run, x[playing(x)]) : null,
+      follow: Boolean(playing(x)) && playing(x) !== "walk",
       edges: x.edges ? file(run, x.edges) : null,
       onTriangles: x === raw ? (n) => { raw.triangles = n; if (state.version === raw) showFacts(); } : null,
     })), state.wire, state.off, state.sockets);
@@ -171,7 +174,7 @@ function objectPage(run, wanted) {
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, walkBtn, heroBtn, socketsBtn)),
+    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, clipBtns.walk, clipBtns.hero, clipBtns.hero_mixed, socketsBtn)),
     gearRow,
     stage,
     factsBox,

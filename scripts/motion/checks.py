@@ -13,6 +13,8 @@ how the raw motion behaves before anyone tidies it.
   hand     whether the pinned hand stays on the wall top
   beats    how far the hips are from each planned point when a move ends
   path     how far the hips stray from the planned route
+  seams    how smoothly one beat's motion runs into the next: the jump in
+           speed and in pose at each join, next to what is usual for the shot
 
 Joint positions are worked out here from the rotations (and compared with the
 ones the worker sent, when it sent them), so the same numbers can be had for
@@ -28,7 +30,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from soma import Skeleton, heading_of, qconj, qmul  # noqa: E402
+from soma import Skeleton, heading_of, qangle, qconj, qmul  # noqa: E402
 
 FPS = 30
 ON_GROUND = 0.5  # the model's own contact confidence, 0..1
@@ -302,6 +304,82 @@ def path_stray(frames, plan: dict) -> dict:
     return {"worst_cm": cm(worst), "worst_frame": worst_frame, "typical_cm": cm(total / len(frames))}
 
 
+def seams(sk: Skeleton, motion: dict, frames, plan: dict) -> dict:
+    """How smoothly the motion runs across each seam.
+
+    A body in steady motion moves each joint about as far in one frame as in
+    the frame before. At a bad join it does not: something is suddenly faster,
+    slower or somewhere else. So for every frame this takes, per joint, how far
+    it is from where the two frames before would have put it (the change in
+    its speed, in cm per frame), and how far it turns in one frame. A seam's
+    numbers are the worst within a frame of each of its joins, and they are
+    given next to what is usual across the whole shot, because a sprint is
+    never as smooth as a crouch.
+
+    A shot made in pieces has two joins a seam (where the tween starts and
+    where it ends); a shot made in one go has one, the frame the beat ends on."""
+    count = len(frames)
+    order = [motion["joints"].index(name) for name in sk.joints]
+
+    def jump(f: int):
+        """(metres, joint): the largest change of speed on frame f."""
+        worst, which = 0.0, None
+        if not 1 <= f < count - 1:
+            return worst, which
+        for i, name in enumerate(sk.joints):
+            a, b, c = frames[f - 1][0][i], frames[f][0][i], frames[f + 1][0][i]
+            d = math.dist(c, tuple(2 * b[k] - a[k] for k in range(3)))
+            if d > worst:
+                worst, which = d, name
+        return worst, which
+
+    def turn(f: int) -> float:
+        """Degrees: the largest turn of any joint, in its parent, from frame f to f + 1."""
+        if not 0 <= f < count - 1:
+            return 0.0
+        a, b = motion["rotations"][f], motion["rotations"][f + 1]
+        return max(qangle(qmul(tuple(b[4 * j : 4 * j + 4]), qconj(tuple(a[4 * j : 4 * j + 4])))) for j in order)
+
+    def hips(f: int) -> float:
+        """m/s: how much the hips' velocity changes on frame f."""
+        if not 1 <= f < count - 1:
+            return 0.0
+        a, b, c = frames[f - 1][0][0], frames[f][0][0], frames[f + 1][0][0]
+        return math.dist(c, tuple(2 * b[k] - a[k] for k in range(3))) * FPS
+
+    jumps = sorted(jump(f)[0] for f in range(1, count - 1))
+    turns = sorted(turn(f) for f in range(count - 1))
+    usual_jump, usual_turn = jumps[len(jumps) // 2], turns[len(turns) // 2]
+    rows = []
+    for seam in plan.get("seams") or []:
+        joins = list(seam["tween_frames"]) if "boundary_frame" in seam else [seam["tween_frames"][0]]
+        near = [f for j in joins for f in (j - 1, j, j + 1)]
+        worst, which, at = 0.0, None, joins[0]
+        for f in near:
+            d, name = jump(f)
+            if d > worst:
+                worst, which, at = d, name, f
+        rows.append(
+            {
+                "from": seam["from"],
+                "to": seam["to"],
+                "joins_at_frames": joins,
+                "speed_jump_cm_per_frame": cm(worst),
+                "speed_jump_joint": which,
+                "speed_jump_frame": at,
+                "speed_jump_times_usual": round(worst / usual_jump, 1) if usual_jump > 1e-9 else None,
+                "hips_speed_jump_m_per_s": round(max(hips(f) for f in near), 3),
+                "pose_jump_deg_per_frame": round(max(turn(f) for j in joins for f in (j - 1, j)), 2),
+            }
+        )
+    return {
+        "usual_speed_jump_cm_per_frame": cm(usual_jump),
+        "worst_speed_jump_anywhere_cm_per_frame": cm(jumps[-1]) if jumps else 0.0,
+        "usual_pose_change_deg_per_frame": round(usual_turn, 2),
+        "seams": rows,
+    }
+
+
 def check(shot: str) -> dict:
     sk = Skeleton.load()
     with open(os.path.join(shot, "motion.json")) as f:
@@ -321,6 +399,7 @@ def check(shot: str) -> dict:
         "beats": beats(sk, frames, plan),
         "path": path_stray(frames, plan),
         "pins": pinned_feet_and_hands(sk, frames, plan),
+        "seams": seams(sk, motion, frames, plan),
     }
     if plan.get("wall"):
         wall = Wall(plan["wall"])
@@ -360,6 +439,11 @@ def main() -> None:
         print(f"CHECK pin {pin['pin']} at '{pin['move']}': {pin['miss_cm']} cm from its planned spot")
     for beat in report["beats"]["beats"]:
         print(f"CHECK beat '{beat['beat']}': ends {beat['miss_cm']} cm from its planned point, facing off by {beat['facing_off_deg']} deg (frame {beat['frame']})")
+    for seam in report["seams"]["seams"]:
+        print(
+            f"CHECK seam '{seam['from']}' to '{seam['to']}': speed jumps {seam['speed_jump_cm_per_frame']} cm a frame at most ({seam['speed_jump_joint']}, frame {seam['speed_jump_frame']}, "
+            f"{seam['speed_jump_times_usual']} times what is usual), hips {seam['hips_speed_jump_m_per_s']} m/s, pose {seam['pose_jump_deg_per_frame']} deg a frame"
+        )
     print(f"CHECK path: hips stray {report['path']['worst_cm']} cm at most (frame {report['path']['worst_frame']}), {report['path']['typical_cm']} cm typically")
 
 

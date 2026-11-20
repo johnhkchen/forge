@@ -619,6 +619,18 @@ def text_to_motion(params: dict) -> dict:
         root, local = bridge.from_kimodo(roots[f], quats[f])
         root_rows.append([round(v, 5) for v in root])
         rotation_rows.append([round(c, 6) for q in local for c in q])
+    # How far our skeleton's hands, feet and head end up from Kimodo's own: the two
+    # skeletons' bones differ by a few millimetres, so this should be a centimetre or so.
+    theirs = np.asarray(output["posed_joints"])[0][:, S.out_rows]
+    apart = {name: 0.0 for name in ("LeftFoot", "RightFoot", "LeftToeBase", "RightToeBase", "LeftHand", "RightHand", "Head")}
+    placed_frames = []
+    for f in range(count):
+        placed, _ = bridge.fk(tuple(root_rows[f]), [tuple(rotation_rows[f][4 * j : 4 * j + 4]) for j in range(len(bridge.joints))])
+        placed_frames.append(placed)
+        for name in apart:
+            j = bridge.index[name]
+            there = (float(theirs[f][j][0]), float(theirs[f][j][1]) + bridge.lift, float(theirs[f][j][2]))
+            apart[name] = max(apart[name], math.dist(placed[j], there))
     # Kimodo's 77-joint answer has six contacts (heel, toe, toe end per foot); ours has four.
     touching = np.asarray(output["foot_contacts"])[0].astype(np.float32)
     columns = [0, 1, 3, 4] if touching.shape[-1] == 6 else [0, 1, 2, 3]
@@ -651,16 +663,14 @@ def text_to_motion(params: dict) -> dict:
             "loaded_for_this_job": (S.encoder.encoder is not None) and not loaded,
             "load_seconds": S.encoder.load_seconds if (S.encoder.encoder is not None) and not loaded else 0.0,
         },
+        "our_joints_vs_kimodos_cm": {name: round(100.0 * d, 2) for name, d in apart.items()},
         "generate_seconds": round(took, 3),
         "seconds_of_motion": round(count / FPS, 3),
         "seconds_per_second_of_motion": round(took / (count / FPS), 3),
         "gpu_memory_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2),
     }
     if params.get("positions"):
-        result["positions"] = []
-        for f in range(count):
-            placed, _ = bridge.fk(tuple(root_rows[f]), [tuple(rotation_rows[f][4 * j : 4 * j + 4]) for j in range(len(bridge.joints))])
-            result["positions"].append([round(c, 5) for p in placed for c in p])
+        result["positions"] = [[round(c, 5) for p in placed for c in p] for placed in placed_frames]
     return result
 
 
