@@ -34,6 +34,12 @@ function Polish(brief: ObjectBrief, reference: image, files: PolishFiles) -> Pol
         the blender MCP tools. Work in small steps, print what you need to
         know from each script, and check your work with \`look\`.
 
+        Every tool call runs on Blender's main thread and freezes the person's
+        screen until it returns, so keep each one light. Check your work with
+        \`look\` using shading "material" or "solid" (instant). Use
+        shading "rendered" only once, for the final check. Keep \`look\`
+        images at max_size 512 unless you need fine detail.
+
         ${role("user")}
         TRELLIS.2 just turned the attached picture into a raw textured mesh.
         Make it into a clean, well-staged asset.
@@ -51,7 +57,7 @@ function Polish(brief: ObjectBrief, reference: image, files: PolishFiles) -> Pol
            ${files.mesh} with bpy.ops.import_scene.gltf. Join its meshes into
            one object named "${brief.name}". Report its triangle count.
         2. Orientation and size. Compare against the reference with
-           \`look\` (mode "angles"). Make sure it stands upright the way the
+           \`look\` (mode "angles", shading "material"). Make sure it stands upright the way the
            real object would and faces -Y (Blender's front). Scale it so its
            largest dimension is ${brief.size_m} m, then apply rotation and scale.
         3. Origin and placement: put the origin at the bottom center of the
@@ -70,10 +76,12 @@ function Polish(brief: ObjectBrief, reference: image, files: PolishFiles) -> Pol
            light, and a soft light-gray world. A camera at a three-quarter
            view slightly above, like the reference, framing the object with a
            margin. Render engine Cycles with the Metal GPU if available,
-           128 samples with denoising, 1200x1200.
-        7. Check: \`look\` through the camera with rendered shading. If it
-           looks wrong compared to the reference (orientation, materials,
-           lighting, framing), fix it and look again. At most 3 rounds.
+           64 samples with denoising, 1024x1024.
+        7. Check: \`look\` through the camera with shading "material" while
+           you adjust. If it looks wrong compared to the reference
+           (orientation, materials, lighting, framing), fix it and look
+           again, at most 3 rounds. Then one final \`look\` with shading
+           "rendered".
         8. Save:
            - render the camera view to ${files.render} (PNG)
            - export only the object, with modifiers applied, to ${files.glb}

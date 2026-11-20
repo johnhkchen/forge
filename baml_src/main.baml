@@ -4,6 +4,7 @@
 //   2. Codex draws the object                        (2_picture)
 //   3. TRELLIS.2 on RunPod lifts it into a mesh      (3_mesh)
 //   4. Claude finishes it in Blender over MCP        (4_polish)
+//   5. Sized versions: web, game, ...               (5_profiles)
 //
 // Each step writes its result into the run folder, and a step whose result is
 // already there is skipped, so `resume` picks a stopped run up where it left off.
@@ -45,5 +46,7 @@ function finish(run: Run, brief: ObjectBrief) -> string {
         let report = polish(brief, run);
         log.info(`blender: done, ${report.fixes.length()} fixes, match ${report.score}/5`);
     }
+    //# 5. Sized versions for the web, games, ...
+    shape(run);
     run.dir
 }

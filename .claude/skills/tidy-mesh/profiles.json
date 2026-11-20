@@ -1,0 +1,47 @@
+{
+  "hero": {
+    "about": "Close-up renders and printing. Keeps the full detail, tidied and with its materials baked so a GLB carries them.",
+    "steps": [
+      ["clean.py", {}],
+      ["decimate.py", { "target_triangles": 200000, "keep_original": false }],
+      ["bake.py", { "mode": "materials", "texture_size": 2048 }]
+    ],
+    "export": { "image_format": "AUTO", "draco": false }
+  },
+  "quads": {
+    "about": "Keep modeling it. Clean quad topology that follows the form, ready to edit or subdivide.",
+    "steps": [
+      ["clean.py", {}],
+      ["retopo.py", { "target_quads": 20000, "detail": 260 }],
+      ["bake.py", { "mode": "onto", "texture_size": 2048 }]
+    ],
+    "export": { "image_format": "AUTO", "draco": false }
+  },
+  "web": {
+    "about": "Web pages and product viewers. Light quads, 1024 textures with a normal map, compressed.",
+    "steps": [
+      ["clean.py", {}],
+      ["retopo.py", { "target_quads": 8000 }],
+      ["bake.py", { "mode": "onto", "texture_size": 1024 }]
+    ],
+    "export": { "image_format": "WEBP", "draco": true }
+  },
+  "game": {
+    "about": "Real-time games. A few thousand quads; the normal map carries the fine detail.",
+    "steps": [
+      ["clean.py", {}],
+      ["retopo.py", { "target_quads": 4000 }],
+      ["bake.py", { "mode": "onto", "texture_size": 1024 }]
+    ],
+    "export": { "image_format": "AUTO", "draco": false }
+  },
+  "mobile": {
+    "about": "Phones and AR. As light as it gets while keeping the silhouette.",
+    "steps": [
+      ["clean.py", {}],
+      ["retopo.py", { "target_quads": 2500, "min_part_quads": 120 }],
+      ["bake.py", { "mode": "onto", "texture_size": 512 }]
+    ],
+    "export": { "image_format": "WEBP", "draco": true }
+  }
+}

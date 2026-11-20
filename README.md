@@ -14,6 +14,7 @@ Each AI does the part it's good at:
 2. **Codex draws it.** You get one object, centered, on a plain gray background, which is the kind of picture image-to-3D handles well. (`baml_src/2_picture`)
 3. **TRELLIS.2 turns the picture into a textured mesh.** It runs on your own RunPod endpoint, which scales to zero, so it costs nothing while idle and has no daily cap. (`baml_src/3_mesh`, `worker/`)
 4. **Claude finishes it in Blender.** It fixes orientation, size, origin and normals, sets the materials, adds a ground plane, lights and a camera, then renders. It checks its own work against the picture as it goes. (`baml_src/4_polish`)
+5. **Sized versions for wherever it's going.** A background Blender rebuilds the mesh as clean quads and bakes the detail into textures, once per profile (`web` and `game` by default). (`baml_src/5_profiles`, `.claude/skills/tidy-mesh`)
 
 The whole pipeline is BAML (the new language, toolchain pinned in `baml.toml`). Steps 1 and 4 go through the `claude` CLI and step 2 through the `codex` CLI, so they use your subscriptions, not metered API keys.
 
@@ -25,6 +26,7 @@ Every run gets its own folder, `runs/<time>-<name>/`:
 | `image.png` | step 2 |
 | `mesh.glb`, `mesh.json` | step 3 (raw TRELLIS.2 output, plus timings) |
 | `render.png`, `final.glb`, `scene.blend`, `polish.json` | step 4 |
+| `profiles/<profile>.glb`, `.png`, `-wire.png`, `.json` | step 5 |
 
 A step is skipped if its file is already there, so `just resume runs/<folder>` picks up where a run stopped.
 
@@ -51,3 +53,18 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just brief "<idea>"` | only step 1, to try ideas |
 | `just check` | compile and run the offline tests |
 | `just health` | is the RunPod endpoint up? |
+| `just tidy <run folder> <profile>…` | make sized versions: `hero`, `quads`, `web`, `game`, `mobile` |
+
+## Profiles
+
+TRELLIS.2 hands back an even soup of ~300k triangles. The `tidy-mesh` skill (`.claude/skills/tidy-mesh/`) turns it into what a modeler would hand over: real parts only, quads that follow the form, and materials baked into textures a GLB can carry.
+
+| Profile | For | Mesh | Textures |
+|---|---|---|---|
+| `hero` | close-up renders, printing | 200k triangles, cleaned | 2048 |
+| `quads` | keep modeling it | ~20k quads | 2048 + normal map |
+| `web` | web pages, product viewers | ~8k quads, Draco | 1024 WebP + normal map |
+| `game` | real-time games | ~4k quads | 1024 + normal map |
+| `mobile` | phones, AR | ~2.5k quads, Draco | 512 WebP + normal map |
+
+In a Claude Code session here, ask for any of these ("make a game version of the kettle") and Claude uses the skill, either in the background or step by step in your open Blender.

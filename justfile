@@ -37,3 +37,12 @@ endpoint:
 # Is the TRELLIS.2 endpoint up? (workers, queue)
 health:
     curl -sS "https://api.runpod.ai/v2/$TRELLIS_ENDPOINT_ID/health" -H "Authorization: Bearer $RUNPOD_API_KEY"; echo
+
+blender_bin := env_var_or_default("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
+
+# Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile)
+tidy run +profiles:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    src="{{run}}/scene.blend"; [ -f "$src" ] || src="{{run}}/mesh.glb"
+    "{{blender_bin}}" -b --factory-startup -P scripts/tidy_profile.py -- "$src" "{{run}}/profiles" {{profiles}} 2>&1 | grep -E '^PROFILE|Error|Traceback'
