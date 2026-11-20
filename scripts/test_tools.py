@@ -717,8 +717,233 @@ def test_midpoly_others(ctx):
             shutil.copy(os.path.join(copy, "profiles", view), os.path.join(ctx["out"], "%s-%s" % (label, view)))
 
 
+# ---- skeletons and walking ----
+
+WALKERS = [("troll", "*cave-troll"), ("ninja", "*shadow-ninja"), ("pirate", "*stocky-pirate-deckhand"), ("lizardkin", "*lizardkin-warrior")]
+BODY_BONES = ["hips", "spine", "chest", "neck", "head"] + [b + s for s in ("_l", "_r") for b in
+              ("shoulder", "upper_arm", "forearm", "hand", "thigh", "shin", "foot", "toe")]
+SIZES = {5120: ("b", 1, 127.0), 5121: ("B", 1, 255.0), 5122: ("h", 2, 32767.0), 5123: ("H", 2, 65535.0), 5125: ("I", 4, 1.0), 5126: ("f", 4, 1.0)}
+WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16}
+
+
+def glb_rows(doc, rest, index):
+    """One accessor of a .glb as a list of tuples, read with plain Python (the walk files are not Draco-packed)."""
+    acc = doc["accessors"][index]
+    view = doc["bufferViews"][acc["bufferView"]]
+    code, size, full = SIZES[acc["componentType"]]
+    wide = WIDTHS[acc["type"]]
+    start = 8 + view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+    stride = view.get("byteStride") or size * wide
+    rows = [struct.unpack_from("<%d%s" % (wide, code), rest, start + i * stride) for i in range(acc["count"])]
+    if acc.get("normalized"):
+        rows = [tuple(v / full for v in row) for row in rows]
+    return rows
+
+
+def quat_times(a, b):
+    ax, ay, az, aw = a
+    bx, by, bz, bw = b
+    return (aw * bx + ax * bw + ay * bz - az * by, aw * by - ax * bz + ay * bw + az * bx,
+            aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz)
+
+
+def turn_degrees(rest, now):
+    """How far a joint has turned from its rest, as Blender's XYZ angles about the bone's own axes."""
+    import math
+    x, y, z, w = quat_times((-rest[0], -rest[1], -rest[2], rest[3]), now)
+    r20, r21, r22 = 2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)
+    r10, r00 = 2 * (x * y + w * z), 1 - 2 * (y * y + z * z)
+    return [math.degrees(v) for v in (math.atan2(r21, r22), math.asin(max(-1.0, min(1.0, -r20))), math.atan2(r10, r00))]
+
+
+def walk_file_checks(label, path, bones, tail):
+    """What a walking .glb must hold, read straight from the file: skeleton, weights, one looping animation inside the limits."""
+    doc, rest = blockout_recipe.read(path)
+    names = [n.get("name") for n in doc["nodes"]]
+    skin = doc["skins"][0]
+    joints = [names[j] for j in skin["joints"]]
+    check("%s: the file has one skeleton of %d bones with the shared names%s" % (label, len(joints), ", and tail_1..%d" % tail if tail else ""),
+          len(doc["skins"]) == 1 and sorted(joints) == sorted(bones), sorted(set(joints) ^ set(bones)))
+    skinned = [n for n in doc["nodes"] if "mesh" in n]
+    check("%s: every mesh in it is bound to that skeleton" % label, skinned and all(n.get("skin") == 0 for n in skinned))
+    points = bare = off = bad = 0
+    for mesh in doc["meshes"]:
+        for prim in mesh["primitives"]:
+            weights = glb_rows(doc, rest, prim["attributes"]["WEIGHTS_0"])
+            used = glb_rows(doc, rest, prim["attributes"]["JOINTS_0"])
+            points += len(weights)
+            bare += sum(1 for w in weights if sum(w) < 1e-4)
+            off += sum(1 for w in weights if abs(sum(w) - 1) > 1e-3)
+            bad += sum(1 for row, w in zip(used, weights) for j, x in zip(row, w) if x > 0 and j >= len(joints))
+    check("%s: all %d points carry weights that add up to 1, none left unbound" % (label, points), points and not bare and not off and not bad, (bare, off, bad))
+    clips = doc.get("animations", [])
+    check("%s: it holds one animation, named walk" % label, [a.get("name") for a in clips] == ["walk"], [a.get("name") for a in clips])
+    turning = {}
+    for channel in clips[0]["channels"]:
+        sampler = clips[0]["samplers"][channel["sampler"]]
+        keys = glb_rows(doc, rest, sampler["output"])
+        times = glb_rows(doc, rest, sampler["input"])
+        seam = max(abs(a - b) for a, b in zip(keys[0], keys[-1]))
+        if seam > 1e-4:
+            raise AssertionError("%s: %s %s does not end where it began (%.5f)" % (label, names[channel["target"]["node"]], channel["target"]["path"], seam))
+        if channel["target"]["path"] == "rotation":
+            turning[names[channel["target"]["node"]]] = (keys, times)
+    check("%s: every bone is keyed, and each one's last key equals its first (the loop has no seam)" % label, sorted(turning) == sorted(bones), sorted(set(bones) - set(turning)))
+    frames = len(turning["hips"][0])
+    check("%s: %d keys, one a frame, %.3f s" % (label, frames, turning["hips"][1][-1][0]), frames >= 13)
+    over, worst = 0, 0.0
+    for node in doc["nodes"]:
+        lim = (node.get("extras") or {}).get("limit_deg")
+        if not lim or node["name"] not in turning:
+            continue
+        for key in turning[node["name"]][0]:
+            for k, angle in enumerate(turn_degrees(node.get("rotation", [0, 0, 0, 1]), key)):
+                past = max(lim[2 * k] - angle, angle - lim[2 * k + 1])
+                worst = max(worst, past)
+                over += past > 0.2
+    limited = sum(1 for n in doc["nodes"] if (n.get("extras") or {}).get("limit_deg"))
+    check("%s: %d joints carry their limits in the file, and no key turns past one (furthest %.2f degrees over)" % (label, limited, max(worst, 0.0)),
+          limited == len(bones) - 1 and over == 0, (limited, over))
+    return doc
+
+
+def test_walk(ctx):
+    """rig.py, walk.py, animate.py: each character's low-poly version gets a skeleton read off its own build, and a walk worked out from it."""
+    with open(os.path.join(HERE, "test_gaits.json")) as f:
+        said = json.load(f)
+    gaits = {}
+    for label, pattern in WALKERS:
+        runs = sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), pattern, "profiles", "lowpoly.glb")))
+        if not runs:
+            print("    skipped: no %s run with a low-poly version" % pattern)
+            continue
+        traits = next(v for k, v in said.items() if k in runs[-1] and k != "about")
+        out = os.path.join(ctx["out"], "%s-walk.glb" % label)
+        rig, walk, moved, exported = blender(runs[-1], [
+            ("rig.py", {}),
+            ("walk.py", {"traits": {k: v for k, v in traits.items() if k != "why"}}),
+            ("animate.py", {}),
+            ("export.py", {"rig": True, "path": out, "materials": False}),
+        ], save=os.path.join(ctx["out"], "%s-walk.blend" % label))
+        tail = rig["measure"]["tail_bones"]
+        bones = BODY_BONES + ["tail_%d" % (i + 1) for i in range(tail)]
+        check("%s: %d bones, placed from the %s (elbow by %s, knee by %s, wrist by the %s)" % (
+              label, len(rig["bones"]), rig["placed_from"], rig["found_by"]["elbow"], rig["found_by"]["knee"], rig["found_by"]["wrist"]),
+              sorted(rig["bones"]) == sorted(bones), sorted(set(rig["bones"]) ^ set(bones)))
+        check("%s: every bone's head and middle is inside the mesh" % label, rig["bones_outside"] == [], rig["bones_outside"])
+        j, m = rig["joints"], rig["measure"]
+        check("%s: joints in order down each limb (shoulder %.2f, elbow %.2f, wrist %.2f out; hip %.2f, knee %.2f, ankle %.2f up), mirrored left to right" % (
+              label, j["upper_arm_l"][0], j["forearm_l"][0], j["hand_l"][0], j["thigh_l"][2], j["shin_l"][2], j["foot_l"][2]),
+              0 < j["upper_arm_l"][0] < j["forearm_l"][0] < j["hand_l"][0] and j["thigh_l"][2] > j["shin_l"][2] > j["foot_l"][2] > j["toe_l"][2] >= 0
+              and j["hand_r"] == [-j["hand_l"][0]] + j["hand_l"][1:] and j["hips"][2] < j["spine"][2] < j["chest"][2] < j["neck"][2] < j["head"][2])
+        check("%s: bound by %s (%s); no point left without a weight" % (label, rig["weights"], rig["why_not_automatic"] or "automatic weights held"),
+              all(s["unweighted"] == 0 for s in rig["skin"].values()) and rig["weights"] in ("automatic", "pieces"))
+        lim = rig["limits"]
+        check("%s: knees and elbows are one-way hinges, and a bulkier build is stiffer (flexibility %.2f)" % (label, m["flexibility"]),
+              lim["shin_l"] == [0.0, 150.0, 0.0, 0.0, 0.0, 0.0] and lim["forearm_l"][:2] == [0.0, 0.0] and lim["forearm_l"][4:] == [-150.0, 0.0]
+              and lim["forearm_r"][4:] == [0.0, 150.0] and 0.8 <= m["flexibility"] <= 1.15)
+        g, c = walk["gait"], moved["check"]
+        gaits[label] = dict(g, leg=m["hip_height"], arm=m["arm_long"], bulk=m["bulk"], height=m["height"])
+        check("%s walks %.2f m/s: %.2f m stride, %d steps a minute, feet %.2f m apart, bob %.1f cm, sway %.1f cm, arms swing %.0f degrees (hands travel %.2f m), lean %.0f degrees" % (
+              label, g["speed_m_s"], g["stride_m"], g["cadence_steps_per_min"], g["stance_width_m"], g["bob_cm"], g["sway_cm"], g["arm_swing_deg"], g["hand_travel_m"], g["lean_deg"]),
+              0.4 < g["speed_m_s"] < 2.2 and 0.5 * m["hip_height"] < g["stride_m"] < 2.2 * m["hip_height"])
+        check("%s: the stride and the loop agree, so the feet can't skate: %d frames at %.2f m/s is %.3f m" % (label, g["frames"], g["speed_m_s"], g["frames"] / 30 * g["speed_m_s"]),
+              abs(g["frames"] / 30 * moved["speed_m_s"] - g["stride_m"]) < 0.01)
+        check("%s: a planted foot slides %.3f cm a step" % (label, c["foot_slide_cm_per_step"]), c["foot_slide_cm_per_step"] < 0.3)
+        check("%s: nothing goes more than %.2f cm through the floor" % (label, c["through_floor_cm"]), c["through_floor_cm"] < 0.5)
+        check("%s: no joint outside its limits on any frame; clamped on the way: %s; heel lifted up to %.0f degrees to spare the ankle; hips lowered %.1f cm for reach" % (
+              label, moved["clamped"] or "nothing", moved["heel_lifted_for_ankle_deg"], moved["hips_lowered_cm"]),
+              c["limit_violations"] == 0 and sum(moved["clamped"].values()) <= 6 and moved["out_of_reach_cm"] == 0)
+        check("%s: the last frame is the first again" % label, c["loop_seam"] < 1e-5, c["loop_seam"])
+        check("%s: the exported file holds the mesh, the %d bones and the walk, and nothing else" % (label, exported["file"]["bones"]),
+              exported["only_this_object"] is True and exported["rig"]["animation"] == "walk", exported["file"]["names"])
+        walk_file_checks(label, out, bones, tail)
+        if tail:
+            check("%s: its %.2f m tail has %d bones that follow the hips, lifted %.0f degrees to clear the floor" % (label, m["tail_long"], tail, g["tail_rise_deg"]),
+                  tail >= 2 and g["tail_swing_deg"] > 0)
+    if "ninja" in gaits:
+        troll, ninja = gaits["troll"], gaits["ninja"]
+        check("the troll (bulk %.3f) stands wider than the ninja (bulk %.3f): %.2f m against %.2f m" % (troll["bulk"], ninja["bulk"], troll["stance_width_m"], ninja["stance_width_m"]),
+              troll["stance_width_m"] > 2 * ninja["stance_width_m"])
+        check("it steps slower (%d against %d steps a minute) and sways more of its height (%.1f%% against %.1f%%)" % (
+              troll["cadence_steps_per_min"], ninja["cadence_steps_per_min"], troll["sway_cm"] / troll["height"], ninja["sway_cm"] / ninja["height"]),
+              troll["cadence_steps_per_min"] < ninja["cadence_steps_per_min"] and troll["sway_cm"] / troll["height"] > 3 * ninja["sway_cm"] / ninja["height"])
+        check("its arms are %.2f of its leg length (the ninja's %.2f), so its hands travel %.2f m a swing against %.2f m" % (
+              troll["arm"] / troll["leg"], ninja["arm"] / ninja["leg"], troll["hand_travel_m"], ninja["hand_travel_m"]),
+              troll["hand_travel_m"] > 2 * ninja["hand_travel_m"])
+        check("the ninja crouches (%.1f cm on a %.2f m leg) and lifts its feet higher (%.1f cm against %.1f); the troll's heel barely leaves the ground (%.0f degrees against %.0f)" % (
+              ninja["crouch_cm"], ninja["leg"], ninja["foot_lift_cm"], troll["foot_lift_cm"], troll["heel_lift_deg"], ninja["heel_lift_deg"]),
+              ninja["foot_lift_cm"] > troll["foot_lift_cm"] and troll["heel_lift_deg"] < ninja["heel_lift_deg"] and ninja["bob_cm"] < troll["bob_cm"])
+
+
+def test_walk_profile(ctx):
+    """The walk profile, by the real runner: a copy of the troll's low-poly version comes back as lowpoly-walk.glb; a run with a recipe, gear and sockets (if one is there) keeps them all on the bones."""
+    with open(os.path.join(HERE, "test_gaits.json")) as f:
+        said = json.load(f)
+    newer = [os.path.dirname(os.path.dirname(p)) for p in sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), "*", "profiles", "midpoly.glb")))
+             if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(p)), "lowpoly_build.json"))]
+    for run in [ctx["troll"]] + newer[-1:]:
+        copy = os.path.join(ctx["out"], "walks", os.path.basename(run))
+        os.makedirs(os.path.join(copy, "profiles"), exist_ok=True)
+        versions = [v for v in ("lowpoly", "midpoly") if os.path.exists(os.path.join(run, "profiles", v + ".glb"))]
+        for name in ["brief.json", "lowpoly_build.json"] + ["profiles/%s%s" % (v, end) for v in versions for end in (".glb", ".json")]:
+            if os.path.exists(os.path.join(run, name)):
+                shutil.copy(os.path.join(run, name), os.path.join(copy, name))
+        traits = next((v for k, v in said.items() if k in run and k != "about"), None)
+        if traits:
+            with open(os.path.join(copy, "gait.json"), "w") as f:
+                json.dump(traits, f)
+        out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                              os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles"), "walk"], capture_output=True, text=True)
+        label = os.path.basename(run)[20:]
+        for version in versions:
+            path = os.path.join(copy, "profiles", version + "-walk")
+            if not os.path.exists(path + ".json"):
+                raise AssertionError("no %s-walk for %s:\n%s" % (version, label, (out.stdout + out.stderr)[-1500:]))
+            with open(path + ".json") as f:
+                record = json.load(f)
+            rig, c = record["rig"], record["animation"]["check"]
+            check("%s %s: walks at %.2f m/s, joints placed from the %s, traits %s" % (label, version, record["walk"]["gait"]["speed_m_s"], rig["placed_from"], record["walk"]["traits_from"]),
+                  rig["placed_from"] == ("recipe" if os.path.exists(os.path.join(copy, "lowpoly_build.json")) else "mesh")
+                  and record["walk"]["traits_from"] == ("given" if traits else "the build"))
+            check("%s %s: feet slide %.3f cm, %.2f cm through the floor, no limit broken, no bone outside the mesh" % (label, version, c["foot_slide_cm_per_step"], c["through_floor_cm"]),
+                  c["foot_slide_cm_per_step"] < 0.3 and c["through_floor_cm"] < 0.5 and c["limit_violations"] == 0 and rig["bones_outside"] == [])
+            doc = walk_file_checks("%s %s" % (label, version), path + ".glb", rig["bones"], rig["measure"]["tail_bones"])
+            names = [n.get("name") for n in doc["nodes"]]
+            if record["sockets"]:
+                held = {n["name"]: [names[c] for c in n.get("children", [])] for n in doc["nodes"]}
+                check("%s %s: each socket hangs on its bone (hands, head, chest, hips), so a prop there follows" % (label, version),
+                      "socket: hand_right" in held["hand_r"] and "socket: hand_left" in held["hand_l"] and "socket: head" in held["head"]
+                      and "socket: back" in held["chest"] and "socket: hip" in held["hips"])
+            if record["gear"]:
+                meshes = sorted(n["name"] for n in doc["nodes"] if "mesh" in n)
+                check("%s %s: the body and each gear piece are still meshes of their own, tagged, on the one skeleton: %s" % (label, version, ", ".join(meshes)),
+                      meshes == sorted(["body"] + ["gear: " + g["gear"] for g in record["gear"]])
+                      and all((n.get("extras") or {}).get("forge") in ("body", "gear") for n in doc["nodes"] if "mesh" in n))
+        if len(versions) == 2:
+            both = []
+            for version in versions:
+                with open(os.path.join(copy, "profiles", version + "-walk.json")) as f:
+                    both.append(json.load(f))
+            check("%s: the low-poly and mid-poly versions get the same skeleton and the same walk" % label,
+                  both[0]["rig"]["joints"] == both[1]["rig"]["joints"] and both[0]["walk"]["gait"]["frames"] == both[1]["walk"]["gait"]["frames"])
+
+
+def test_bone_names(ctx):
+    """bones.json: every bone rig.py makes has a SOMA and a Mixamo name, and every SOMA joint is accounted for."""
+    with open(os.path.join(TOOLS, "..", "bones.json")) as f:
+        table = json.load(f)
+    check("all %d body bones are in the table, each with a SOMA and a Mixamo name" % len(BODY_BONES),
+          sorted(table["bones"]) == sorted(BODY_BONES) and all(b.get("soma") and b.get("mixamo") for b in table["bones"].values()))
+    taken = [b["soma"] for b in table["bones"].values()] + [j for b in table["bones"].values() for j in b.get("soma_also", [])] + list(table["soma_unused"])
+    check("SOMA's 30 joints are each mapped, folded into a neighbor, or listed as unused", sorted(taken) == sorted(table["soma_joints"]) and len(table["soma_joints"]) == 30,
+          sorted(set(table["soma_joints"]) ^ set(taken)))
+    check("no two bones claim the same SOMA or Mixamo joint", len({b["soma"] for b in table["bones"].values()}) == len(BODY_BONES)
+          and len({b["mixamo"] for b in table["bones"].values()}) == len(BODY_BONES))
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
-         test_gear, test_denser, test_midpoly, test_midpoly_others]
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile]
 
 
 def main(argv):

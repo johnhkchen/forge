@@ -41,6 +41,10 @@ def profile_summary(run_dir, name):
              or steps.get("decimate.py") or {})
     bake = steps.get("bake.py") or {}
     export = record.get("export") or {}
+    # A character's low-poly and mid-poly versions may also come with a skeleton and a walk.
+    walking = read_json(os.path.join(run_dir, "profiles", name + "-walk.json")) or {}
+    gait = (walking.get("walk") or {}).get("gait") or {}
+    has_walk = os.path.exists(os.path.join(run_dir, "profiles", name + "-walk.glb"))
     return {
         "name": name,
         "about": record.get("about"),
@@ -57,6 +61,9 @@ def profile_summary(run_dir, name):
         # Low-poly and mid-poly characters: the gear that comes off, and where props attach.
         "gear": record.get("gear") or [],
         "sockets": record.get("sockets") or [],
+        "walk": "profiles/%s-walk.glb" % name if has_walk else None,
+        "gait": {k: gait.get(k) for k in ("speed_m_s", "stride_m", "cadence_steps_per_min", "stance_width_m", "bob_cm", "sway_cm")} if has_walk else None,
+        "bones": len((walking.get("rig") or {}).get("bones") or []) or None,
     }
 
 

@@ -221,5 +221,22 @@
         "draco": true
       }
     }
+  },
+  "walk": {
+    "about": "The same character with a skeleton and a walk of its own: bones placed from its build, joints that stop where a body's do, and a looping walk worked out from its leg length, bulk and manner. Gear and prop points follow the bones.",
+    "of": [
+      "lowpoly",
+      "midpoly"
+    ],
+    "rig": {
+      "weights": "auto"
+    },
+    "walk": {
+      "fps": 30
+    },
+    "export": {
+      "image_format": "WEBP",
+      "draco": false
+    }
   }
 }

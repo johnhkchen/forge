@@ -52,12 +52,20 @@ health:
 
 blender_bin := env_var_or_default("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 
-# Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile)
+# Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile midpoly lowpoly; walk adds a skeleton and a walk to the last two)
 tidy run +profiles:
     #!/usr/bin/env bash
     set -euo pipefail
     src="{{run}}/scene.blend"; [ -f "$src" ] || src="{{run}}/mesh.glb"
     "{{blender_bin}}" -b --factory-startup -P scripts/tidy_profile.py -- "$src" "{{run}}/profiles" {{profiles}} 2>&1 | grep -E '^PROFILE|Error|Traceback'
+
+# Only ask Opus how a run's character walks (weight, stealth, swagger, stiffness); saves nothing
+gait run:
+    baml run how_it_walks -- --dir "{{run}}"
+
+# Picture a walking .glb as a strip of poses (view: side, front or quarter)
+walk-strip file out view="side":
+    "{{blender_bin}}" -b --factory-startup -P scripts/walk_strip.py -- "{{file}}" "{{out}}" --view {{view}} 2>&1 | grep -E '^STRIP|Error|Traceback'
 
 # For a run from before recipes were kept: rebuild its block-out from the transcript in a background Blender and save the recipe, so `just tidy <run> midpoly` works
 recipe run:
