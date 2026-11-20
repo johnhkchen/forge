@@ -80,6 +80,7 @@ function facts(run, v) {
   if (v.hero && v.hero_seconds) rows.push(["Hero shot", `${Math.round(v.hero_seconds)} s`, v.hero_mixed ? "two cuts: all our poses, or some beats from a sentence" : v.hero_prop ? `with its ${v.hero_prop}` : "from poses of our own"]);
   if (v.walk && v.cloth_bones) rows.push(["Loose cloth", `${v.cloth_bones} bones`, "it hangs and swings as the character moves"]);
   if (v.walk && v.gait?.speed_m_s) rows.push(["Walks at", `${v.gait.speed_m_s} m/s`, `${v.gait.cadence_steps_per_min} steps a minute · ${v.gait.stride_m} m stride`]);
+  if (v.run && v.run_gait?.speed_m_s) rows.push(["Runs at", `${v.run_gait.speed_m_s} m/s`, `${v.run_gait.steps_per_minute} steps a minute · made from one sentence`]);
   return rows;
 }
 
@@ -100,12 +101,12 @@ function objectPage(run, wanted) {
   const wireBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.wire), onclick: () => { state.wire = !state.wire; wireBtn.setAttribute("aria-pressed", String(state.wire)); viewer?.setWire(state.wire); } }, "Wireframe");
 
   const socketsBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => { state.sockets = !state.sockets; socketsBtn.setAttribute("aria-pressed", String(state.sockets)); viewer?.setSockets(state.sockets); } }, "Where props go");
-  // One clip at a time. Pressed in, the character walks on the spot, or plays a hero shot from start
+  // One clip at a time. Pressed in, the character walks or runs on the spot, or plays a hero shot from start
   // to end, over and over, with the view following it; let go, it stands still in its T-pose.
   // A character can have two cuts of its hero shot: every beat from our own poses, or some beats
   // made from a sentence.
   const clipBtn = (clip, label) => h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.clip === clip), onclick: () => { state.clip = state.clip === clip ? null : clip; showClips(); render(); } }, label);
-  const clipBtns = { walk: clipBtn("walk", "Walk"), hero: clipBtn("hero", "Hero"), hero_mixed: clipBtn("hero_mixed", "Hero: text + poses") };
+  const clipBtns = { walk: clipBtn("walk", "Walk"), run: clipBtn("run", "Run"), hero: clipBtn("hero", "Hero"), hero_mixed: clipBtn("hero_mixed", "Hero: text + poses") };
   function showClips() {
     for (const [clip, btn] of Object.entries(clipBtns)) btn.setAttribute("aria-pressed", String(state.clip === clip));
   }
@@ -154,7 +155,7 @@ function objectPage(run, wanted) {
       label: panes.length > 1 ? (x === raw ? "Before" : `After · ${VERSION_NAMES[x.name]}`) : VERSION_NAMES[x.name],
       glb: file(run, x.glb),
       walk: playing(x) ? file(run, x[playing(x)]) : null,
-      follow: Boolean(playing(x)) && playing(x) !== "walk",
+      follow: Boolean(playing(x)) && playing(x) !== "walk" && playing(x) !== "run",
       edges: x.edges ? file(run, x.edges) : null,
       onTriangles: x === raw ? (n) => { raw.triangles = n; if (state.version === raw) showFacts(); } : null,
     })), state.wire, state.off, state.sockets);
@@ -175,7 +176,7 @@ function objectPage(run, wanted) {
     h("h1", {}, run.name),
     run.description ? h("p", { class: "lede" }, run.description) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips),
-    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, clipBtns.walk, clipBtns.hero, clipBtns.hero_mixed, socketsBtn)),
+    h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn)),
     gearRow,
     stage,
     factsBox,

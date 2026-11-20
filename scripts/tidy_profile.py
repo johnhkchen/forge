@@ -29,6 +29,12 @@ versions already in OUT_DIR and writes each again with a skeleton and a walk,
 reads the run's gait.json (how the character carries itself, from Opus) and
 lowpoly_build.json (the block-out's recipe, to place the joints) when they
 are there, and manages without either.
+
+The "run" profile is the same again with a looping run, <version>-run.glb and
+<version>-run.json. The run is not worked out here: it is a clip made from a
+sentence by Kimodo on the motion worker and cut into a loop
+(scripts/motion/run_clip.py leaves it in the run's run/loop.json; `just runs`
+does all of it). With no clip there, the profile is skipped with a note.
 """
 import json
 import os
@@ -707,7 +713,62 @@ def walk(source, out_dir, profile, spec):
             gait["cadence_steps_per_min"], check["foot_slide_cm_per_step"], record["bytes"] / 1e6, record["seconds"], glb))
 
 
+def running(source, out_dir, profile, spec):
+    """Each block-out version in OUT_DIR again, with a skeleton and the run cut from this character's clip (run/loop.json)."""
+    run_dir = os.path.dirname(source)
+    loop_file = os.path.join(run_dir, "run", "loop.json")
+    if not os.path.exists(loop_file):
+        # Not a failure: the clip comes from Kimodo on the motion worker, and that may not be reachable (yet).
+        print("PROFILE run skipped: Kimodo not available (no run clip at %s; `just runs` makes it once the motion worker can reach Kimodo)" % loop_file)
+        return None
+    sys.path.insert(0, os.path.join(ROOT, "scripts", "motion"))
+    import apply_motion
+    import run_clip
+    from soma import Skeleton
+    with open(loop_file) as f:
+        loop = json.load(f)
+    plain, converted = run_clip.loop_to_plain(loop, Skeleton.load(), spec["clip"])
+    ask = {}
+    if os.path.exists(os.path.join(run_dir, "run", "ask.json")):
+        with open(os.path.join(run_dir, "run", "ask.json")) as f:
+            ask = json.load(f)
+    recipe = read_recipe(run_dir)
+    versions = [v for v in spec["of"] if os.path.exists(os.path.join(out_dir, v + ".glb"))]
+    if not versions:
+        raise Skip("no %s in %s yet: the run is added to those" % (" or ".join(v + ".glb" for v in spec["of"]), out_dir))
+    cut = ("prompt", "made_by", "frames", "seconds", "strides", "stride_frames", "steps_per_minute", "first_frame", "last_frame", "blend_frames", "seam_before_blend")
+    for version in versions:
+        started = time.time()
+        made = {}
+        if os.path.exists(os.path.join(out_dir, version + ".json")):
+            with open(os.path.join(out_dir, version + ".json")) as f:
+                made = json.load(f)
+        name = "%s-%s" % (version, spec["clip"])
+        record = {"profile": name, "about": spec["about"], "source": os.path.join(out_dir, version + ".glb"), "of": version,
+                  "clip": {k: loop["loop"].get(k) for k in cut}, "from_soma": converted}
+        try:  # the shared steps: clothes, skeleton, the motion fitted and baked, loose cloth swung
+            record.update(apply_motion.fit(record["source"], plain, spec["clip"], recipe, spec, tail=True, echo=print))
+        except ValueError as why:  # not a T-pose character: nothing to fit a skeleton to
+            raise Skip(str(why))
+        glb = os.path.join(out_dir, name + ".glb")
+        apply_motion.write(record, glb, materials=not made.get("flat_colors"), export=spec["export"], echo=print)
+        moved, check = record["animation"], record["animation"]["check"]
+        # What the gallery says about it, in one place: how fast, how many steps, and the sentence it came from.
+        record["run"] = {"speed_m_s": moved["speed_m_s"], "steps_per_minute": loop["loop"]["steps_per_minute"], "loop_s": moved["seconds"],
+                         "frames": moved["frames"], "asked_speed_m_s": ask.get("speed_mps"), "froude": ask.get("froude"), "prompt": loop["loop"].get("prompt")}
+        record["gear"], record["sockets"] = made.get("gear") or [], made.get("sockets") or []
+        record["seconds"] = round(time.time() - started, 1)
+        with open(os.path.join(out_dir, name + ".json"), "w") as f:
+            json.dump(record, f, indent=2)
+        cloth = len((record.get("cloth") or {}).get("cloth_bones") or [])
+        print("PROFILE %s: %d bones%s, runs %.2f m/s at %d steps a minute, a loop of %d frames, feet slide %.2f cm a step, %d turns outside a limit, seam %s, %.2f MB, %.0fs -> %s" % (
+            name, len(record["rig"]["bones"]), " and %d for loose cloth" % cloth if cloth else "", moved["speed_m_s"], loop["loop"]["steps_per_minute"],
+            moved["frames"], check["foot_slide_cm_per_step"], check["limit_violations"], check["loop_seam"], record["bytes"] / 1e6, record["seconds"], glb))
+
+
 def make(source, out_dir, profile, spec):
+    if spec.get("clip"):
+        return running(source, out_dir, profile, spec)
     if spec.get("of"):
         return walk(source, out_dir, profile, spec)
     started = time.time()

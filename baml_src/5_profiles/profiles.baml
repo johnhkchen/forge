@@ -32,11 +32,14 @@ function missing_profiles(run: Run, wanted: string[]) -> string[] {
     })
 }
 
-/// The file that shows a profile was made. The walk has no file of its own
-/// name: it writes one per block-out version, the low-poly one first.
+/// The file that shows a profile was made. The walk and the run have no file
+/// of their own name: each writes one per block-out version, the low-poly one
+/// first.
 function profile_file(profile: string) -> string {
     if (profile == WALK) {
         "profiles/lowpoly-walk.glb"
+    } else if (profile == RUN) {
+        "profiles/lowpoly-run.glb"
     } else {
         `profiles/${profile}.glb`
     }
@@ -99,8 +102,9 @@ function shape(run: Run, wanted: string[] = DEFAULT_PROFILES) -> void {
     }
     // A character the skeleton can't be fitted to (not standing in a T-pose,
     // say) keeps its other versions: the runner skips the walk with a note.
+    // The same goes for the run, which also needs a clip that may not be there.
     let required = todo.filter((p) -> {
-        p != WALK
+        p != WALK && p != RUN
     });
     if (!out.ok() || missing_profiles(run, required)) {
         let tail = lines.slice(baml.Int.max(0, lines.length() - 15), lines.length()).join("\n");

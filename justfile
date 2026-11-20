@@ -27,6 +27,7 @@ check:
     baml test
     python3 scripts/motion/author_poses.py --check | tail -1
     python3 scripts/motion/test_timeline.py | tail -1
+    python3 scripts/motion/test_run_clip.py | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -110,7 +111,7 @@ poses:
 
 blender_bin := env_var_or_default("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 
-# Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile midpoly lowpoly; walk adds a skeleton and a walk to the last two)
+# Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile midpoly lowpoly; walk adds a skeleton and a walk to the last two; run adds a run, once `just runs` has made its clip)
 tidy run +profiles:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -120,6 +121,14 @@ tidy run +profiles:
 # Only ask Opus how a run's character walks (weight, stealth, swagger, stiffness); saves nothing
 gait run:
     baml run how_it_walks -- --dir "{{run}}"
+
+# A looping run for every character in a folder of runs (each one with a gait.json): one sentence each to Kimodo on the motion worker, cut into a loop, played on the low-poly and mid-poly versions. Says "run skipped: Kimodo not available" and stops cleanly if Kimodo can't be reached
+runs dir="runs":
+    baml run runs -- --dir "{{dir}}"
+
+# Only show what each character would be asked to run like: its sentence and speed (sends nothing; writes run/ask.json and the request)
+run-asks dir="runs":
+    python3 scripts/motion/run_clip.py "{{dir}}"/*/ | grep -E '^RUN'
 
 # Picture a walking .glb as a strip of poses (view: side, front or quarter)
 walk-strip file out view="side":

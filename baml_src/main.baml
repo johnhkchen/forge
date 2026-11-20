@@ -7,6 +7,7 @@
 //      finds its parts (lid, knob, spout...) and blocks out a low-poly version
 //   5. Sized versions: web, game, ...               (5_profiles)
 //      a character also gets a skeleton and a walk   (7_walk)
+//      and a run, when Kimodo can be reached         (9_run)
 //   6. Only when asked: a character's props, each a small run of its own (6_props)
 //
 // Each step writes its result into the run folder, and a step whose result is
@@ -87,6 +88,10 @@ function finish(run: Run, brief: ObjectBrief, props: string = "none") -> string 
         log.info(`walk: ${traits.why}`);
     }
     shape(run, wanted = versions);
+    //# 5c. A run beside the walk, when the sentence-to-motion model can be reached (never stops the run)
+    if (versions.includes(WALK)) {
+        run_for(run);
+    }
     //# 6. Props: each held thing as a small run of its own (off unless asked)
     if (wanted != "none") {
         make_props(brief, run, wanted);

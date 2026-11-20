@@ -48,6 +48,9 @@ def profile_summary(run_dir, name):
     # ...and with a hero shot: a longer clip from poses of our own, with its prop (scripts/motion/apply_shot.py).
     hero = read_json(os.path.join(run_dir, "profiles", name + "-hero.json")) or {}
     has_hero = os.path.exists(os.path.join(run_dir, "profiles", name + "-hero.glb"))
+    # ...and with a run: a loop cut from a clip made from one sentence (scripts/motion/run_clip.py, the `run` profile).
+    running = (read_json(os.path.join(run_dir, "profiles", name + "-run.json")) or {}).get("run") or {}
+    has_run = os.path.exists(os.path.join(run_dir, "profiles", name + "-run.glb"))
     # ...and maybe a second cut of it, where some beats were made from a sentence instead of our poses.
     has_mixed = os.path.exists(os.path.join(run_dir, "profiles", name + "-hero-mixed.glb"))
     return {
@@ -71,6 +74,8 @@ def profile_summary(run_dir, name):
         "bones": len((walking.get("rig") or {}).get("bones") or []) or None,
         # Loose cloth (a kilt, a hood) has bones of its own that hang and swing.
         "cloth_bones": len((walking.get("cloth") or {}).get("cloth_bones") or []) or None,
+        "run": "profiles/%s-run.glb" % name if has_run else None,
+        "run_gait": {k: running.get(k) for k in ("speed_m_s", "steps_per_minute", "loop_s")} if has_run else None,
         "hero": "profiles/%s-hero.glb" % name if has_hero else None,
         "hero_mixed": "profiles/%s-hero-mixed.glb" % name if has_mixed else None,
         "hero_seconds": (hero.get("animation") or {}).get("seconds") if has_hero else None,

@@ -238,5 +238,20 @@
       "image_format": "WEBP",
       "draco": false
     }
+  },
+  "run": {
+    "about": "The same character with its skeleton and a looping run on the spot. The run comes from one sentence about how this character runs, made into motion by NVIDIA Kimodo and cut where two strides match; its feet stay planted, its joints stay inside their limits, and loose cloth swings at running speed. Made only when the run clip is there (just runs).",
+    "clip": "run",
+    "of": [
+      "lowpoly",
+      "midpoly"
+    ],
+    "rig": {
+      "weights": "auto"
+    },
+    "export": {
+      "image_format": "WEBP",
+      "draco": false
+    }
   }
 }

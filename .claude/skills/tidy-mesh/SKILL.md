@@ -1,6 +1,6 @@
 ---
 name: tidy-mesh
-description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and for clothes that sit on the body, move with it and swing (drape, cloth, swing).
+description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and a run (the run profile), and for clothes that sit on the body, move with it and swing (drape, cloth, swing).
 ---
 
 # tidy-mesh
@@ -314,7 +314,8 @@ cast under a name of its own (`just cast <shot> <run> <prop run> hero-mixed`).
 `scripts/motion/soma_to_plain.py` renames it with `bones.json`,
 turns it into the same plain form, and `scripts/motion/apply_shot.py` sends
 it through the same four steps (`just cast <shot> <run> [prop run]`; README,
-"Shots"). It looks joints up by name, so a skeleton with more joints than
+"Shots"). A character's run is a third: one sentence, made by Kimodo, cut
+into a loop (see "Running" below). It looks joints up by name, so a skeleton with more joints than
 the table needs is fine. Three things it does that the walk has no need of:
 our elbows are one-way hinges, so the two arm bones are set from where the
 shoulder, elbow and wrist are rather than from the model's own share of
@@ -363,10 +364,127 @@ What is weak, most visible first:
   legs, arms held out, and pieces built along the axes. A head is "the
   lowest sizeable piece above the arms"; a cape that hangs behind the hips
   could be taken for a tail.
-- **One gait.** No start, stop, turn or run, no uneven ground, and the walk
+- **One gait.** No start, stop or turn (a run is a clip of its own: see
+  "Running"), no uneven ground, and the walk
   stays in place (the speed is in `<version>-walk.json` for whoever moves
   the character).
 - **Hands and face don't move**: one bone per hand, none in the face.
+
+## Running: a loop cut from a sentence
+
+The walk is worked out from the build. The run is asked for in words and
+then treated like any other motion from outside: the `run` profile writes
+`lowpoly-run.glb` / `midpoly-run.glb` (and a `.json` each) beside the walk
+files, with the same skeleton, gear, sockets and limits and one looping
+animation, `run`, on the spot.
+
+    just runs                                 # every character in runs/ with a gait.json
+    just run-asks                             # only show each one's sentence and speed; sends nothing
+    just tidy runs/<run folder> run           # only the Blender part, once the clip is there
+    just walk-strip runs/<run>/profiles/lowpoly-run.glb strip.png side
+
+**The sentence and the speed** (`scripts/motion/run_clip.py`). Both come
+from the brief and the four traits in `gait.json`. Kimodo's sentences are
+about "a person", so the brief gives a word on the build (huge, stocky, tall
+lanky) and the traits pick one manner of running:
+
+| | Sentence | Speed |
+|---|---|---|
+| Cave troll | A huge person runs forward in a slow, heavy, lumbering run, with pounding steps and a stiff upper body. | 2.53 m/s |
+| Lizardkin | A stocky person runs forward at a steady pace with heavy, solid steps. | 2.86 |
+| Pirate | A stocky person runs forward with a confident swagger, shoulders rolling, with heavy steps. | 2.97 |
+| Roosevelt | A stocky person runs forward proudly, upright with the chest out, with firm, strong steps. | 3.26 |
+| Ninja | A stocky person runs forward stealthily in a low crouch, with light, quick, quiet steps. | 3.42 |
+| Lincoln | A tall lanky person runs forward at an easy pace with long, loose, loping strides. | 3.79 |
+
+The speed follows the leg, as the walk's does: a Froude number (speed
+squared / gravity x leg length) of about 1.7 for an easy run, brought well
+down by weight (measured bulk and the `weight` trait, half each) and a
+little by stiffness and stealth, never under 0.55, where running turns back
+into walking. The clip is made at the model's own size and scaled to the
+character by its leg, so the path Kimodo is given runs at that speed times
+(the model's leg / the character's leg).
+
+**The job.** One Kimodo job carries up to eight sentences, made one after
+the other as one long motion along one straight line: six seconds each,
+slowest first, the line's speed changing over 24 frames where one stretch
+runs into the next. So six characters are one job. Each character's ask
+(sentence, speed, length, seed) has a fingerprint; its clip
+(`<run>/run/clip.json`) is made again only when that changes, and then only
+that character is sent. Requests and answers are kept by the hash of their
+content in `runs/.run-cache/`, like a shot's. `--batch 1` on `run_clip.py`
+sends one job per character instead.
+
+**The cut.** The first 45 frames of a stretch (the model settling into the
+new pace) and the last 6 are never used. In between: the stride's length
+is read off the legs (how far one toe is ahead of the other, compared with
+itself later); then every pair of frames a whole number of strides apart
+(one to three, give or take 8%) is scored by how unlike the two are, in
+where each joint is, how fast it is moving, and which feet are down. The
+best pair is the cut; two strides or more are preferred unless a single
+stride matches a fifth better. The last 8 frames are eased onto the frames
+that led into the first, so the motion arrives at the seam already moving
+the right way, and the last frame is made the first exactly. The average
+travel over the ground comes out, so it runs in place; the speed is kept
+(`<run>/run/loop.json`, and `run` in `<version>-run.json`).
+
+**Onto the character.** `scripts/motion/apply_motion.py` is the one way a
+motion from elsewhere gets onto a character; a shot (`apply_shot.py`) and
+the run both go through it: drape, rig, cloth, animate, whatever the rig
+asks for next (swing.py), export. For the run, feet are planted on the
+loop played three times over the ground (so a foot down across the seam is
+planted the same at both ends), the middle round is kept, and its travel
+is taken out again: a planted foot then slides straight back at exactly
+the run's speed, which is what animate.py holds it to. swing.py is told
+that speed, so loose cloth is blown back harder than in the walk. A tail,
+which no motion model has, gets its motion here as in the walk: each bone
+turns as the hips did two frames earlier, more toward the tip, and the
+tail is lifted clear of the ground.
+
+**When Kimodo can't be reached** (no endpoint, or the account behind the
+worker's Hugging Face token has not been given Meta's Llama 3 yet): `just
+runs` says `run skipped: Kimodo not available` with the worker's reason and
+ends well; the `run` profile with no clip says the same and writes
+nothing; a pipeline run logs it and carries on. Nothing is half-made.
+
+Tried without Kimodo. `python3 scripts/motion/test_run_clip.py` (in `just
+check`) tests the sentence and speed, the job, the cache, the cut and the
+run on the spot against a pretend worker that makes a stick-figure run.
+`just test-tools` runs the `run` profile for real on the troll and the
+lizardkin with that stick figure. And once, by hand, a jog MotionBricks
+made between our own two sprint poses (154 frames, 2.2 m/s) was cut and
+played on all six characters, to see the whole path with a model's motion
+in it. That jog is a test, not anyone's run, and none of it is kept:
+
+| TEST jog | Troll | Pirate | Ninja | Lizardkin | Lincoln | Roosevelt |
+|---|---|---|---|---|---|---|
+| Loop | 68 frames, 2 strides | same | same | same | same | same |
+| Ends apart before easing | 0.01 cm | same | same | same | same | same |
+| Speed on the character | 2.36 m/s | 1.82 | 2.19 | 2.11 | 2.38 | 1.97 |
+| Planted foot slides, a step | 15.1 cm | 0.003 | 0.004 | 0.04 | 0.004 | 0.003 |
+| Through the floor | 2.9 cm | 1.1 | 1.3 | 2.1 | 1.4 | 1.2 |
+| Turns outside a limit | 0 | 0 | 0 | 0 | 0 | 0 |
+| Loop seam | 0 | 0 | 0 | 0 | 0 | 0 |
+| Cloth bones: outside a limit, in a leg, seam | none | none | 8 (low poly), 4 (mid): 0, 0 cm, 0 | none | none | none |
+
+What is weak, most likely to show first:
+
+- **No real run has been made yet.** Everything above is tested on a stick
+  figure and one test jog. What Kimodo makes of each sentence, and whether
+  six sentences in one job hold their line and their pace, is unseen.
+- **Short legs and long strides.** The troll's thighs reach their limits in
+  the test jog's 1.3 m steps and its planted feet slide 15 cm. A lumbering
+  run has shorter steps, but if its real clip does the same, the cure is in
+  the ask (slower, or "short steps" in the sentence), not here.
+- **Toes dip.** A foot pushing off goes 1 to 3 cm through the floor.
+- **A loop is one or two strides.** Seen for long, it repeats. The cut
+  picks the best match; it does not vary it.
+- **Arms.** Our elbows are one-way hinges and the forearms are held to
+  their limits on most frames of a run; no limit is broken, but an arm
+  pumps a little flatter than the model drew it.
+- **The sentence is a recipe, not a reading.** It is put together from
+  trait bands; two characters with like traits get like sentences (the
+  pirate and Roosevelt are one band apart).
 
 ## Clothes that sit on the body and move with it
 
@@ -742,6 +860,7 @@ just tidy runs/<run folder> web game        # one or more profiles
 just tidy runs/<run folder> hero quads web game mobile
 just tidy runs/<run folder> lowpoly midpoly     # need the block-out (lowpoly.glb); midpoly also its recipe
 just tidy runs/<run folder> walk                # needs lowpoly (and midpoly) made first; adds <version>-walk.glb
+just tidy runs/<run folder> run                 # needs the run clip too (`just runs` makes it); adds <version>-run.glb
 ```
 
 Each profile's `<profile>.json` records `shape` (from match.py): how far the
@@ -849,7 +968,8 @@ written apart with its sockets; and the `midpoly` profile made for real on
 copies of the troll, lizardkin, pirate and ninja runs (the last three from
 their recorded block-outs in `scripts/test_blockouts.json`); and the walk: each of the four
 rigged, walked and exported, with the foot slide, floor, limits, loop and
-weights checked both in Blender and in the written file; and the clothes:
+weights checked both in Blender and in the written file; the run profile, skipped with no clip
+and made for real from a stick-figure clip (troll, lizardkin); and the clothes:
 drape.py on the troll, then Lincoln, the ninja, Roosevelt, the troll and
 the pirate made low poly, mid poly and walking by the real runner and
 measured with `scripts/cloth_check.py` over every frame (skin through

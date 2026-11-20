@@ -9,8 +9,10 @@ drape.py lays the clothes on the body, rig.py puts the skeleton in, cloth.py
 gives the clothes the body's weights and loose cloth its bones, animate.py
 fits the motion to this character, keeps planted feet planted, clamps every
 joint to its limits, bakes it and measures it, swing.py makes the loose cloth
-hang and swing with it, and export.py writes one .glb. Nothing here is a second way to
-animate a character: this file only feeds animate.py a different motion.
+hang and swing with it, and export.py writes one .glb. Those steps are
+apply_motion.py's, which a character's run goes through too. Nothing here is a
+second way to animate a character: this file only feeds animate.py a different
+motion, and adds the prop.
 
 For each version it writes into the shot folder:
     <version>-<name>.glb    the character, rigged, with the action <name>
@@ -36,37 +38,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
-import blockout_recipe  # noqa: E402
+import apply_motion  # noqa: E402
 import soma_to_plain  # noqa: E402
 from soma import Skeleton  # noqa: E402
 
-SCRIPTS = os.path.join(REPO, ".claude", "skills", "tidy-mesh", "scripts")
 # Where each version of a character is read from, inside its run folder. The
 # low-poly one is the block-out itself: that file has the gear as separate
 # meshes and the sockets.
 VERSION_FILES = {"lowpoly": "lowpoly.glb", "midpoly": os.path.join("profiles", "midpoly.glb")}
 # Which of a prop's versions goes with which version of the character.
 PROP_FILES = {"lowpoly": os.path.join("profiles", "lowpoly.glb"), "midpoly": os.path.join("profiles", "game.glb")}
-
-
-def run_script(name, params):
-    """Run a tidy-mesh skill script with its PARAMS updated, as the profile runner does, and return the JSON it printed."""
-    with open(os.path.join(SCRIPTS, name)) as f:
-        source = f.read()
-    head, _, tail = source.partition("\nimport ")
-    namespace = {"__name__": "__main__"}
-    exec(head, namespace)
-    namespace["PARAMS"].update(params)
-    captured = []
-
-    def capture(*args, **kwargs):
-        text = " ".join(str(a) for a in args)
-        if text.startswith("RESULT "):
-            captured.append(json.loads(text[len("RESULT "):]))
-
-    namespace["print"] = capture
-    exec("import " + tail, namespace)
-    return captured[-1] if captured else None
 
 
 def sword_shape(obj):
@@ -254,19 +235,9 @@ def main():
         if not os.path.exists(source):
             print("APPLY %s: skipped, no %s" % (version, source))
             continue
-        bpy.ops.wm.read_factory_settings(use_empty=True)
-        bpy.context.scene.render.fps = plain["fps"]
-        bpy.ops.import_scene.gltf(filepath=source)
+        # The shared steps: clothes, skeleton, the motion fitted and baked, loose cloth swung (apply_motion.py).
         record = {"version": version, "motion": name, "character": source, "shot": shot, "from_soma": converted}
-        dressed = any(o.type == "MESH" and o.get("forge") == "gear" for o in bpy.context.scene.objects)
-        if dressed:  # clothes onto the body, and the body faces they hide (a version draped when it was made is only read)
-            record["drape"] = run_script("drape.py", {"pieces": recipe["pieces"] if recipe else None, "rings": False})
-        record["rig"] = run_script("rig.py", {"recipe": recipe["pieces"] if recipe else None})
-        if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
-            record["cloth"] = run_script("cloth.py", {})
-        record["animation"] = run_script("animate.py", {"motion": plain, "action": name, "check": True})
-        for script in record["animation"].get("then", []):  # what the rig asks for after any bake: swing.py, for cloth bones
-            record[script[:-3]] = run_script(script, {})
+        record.update(apply_motion.fit(source, plain, name, recipe))
         rig = bpy.data.objects[record["rig"]["rig"]]
         scale = record["rig"]["measure"]["hip_height"] / converted["soma_hip_height_m"]
         record["size_against_soma"] = round(scale, 4)
@@ -282,11 +253,7 @@ def main():
         if os.path.exists(made):
             with open(made) as f:
                 flat = bool(json.load(f).get("flat_colors"))
-        record["export"] = run_script("export.py", {"rig": True, "path": glb, "image_format": "WEBP", "draco": False, "materials": not flat, "check": True})
-        doc, rest = blockout_recipe.read(glb)
-        if blockout_recipe.tidy_names(doc):
-            blockout_recipe.write(glb, doc, rest)
-        record["bytes"] = os.path.getsize(glb)
+        apply_motion.write(record, glb, materials=not flat)
         with open(os.path.join(shot, "%s-%s.json" % (version, name)), "w") as f:
             json.dump(record, f, indent=2)
         a, c = record["animation"], record["animation"]["check"]

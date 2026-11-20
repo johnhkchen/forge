@@ -776,7 +776,7 @@ def turn_degrees(rest, now):
     return [math.degrees(v) for v in (math.atan2(r21, r22), math.asin(max(-1.0, min(1.0, -r20))), math.atan2(r10, r00))]
 
 
-def walk_file_checks(label, path, bones, tail):
+def walk_file_checks(label, path, bones, tail, clip="walk"):
     """What a walking .glb must hold, read straight from the file: skeleton, weights, one looping animation inside the limits."""
     doc, rest = blockout_recipe.read(path)
     names = [n.get("name") for n in doc["nodes"]]
@@ -797,7 +797,7 @@ def walk_file_checks(label, path, bones, tail):
             bad += sum(1 for row, w in zip(used, weights) for j, x in zip(row, w) if x > 0 and j >= len(joints))
     check("%s: all %d points carry weights that add up to 1, none left unbound" % (label, points), points and not bare and not off and not bad, (bare, off, bad))
     clips = doc.get("animations", [])
-    check("%s: it holds one animation, named walk" % label, [a.get("name") for a in clips] == ["walk"], [a.get("name") for a in clips])
+    check("%s: it holds one animation, named %s" % (label, clip), [a.get("name") for a in clips] == [clip], [a.get("name") for a in clips])
     turning = {}
     for channel in clips[0]["channels"]:
         sampler = clips[0]["samplers"][channel["sampler"]]
@@ -948,6 +948,68 @@ def test_walk_profile(ctx):
                     both.append(json.load(f))
             check("%s: the low-poly and mid-poly versions get the same body skeleton and the same walk" % label,
                   both[0]["rig"]["joints"] == both[1]["rig"]["joints"] and both[0]["walk"]["gait"]["frames"] == both[1]["walk"]["gait"]["frames"])
+
+
+def test_run_profile(ctx):
+    """The run profile, by the real runner, with no worker: with no clip it is skipped with a note and nothing fails; with a clip (a stick-figure run from the offline tests' pretend worker, cut into a loop) the troll, and a character with a tail if one is there, come back as lowpoly-run.glb, looping, inside their limits."""
+    sys.path.insert(0, os.path.join(HERE, "motion"))
+    import test_run_clip
+    with open(os.path.join(HERE, "test_gaits.json")) as f:
+        said = json.load(f)
+    tailed = sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), "*lizardkin-warrior")))
+    copies = []
+    for run in [ctx["troll"]] + tailed[-1:]:
+        copy = os.path.join(ctx["out"], "running", os.path.basename(run))
+        os.makedirs(os.path.join(copy, "profiles"), exist_ok=True)
+        for name in ["brief.json", "lowpoly_build.json", "profiles/lowpoly.glb", "profiles/lowpoly.json", "profiles/lowpoly-walk.json"]:
+            if os.path.exists(os.path.join(run, name)):
+                shutil.copy(os.path.join(run, name), os.path.join(copy, name))
+        with open(os.path.join(copy, "gait.json"), "w") as f:
+            json.dump(next(v for k, v in said.items() if k in run and k != "about"), f)
+        copies.append(copy)
+
+    def runner(copy):
+        return subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                               os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles"), "run"], capture_output=True, text=True)
+
+    out = runner(copies[0])
+    check("with no run clip the profile is skipped, says why, and the runner still ends well",
+          out.returncode == 0 and "run skipped: Kimodo not available" in out.stdout and not os.path.exists(os.path.join(copies[0], "profiles", "lowpoly-run.glb")),
+          out.stdout[-300:])
+    done = test_run_clip.to_the_end(copies, os.path.join(ctx["out"], "running", ".run-cache"))
+    speeds = {}
+    for copy in copies:
+        label = os.path.basename(copy)[20:]
+        loop = done["state"][copy]
+        out = runner(copy)
+        path = os.path.join(copy, "profiles", "lowpoly-run")
+        if not os.path.exists(path + ".json"):
+            raise AssertionError("no lowpoly-run for %s:\n%s" % (label, (out.stdout + out.stderr)[-1500:]))
+        with open(path + ".json") as f:
+            record = json.load(f)
+        rig, moved, c = record["rig"], record["animation"], record["animation"]["check"]
+        speeds[label] = moved["speed_m_s"]
+        check("%s: \"%s\"" % (label, done["asks"][copy]["prompt"]), record["run"]["prompt"] == done["asks"][copy]["prompt"])
+        check("%s runs on the spot at %.2f m/s (asked for %.2f), %d steps a minute, a loop of %d frames cut from a whole number of strides (%d)" % (
+            label, moved["speed_m_s"], done["asks"][copy]["speed_mps"], record["run"]["steps_per_minute"], moved["frames"], loop["strides"]),
+              abs(moved["speed_m_s"] - done["asks"][copy]["speed_mps"]) < 0.08 * done["asks"][copy]["speed_mps"]
+              and moved["frames"] == loop["frames"] == loop["strides"] * loop["stride_frames"])
+        check("%s: the last frame is the first again, and no joint is turned past its limit (%s were held back)" % (label, ", ".join(sorted(moved["clamped"])) or "none"),
+              c["loop_seam"] < 1e-4 and c["limit_violations"] == 0, c)
+        walk_file_checks(label, path + ".glb", rig["bones"] + ((record.get("cloth") or {}).get("cloth_bones") or []), rig["measure"]["tail_bones"], clip="run")
+        if rig["measure"]["tail_bones"]:
+            check("%s: its tail has a motion of its own, following the hips (%s)" % (label, record.get("tail")),
+                  (record.get("tail") or {}).get("bones") == rig["measure"]["tail_bones"])
+    if os.path.exists(os.path.join(ctx["troll"], "profiles", "lowpoly-walk.json")):
+        with open(os.path.join(ctx["troll"], "profiles", "lowpoly-walk.json")) as f:
+            walks = json.load(f)["walk"]["gait"]["speed_m_s"]
+        check("the troll runs faster than it walks (%.2f against %.2f m/s)" % (speeds["cave-troll"], walks), speeds["cave-troll"] > 1.5 * walks)
+    # A new clip puts the old files out of date: they are removed, so the runner makes them again.
+    with open(os.path.join(copies[0], "gait.json"), "w") as f:
+        json.dump(dict(next(v for k, v in said.items() if k in copies[0] and k != "about"), weight=0.5), f)
+    test_run_clip.to_the_end(copies, os.path.join(ctx["out"], "running", ".run-cache"))
+    check("told to run differently, the troll's old run is cleared away to be made again", not os.path.exists(os.path.join(copies[0], "profiles", "lowpoly-run.glb"))
+          and os.path.exists(os.path.join(copies[-1], "profiles", "lowpoly-run.glb")) == (len(copies) > 1))
 
 
 def test_bone_names(ctx):
@@ -1145,7 +1207,7 @@ def test_cloth(ctx):
 
 
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile, test_drape, test_cloth]
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_drape, test_cloth]
 
 
 def main(argv):
