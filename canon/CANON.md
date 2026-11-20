@@ -22,6 +22,22 @@ for free either.
 The world is kind. Toons have small worries, big dreams about who they are,
 and a lot of patience with each other.
 
+## Whose eyes
+
+The strips are seen through the eyes of **the shadow ninja**, a fairly recent
+pop who is quietly trying to work out what life as a toon is about.
+
+- **He never speaks.** He has no speech balloons. What he feels shows in how he
+  looks at things: close when something matters, wide when he's taking it in,
+  lingering when he doesn't understand.
+- **He loves films,** so he frames things like one: low angles, careful
+  two-shots, the odd letterboxed panel. The set cameras are his favourite spots
+  to stand.
+- **The others try not to mind him.** Sometimes someone glances at him and
+  politely carries on. Lincoln talks to him as if he might answer one day.
+- Now and then the edge of his mask or his gloved hand is in the picture, so we
+  remember whose eyes these are.
+
 ## How this world began: the reset
 
 The first toons pooled all the credits they had and reset the world, with
@@ -53,6 +69,7 @@ Everything else is still empty.
 | Young Lincoln | Abraham Lincoln, frontier wrestler | Tall, patient, honest to the penny, tells long stories |
 | Roosevelt | Theodore Roosevelt, wrestler of the 1890s | Bursting with energy, everything is "bully!", loves open ground |
 | The stocky pirate deckhand | A captain | Practical, good with ropes and salvage, wants a ship |
+| The shadow ninja | (He hasn't said) | A recent pop, silent, a film lover; we see the world through his eyes |
 | The cave troll | Exactly what he is | Fussy, kind, likes things done properly |
 | The lizardkin warrior | The last warrior of a proud people | Earnest, loyal roommate |
 
@@ -61,9 +78,13 @@ politically.
 
 ## Strips, in order
 
-1. **Long Reach** (`comics/ring-strip`): Roosevelt challenges Lincoln to a
-   friendly bout in the boxing house and finds he can't get past Lincoln's
-   arms. Forty minutes later he concedes and asks for a rematch tomorrow.
+1. **Long Reach** (`comics/ring-strip`): seen from ringside by the ninja.
+   Roosevelt challenges Lincoln to a friendly bout in the boxing house and finds
+   he can't get past Lincoln's arms. Forty minutes later he concedes and asks
+   for a rematch tomorrow.
+
+(The rooftop ninja episode in `comics/rooftop-ninja` was a test of the comic
+tools, not canon: in canon the ninja watches rather than performs.)
 
 ## Not yet seen
 
