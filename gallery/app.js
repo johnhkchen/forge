@@ -88,7 +88,7 @@ function objectPage(run, wanted) {
   const versions = versionsOf(run);
   const start = versions.find((v) => v.name === wanted) || versions.find((v) => v.name === "web") || versions[versions.length - 1];
   // `off` holds the gear the visitor took off; it carries over between the versions that have gear.
-  const state = { version: start, compare: versions.length > 1, wire: true, off: new Set(), sockets: false, clip: "walk", bare: false };
+  const state = { version: start, compare: false, wire: false, off: new Set(), sockets: false, clip: "walk", bare: false };
   const hasGear = versions.some((v) => v.gear?.length);
   // A character whose clothes hide its body has a real body made from a second picture, and each
   // of those clothes cut out on its own. They stand where the raw mesh stands and, once the object
@@ -299,8 +299,10 @@ class Viewer {
       spec.onTriangles?.(Math.round(triangles));
       pane.scene.add(model);
       pane.model = model;
-      pane.wire = spec.walk ? this.walkingWire(model, triangles) : await this.wireFor(model, spec, triangles);
-      if (pane.wire) { pane.wire.visible = this.wire; if (!spec.walk) pane.scene.add(pane.wire); }
+      // The wireframe (and its edges file) is only made once it is wanted: off by default, so a page opens faster.
+      pane.spec = spec;
+      pane.triangles = triangles;
+      if (this.wire) await this.addWire(pane);
       pane.markers = this.markersFor(model, Boolean(spec.walk));
       if (pane.markers) { pane.markers.visible = this.sockets; if (!spec.walk) pane.scene.add(pane.markers); }
       if (spec.walk && gltf.animations.length) {
@@ -455,8 +457,16 @@ class Viewer {
     this.framed = true;
   }
 
-  setWire(on) {
+  async addWire(pane) {
+    if (pane.wire || !pane.model) return;
+    const spec = pane.spec;
+    pane.wire = spec.walk ? this.walkingWire(pane.model, pane.triangles) : await this.wireFor(pane.model, spec, pane.triangles);
+    if (pane.wire) { pane.wire.visible = this.wire; if (!spec.walk) pane.scene.add(pane.wire); }
+  }
+
+  async setWire(on) {
     this.wire = on;
+    if (on) await Promise.all(this.panes.map((p) => this.addWire(p)));
     this.panes.forEach((p) => { if (p.wire) p.wire.visible = on; });
     this.setGear(this.off);
   }
