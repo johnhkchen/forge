@@ -83,7 +83,8 @@ def where(p, lo, hi):
 
 def summarize(pairs, size):
     d = sorted(x for x, _ in pairs)
-    pct = lambda q: round(100 * d[min(len(d) - 1, int(q * len(d)))] / size, 2)
+    def pct(q):
+        return round(100 * d[min(len(d) - 1, int(q * len(d)))] / size, 2)
     return {"mean_%": round(100 * sum(d) / len(d) / size, 3), "p95_%": pct(0.95), "max_%": pct(1.0)}
 
 
@@ -103,7 +104,11 @@ lost = distances(full_pts, light_tree, light.matrix_world.inverted(), light.matr
 added = distances(light_pts, full_tree, full.matrix_world.inverted(), full.matrix_world)
 
 worst = []
-for dist, p in sorted(lost + added, key=lambda x: -x[0]):
+def farthest_first(pair):
+    return -pair[0]
+
+
+for dist, p in sorted(lost + added, key=farthest_first):
     spot = where(p, lo, hi)
     if any(w["where"] == spot for w in worst):
         continue

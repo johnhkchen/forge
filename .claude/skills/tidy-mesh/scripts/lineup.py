@@ -17,6 +17,9 @@ import json
 import math
 from mathutils import Euler, Vector
 
+def face_count(obj):
+    return len(obj.data.polygons)
+
 if not PARAMS["run"]:
     raise ValueError("set PARAMS['run'] to the run folder's absolute path")
 run = PARAMS["run"]
@@ -42,7 +45,7 @@ for label, path in entries:
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=path)
     new = [o for o in bpy.data.objects if o not in before]
-    obj = max((o for o in new if o.type == "MESH"), key=lambda o: len(o.data.polygons))
+    obj = max((o for o in new if o.type == "MESH"), key=face_count)
     for o in new:
         if o is not obj:
             bpy.data.objects.remove(o, do_unlink=True)

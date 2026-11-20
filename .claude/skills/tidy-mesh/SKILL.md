@@ -60,6 +60,27 @@ build); Exoside Quad Remesher (licence forbids automated use); open AI
 "artist mesh" models (triangles only, drop small parts); cloud retopology
 (Tencent Smart Topology, Meshy remesh) is a possible future comparison.
 
+## Parts: remesh the pieces a modeler would build separately
+
+TRELLIS.2 fuses touching parts into one surface: the kettle's lid, knob and
+spout are one piece with its body, which is 93% of the mesh. One remesh over
+all of it makes every part share one quad layout. Nothing in the mesh says
+where a part ends (we tried cutting along creases: TRELLIS blends the joins
+too softly), so someone who knows what the object is has to say.
+
+That's Claude, in pipeline step 4b (`FindParts`, in `baml_src/4_polish`): in
+a "Parts" scene of the live Blender it places one axis-aligned box per part,
+checks them with `split.py` in "color" mode and `look`, and saves the boxes
+as `runs/<run>/parts.json`. The profile runner then cuts with `split.py`
+("split" mode: each part becomes its own piece, its cut opening capped
+inside the joint) and remeshes every piece on its own budget, which grows
+with area^0.75 so thin parts aren't starved. Delete `parts.json` to go back
+to one remesh; `just resume` asks Claude again.
+
+To do it by hand in the live Blender: run `split.py` in "color" mode with
+your boxes, `look`, adjust, then write the boxes to `parts.json`
+(`{"parts": [{"name", "why", "min", "max"}], "notes"}`).
+
 ## Run a profile (default: in the background)
 
 Heavy steps (retopology, baking) lock Blender's window while they run, so by
@@ -102,6 +123,7 @@ add-on's safe mode.
 | `bake.py` | "materials": bakes the shader into plain textures; "onto": bakes color, metal, roughness and a normal map from the full mesh onto a lighter one | 5–60 s, freezes Blender |
 | `export.py` | writes one object as GLB (WebP, Draco optional) | ~1 s |
 | `preview.py` | renders a quick three-quarter PNG, optionally with wireframe | ~2 s |
+| `split.py` | splits an object into named parts from one box per part ("color" mode just paints them, to check the boxes) | ~1 s |
 | `lineup.py` | shows a run's raw mesh and its profiles side by side in a new "Profiles" scene, labelled, wireframe on | ~2 s |
 
 Rules for the live session:

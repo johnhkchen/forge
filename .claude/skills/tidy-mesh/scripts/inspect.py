@@ -16,6 +16,10 @@ import math
 from mathutils import Vector
 
 
+
+def face_count(obj):
+    return len(obj.data.polygons)
+
 def pick_object(name):
     if name:
         obj = bpy.data.objects.get(name)
@@ -25,7 +29,7 @@ def pick_object(name):
     meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     if not meshes:
         raise ValueError("the scene has no mesh objects")
-    return max(meshes, key=lambda o: len(o.data.polygons))
+    return max(meshes, key=face_count)
 
 
 def islands(bm):

@@ -70,3 +70,7 @@ sync-kit:
 # Serve the gallery to this Mac and phones on the same Wi-Fi
 gallery port="8028":
     python3 scripts/gallery.py --port {{port}}
+
+# Only brief, picture and mesh (leaves Blender alone); finish with `just resume`
+mesh idea:
+    baml run make_mesh -- --idea "{{idea}}"

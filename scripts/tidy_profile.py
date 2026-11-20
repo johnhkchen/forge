@@ -114,20 +114,23 @@ def import_obj(path):
     return next(o for o in bpy.data.objects if o not in before and o.type == "MESH")
 
 
-def split_parts(source):
+def split_parts(source, weld=True):
     """The object's separate pieces (handle, pins, body...) as their own
-    objects, welded first so texture seams don't count as gaps."""
+    objects, welded first so texture seams don't count as gaps. Pieces that
+    were just cut apart share their seam vertices, so they skip the weld or
+    it would stitch them back together."""
     import bmesh
     copy = source.copy()
     copy.data = source.data.copy()
     copy.modifiers.clear()
     for c in source.users_collection:
         c.objects.link(copy)
-    bm = bmesh.new()
-    bm.from_mesh(copy.data)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=max(source.dimensions) * 1e-6)
-    bm.to_mesh(copy.data)
-    bm.free()
+    if weld:
+        bm = bmesh.new()
+        bm.from_mesh(copy.data)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=max(source.dimensions) * 1e-6)
+        bm.to_mesh(copy.data)
+        bm.free()
     for o in bpy.context.selected_objects:
         o.select_set(False)
     copy.select_set(True)
@@ -165,10 +168,33 @@ def autoremesh(params):
         return result
     source = largest_mesh()
     work = tempfile.mkdtemp(prefix="autoremesher-")
+    # Part-by-part pays off at larger budgets; at a few thousand quads each
+    # part's hidden cap and minimum budget cost more shape than they save.
+    plan = (params.get("parts_plan") or {}) if params.get("use_parts", True) else {}
     try:
+        if plan.get("parts"):
+            # Cut the parts Claude found (split.py), then treat every piece
+            # (cut parts and already-separate ones) as its own remesh.
+            cut = run_script("split.py", {"object": source.name, "mode": "split",
+                                          "parts": [{"name": p["name"], "box": {"min": p["min"], "max": p["max"]}}
+                                                    for p in plan["parts"]]})
+            pieces = [o for o in bpy.data.objects if o.type == "MESH" and o.name.startswith(source.name + " · ")]
+            for o in bpy.context.selected_objects:
+                o.select_set(False)
+            for o in pieces:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = pieces[0]
+            bpy.ops.object.join()
+            parted = bpy.context.view_layer.objects.active
+            parted.name = source.name + " (parted)"
+            parts = split_parts(parted, weld=False)
+            bpy.data.objects.remove(parted, do_unlink=True)
+            params = dict(params, per_part=True, cut=cut)
         if params.get("per_part", False):
-            parts = split_parts(source)
-            areas = {p.name: area(p) for p in parts}
+            parts = parts if plan.get("parts") else split_parts(source)
+            # Budgets grow slower than area, so thin parts (a strap, a pin)
+            # aren't starved next to a big body.
+            areas = {p.name: area(p) ** 0.75 for p in parts}
             total = sum(areas.values()) or 1.0
             floor = params.get("min_part_quads", 60)
         else:
@@ -221,6 +247,7 @@ def autoremesh(params):
             "quads": sum(1 for p in faces if len(p.vertices) == 4),
             "parts": results,
             "settings": {k: params.get(k) for k in ("adaptivity", "anisotropy", "sharp_edge", "per_part")},
+            "cut": (params.get("cut") or {}).get("parts"),
         }
     finally:
         shutil.rmtree(work, ignore_errors=True)
@@ -256,12 +283,24 @@ def export_edges(path):
         bpy.data.objects.remove(lines, do_unlink=True)
 
 
+def read_plan(source):
+    """The run's parts.json (Claude's part boxes), if it has one."""
+    path = os.path.join(os.path.dirname(source), "parts.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return json.load(f)
+
+
 def make(source, out_dir, profile, spec):
     started = time.time()
     load(source)
     record = {"profile": profile, "about": spec["about"], "source": source, "steps": []}
+    plan = read_plan(source)
+    if plan.get("parts"):
+        record["parts"] = [p["name"] for p in plan["parts"]]
     for name, params in spec["steps"]:
-        result = autoremesh(params) if name == "autoremesher" else run_script(name, params)
+        result = autoremesh(dict(params, parts_plan=plan)) if name == "autoremesher" else run_script(name, params)
         record["steps"].append({"script": name, "result": result})
     light = [n for n, _ in spec["steps"]]
     if {"retopo.py", "autoremesher"} & set(light) or any(p.get("as_copy") for _, p in spec["steps"]):

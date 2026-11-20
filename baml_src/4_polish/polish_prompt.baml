@@ -71,6 +71,22 @@ function Polish(brief: ObjectBrief, reference: image, files: PolishFiles) -> Pol
            roughness so each material reads like the list above: real metals
            metallic 1.0, everything else 0.0. Fix anything the picture
            contradicts. Do not repaint or replace textures.
+        5b. Textures, up close. The image-to-3D model bakes one texture over
+           the whole object, so fine detail comes out soft and the sides the
+           picture didn't show are invented. For each material, \`look\`
+           closely (mode "angles", shading "material", a short distance,
+           max_size 768) and compare it with the reference: color, contrast,
+           sharpness, sheen, surface grain. Improve it with nodes only:
+           - color and contrast: Hue/Saturation/Value, RGB Curves or
+             Brightness/Contrast on the base-color texture;
+           - surface grain: a Bump node driven by the texture's own value or
+             by a fine Noise/Voronoi texture, kept subtle;
+           - sheen: roughness (most non-metals are 0.6-0.95);
+           - soft organic materials (bread, wax, fruit, skin, soap): a
+             little subsurface (weight 0.05-0.2, warm radius).
+           Keep each fix to the material where it belongs (use the texture's
+           color to separate materials if they share one texture). Say in
+           your report what you changed and what still doesn't match.
         6. Staging: a large ground plane with a neutral matte warm-gray
            material, a soft key light from the upper left, a fill and a rim
            light, and a soft light-gray world. A camera at a three-quarter

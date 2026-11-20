@@ -91,7 +91,8 @@
         "autoremesher",
         {
           "quads": 4000,
-          "adaptivity": 1.0
+          "adaptivity": 1.0,
+          "use_parts": false
         }
       ],
       [
@@ -119,7 +120,8 @@
         {
           "quads": 3000,
           "adaptivity": 1.0,
-          "anisotropy": 0.3
+          "anisotropy": 0.3,
+          "use_parts": false
         }
       ],
       [
