@@ -45,7 +45,7 @@ function Polish(brief: ObjectBrief, reference: image, files: PolishFiles) -> Pol
         Make it into a clean, well-staged asset.
 
         The object: ${brief.name}. ${brief.description}
-        Its largest dimension is about ${brief.size_m} m.
+        ${if (brief.character ?? false) { `Its standing height is about ${brief.size_m} m (arm span doesn't count).` } else { `Its largest dimension is about ${brief.size_m} m.` }}
         Materials:
         ${brief.materials.map((m) -> { `- ${m.part}: ${m.look}${if (m.metallic) { " (metal)" } else { "" }}` }).join("\n")}
 
@@ -59,8 +59,8 @@ function Polish(brief: ObjectBrief, reference: image, files: PolishFiles) -> Pol
         ${if (brief.character ?? false) { "This is a character in a T-pose: keep the pose exactly, feet flat on the ground, facing -Y, and scale it so its standing height (z) is the size above." } else { "" }}
         2. Orientation and size. Compare against the reference with
            \`look\` (mode "angles", shading "material"). Make sure it stands upright the way the
-           real object would and faces -Y (Blender's front). Scale it so its
-           largest dimension is ${brief.size_m} m, then apply rotation and scale.
+           real object would and faces -Y (Blender's front). Scale it to the size
+           above (${brief.size_m} m), then apply rotation and scale.
         3. Origin and placement: put the origin at the bottom center of the
            bounding box and the object at the world origin, resting on z = 0.
         4. Mesh cleanup: merge vertices by distance (0.0001 m), delete loose
