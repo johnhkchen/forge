@@ -51,6 +51,7 @@ import sys
 import tempfile
 import time
 
+import bmesh
 import bpy
 from mathutils import Vector
 
@@ -813,6 +814,72 @@ def drape(run_dir, name):
     return run_script("drape.py", {"object": name, "pieces": recipe["pieces"] if recipe else None})
 
 
+FIT_PASSES = 2  # fit_clothes looks again after easing the cloth, at most this many times in all
+
+
+def fit_clothes(run_dir, name):
+    """Ease tight clothes out where the body comes through them in motion (fit_cloth.py), on the draped block-out
+    `name`, before anything is baked. A copy is split into body and gear, rigged, and taken through the
+    range-of-motion routine (rom.py); fit_cloth.py moves the block-out's cloth points out by how far the skin
+    came through, and the copy is thrown away. Done again if the first pass still found some. Returns each pass's
+    result, or None for a block-out with no gear."""
+    light = bpy.data.objects[name]
+    tags = json.loads(light.get("forge_groups", "[]"))
+    if len(tags) < 2 or tags[0].get("forge") != "body":
+        return None
+    recipe = read_recipe(run_dir)
+    scene = bpy.context.scene
+    kept_frames = (scene.frame_start, scene.frame_end, scene.frame_current, scene.render.fps)
+    passes = []
+    for _ in range(FIT_PASSES):
+        source = light.data.attributes.get("fit_src") or light.data.attributes.new("fit_src", "INT", "POINT")
+        source.data.foreach_set("value", list(range(len(light.data.vertices))))
+        parts = []
+        for index, tag in enumerate(tags):  # the groups as meshes of their own, as export.py writes them
+            me = light.data.copy()
+            bm = bmesh.new()
+            bm.from_mesh(me)
+            mark = bm.faces.layers.int.get("forge_group")
+            bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[mark] != index], context="FACES")
+            bm.to_mesh(me)
+            bm.free()
+            part = bpy.data.objects.new("fit: " + tag["name"], me)
+            part.matrix_world = light.matrix_world.copy()
+            for key, value in tag.items():
+                if key != "name":
+                    part[key] = value
+            part["fit_part"] = 1
+            scene.collection.objects.link(part)
+            parts.append(part)
+        hidden = light.hide_get()
+        light.hide_set(True)
+        before = set(bpy.data.actions)
+        try:
+            run_script("rig.py", {"meshes": [p.name for p in parts], "recipe": recipe["pieces"] if recipe else None, "name": "fit rig"})
+            run_script("cloth.py", {"rig": "fit rig", "bones": False})
+            run_script("rom.py", {"rig": "fit rig"})
+            run_script("animate.py", {"rig": "fit rig", "motion": "rom", "contact": False, "check": False})
+            passes.append(run_script("fit_cloth.py", {"source": name, "rig": "fit rig"}))
+        finally:
+            rig = bpy.data.objects.get("fit rig")
+            for part in parts:
+                me = part.data
+                bpy.data.objects.remove(part, do_unlink=True)
+                bpy.data.meshes.remove(me)
+            if rig is not None:
+                arm = rig.data
+                bpy.data.objects.remove(rig, do_unlink=True)
+                bpy.data.armatures.remove(arm)
+            for action in set(bpy.data.actions) - before:
+                bpy.data.actions.remove(action)
+            light.hide_set(hidden)
+            light.data.attributes.remove(light.data.attributes["fit_src"])
+            scene.frame_start, scene.frame_end, scene.frame_current, scene.render.fps = kept_frames
+        if not passes[-1]["cloth_points_moved"] or passes[-1]["moved_cm"]["most"] < 0.3:
+            break
+    return passes
+
+
 def paint_face(run_dir):
     """A character's face, painted onto the detailed mesh from a picture of it (face_paint.py) before anything is
     baked, so every version made here carries it: TRELLIS leaves eyes and lips as smudges. The head sheet
@@ -1069,6 +1136,10 @@ def make(source, out_dir, profile, spec):
             if draped:
                 record["steps"].append({"script": "drape.py", "result": draped})
                 record["drape"] = {k: draped[k] for k in ("gap_where_it_touches_cm", "points_inside_the_body", "rings_added", "triangles", "masks")}
+                fitted = fit_clothes(os.path.dirname(source), result["object"]) if spec.get("fit_cloth") else None
+                if fitted:
+                    record["steps"].append({"script": "fit_cloth.py", "result": fitted})
+                    record["fit_cloth"] = fitted
     light = [n for n, _ in spec["steps"]]
     built = {"blockout", "rebuild"} & set(light)
     if {"retopo.py", "autoremesher"} & set(light) or built or any(p.get("as_copy") for _, p in spec["steps"]):

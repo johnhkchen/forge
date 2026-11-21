@@ -170,7 +170,8 @@
     "export": {
       "image_format": "WEBP",
       "draco": true
-    }
+    },
+    "fit_cloth": true
   },
   "lowpoly": {
     "about": "Old-school real-time style, like early Warcraft: a few hundred triangles Claude blocks out from simple shapes, with the detail's color and soft shadows painted into one small texture.",
