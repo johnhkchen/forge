@@ -6,47 +6,47 @@
     430,
     932
    ],
-   "ready_s": 3.6,
+   "ready_s": 3.0,
    "the_diorama_said": {
     "files": 1,
-    "bytes": 683288,
-    "seconds": 1.240800000011921,
+    "bytes": 3236296,
+    "seconds": 0.9855,
     "settled": true
    },
    "total": {
     "files": 35,
-    "bytes": 1907883
+    "bytes": 4468800
    },
    "groups": {
     "the diorama": {
      "files": 5,
-     "bytes": 794024,
+     "bytes": 3354666,
      "list": [
       [
        "/dioramas/meet-the-cast/diorama.glb",
-       683463
+       3236472
       ],
       [
        "/dioramas/meet-the-cast/stills/front-small.jpg",
-       25739
+       26576
       ],
       [
        "/dioramas/meet-the-cast/stills/over_his_shoulder-small.jpg",
-       27889
+       29821
       ],
       [
        "/dioramas/meet-the-cast/stills/roosevelt-small.jpg",
-       26203
+       28869
       ],
       [
        "/dioramas/meet-the-cast/stills/the_cast-small.jpg",
-       30730
+       32928
       ]
      ]
     },
     "the page itself": {
      "files": 12,
-     "bytes": 261787,
+     "bytes": 262056,
      "list": [
       [
        "/index.html",
@@ -58,11 +58,11 @@
       ],
       [
        "/api/dioramas",
-       2214
+       2179
       ],
       [
        "/api/runs",
-       79929
+       80209
       ],
       [
        "/api/sets",
@@ -78,7 +78,7 @@
       ],
       [
        "/app.js",
-       86412
+       86436
       ],
       [
        "/comic.css",
@@ -100,43 +100,43 @@
     },
     "three.js and the mesh decoder": {
      "files": 9,
-     "bytes": 309033,
+     "bytes": 309039,
      "list": [
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-       208032
+       207628
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js",
-       6235
+       6240
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js",
-       1315
+       1734
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/draco_decoder.wasm",
-       49471
+       49442
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/draco_wasm_wrapper.js",
-       10704
+       10744
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/DRACOLoader.js",
-       3974
+       4372
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js",
-       20496
+       20079
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js",
-       6376
+       6373
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/SkeletonUtils.js",
-       2430
+       2427
       ]
      ]
     },
@@ -154,11 +154,11 @@
       ],
       [
        "https://fonts.gstatic.com/s/karla/v33/qkB9XvYC6trAT55ZBi1ueQVIjQTD-JrIH2G7nytkHRyQ8p4wUje6bmMorHA.woff2",
-       24392
+       24393
       ],
       [
        "https://fonts.gstatic.com/s/lora/v37/0QIvMX1D_JOuMwr7I_FMl_E.woff2",
-       38344
+       38343
       ]
      ]
     },
@@ -195,47 +195,47 @@
     1280,
     900
    ],
-   "ready_s": 1.6,
+   "ready_s": 1.2,
    "the_diorama_said": {
     "files": 1,
-    "bytes": 683288,
-    "seconds": 0.35260000002384184,
+    "bytes": 3236296,
+    "seconds": 0.07640000000596046,
     "settled": true
    },
    "total": {
-    "files": 45,
-    "bytes": 24003021
+    "files": 46,
+    "bytes": 5045335
    },
    "groups": {
     "the diorama": {
      "files": 5,
-     "bytes": 794024,
+     "bytes": 3354666,
      "list": [
       [
        "/dioramas/meet-the-cast/diorama.glb",
-       683463
+       3236472
       ],
       [
        "/dioramas/meet-the-cast/stills/front-small.jpg",
-       25739
+       26576
       ],
       [
        "/dioramas/meet-the-cast/stills/over_his_shoulder-small.jpg",
-       27889
+       29821
       ],
       [
        "/dioramas/meet-the-cast/stills/roosevelt-small.jpg",
-       26203
+       28869
       ],
       [
        "/dioramas/meet-the-cast/stills/the_cast-small.jpg",
-       30730
+       32928
       ]
      ]
     },
     "the page itself": {
      "files": 11,
-     "bytes": 261144,
+     "bytes": 261413,
      "list": [
       [
        "/index.html",
@@ -247,11 +247,11 @@
       ],
       [
        "/api/dioramas",
-       2214
+       2179
       ],
       [
        "/api/runs",
-       79929
+       80209
       ],
       [
        "/api/sets",
@@ -267,7 +267,7 @@
       ],
       [
        "/app.js",
-       86412
+       86436
       ],
       [
        "/comic.css",
@@ -285,11 +285,11 @@
     },
     "three.js and the mesh decoder": {
      "files": 9,
-     "bytes": 310535,
+     "bytes": 310537,
      "list": [
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-       207804
+       207805
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js",
@@ -297,7 +297,7 @@
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js",
-       1672
+       1676
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/draco_decoder.wasm",
@@ -305,23 +305,23 @@
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/draco_wasm_wrapper.js",
-       10704
+       10707
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/DRACOLoader.js",
-       4345
+       4334
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js",
-       20415
+       20422
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js",
-       6733
+       6732
       ],
       [
        "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/SkeletonUtils.js",
-       2788
+       2787
       ]
      ]
     },
@@ -348,8 +348,8 @@
      ]
     },
     "other pictures on the page": {
-     "files": 16,
-     "bytes": 22560574,
+     "files": 17,
+     "bytes": 1041975,
      "list": [
       [
        "/comics/backdrops/ring.webp",
@@ -364,52 +364,56 @@
        41631
       ],
       [
-       "/runs/2026-11-20T06-16-35-cave-troll/portrait.png",
-       2117328
+       "/comics/rooftop-ninja/panels/01.webp",
+       14079
       ],
       [
-       "/runs/2026-11-20T13-52-46-stocky-pirate-deckhand/portrait.png",
-       2370832
+       "/runs/2026-11-20T06-16-35-cave-troll/card.jpg",
+       64064
       ],
       [
-       "/runs/2026-11-20T13-52-48-shadow-ninja/portrait.png",
-       2262652
+       "/runs/2026-11-20T13-52-46-stocky-pirate-deckhand/card.jpg",
+       71370
       ],
       [
-       "/runs/2026-11-20T13-52-54-lizardkin-warrior/portrait.png",
-       2399802
+       "/runs/2026-11-20T13-52-48-shadow-ninja/card.jpg",
+       53394
       ],
       [
-       "/runs/2026-11-20T14-02-41-young-lincoln-frontier-wrestler/portrait.png",
-       2082033
+       "/runs/2026-11-20T13-52-54-lizardkin-warrior/card.jpg",
+       71438
       ],
       [
-       "/runs/2026-11-20T14-02-42-1890s-wrestling-ring/render.png",
-       1299339
+       "/runs/2026-11-20T14-02-41-young-lincoln-frontier-wrestler/card.jpg",
+       59277
       ],
       [
-       "/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/portrait.png",
-       2029297
+       "/runs/2026-11-20T14-02-42-1890s-wrestling-ring/card.jpg",
+       37955
       ],
       [
-       "/runs/2026-11-20T16-26-21-plain-iron-katana/render.png",
-       1010363
+       "/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/card.jpg",
+       43636
       ],
       [
-       "/runs/2026-11-20T18-10-09-flamenco-dancer/portrait.png",
-       1975792
+       "/runs/2026-11-20T16-26-21-plain-iron-katana/card.jpg",
+       12458
       ],
       [
-       "/runs/2026-11-20T22-46-17-plain-young-villager/portrait.png",
-       2177457
+       "/runs/2026-11-20T18-10-09-flamenco-dancer/card.jpg",
+       53072
       ],
       [
-       "/runs/2026-11-20T23-50-25-handmade-pinhole-box-camera/render.png",
-       1186199
+       "/runs/2026-11-20T22-46-17-plain-young-villager/card.jpg",
+       62169
       ],
       [
-       "/runs/2026-11-21T00-12-05-vintage-stage-microphone/render.png",
-       1198327
+       "/runs/2026-11-20T23-50-25-handmade-pinhole-box-camera/card.jpg",
+       23664
+      ],
+      [
+       "/runs/2026-11-21T00-12-05-vintage-stage-microphone/card.jpg",
+       24246
       ],
       [
        "/sets/boxing-house/card.png",

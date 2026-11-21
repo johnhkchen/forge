@@ -12,7 +12,7 @@ Reads dioramas/<name>/diorama.json (scripts/diorama/diorama.py says what it hold
 
 and writes, into dioramas/<name>/ (or --out):
 
-    diorama.glb           everything on the base in one light file: no bones, Draco, WebP
+    diorama.glb           everything on the base in one file a phone can open: no bones, Draco, WebP, small pictures
     stills/<camera>.jpg   a picture through each camera named in `stills`, on a shelf in the basement
     stills/<camera>-small.jpg
     card.png              the first of those, small, for a card
@@ -30,7 +30,7 @@ import time
 
 import bmesh
 import bpy
-from mathutils import Matrix, Quaternion, Vector
+from mathutils import Matrix, Quaternion, Vector, interpolate, kdtree
 from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -323,15 +323,161 @@ def look(character, target, most_deg=62.0):
         bpy.context.view_layer.update()
 
 
-def stand_toon(card, spec, st, runs, poses):
-    """One toon, brought in, posed and stood on its spot. Its skeleton is still on: hands and head are read from it."""
-    character = stage.load_character(diorama.toon_file(runs, card, poses))
+# ---- a detailed mesh on a borrowed skeleton -------------------------------------------
+
+STRETCH_WORST = 5.0     # no edge of a bound mesh may come out this many times its length...
+STRETCH_SHARE = 0.01    # ...and at most this share of them may come out over twice it
+MOST_BONES = 4
+SLIVER_M = 0.002      # edges shorter than this at rest are left out of the stretch figures
+SMOOTHINGS = 8        # how many times copied weights are blended with their neighbours
+WELD_M = 0.0005       # points of a detailed mesh this close together are one point
+
+
+def skin_from(character, obj):
+    """Bind `obj` (a mesh standing where the character stands in its T-pose) to the character's skeleton: every
+    point takes the weights of the nearest spot on the character's own skinned meshes, blended across that
+    triangle, cut to the four strongest bones and made to add up to 1. Returns how many points were bound."""
+    rig = character["rig"]
+    verts, tris, weights = [], [], []
+    for source in character["objects"]:
+        if source.type != "MESH" or source.find_armature() is not rig:
+            continue
+        names = {g.index: g.name for g in source.vertex_groups}
+        mesh = source.data  # in the T-pose a skinned mesh is where its own points say: skin under clothes counts too
+        mesh.calc_loop_triangles()
+        base, world = len(verts), source.matrix_world
+        verts.extend(world @ v.co for v in mesh.vertices)
+        weights.extend({names[g.group]: g.weight for g in v.groups if g.weight > 0.0 and names[g.group] in rig.data.bones} for v in mesh.vertices)
+        tris.extend([base + i for i in t.vertices] for t in mesh.loop_triangles)
+    tree = BVHTree.FromPolygons(verts, tris, epsilon=0.0)
+    obj.data.transform(obj.matrix_world)
+    obj.matrix_world = Matrix.Identity(4)
+    import numpy
+
+    bones = [b.name for b in rig.data.bones]
+    column = {name: i for i, name in enumerate(bones)}
+    # A detailed mesh comes in thousands of patches whose borders only touch (its points are doubled along every
+    # seam). Points in one place are treated as one point, so a seam cannot open when the skeleton moves.
+    points = obj.data.vertices
+    spots = kdtree.KDTree(len(points))
+    for v in points:
+        spots.insert(v.co, v.index)
+    spots.balance()
+    one = list(range(len(points)))
+
+    def first(i):
+        while one[i] != i:
+            one[i] = one[one[i]]
+            i = one[i]
+        return i
+
+    for v in points:
+        for _, other, _ in spots.find_range(v.co, WELD_M):
+            a, b = first(v.index), first(other)
+            if a != b:
+                one[max(a, b)] = min(a, b)
+    roots = sorted({first(i) for i in range(len(points))})
+    row = {root: i for i, root in enumerate(roots)}
+    welded = numpy.array([row[first(i)] for i in range(len(points))], dtype=numpy.int64)
+    count = len(roots)
+    table = numpy.zeros((count, len(bones)), dtype=numpy.float32)
+    for root in roots:
+        spot, _, index, _ = tree.find_nearest(points[root].co)
+        corners = tris[index]
+        shares = interpolate.poly_3d_calc([verts[i] for i in corners], spot)
+        for corner, share in zip(corners, shares):
+            for bone, weight in weights[corner].items():
+                table[row[root], column[bone]] += weight * share
+    # The rigged mesh is coarse and in pieces, so what was copied has steps in it (a coat's hem against the leg
+    # under it). Each point is blended with its neighbours a few times: steps become slopes, and a stray point
+    # that took the wrong limb's weights is pulled back to what is around it.
+    ends = welded[numpy.array([e.vertices[:] for e in obj.data.edges], dtype=numpy.int64).reshape(-1, 2)]
+    ends = ends[ends[:, 0] != ends[:, 1]]
+    if len(ends):
+        near = numpy.zeros(count, dtype=numpy.float32)
+        numpy.add.at(near, ends[:, 0], 1.0)
+        numpy.add.at(near, ends[:, 1], 1.0)
+        near = numpy.maximum(near, 1.0)[:, None]
+        for _ in range(SMOOTHINGS):
+            around = numpy.zeros_like(table)
+            numpy.add.at(around, ends[:, 0], table[ends[:, 1]])
+            numpy.add.at(around, ends[:, 1], table[ends[:, 0]])
+            table = 0.5 * table + 0.5 * around / near
+    order = numpy.argsort(-table, axis=1)[:, :MOST_BONES]
+    kept = numpy.take_along_axis(table, order, axis=1)
+    kept = kept / numpy.maximum(kept.sum(axis=1, keepdims=True), 1e-9)
+    groups = {}
+    for index in range(len(points)):
+        for bone, weight in zip(order[welded[index]], kept[welded[index]]):
+            if weight > 0.001:
+                groups.setdefault(bones[bone], {}).setdefault(round(float(weight), 4), []).append(index)
+    for bone, by_weight in groups.items():
+        group = obj.vertex_groups.new(name=bone)
+        for weight, indices in by_weight.items():
+            group.add(indices, weight, "REPLACE")
+    obj.parent = rig
+    obj.matrix_parent_inverse = rig.matrix_world.inverted()
+    modifier = obj.modifiers.new("skeleton", "ARMATURE")
+    modifier.object = rig
+    return len(obj.data.vertices)
+
+
+def stretch_of(objects):
+    """How far a pose pulls some skinned meshes about: each edge's length now over its length at rest, and the most any edge grew."""
+    graph = bpy.context.evaluated_depsgraph_get()
+    ratios, pulled = [], 0.0
+    for obj in objects:
+        made = obj.evaluated_get(graph)
+        posed = made.to_mesh()
+        for edge in obj.data.edges:
+            a, b = edge.vertices
+            rest = (obj.data.vertices[a].co - obj.data.vertices[b].co).length
+            now = (posed.vertices[a].co - posed.vertices[b].co).length
+            pulled = max(pulled, now - rest)
+            if rest >= SLIVER_M:  # a sliver a fraction of a millimetre long can triple and nobody will ever see it
+                ratios.append(now / rest)
+        made.to_mesh_clear()
+    ratios.sort()
+    pick = lambda share: ratios[min(len(ratios) - 1, int(share * len(ratios)))]
+    return {"worst": round(ratios[-1], 2), "one_in_a_thousand": round(pick(0.999), 2), "one_in_a_hundred": round(pick(0.99), 2), "over_twice_pct": round(100.0 * sum(1 for r in ratios if r > 2.0) / len(ratios), 3), "longest_pull_cm": round(pulled * 100, 1),
+            "edges": len(ratios)}
+
+
+def wear_web(character, runs, card):
+    """Swap a character's rigged meshes for its detailed web mesh, bound to the same skeleton. The character must be in its T-pose."""
+    rig = character["rig"]
+    added = stage.bring_in(diorama.web_file(runs, card))
+    bpy.context.view_layer.update()
+    worn = [o for o in added if o.type == "MESH"]
+    for obj in worn:
+        skin_from(character, obj)
+    for obj in added:
+        if obj not in worn and obj is not rig:
+            bpy.data.objects.remove(obj, do_unlink=True)
+    for obj in character["meshes"]:
+        obj.hide_render = obj.hide_viewport = True
+    character["own_meshes"], character["meshes"] = character["meshes"], worn
+    character["objects"] = character["objects"] + worn
+    bpy.context.view_layer.update()
+
+
+def stand_toon(card, spec, st, runs, poses, web=True):
+    """One toon, brought in, posed and stood on its spot. Its skeleton is still on: hands and head are read from it.
+    A web version is bound to the skeleton of its rigged file first (web=False leaves it in that file's own meshes)."""
+    path = diorama.toon_file(runs, card, poses)
+    character = stage.load_character(path)
+    character["rig_from"] = os.path.basename(path)
+    wears_web = web and card.get("version") == "web"
+    if wears_web:
+        stage.strike(character, {"bones": {}})
+        wear_web(character, runs, card)
     kind = diorama.read_pose(card["pose"], poses)
     if kind[0] == "pose":
         stage.strike(character, kind[1])
         how = {"pose": card["pose"]}
     else:
         how = stage.freeze(character, kind[2])
+    character["wears"] = "web" if wears_web else os.path.basename(path).split("-")[0]
     spot, floor, _ = diorama.spot_of(spec, st, card)
     heading = diorama.facing_of(spec, st, card)
     stage.stand_at(character, spot=(spot[0], -spot[1]), facing=math.radians(heading), floor=floor)
@@ -718,8 +864,8 @@ def measure(things, set_objects, dressing, plinth, links, keep, hero):
 # ---- the whole build ------------------------------------------------------------
 
 
-def slim_pictures(objects, most_px):
-    """Keep a toy's paint and nothing else: color pictures no bigger than `most_px`, no bump or shine maps."""
+def slim_pictures(objects, most_px, maps="color"):
+    """Keep a toy's pictures small: none bigger than `most_px`, and with maps="color", its paint and nothing else (no bump or shine maps)."""
     seen = set()
     for obj in objects:
         for slot in obj.material_slots:
@@ -730,13 +876,21 @@ def slim_pictures(objects, most_px):
             shader = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
             if shader is None:
                 continue
-            for socket in ("Normal", "Metallic", "Roughness"):
-                for link in list(shader.inputs[socket].links):
-                    mat.node_tree.links.remove(link)
-            shader.inputs["Metallic"].default_value = 0.0
-            shader.inputs["Roughness"].default_value = 0.78
+            if maps == "color":
+                for socket in ("Normal", "Metallic", "Roughness"):
+                    for link in list(shader.inputs[socket].links):
+                        mat.node_tree.links.remove(link)
+                shader.inputs["Metallic"].default_value = 0.0
+                shader.inputs["Roughness"].default_value = 0.78
+            used = set()
+            walk = [link.from_node for socket in shader.inputs for link in socket.links]
+            while walk:
+                node = walk.pop()
+                if node.name not in used:
+                    used.add(node.name)
+                    walk.extend(link.from_node for socket in node.inputs for link in socket.links)
             for node in mat.node_tree.nodes:
-                if node.type == "TEX_IMAGE" and node.image and node.outputs["Color"].links and max(node.image.size) > most_px:
+                if node.type == "TEX_IMAGE" and node.image and node.name in used and max(node.image.size) > most_px:
                     wide, tall = node.image.size
                     node.image.scale(max(1, round(wide * most_px / max(wide, tall))), max(1, round(tall * most_px / max(wide, tall))))
 
@@ -781,7 +935,29 @@ def main():
     os.makedirs(work, exist_ok=True)
 
     set_objects, dressing = stand_set(spec, st, shown, work)
-    characters = {card["toon"]: stand_toon(card, spec, st, runs, poses) for card in spec["toons"]}
+    characters, binds = {}, {}
+    for card in spec["toons"]:
+        character = stand_toon(card, spec, st, runs, poses)
+        if character["wears"] == "web":
+            # Did the borrowed skeleton carry the detailed mesh cleanly? Its edges say: none pulled far, few pulled at all.
+            bind = stretch_of(character["meshes"])
+            for obj in character["own_meshes"]:
+                obj.hide_viewport = False
+            bpy.context.view_layer.update()
+            bind["its_rigged_version"] = {k: v for k, v in stretch_of([o for o in character["own_meshes"] if o.find_armature() is character["rig"]]).items() if k in ("worst", "one_in_a_thousand", "over_twice_pct")}
+            for obj in character["own_meshes"]:
+                obj.hide_viewport = True
+            bind["sound"] = bind["worst"] <= STRETCH_WORST and bind["over_twice_pct"] <= 100 * STRETCH_SHARE
+            bind["rig_from"] = character["rig_from"]
+            binds[card["toon"]] = bind
+            print("DIORAMA %s bind %s: web mesh on %s, worst edge %.2fx, one in a thousand %.2fx, %.3f%% over twice, longest pull %.1f cm (%s's own: worst %.2fx)%s" % (
+                spec["name"], card["toon"], character["rig_from"], bind["worst"], bind["one_in_a_thousand"], bind["over_twice_pct"], bind["longest_pull_cm"], character["rig_from"].split("-")[0],
+                bind["its_rigged_version"]["worst"], "" if bind["sound"] else ": NOT SOUND, falling back to " + character["rig_from"]))
+            if not bind["sound"]:
+                for obj in character["objects"]:
+                    bpy.data.objects.remove(obj, do_unlink=True)
+                character = stand_toon(card, spec, st, runs, poses, web=False)
+        characters[card["toon"]] = character
     props = {name: bring_prop(name, card, runs, shown) for name, card in (spec.get("props") or {}).items()}
     links = {}
     floor_y = float(st.get("ground", {}).get("y", 0.0))
@@ -843,7 +1019,6 @@ def main():
         objects = meshes_under(holder)
         things[name] = {"objects": objects, "points": mesh_points(objects), "middle": prop_middle[name], "holder": holder, "on_floor": name in prop_floor and not any(a == name and l["kind"] == "stands" for (a, b), l in links.items()),
                         "floor": prop_floor.get(name, floor_y), "triangles": sum(len(p.vertices) - 2 for o in objects for p in o.data.polygons)}
-    slim_pictures([o for who in characters for o in things[who]["objects"]], int(spec.get("paint_px", 512)))
 
     plinth, plinth_facts = build_plinth(spec, st, shown, work)
     plinth_points = mesh_points([plinth[0]])
@@ -856,24 +1031,14 @@ def main():
     for who in characters:
         low, high = bounds(things[who]["points"])
         print("DIORAMA %s toon %s: %s, %s, at (%.2f, %.2f) facing %.0f, %d triangles; x %.2f to %.2f, z %.2f to %.2f, %.2f m tall" % (
-            spec["name"], who, characters[who]["card"].get("version", "lowpoly"), characters[who]["card"]["pose"], characters[who]["spot"][0], characters[who]["spot"][1], characters[who]["heading"], things[who]["triangles"],
+            spec["name"], who, characters[who]["wears"], characters[who]["card"]["pose"], characters[who]["spot"][0], characters[who]["spot"][1], characters[who]["heading"], things[who]["triangles"],
             low.x, high.x, -high.y, -low.y, high.z - characters[who]["floor"]))
 
     record = {"format": "forge-diorama-build/1", "name": spec["name"], "plinth": plinth_facts, "cameras": views, "measured": numbers, "problems": problems,
-              "toons": {who: {"version": characters[who]["card"].get("version", "lowpoly"), "pose": characters[who]["how"], "at": [round(v, 3) for v in characters[who]["spot"]],
+              "binds": binds,
+              "toons": {who: {"version": characters[who]["wears"], "asked_for": characters[who]["card"].get("version", "lowpoly"), "pose": characters[who]["how"], "at": [round(v, 3) for v in characters[who]["spot"]],
                               "floor_m": round(characters[who]["floor"], 3), "facing_deg": round(characters[who]["heading"], 1), "triangles": things[who]["triangles"]} for who in characters},
               "props": {name: {"at": [round(v, 3) for v in from_blender(things[name]["holder"].matrix_world.translation)], "triangles": things[name]["triangles"]} for name in props}}
-
-    exported = [o for o in shown.all_objects]
-    if not draft:
-        path = os.path.join(out, "diorama.glb")
-        export(exported, path)
-        record["glb"] = diorama.glb_facts(path)
-        for key, most in diorama.BUDGET.items():
-            if record["glb"][key] > most:
-                problems.append("diorama.glb is %s %s: more than the %s a phone should be asked for" % (format(record["glb"][key], ","), key, format(most, ",")))
-        print("DIORAMA %s: diorama.glb, %d triangles, %.2f MB, %s, pictures %s" % (spec["name"], record["glb"]["triangles"], record["glb"]["bytes"] / 1e6,
-                                                                               "Draco" if record["glb"]["draco"] else "not packed", ", ".join(record["glb"]["pictures"]) or "none"))
 
     record["stills"] = []
     if "--no-stills" not in args:
@@ -888,6 +1053,20 @@ def main():
             print("DIORAMA %s still: %s" % (spec["name"], os.path.relpath(picture, REPO)))
         if not draft:
             smaller(os.path.join(out, "stills", spec["stills"][0] + ".jpg"), os.path.join(out, "card.png"), CARD, "PNG")
+
+    exported = [o for o in shown.all_objects]
+    if not draft:
+        # The pictures above were taken with every map at full size. The file a phone opens keeps less.
+        slim_pictures([o for who in characters for o in things[who]["objects"]], int(spec.get("paint_px", 512)), spec.get("maps", "color"))
+        slim_pictures([o for name in props for o in things[name]["objects"]], int(spec.get("prop_px", spec.get("paint_px", 512))), spec.get("prop_maps", "all"))
+        path = os.path.join(out, "diorama.glb")
+        export(exported, path)
+        record["glb"] = diorama.glb_facts(path)
+        for key, most in diorama.BUDGET.items():
+            if record["glb"][key] > most:
+                problems.append("diorama.glb is %s %s: more than the %s a phone should be asked for" % (format(record["glb"][key], ","), key, format(most, ",")))
+        print("DIORAMA %s: diorama.glb, %d triangles, %.2f MB, %s, pictures %s" % (spec["name"], record["glb"]["triangles"], record["glb"]["bytes"] / 1e6,
+                                                                               "Draco" if record["glb"]["draco"] else "not packed", ", ".join(record["glb"]["pictures"]) or "none"))
 
     if not draft:
         # Does the file open again, with everything in it?

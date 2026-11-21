@@ -12,9 +12,11 @@ on a shelf in the basement. `dioramas/<name>/diorama.json` is the whole plan:
                                     on the gallery's front page, the others go on the shelf under it
     set       {name, backdrop, keep {x [from, to], z [from, to], top_m}, dressing [prop, ...]}: a slice of a
               standing set (sets/<name>), cut like a cake, with one of its `backdrop_options` (by place) behind
+    paint_px, maps, prop_px   how big the toons' pictures may be in the .glb, whether it keeps only their color
+              ("color") or their bump and shine maps too ("all"), and the same size limit for props
     poses     {name: {about, bones}}: poses of this moment only, written like motion/comic_poses.json
     props     {id: {run, file, scale} or {built: "tripod" | "teacup" | "softbox", ...}}: what can be held or stood
-    toons     [{toon, name, run, version (lowpoly | midpoly), pose (a name, or "clip@seconds"),
+    toons     [{toon, name, run, version (lowpoly | midpoly | web), pose (a name, or "clip@seconds"),
                 mark (one of the set's) or at [x, z], on (a block to stand on), facing_deg or faces (a toon,
                 a mark or [x, z]), looks_at (a toon, a prop or [x, y, z]),
                 holds [{prop, hand, grip}], beside [{prop, offset [to its right, forward], turn_deg}]}]
@@ -49,12 +51,13 @@ DIORAMAS = os.path.join(REPO, "dioramas")
 COMIC_POSES = os.path.join(REPO, "motion", "comic_poses.json")
 EPOCHS = os.path.join(REPO, "world", "epochs")
 CLIP_AT = re.compile(r"^([a-z][a-z0-9_-]*)@([0-9]+(?:\.[0-9]+)?)s?$")
-VERSIONS = ("lowpoly", "midpoly")
+VERSIONS = ("lowpoly", "midpoly", "web")
+RIGGED = ("midpoly", "lowpoly")  # a web version has no skeleton of its own: it borrows the first of these its run has
 BUILT = ("tripod", "teacup", "softbox")
 HANDS = ("right", "left")
 GRIPS = ("top", "bottom", "centre", "front")
 APART_M = 0.35  # two toons planned closer than this are standing in each other
-BUDGET = {"bytes": 2_000_000, "triangles": 60_000}  # what the combined .glb may cost a phone
+BUDGET = {"bytes": 6_000_000, "triangles": 320_000}  # what the combined .glb may cost a phone
 
 
 def folder(name):
@@ -112,7 +115,16 @@ def toon_file(runs, toon, poses):
     kind = read_pose(toon.get("pose"), poses)
     if not run or not kind:
         return None
-    return os.path.join(run, "profiles", "%s-%s.glb" % (toon.get("version", "lowpoly"), "walk" if kind[0] == "pose" else kind[1]))
+    clip = "walk" if kind[0] == "pose" else kind[1]
+    versions = RIGGED if toon.get("version") == "web" else (toon.get("version", "lowpoly"),)
+    paths = [os.path.join(run, "profiles", "%s-%s.glb" % (version, clip)) for version in versions]
+    return next((p for p in paths if os.path.isfile(p)), paths[0])
+
+
+def web_file(runs, toon):
+    """A toon's detailed version (profiles/web.glb): one mesh with its gear fused in, a painted face, and no skeleton."""
+    run = find_run(runs, toon["run"])
+    return os.path.join(run, "profiles", "web.glb") if run else None
 
 
 def prop_file(runs, prop):
@@ -233,7 +245,9 @@ def check(spec, runs=None):
             continue
         ids.add(who)
         if toon.get("version", "lowpoly") not in VERSIONS:
-            say("toon \"%s\": version is lowpoly or midpoly, not \"%s\"" % (who, toon.get("version")))
+            say("toon \"%s\": version is lowpoly, midpoly or web, not \"%s\"" % (who, toon.get("version")))
+        if runs and toon.get("version") == "web" and not os.path.isfile(web_file(runs, toon) or ""):
+            say("toon \"%s\": no profiles/web.glb in a run named for \"%s\" under %s" % (who, toon.get("run"), runs))
         if read_pose(toon.get("pose"), poses) is None:
             say("toon \"%s\" has no pose \"%s\" (a name from motion/comic_poses.json or this diorama's own, or clip@seconds)" % (who, toon.get("pose")))
         elif runs and not os.path.isfile(toon_file(runs, toon, poses) or ""):

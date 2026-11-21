@@ -6,8 +6,8 @@ What it shows:
   plan    every diorama's plan is sound, and a plan that is not is told why: a mark that isn't there, a pose
           nobody wrote, two toons on one spot, a prop nobody holds, a backdrop the stage doesn't have, a
           camera framing someone who isn't in it
-  built   what is kept in dioramas/<name>/ is the last build with nothing wrong: one light .glb (Draco, WebP,
-          inside the budget) with every toon, prop, the set and the base in it, its pictures and its card
+  built   what is kept in dioramas/<name>/ is the last build with nothing wrong: one .glb (Draco, WebP,
+          inside the budget, every web mesh soundly bound to its borrowed skeleton) with every toon, prop, the set and the base in it, its pictures and its card
   shelf   the gallery's front page gets the newest diorama first, with its epoch, views and pictures
 
 `scripts/test_tools.py` runs the same checks, and builds a diorama for real.
@@ -59,7 +59,7 @@ def test_plan(runs=None):
     told(spec, lambda s: s.update(epoch="epoch-99"), "has not been saved")
     told(spec, lambda s: s.update(stills=["somewhere"]), "stills names the cameras")
     if runs:
-        told(spec, lambda s: s["toons"][0].update(run="nobody-at-all"), "no midpoly file" if first.get("version") == "midpoly" else "no lowpoly file", runs)
+        told(spec, lambda s: s["toons"][0].update(run="nobody-at-all"), "in a run named for \"nobody-at-all\"", runs)
 
 
 def built_checks(spec, record, folder, label):
@@ -88,6 +88,12 @@ def built_checks(spec, record, folder, label):
     missing = [name for name in wanted if name not in facts["nodes"]]
     check("%s: every toon and prop is in it by name, with the set and the base" % label,
           not missing and any(n.startswith("set:") for n in facts["nodes"]) and any(n.startswith("plinth:") for n in facts["nodes"]), missing or facts["nodes"])
+    for who, bind in (record.get("binds") or {}).items():
+        wears = record["toons"][who]["version"]
+        check("%s: %s's web mesh on its borrowed skeleton: worst edge %.2fx, %.3f%% over twice%s" % (label, who, bind["worst"], bind["over_twice_pct"], "" if bind["sound"] else " (not sound: it wears %s)" % wears),
+              (bind["sound"] and wears == "web" and bind["worst"] <= 5.0 and bind["over_twice_pct"] <= 1.0) or (not bind["sound"] and wears != "web"), bind)
+    asked = [t["toon"] for t in spec["toons"] if t.get("version") == "web"]
+    check("%s: every toon asked for in its web version was bound and measured" % label, sorted(asked) == sorted(record.get("binds") or {}), asked)
     if "opens_again" in record:
         check("%s: Blender opened the file again and counted the same triangles" % label, record["opens_again"]["triangles"] == facts["triangles"], record["opens_again"])
     for name in spec["cameras"]:
@@ -117,8 +123,9 @@ def test_shelf():
     check("it comes with its title, a one-line caption and its epoch", now["title"] and now["caption"] and now["epoch"]["title"], now)
     check("it comes with its .glb, its views and its pictures", now["glb"] and len(now["views"]) >= 3 and len(now["stills"]) >= 3, now)
     files = diorama.front_page_files(now["name"])
-    check("opening the front page fetches one model and the small pictures, under 1.5 MB: %.2f MB in %d files" % (files["first"]["bytes"] / 1e6, files["first"]["files"]),
-          files["first"]["bytes"] < 1_500_000 and files["first"]["list"][0] == "diorama.glb", files["first"])
+    most = diorama.BUDGET["bytes"] + 300_000
+    check("opening the front page fetches one model and the small pictures, under %.1f MB: %.2f MB in %d files" % (most / 1e6, files["first"]["bytes"] / 1e6, files["first"]["files"]),
+          files["first"]["bytes"] < most and files["first"]["list"][0] == "diorama.glb", files["first"])
 
 
 FAILED = []
