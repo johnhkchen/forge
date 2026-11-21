@@ -889,17 +889,17 @@ characters with their gear (mid-poly files are made too).
 | | Lincoln (host) | Roosevelt (guest) |
 |---|---|---|
 | size against the motion's body | 1.08 | 0.89 |
-| a planted foot strays, at most | 0.002 cm | 0.2 cm |
-| foot slide in one step | 0.005 cm | 0.46 cm |
-| through the floor | 0.03 cm | 0.05 cm |
-| deepest in the set | 0.21 cm (a thigh, in the chair seat) | 0 |
+| a planted foot strays, at most | 0.003 cm | 0.3 cm |
+| foot slide in one step | 0.006 cm | 0.63 cm |
+| through the floor | 0.02 cm | 0.28 cm |
+| deepest in the set | 0.08 cm (a toe) | 0 |
 | turns outside a joint limit | 0 | 0 |
-| wrist from its spot in the handshake | 0.0 cm | 7.6 cm (his arm is too short) |
-| lowest point over the seat, against its top | 0.1 to 0.3 cm | 2.9 cm above |
-| hips raised to clear the seat, at most | 11.9 cm | 15.8 cm |
+| wrist from its spot in the handshake | 0.0 cm | 7.4 cm (his arm is too short) |
+| lowest point over the seat, against its top | 0.7 to 0.9 cm above | 3.2 cm above |
+| hips raised to clear the seat, at most | 12.2 cm | 15.9 cm |
 
-Between them, over the 69 frames the hands are held: palms 11.6 cm apart
-typically (11.1 to 12.6), wrists 17.5 cm (15.2 to 22.0; planned 14.0). On
+Between them, over the 69 frames the hands are held: palms 12.6 cm apart
+typically (12.1 to 13.7), wrists 17.3 cm (15.0 to 21.7; planned 14.0). On
 the box figures, before casting: every beat ends within 1 cm of its mark
 (2.5 cm for one walk), the hips are over the seat within 0.7 cm, wrists 14.6
 cm apart. The motion took 34 jobs, 92 seconds of worker time on an RTX 4090.
