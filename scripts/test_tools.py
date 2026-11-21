@@ -1277,6 +1277,9 @@ CLOTH_LIMITS = {  # the most skin that may come through over a walk: (share of c
     "lincoln": (6, 4), "ninja": (4, 3), "roosevelt": (2, 1.5), "pirate": (5, 6),
     "troll": (12, 9),  # low poly: eight cloth chains around thighs 43 cm thick; see SKILL.md, "What is weak"
 }
+ROM_LIMITS = {  # the same over the range-of-motion routine (rom.py), as it stands: a ceiling to keep it from getting worse
+    "lincoln": (4, 6), "ninja": (4, 6), "roosevelt": (4, 6), "pirate": (5, 7), "troll": (7, 10),
+}
 CLOTHED = [("lincoln", "*young-lincoln-frontier-wrestler", ["wool trousers", "linen work shirt"], []),
            ("ninja", "*shadow-ninja", ["cloth suit", "shin wraps"], ["hood and mask"]),
            ("roosevelt", "*roosevelt-wrestler-1890s", ["wool singlet", "wool tights"], []),
@@ -1319,7 +1322,7 @@ def dressed_run(ctx, label, pattern):
     if traits:
         with open(os.path.join(copy, "gait.json"), "w") as f:
             json.dump(traits, f)
-    wanted = ["walk"] if label in ("troll", "pirate") else ["lowpoly", "midpoly", "walk"]
+    wanted = ["walk", "rom"] if label in ("troll", "pirate") else ["lowpoly", "midpoly", "walk", "rom"]
     out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
                           os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles")] + wanted, capture_output=True, text=True)
     for version in ("lowpoly", "midpoly"):
@@ -1329,7 +1332,7 @@ def dressed_run(ctx, label, pattern):
 
 
 def test_cloth(ctx):
-    """Clothes sit on the body and move with it: five characters, low poly and mid poly, made by the real runner and measured over every frame of their walk."""
+    """Clothes sit on the body and move with it: five characters, low poly and mid poly, made by the real runner and measured over every frame of their walk, and of a range-of-motion routine that pushes the body further (rom.py)."""
     for label, pattern, tight, loose in CLOTHED:
         copy, run = dressed_run(ctx, label, pattern)
         if not copy:
@@ -1339,6 +1342,8 @@ def test_cloth(ctx):
         old = [p for p in old if os.path.exists(p)] if label not in ("troll", "pirate") else []
         new = [os.path.join(copy, "profiles", v + "-walk.glb") for v in ("lowpoly", "midpoly")]
         numbers = cloth_numbers(new + old)
+        rom = [os.path.join(copy, "profiles", v + "-rom.glb") for v in ("lowpoly", "midpoly")]
+        pushed = cloth_numbers(rom) if all(os.path.exists(p) for p in rom) else [None, None]
         for i, version in enumerate(("lowpoly", "midpoly")):
             who = "%s %s" % (label, version)
             now = numbers[i]
@@ -1370,6 +1375,15 @@ def test_cloth(ctx):
             check("%s: over %d frames of its walk, skin is through its clothes on %d point-frames, %.2f%% of those covered, %.1f cm at the deepest%s" % (
                   who, now["frames"], poke["point_frames"], poke["share_%"], poke["deepest_cm"], was),
                   now["frames"] >= 13 and poke["share_%"] <= share and poke["deepest_cm"] <= deep, poke)
+            # ...and over the range-of-motion routine, which pushes the body further than a walk does
+            if pushed[i]:
+                pushed_poke, (pushed_share, pushed_deep) = pushed[i]["poke_through"], ROM_LIMITS[label]
+                with open(os.path.join(copy, "profiles", version + "-rom.json")) as f:
+                    held = json.load(f)["animation"].get("clamped") or {}
+                check("%s: over %d frames of arms overhead, twists, bends, a squat and punches, skin is through its clothes on %d point-frames, %.2f%% of those covered, %.1f cm at the deepest (through %s; joints held at a limit: %s)" % (
+                      who, pushed[i]["frames"], pushed_poke["point_frames"], pushed_poke["share_%"], pushed_poke["deepest_cm"], ", ".join(sorted(pushed_poke["through"])) or "nothing",
+                      ", ".join("%s %d" % (b, n) for b, n in sorted(held.items(), key=lambda x: -x[1])[:4]) or "none"),
+                      pushed_poke["share_%"] <= pushed_share and pushed_poke["deepest_cm"] <= pushed_deep, pushed_poke)
             if before:
                 check("%s: no more than before, give or take" % who, poke["point_frames"] <= 1.25 * before["poke_through"]["point_frames"] + 20,
                       (poke["point_frames"], before["poke_through"]["point_frames"]))

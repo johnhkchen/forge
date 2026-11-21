@@ -31,6 +31,12 @@ reads the run's gait.json (how the character carries itself, from Opus) and
 lowpoly_build.json (the block-out's recipe, to place the joints) when they
 are there, and manages without either.
 
+The "rom" profile is the same again with a range-of-motion routine instead of
+the walk, <version>-rom.glb and <version>-rom.json (rom.py): arms overhead,
+twists, side bends, a bend forward, a squat and punches, standing in place.
+It is for checking, not showing: what the skin, clothes and joints do when
+the body is pushed further than a walk pushes it.
+
 The "run" profile is the same again with a looping run, <version>-run.glb and
 <version>-run.json. The run is not worked out here: it is a clip made from a
 sentence by Kimodo on the motion worker and cut into a loop
@@ -925,7 +931,9 @@ def walk(source, out_dir, profile, spec):
                 made = json.load(f)
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.ops.import_scene.gltf(filepath=os.path.join(out_dir, version + ".glb"))
-        name = version + "-walk"
+        source_script = spec.get("source", "walk.py")  # the motion source: walk.py, or rom.py for the range-of-motion routine
+        motion_name = source_script[:-3]
+        name = version + "-" + motion_name
         record = {"profile": name, "about": spec["about"], "source": os.path.join(out_dir, version + ".glb"), "of": version}
         dressed = any(o.type == "MESH" and o.get("forge") == "gear" for o in bpy.context.scene.objects)
         if dressed:  # clothes onto the body (a version draped when it was made is only read), and the faces they hide
@@ -936,8 +944,11 @@ def walk(source, out_dir, profile, spec):
             raise Skip(str(why))
         if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
             record["cloth"] = run_script("cloth.py", spec.get("cloth", {}))
-        record["walk"] = run_script("walk.py", dict(spec.get("walk", {}), traits=traits or None))
-        record["animation"] = run_script("animate.py", spec.get("animate", {}))
+        if motion_name == "walk":
+            record["walk"] = run_script("walk.py", dict(spec.get("walk", {}), traits=traits or None))
+        else:
+            record[motion_name] = run_script(source_script, spec.get(motion_name, {}))
+        record["animation"] = run_script("animate.py", dict(spec.get("animate", {}), motion=motion_name))
         for script in record["animation"].get("then", []):  # what the rig asks for after a bake: swing.py, for cloth bones
             record[script[:-3]] = run_script(script, spec.get(script[:-3], {}))
         glb = os.path.join(out_dir, name + ".glb")
@@ -950,11 +961,17 @@ def walk(source, out_dir, profile, spec):
         record["seconds"] = round(time.time() - started, 1)
         with open(os.path.join(out_dir, name + ".json"), "w") as f:
             json.dump(record, f, indent=2)
-        gait, check = record["walk"]["gait"], record["animation"]["check"]
+        check = record["animation"]["check"]
         cloth = len((record.get("cloth") or {}).get("cloth_bones") or [])
-        print("PROFILE %s: %d bones%s, %s weights, %.2f m/s at %d steps a minute, feet slide %.2f cm a step, %.2f MB, %.0fs -> %s" % (
-            name, len(record["rig"]["bones"]), " and %d for loose cloth" % cloth if cloth else "", record["rig"]["weights"], gait["speed_m_s"],
-            gait["cadence_steps_per_min"], check["foot_slide_cm_per_step"], record["bytes"] / 1e6, record["seconds"], glb))
+        if motion_name == "walk":
+            gait = record["walk"]["gait"]
+            print("PROFILE %s: %d bones%s, %s weights, %.2f m/s at %d steps a minute, feet slide %.2f cm a step, %.2f MB, %.0fs -> %s" % (
+                name, len(record["rig"]["bones"]), " and %d for loose cloth" % cloth if cloth else "", record["rig"]["weights"], gait["speed_m_s"],
+                gait["cadence_steps_per_min"], check["foot_slide_cm_per_step"], record["bytes"] / 1e6, record["seconds"], glb))
+        else:
+            print("PROFILE %s: %d bones%s, %s weights, %d frames, clamped %s, %.2f MB, %.0fs -> %s" % (
+                name, len(record["rig"]["bones"]), " and %d for loose cloth" % cloth if cloth else "", record["rig"]["weights"],
+                record["animation"]["frames"], json.dumps(record["animation"].get("clamped") or {}), record["bytes"] / 1e6, record["seconds"], glb))
 
 
 def running(source, out_dir, profile, spec):

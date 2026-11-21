@@ -261,5 +261,23 @@
       "image_format": "WEBP",
       "draco": false
     }
+  },
+  "rom": {
+    "about": "The same character with its skeleton, going through a range-of-motion routine standing in place: arms overhead, a twist and a side bend each way, a bend forward, a squat, a punch with each hand. For checking what skin, clothes and joints do when the body is pushed further than a walk pushes it; not shown in the gallery.",
+    "source": "rom.py",
+    "of": [
+      "lowpoly",
+      "midpoly"
+    ],
+    "rig": {
+      "weights": "auto"
+    },
+    "rom": {
+      "fps": 30
+    },
+    "export": {
+      "image_format": "WEBP",
+      "draco": false
+    }
   }
 }
