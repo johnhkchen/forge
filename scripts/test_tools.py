@@ -1989,9 +1989,133 @@ def test_comic_pov(ctx):
     check("a painted backdrop is hung with its horizon level with the camera's", all(p.get("sky_css") for p in reader["panels"]) or not reader["panels"][0].get("sky_image"))
 
 
+# ---- anatomy: landmarks, proportions, a body with loops where it bends, a body made without Claude ----
+
+LANDMARKS = ("top", "chin", "neck", "neck_base", "shoulder", "armpit", "chest", "waist", "hips", "crotch", "elbow", "wrist", "fingertip", "knee", "ankle", "heel", "toe")
+
+
+def run_of(ctx, pattern):
+    found = sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), pattern)))
+    return found[-1] if found else None
+
+
+def test_landmarks(ctx):
+    """landmarks.py finds a body's landmarks on a detailed mesh and on a low-poly one, and keeps its surface for build.py."""
+    found = blender(ctx["troll"] + "/final.glb", [("landmarks.py", {"head": {"min": [-0.3, -0.72, 1.93], "max": [0.3, -0.1, 2.4]}})],
+                    save=os.path.join(ctx["out"], "troll-landmarks.blend"))[0]
+    marks = found["landmarks"]
+    check("every landmark is there, with how it was found", all(k in marks and k in found["found"] for k in LANDMARKS), sorted(marks))
+    check("they stack as a body does: floor, ankle, knee, crotch, waist, chest, shoulder, top",
+          0 <= marks["ankle"][2] < marks["knee"][2] < marks["crotch"][2] < marks["waist"][2] < marks["chest"][2] < marks["shoulder"][2] <= marks["top"][2],
+          [marks[k][2] for k in ("ankle", "knee", "crotch", "waist", "chest", "shoulder", "top")])
+    check("and run out along the arm: armpit, elbow, wrist, fingertip", marks["armpit"][0] < marks["elbow"][0] < marks["wrist"][0] < marks["fingertip"][0])
+    check("the head's box gives the chin", found["found"]["chin"] == "the head's box" and abs(marks["chin"][2] - 1.93) < 1e-3)
+    check("a troll's sunk head is said to have no neck, not given a made-up one", "no neck" in found["found"]["neck"], found["found"]["neck"])
+    check("the body piece is ready to paste, and its surface is kept under its name", found["body"]["body"] == "body" and found["kept_as"] == "body: body")
+    check("the marks are drawn, and never render", found["guide"] == "Look: landmarks")
+    check("joints for a skeleton come with it", sorted(found["joints"]) == ["ankle", "elbow", "hip", "knee", "shoulder", "wrist"])
+    low = blender(os.path.join(ctx["troll"], "profiles", "lowpoly.glb"), [("landmarks.py", {"show": False, "keep": False})])[0]
+    tall = found["proportions"]["height_m"]
+    apart = {k: round(100 * sum((a - b) ** 2 for a, b in zip(low["landmarks"][k], marks[k])) ** 0.5 / tall, 1) for k in ("armpit", "crotch", "fingertip", "toe")}
+    check("the same finder reads a 1,200-triangle block-out: armpit, crotch, fingertip and toe within 6% of the height of the detailed mesh's", max(apart.values()) < 6, apart)
+
+
+def test_proportions(ctx):
+    """The proportions landmarks.py reads tell the characters apart: a cartoon's big head, a troll's long arms, a dancer's real legs under her skirt."""
+    troll = blender(ctx["troll"] + "/final.glb", [("landmarks.py", {"show": False, "keep": False})])[0]["proportions"]
+    check("the troll's arms are over half its height", troll["arm_share"] > 0.5, troll["arm_share"])
+    check("every share is a sane fraction", all(0 < troll[k] < 1 for k in ("leg_share", "arm_share", "hand_share", "foot_share", "trunk_share")), troll)
+    villager, lincoln, dancer = run_of(ctx, "*plain-young-villager"), run_of(ctx, "*young-lincoln*"), run_of(ctx, "*flamenco-dancer")
+    if villager and lincoln:
+        v = blender(villager + "/final.glb", [("landmarks.py", {"show": False, "keep": False})])[0]["proportions"]
+        l = blender(lincoln + "/final.glb", [("landmarks.py", {"show": False, "keep": False})])[0]["proportions"]
+        check("the cartoon villager is fewer heads tall than lanky Lincoln", v["heads_tall"] + 1 < l["heads_tall"], (v["heads_tall"], l["heads_tall"]))
+        check("Lincoln's arms are longer for his height than the troll's are short of it", 0.36 < l["arm_share"] < troll["arm_share"], l["arm_share"])
+    else:
+        check("the villager and Lincoln runs are not here: skipped", True)
+    if dancer and os.path.exists(dancer + "/base/final.glb"):
+        dressed = blender(dancer + "/final.glb", [("landmarks.py", {"show": False, "keep": False})])[0]
+        bare = blender(dancer + "/base/final.glb", [("landmarks.py", {"show": False, "keep": False})])[0]
+        check("under a long skirt the crotch is not found, and it says so", "usual proportion" in dressed["found"]["crotch"], dressed["found"]["crotch"][:60])
+        check("on her base body it is, by its shape", bare["found"]["crotch"] == "shape" and 0.38 < bare["proportions"]["leg_share"] < 0.52, bare["proportions"]["leg_share"])
+    else:
+        check("the dancer's base body is not here: skipped", True)
+
+
+def test_body_loops(ctx):
+    """A "body" piece: trunk, neck, arms, hands, legs and feet from landmarks, three loops at each elbow and knee where rig.py then puts the joints."""
+    box = {"min": [-0.3, -0.72, 1.93], "max": [0.3, -0.1, 2.4]}
+    found, built, chunky, mid = blender(ctx["troll"] + "/final.glb", [
+        ("landmarks.py", {"head": box, "show": False}),
+        ("build.py", {"parts": [{"name": "body", "body": "body"}], "sockets": True}),
+        ("build.py", {"name": "chunky", "parts": [{"name": "body", "body": "body", "style": {"chunky": 1.3}}], "check": 0}),
+        ("build.py", {"name": "mid", "parts": [{"name": "body", "body": "body", "detail": "mid"}], "check": 0}),
+    ], save=os.path.join(ctx["out"], "troll-body.blend"))
+    names = [p["name"] for p in built["pieces"]]
+    check("one piece asked for, seven built", names == ["body trunk", "body neck", "body arm", "body hand", "body leg", "body foot", "body thumb"], names)
+    body = built["body"]
+    check("three loops at each elbow and knee", body["loops"] == {"elbow": 3, "knee": 3}, body["loops"])
+    check("a whole body in 700 to 1,000 triangles", 700 <= body["triangles"] <= 1000, body["triangles"])
+    check("it keeps the detailed mesh's shape: typically under 2.5% off, worst under 8% (a troll's crust and tusks are not body)",
+          built["shape_lost"]["p95_%"] < 2.5 and built["shape_lost"]["max_%"] < 8, built["shape_lost"])
+    check("it says which landmarks to check by eye", "neck" in body["check_these"], body["check_these"])
+    check("chunky 1.3 is deeper and barely taller (the arms it thickens are a troll's highest point)", chunky["size"][1] > 1.1 * built["size"][1] and abs(chunky["size"][2] - built["size"][2]) < 0.08 * built["size"][2],
+          (built["size"], chunky["size"]))
+    check("mid detail: five loops at each joint, 3 to 4 times the triangles", mid["body"]["loops"] == {"elbow": 5, "knee": 5} and
+          3 * body["triangles"] < mid["body"]["triangles"] < 4.6 * body["triangles"], (body["triangles"], mid["body"]["triangles"]))
+    check("the recipe is kept, with the landmarks and joints for whatever reads it next", built["recipe_kept"])
+    # the joints: rig.py reads the recipe's rings, and should land on the landmarks
+    glb = os.path.join(ctx["out"], "troll-body.glb")
+    blender(os.path.join(ctx["out"], "troll-body.blend"), [("export.py", {"object": built["object"], "path": glb, "materials": False})])
+    with contextlib.redirect_stdout(io.StringIO()):
+        blockout_recipe.main(glb)
+    with open(os.path.join(ctx["out"], "lowpoly_build.json")) as f:
+        recipe = json.load(f)
+    check("the recipe file carries landmarks and joints", sorted(recipe.get("joints", {})) == ["ankle", "elbow", "hip", "knee", "shoulder", "wrist"] and "knee" in recipe["landmarks"])
+    rigged = blender(glb, [("rig.py", {"recipe": recipe["pieces"], "weights": "pieces"})])[0]
+    check("rig.py finds the elbow and knee by their close rings", rigged["found_by"]["elbow"] == "close rings" and rigged["found_by"]["knee"] == "close rings", rigged["found_by"])
+    tall = found["proportions"]["height_m"]
+    off = {"elbow": abs(rigged["joints"]["forearm_l"][0] - recipe["landmarks"]["elbow"][0]) / tall, "wrist": abs(rigged["joints"]["hand_l"][0] - recipe["landmarks"]["wrist"][0]) / tall,
+           "knee": abs(rigged["joints"]["shin_l"][2] - recipe["landmarks"]["knee"][2]) / tall}
+    check("and puts the elbow, wrist and knee within 3% of the height of the landmarks", max(off.values()) < 0.03, {k: round(100 * v, 1) for k, v in off.items()})
+    # a body from numbers alone, no kept surface: what a body usually has
+    marks, girth = found["landmarks"], found["girth"]
+    plain = blender(ctx["troll"] + "/final.glb", [("build.py", {"parts": [{"name": "body", "body": {"landmarks": marks, "girth": girth}}], "check": 0})])[0]
+    check("landmarks and girths alone build a body too, the same rings give or take", abs(plain["body"]["triangles"] - body["triangles"]) < 0.1 * body["triangles"] and abs(plain["size"][2] - built["size"][2]) < 0.1 * built["size"][2], (plain["body"]["triangles"], plain["size"]))
+    parts, kept = blockout_recipe.mid_parts(recipe["pieces"], 2, 2, tall)
+    check("the mid-poly rebuild asks for the body again in mid detail, with its kept surface, not for seven denser lofts",
+          [p.get("detail") for p in parts] == ["mid"] and list(kept) == ["body"], [p["name"] for p in parts])
+
+
+def test_auto_body(ctx):
+    """scripts/auto_body.py: a run's block-out gets an anatomical body without Claude; its head, hair and gear stay."""
+    run = run_of(ctx, "*shadow-ninja")
+    if not run or not os.path.exists(os.path.join(run, "lowpoly_build.json")):
+        check("the ninja run (with a recipe) is not here: skipped", True)
+        return
+    out = os.path.join(ctx["out"], "auto-body")
+    done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "auto_body.py"), "--", run, out], capture_output=True, text=True)
+    lines = [l for l in done.stdout.splitlines() if l.startswith("AUTOBODY ")]
+    check("it finishes", bool(lines), (done.stdout + done.stderr)[-600:])
+    made = json.loads(lines[-1][9:])
+    check("the old trunk, arms, hands, legs and feet are replaced", sorted(made["replaced"]) == ["arm", "foot", "hand", "leg", "torso"], made["replaced"])
+    check("the head and every gear piece stay", {"head", "hood", "jacket", "boot", "sash band"} <= set(made["kept"]), made["kept"])
+    check("the whole character is 1,000 to 2,500 triangles", 1000 <= made["triangles"] <= 2500, made["triangles"])
+    check("closer to the detailed mesh than a block-out is asked to be: typically under 2.5%, worst under 8%",
+          made["shape_lost"]["p95_%"] < 2.5 and made["shape_lost"]["max_%"] < 8, made["shape_lost"])
+    check("the body is drawn in where clothes cover it", {"trunk", "leg"} <= set(made["under"]), sorted(made["under"]))
+    check("the clothes were laid on the new body", made["draped"])
+    with open(os.path.join(out, "lowpoly_build.json")) as f:
+        recipe = json.load(f)
+    held = read_glb(os.path.join(out, "lowpoly.glb"))
+    check("the file has the body and the gear apart, and the recipe has landmarks", held["meshes"] >= 5 and "elbow" in recipe["landmarks"], held["meshes"])
+    check("nothing was written into the run", not os.path.exists(os.path.join(run, "auto-body")))
+
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
-         test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script]
+         test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body]
 
 
 def main(argv):

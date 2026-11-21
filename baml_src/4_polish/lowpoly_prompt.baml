@@ -62,10 +62,12 @@ function base_steps(base: BaseRefs?) -> string {
         - In step 1, after the reference, bring each in with open.py and
           "add": True (same "scene"; don't move or scale them): the base
           body as "Body", each garment as "Garment: <its name>".
-        - In step 2, measure every body piece (torso, hips, legs, arms,
-          hands, feet) on the base body: "object": "Body" in measure.py.
-          Don't take the body's shape from the reference where the ${names}
-          cover it: what is there is cloth, not body.
+        - In step 2, read the body off the base body: "object": "Body" in
+          landmarks.py. Anything of the body you measure yourself, measure
+          there too: "object": "Body" in measure.py. Don't take the body's
+          shape from the reference
+          where the ${names} cover it: what is there is cloth, not body.
+          A body read off the base body needs no "under" for the ${names}.
         - Measure each of the ${names} on its own mesh ("object": "Garment:
           <its name>") and build that gear piece from those rows. The mesh
           is that garment and nothing else, so the rows are the cloth
@@ -89,11 +91,52 @@ function base_steps(base: BaseRefs?) -> string {
 /// What a character needs on top of a prop: a pose that can be rigged, and
 /// a face that can be read.
 const CHARACTER_STEPS = `
-    It is a character in a T-pose, to be rigged later: keep the T-pose,
-    build it symmetric (model the +X half and set "mirror": True, if the
-    reference is centered on x = 0), and give elbows, knees, shoulders, hips
-    and the neck an extra ring so they can bend. Keep hands and feet as
-    simple blocks; no separate fingers.
+    It is a character in a T-pose, to be rigged later: keep the T-pose, and
+    build what you build yourself symmetric (model the +X half and set
+    "mirror": True, if the reference is centered on x = 0).
+
+    Its body is a body, not a stack of tubes. Don't block out the trunk,
+    neck, arms, hands, legs and feet by hand:
+    - In step 2, once you have the head's box, run landmarks.py with it as
+      "head". It finds the chin, neck, shoulders, armpits, chest, waist,
+      hips, crotch, elbows, wrists, knees and ankles, reads the body's own
+      shape all the way along, and prints a "body" piece. \`look\` at its
+      marks (mode "angles", target ["Reference", "Look: landmarks"]).
+    - In step 3 that "body" piece goes into build.py's "parts" as it is.
+      build.py makes it a trunk with a ribcage, a waist and a pelvis, a
+      neck, arms with a shoulder cap, hands with a thumb, legs with a knee
+      and a calf, and feet with a heel and toes: about 900 triangles, with
+      three rings at each elbow and knee so they bend. What you build
+      yourself is the head, the hair, what the character grows (a tail,
+      horns, spines) and what it wears.
+    - Then check its anatomy against the picture, as you would a drawing:
+      1. A landmark "found" by "usual proportion" is a guess. Put a wrong
+         one right on the piece: "landmarks": {"knee": [x, y, z]}. On a
+         body with its arms hanging, the elbow is level with the waist and
+         the wrist with the crotch; the knee is halfway down the leg.
+      2. Proportions: landmarks.py prints how many heads tall it is and
+         how much of its height is leg and arm. Keep what the picture has
+         (a cartoon's big head and short legs, a troll's long arms); don't
+         pull it toward an average person.
+      3. The trunk: shoulders against hips as in the picture, a waist
+         between the ribcage and the pelvis, the chest in front, the
+         shoulder blades and glutes behind.
+      4. The limbs: a shoulder cap, an upper arm and a forearm that each
+         swell and taper, a wrist; a thigh, a kneecap in front, a calf
+         behind, an ankle.
+      5. Hands end in one finger mass with a thumb forward of it; feet
+         have a heel, an arch and toes, and lie flat on the floor. No
+         separate fingers.
+      6. The neck meets the head under the jaw and is no thinner or longer
+         than the picture's, with a slope down to the shoulders.
+    - Style goes on the piece, not into new shapes: "style": {"chunky":
+      1.2} thickens the trunk and limbs (old RuneScape), "limbs": 0.9
+      slims the limbs alone, "head": 1.15 grows the head and all that sits
+      on it. "follow": 0.6 keeps cleaner, evener shapes (a mobile-clean or
+      cartoon look); 1.0 follows every fold of the reference.
+    - Where clothes cover the body, draw it in so it sits under them:
+      "under": {"trunk": 0.012, "leg": 0.012, "foot": 0.03}, in meters
+      ("arm" and "hand" too). Leave bare parts out.
 
     The face is what people look at, so the head is never a plain loft:
     - In step 2, measure a "head" box too, then run face.py with that box.
@@ -148,9 +191,9 @@ function gear_steps(brief: ObjectBrief) -> string {
         or swap its boots. So build it in two layers:
         - The body first, whole: skin (or fur, or scales) everywhere, under
           the clothes too. Under a coat there is a chest and arms, under
-          boots there are feet. Where gear covers it the body can be plain
-          (6 sides, few rings); it only shows with the gear off. Hair,
-          beards, horns, tails and tusks are body.
+          boots there are feet. The "body" piece from landmarks.py is that
+          body; give it "under" where gear covers it. Hair, beards, horns,
+          tails and tusks are body.
         - Then each gear item below as a piece or pieces of its own, built
           where the reference shows it, with "gear": "<the item's name>" on
           every piece of it. A piece with no "gear" is body.

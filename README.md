@@ -97,6 +97,8 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just motion-health`, `just motion-info`, `just motion-selftest` | is the motion endpoint up, what is it running, and does it work end to end |
 | `just text-info` | what the sentence-to-motion model has fetched and loaded (the first call fetches it) |
 | `just recipe <run folder>` | for a run from before recipes were kept: get its block-out's recipe back from the transcript, so `midpoly` can be made |
+| `just auto-body <run folder> <out folder>` | give a finished character a body with anatomy, without Claude: its landmarks are found, a body is built from them, and its own head and gear go back on. Writes into the out folder, never the run |
+| `just anatomy-check <run folder> <out.png> low=<file.glb>…` | measure low-poly and mid-poly bodies against the detailed mesh: landmarks, proportions, outlines, cross-sections, and a sheet to look at |
 | `just gallery` | look at every object, raw vs cleaned-up, and read the comics, on this Mac or a phone on the same Wi-Fi |
 | `just transcript <run folder> <step>` | read the Blender code Claude ran in a step (`polish`, `parts`, `lowpoly`) |
 | `just test-tools` | try the Blender scripts on real runs in a background Blender (your open Blender is left alone) |
@@ -129,6 +131,18 @@ A face is the first thing anyone looks at and the first thing this pipeline got 
 - **In the walk, the head and what sits on it follow the head bone alone**, so the jaw doesn't bend with the neck.
 
 `just face-sheet` draws every version's face next to the picture and `just face-check` measures them. Weak spots: the detailed `final.glb` itself keeps TRELLIS's face (make `hero` for a painted one); the paint is a front view, so ears and temples are still TRELLIS's; glasses and eye patches are painted flat onto the face as well as built; and a head sunk between the shoulders (the troll) isn't found without a block-out to say where it is. More in the skill's notes.
+
+## Bodies with anatomy
+
+Built by hand from tubes, a low-poly body came out as stacked tubes: no shoulder cap, no waist between ribcage and pelvis, no calf, a mitten for a hand, a box for a foot. So the body is no longer built by hand:
+
+- **The landmarks are found, not guessed.** A tool reads the detailed mesh (or the real body under hiding clothes, when the run has one) and finds the chin, neck, shoulders, armpits, chest, waist, hips, crotch, elbows, wrists, knees and ankles, how long the hands and feet are, and the body's own shape all the way along. Where a landmark doesn't show (an elbow inside a straight sleeve) it sits where a body usually has it, and says so.
+- **One "body" piece builds the lot**: a trunk with ribcage, waist and pelvis, a neck, arms with a shoulder cap, hands with a thumb, legs with a knee and a calf, feet with a heel and toes. About 900 triangles, with three rings close together at each elbow and knee, which is where the skeleton then puts those joints.
+- **Style is a few numbers on that piece**: chunkier, slimmer limbs, a bigger head, or cleaner shapes that follow the picture less closely.
+- **Mid poly adds anatomy, not only roundness**: five rings at each elbow and knee and twice as many everywhere else, each laid on the detailed mesh, so the chest, shoulder blades and kneecaps it has come through.
+- **The landmarks stay in the recipe** (`lowpoly_build.json`, `landmarks` and `joints`) for whatever needs them next.
+
+Claude now adds the head, hair and gear to that body and checks it against a short anatomy list. `just auto-body <run folder> <out folder>` does the body for a finished run without Claude, keeping its head and gear; `just anatomy-check` measures any version against the detailed mesh (landmarks, proportions, outlines, cross-sections) and draws a sheet. What is weak, and the numbers on eight characters, are in the skill's "Anatomy" section; the sheets are in `docs/anatomy/`.
 
 ## Gear comes off
 
