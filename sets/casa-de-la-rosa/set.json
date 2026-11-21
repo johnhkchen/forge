@@ -1,0 +1,681 @@
+{
+ "format": "forge-set/1",
+ "name": "casa-de-la-rosa",
+ "title": "Casa de la Rosa",
+ "about": "A small whitewashed Andalusian courtyard house with a tile roof, a wooden tablao at the front and a mirrored rehearsal floor beside it. She is a star about to premiere, but a warm and patient one, so she asked for a real stage and a mirror to practise in front of, with a little patio where friends can pull up a chair and watch. The red, black and white come straight from her skirt, shoes and rose.",
+ "stage": "open",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is the middle of the house; the front is its open side"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -7.2,
+    -6.2
+   ],
+   [
+    7.2,
+    -6.2
+   ],
+   [
+    7.2,
+    8.8
+   ],
+   [
+    -7.2,
+    8.8
+   ]
+  ],
+  "about": "all of it, its cameras included"
+ },
+ "units": "metres. y is up, the ground is 0. The front is +z: a heading of 0 faces it, 90 faces +x.",
+ "floor": {
+  "areas": [
+   [
+    [
+     -5.95,
+     -4.95
+    ],
+    [
+     5.95,
+     5.0
+    ]
+   ],
+   [
+    [
+     -6.9,
+     5.0
+    ],
+    [
+     6.9,
+     8.6
+    ]
+   ]
+  ]
+ },
+ "ground": {
+  "y": -0.02,
+  "color": [
+   0.72,
+   0.71,
+   0.69
+  ],
+  "size_m": 70.0
+ },
+ "blocks": [
+  {
+   "name": "back wall",
+   "kind": "wall",
+   "center": [
+    0.0,
+    1.6,
+    -5.125
+   ],
+   "size": [
+    12.5,
+    3.2,
+    0.25
+   ],
+   "heading": 0.0,
+   "color": [
+    0.957,
+    0.937,
+    0.902
+   ]
+  },
+  {
+   "name": "left wall",
+   "kind": "wall",
+   "center": [
+    -6.125,
+    1.6,
+    0.0
+   ],
+   "size": [
+    0.25,
+    3.2,
+    10.0
+   ],
+   "heading": 0.0,
+   "color": [
+    0.957,
+    0.937,
+    0.902
+   ]
+  },
+  {
+   "name": "right wall",
+   "kind": "wall",
+   "center": [
+    6.125,
+    1.6,
+    0.0
+   ],
+   "size": [
+    0.25,
+    3.2,
+    10.0
+   ],
+   "heading": 0.0,
+   "color": [
+    0.957,
+    0.937,
+    0.902
+   ]
+  },
+  {
+   "name": "bed",
+   "kind": "bed",
+   "center": [
+    -5.0,
+    0.25,
+    -3.7
+   ],
+   "size": [
+    1.4,
+    0.5,
+    2.0
+   ],
+   "heading": 0.0,
+   "color": [
+    0.949,
+    0.937,
+    0.914
+   ]
+  },
+  {
+   "name": "wardrobe",
+   "kind": "wardrobe",
+   "center": [
+    -1.6,
+    1.0,
+    -4.425
+   ],
+   "size": [
+    1.2,
+    2.0,
+    0.55
+   ],
+   "heading": 0.0,
+   "color": [
+    0.639,
+    0.125,
+    0.165
+   ]
+  },
+  {
+   "name": "armchair seat",
+   "kind": "seat",
+   "center": [
+    1.75,
+    0.23,
+    -4.29
+   ],
+   "size": [
+    0.6,
+    0.46,
+    0.42
+   ],
+   "heading": 0.0,
+   "color": [
+    0.71,
+    0.325,
+    0.184
+   ]
+  },
+  {
+   "name": "armchair back",
+   "kind": "seat",
+   "center": [
+    1.75,
+    0.5,
+    -4.56
+   ],
+   "size": [
+    0.6,
+    1.0,
+    0.12
+   ],
+   "heading": 0.0,
+   "color": [
+    0.71,
+    0.325,
+    0.184
+   ]
+  },
+  {
+   "name": "side table",
+   "kind": "table",
+   "center": [
+    2.525,
+    0.275,
+    -4.325
+   ],
+   "size": [
+    0.45,
+    0.55,
+    0.45
+   ],
+   "heading": 0.0,
+   "color": [
+    0.639,
+    0.125,
+    0.165
+   ]
+  },
+  {
+   "name": "patio table",
+   "kind": "table",
+   "center": [
+    5.1,
+    0.36,
+    3.4
+   ],
+   "size": [
+    0.9,
+    0.72,
+    0.9
+   ],
+   "heading": 0.0,
+   "color": [
+    0.639,
+    0.125,
+    0.165
+   ]
+  },
+  {
+   "name": "arches 1 post 1",
+   "kind": "post",
+   "center": [
+    1.1,
+    1.25,
+    2.39
+   ],
+   "size": [
+    0.18,
+    2.5,
+    0.18
+   ],
+   "heading": 0.0,
+   "color": [
+    0.957,
+    0.937,
+    0.902
+   ]
+  },
+  {
+   "name": "arches 1 post 2",
+   "kind": "post",
+   "center": [
+    3.0,
+    1.25,
+    2.39
+   ],
+   "size": [
+    0.18,
+    2.5,
+    0.18
+   ],
+   "heading": 0.0,
+   "color": [
+    0.957,
+    0.937,
+    0.902
+   ]
+  },
+  {
+   "name": "arches 1 post 3",
+   "kind": "post",
+   "center": [
+    4.9,
+    1.25,
+    2.39
+   ],
+   "size": [
+    0.18,
+    2.5,
+    0.18
+   ],
+   "heading": 0.0,
+   "color": [
+    0.957,
+    0.937,
+    0.902
+   ]
+  },
+  {
+   "name": "mirror wall 2 frame",
+   "kind": "wall",
+   "center": [
+    -5.95,
+    1.2,
+    2.0
+   ],
+   "size": [
+    0.1,
+    2.4,
+    5.4
+   ],
+   "heading": 0.0,
+   "color": [
+    0.639,
+    0.125,
+    0.165
+   ]
+  },
+  {
+   "name": "string lights 3 post 1",
+   "kind": "post",
+   "center": [
+    0.12,
+    1.4,
+    2.62
+   ],
+   "size": [
+    0.12,
+    2.8,
+    0.12
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "string lights 3 post 2",
+   "kind": "post",
+   "center": [
+    5.88,
+    1.4,
+    2.62
+   ],
+   "size": [
+    0.12,
+    2.8,
+    0.12
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "string lights 3 post 3",
+   "kind": "post",
+   "center": [
+    5.88,
+    1.4,
+    4.88
+   ],
+   "size": [
+    0.12,
+    2.8,
+    0.12
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "string lights 3 post 4",
+   "kind": "post",
+   "center": [
+    0.12,
+    1.4,
+    4.88
+   ],
+   "size": [
+    0.12,
+    2.8,
+    0.12
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  }
+ ],
+ "marks": {
+  "bedroom": {
+   "kind": "stand",
+   "at": [
+    -4.25,
+    -1.7
+   ],
+   "facing_deg": 0.0,
+   "about": "the quiet room: Where she rests her feet after rehearsal: a low bed with a red quilt and a shuttered window."
+  },
+  "dressing_room": {
+   "kind": "stand",
+   "at": [
+    -0.75,
+    -3.0
+   ],
+   "facing_deg": 0.0,
+   "about": "the camerino: Her dressing room, with the ruffled skirts on a rail, the dance shoes in a row and a bowl of red roses by the mirror."
+  },
+  "sitting_room": {
+   "kind": "stand",
+   "at": [
+    3.5,
+    -3.0
+   ],
+   "facing_deg": 0.0,
+   "about": "the tea corner: A snug room with a sofa, a guitar on the wall and a teapot always ready for whoever drops by."
+  },
+  "practice": {
+   "kind": "stand",
+   "at": [
+    -3.0,
+    2.0
+   ],
+   "facing_deg": 0.0,
+   "about": "the rehearsal floor: A clear sprung wooden floor with a full mirror along one wall, where she works out every step before it goes on stage."
+  },
+  "stage": {
+   "kind": "stand",
+   "at": [
+    3.0,
+    0.85
+   ],
+   "facing_deg": 0.0,
+   "about": "the tablao: Her small raised wooden stage, made to ring under her heels, with her microphone at the front edge and one chair for the guitarist.",
+   "floor_y": 0.25
+  },
+  "patio": {
+   "kind": "stand",
+   "at": [
+    3.0,
+    3.75
+   ],
+   "facing_deg": 0.0,
+   "about": "the little plaza: A paved open-air spot in front of the stage with folding chairs and potted geraniums, so friends can sit and watch."
+  },
+  "seat": {
+   "kind": "sit",
+   "at": [
+    1.75,
+    -4.24
+   ],
+   "stand_at": [
+    1.75,
+    -3.76
+   ],
+   "facing_deg": 0.0,
+   "seat_height_m": 0.46,
+   "seat": "armchair seat",
+   "beside": [
+    "armchair back"
+   ],
+   "about": "the armchair in the tea corner"
+  },
+  "gate": {
+   "kind": "stand",
+   "at": [
+    0.0,
+    6.6
+   ],
+   "facing_deg": 180.0,
+   "about": "out front, looking in"
+  }
+ },
+ "paths": [
+  {
+   "from": "gate",
+   "to": "bedroom"
+  },
+  {
+   "from": "gate",
+   "to": "dressing_room"
+  },
+  {
+   "from": "gate",
+   "to": "sitting_room"
+  },
+  {
+   "from": "gate",
+   "to": "practice"
+  },
+  {
+   "from": "gate",
+   "to": "stage"
+  },
+  {
+   "from": "gate",
+   "to": "patio"
+  },
+  {
+   "from": "gate",
+   "to": "seat",
+   "via": [
+    [
+     1.75,
+     4.6
+    ]
+   ]
+  }
+ ],
+ "cameras": {
+  "front": {
+   "at": [
+    1.8,
+    2.3,
+    8.3
+   ],
+   "aim": [
+    0.72,
+    1.0,
+    -1.0
+   ],
+   "lens_mm": 20,
+   "about": "the whole house, from the yard",
+   "sees": [
+    "bedroom",
+    "dressing_room",
+    "sitting_room",
+    "practice",
+    "stage",
+    "patio",
+    "seat"
+   ]
+  },
+  "stage": {
+   "at": [
+    3.6,
+    1.5,
+    5.85
+   ],
+   "aim": [
+    3.0,
+    1.25,
+    0.85
+   ],
+   "lens_mm": 35,
+   "about": "the stage and the microphone",
+   "sees": [
+    "dressing_room",
+    "sitting_room",
+    "stage"
+   ]
+  }
+ },
+ "lights": [
+  {
+   "name": "sun",
+   "kind": "sun",
+   "at": [
+    -8.0,
+    16.0,
+    10.0
+   ],
+   "aim": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "power": 2.6,
+   "color": [
+    1.0,
+    0.96,
+    0.88
+   ]
+  },
+  {
+   "name": "sky",
+   "kind": "area",
+   "at": [
+    6.0,
+    12.0,
+    8.0
+   ],
+   "aim": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "power": 900.0,
+   "color": [
+    0.88,
+    0.93,
+    1.0
+   ],
+   "size_m": 12.0
+  }
+ ],
+ "world": {
+  "color": [
+   0.8,
+   0.86,
+   0.9
+  ],
+  "strength": 0.7
+ },
+ "backdrop": null,
+ "signs": [
+  {
+   "name": "house sign",
+   "image": "sign.png",
+   "center": [
+    -6.56,
+    1.72,
+    6.25
+   ],
+   "width_m": 1.3,
+   "height_m": 0.44,
+   "heading": 0.0,
+   "glow": 0.8,
+   "about": "her sign: Pull up a chair"
+  }
+ ],
+ "slots": {
+  "microphone": {
+   "at": [
+    3.55,
+    0.25,
+    1.2
+   ],
+   "heading": 0.0,
+   "about": "on the stage, a step to one side of where she stands"
+  }
+ },
+ "dressing": [
+  {
+   "prop": "microphone",
+   "slot": "microphone",
+   "glb": "dressing/microphone.glb",
+   "from_run": "2026-11-21T00-12-05-vintage-stage-microphone",
+   "about": "her microphone: the first thing we ever heard from this cast came through it"
+  }
+ ],
+ "geometry": {
+  "glb": "set.glb",
+  "move": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "turn_deg": 0.0,
+  "built_by": "baml run buy_house (the design), then python3 scripts/world/build_house.py casa-de-la-rosa"
+ },
+ "faces": {
+  "toward": "the spawn spot",
+  "facing_deg": 180.0,
+  "why": "She was the last of the first toons to be looked after, so the first thing every new arrival sees is her stage and a seat waiting for them."
+ },
+ "design": "design.json"
+}

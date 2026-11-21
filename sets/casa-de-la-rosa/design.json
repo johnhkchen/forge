@@ -1,0 +1,148 @@
+{
+  "name": "Casa de la Rosa",
+  "style": "A small whitewashed Andalusian courtyard house with a tile roof, a wooden tablao at the front and a mirrored rehearsal floor beside it.",
+  "why": "She is a star about to premiere, but a warm and patient one, so she asked for a real stage and a mirror to practise in front of, with a little patio where friends can pull up a chair and watch. The red, black and white come straight from her skirt, shoes and rose.",
+  "wide_m": 12.0,
+  "deep_m": 10.0,
+  "faces": "the spawn spot",
+  "faces_why": "She was the last of the first toons to be looked after, so the first thing every new arrival sees is her stage and a seat waiting for them.",
+  "walls": {
+    "name": "fresh lime whitewash",
+    "hex": "#f4efe6"
+  },
+  "roof": {
+    "name": "sun-baked terracotta",
+    "hex": "#b5532f"
+  },
+  "trim": {
+    "name": "rose-petal red",
+    "hex": "#a3202a"
+  },
+  "materials": [
+    {
+      "part": "walls",
+      "look": "thick lime-washed stucco, softly lumpy, bright white in the sun"
+    },
+    {
+      "part": "roof",
+      "look": "curved clay barrel tiles in warm terracotta"
+    },
+    {
+      "part": "floors",
+      "look": "worn oak boards inside, dark ebony boards on the stage"
+    },
+    {
+      "part": "railings and brackets",
+      "look": "simple black wrought iron with little curls"
+    }
+  ],
+  "areas": [
+    {
+      "name": "the quiet room",
+      "kind": "Bedroom",
+      "x_m": 0.0,
+      "z_m": 0.0,
+      "wide_m": 3.5,
+      "deep_m": 4.0,
+      "floor": {
+        "name": "warm pine boards",
+        "hex": "#c9a27a"
+      },
+      "about": "Where she rests her feet after rehearsal: a low bed with a red quilt and a shuttered window."
+    },
+    {
+      "name": "the camerino",
+      "kind": "DressingRoom",
+      "x_m": 3.5,
+      "z_m": 0.0,
+      "wide_m": 3.5,
+      "deep_m": 4.0,
+      "floor": {
+        "name": "dusty rose tile",
+        "hex": "#d8b9a0"
+      },
+      "about": "Her dressing room, with the ruffled skirts on a rail, the dance shoes in a row and a bowl of red roses by the mirror."
+    },
+    {
+      "name": "the tea corner",
+      "kind": "SittingRoom",
+      "x_m": 7.0,
+      "z_m": 0.0,
+      "wide_m": 5.0,
+      "deep_m": 4.0,
+      "floor": {
+        "name": "terracotta floor tile",
+        "hex": "#c07a4e"
+      },
+      "about": "A snug room with a sofa, a guitar on the wall and a teapot always ready for whoever drops by."
+    },
+    {
+      "name": "the rehearsal floor",
+      "kind": "PracticeFloor",
+      "x_m": 0.0,
+      "z_m": 4.0,
+      "wide_m": 6.0,
+      "deep_m": 6.0,
+      "floor": {
+        "name": "honey oak boards",
+        "hex": "#b8864f"
+      },
+      "about": "A clear sprung wooden floor with a full mirror along one wall, where she works out every step before it goes on stage."
+    },
+    {
+      "name": "the tablao",
+      "kind": "Stage",
+      "x_m": 7.0,
+      "z_m": 4.5,
+      "wide_m": 4.0,
+      "deep_m": 3.0,
+      "floor": {
+        "name": "polished ebony boards",
+        "hex": "#2b211d"
+      },
+      "about": "Her small raised wooden stage, made to ring under her heels, with her microphone at the front edge and one chair for the guitarist."
+    },
+    {
+      "name": "the little plaza",
+      "kind": "Patio",
+      "x_m": 6.0,
+      "z_m": 7.5,
+      "wide_m": 6.0,
+      "deep_m": 2.5,
+      "floor": {
+        "name": "sandstone flags",
+        "hex": "#d9c3a0"
+      },
+      "about": "A paved open-air spot in front of the stage with folding chairs and potted geraniums, so friends can sit and watch."
+    }
+  ],
+  "microphone_area": "the tablao",
+  "features": [
+    {
+      "kind": "arches",
+      "area": "the tablao",
+      "about": "Two whitewashed arches frame the stage like a little theatre."
+    },
+    {
+      "kind": "mirror_wall",
+      "area": "the rehearsal floor",
+      "about": "A tall mirror along the side wall so she can check every turn of the skirt."
+    },
+    {
+      "kind": "string_lights",
+      "area": "the little plaza",
+      "about": "Warm bulbs strung over the seats for evening shows."
+    },
+    {
+      "kind": "flower_pots",
+      "area": "the little plaza",
+      "about": "Clay pots of red geraniums, the same red as the rose in her hair."
+    },
+    {
+      "kind": "shutters",
+      "area": "the quiet room",
+      "about": "Rose-red wooden shutters she can close when she needs her rest."
+    }
+  ],
+  "sign": "Pull up a chair"
+}

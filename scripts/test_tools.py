@@ -30,9 +30,11 @@ TOOLS = os.path.join(HERE, "..", ".claude", "skills", "tidy-mesh", "scripts")
 BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "sets"))
+sys.path.insert(0, os.path.join(HERE, "world"))
 import blockout_recipe  # noqa: E402
 import check_safe  # noqa: E402
 import test_sets  # noqa: E402  (the standing sets' own cases, which need no Blender)
+import test_world  # noqa: E402  (the world's own cases, which need no Blender either)
 
 
 def blender(base, steps, save=None):
@@ -1751,6 +1753,42 @@ def test_set_build(ctx):
 
 
 
+def test_world_places(ctx):
+    """The world: world.json puts every place on one ground with no two footprints overlapping, every place passes set-check, and the newest epoch is the world as it is now."""
+    test_world.test_places()
+    test_world.test_epochs()
+
+
+def test_world_house(ctx):
+    """The world: the dancer's house design parses and validates, builds into the very set that is kept, and a different design builds a sound set too."""
+    test_world.test_house()
+
+
+def test_world_toons(ctx):
+    """The world: every toon stands on a mark, the artifacts are where the story says, the ninja's stage is ready for portraits, and the first view is light enough for a phone."""
+    test_world.test_toons()
+    test_world.test_load()
+
+
+def test_world_house_build(ctx):
+    """The world: a house design is built into a set in a background Blender (build_house.py), and what comes out is sound and low-poly."""
+    name = "test-house-build"
+    folder = os.path.join(HERE, "..", "sets", name)
+    shutil.rmtree(folder, ignore_errors=True)
+    os.makedirs(folder)
+    try:
+        shutil.copy(os.path.join(HERE, "..", "sets", "casa-de-la-rosa", "design.json"), folder)
+        shutil.copytree(os.path.join(HERE, "..", "sets", "casa-de-la-rosa", "dressing"), os.path.join(folder, "dressing"))
+        out = subprocess.run([sys.executable, os.path.join(HERE, "world", "build_house.py"), name], capture_output=True, text=True)
+        lines = [line for line in out.stdout.splitlines() if line.startswith("HOUSE")]
+        check("build_house.py planned it, built it, pictured it and found it sound", out.returncode == 0 and lines and lines[-1].endswith("sound"), (out.stdout + out.stderr)[-1500:])
+        held = read_glb(os.path.join(folder, "set.glb"))
+        check("set.glb: %d triangles, flat colors on the corners, no textures" % held["triangles"], 300 <= held["triangles"] <= 4000 and held["vertex_colors"] and held["images"] == 0, held)
+        check("it has its sign and its card", os.path.getsize(os.path.join(folder, "sign.png")) > 1000 and os.path.getsize(os.path.join(folder, "card.png")) > 10000)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def read_png(path):
     """An 8-bit RGB or RGBA .png as (wide, tall, rows of (r, g, b, a) tuples), read with nothing but zlib."""
     import zlib
@@ -2165,7 +2203,8 @@ def test_auto_body(ctx):
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body,
-         test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build]
+         test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build,
+         test_world_places, test_world_house, test_world_toons, test_world_house_build]
 
 
 def main(argv):

@@ -1,4 +1,4 @@
-// Forge gallery: the shelf of runs, a before/after viewer for each, and the sets they are filmed on.
+// Forge gallery: the world seen whole, the shelf of runs, a before/after viewer for each, and the sets they are filmed on.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
@@ -23,6 +23,7 @@ let runs = [];
 let sets = [];
 let takes = [];
 let comics = [];
+let world = null;
 let viewer = null;
 
 const h = (tag, attrs = {}, ...kids) => {
@@ -58,8 +59,8 @@ function shelf() {
   return h("div", {},
     objects,
     h("section", { class: "sets" },
-      h("h2", {}, "Sets"),
-      h("p", { class: "lede" }, "Places of our own to film in. Each is built once and keeps its marks, cameras and lights, so a new shot only needs to say who stands where."),
+      h("h2", {}, "Places"),
+      h("p", { class: "lede" }, "Each place on its own. It is built once and keeps its marks, cameras and lights, so a new shot only needs to say who stands where."),
       h("div", { class: "shelf" }, sets.map((set) => {
         const marks = Object.keys(set.marks || {}).length, cameras = Object.keys(set.cameras || {}).length;
         const filmed = takes.filter((t) => t.set === set.id).length;
@@ -146,18 +147,26 @@ function setPage(set, wantedTake, wantedCamera) {
     );
   }
 
+  // A stage whose backdrop can be swapped: each choice is a real place in the world.
+  const behind = set.backdrop_options?.options || [];
+  const behindChips = behind.map((option) => h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(option.image === set.backdrop?.image), onclick: () => {
+    behindChips.forEach((chip, i) => press(chip, behind[i] === option));
+    viewer?.setBackdrop(option.image);
+  } }, option.title));
   const marks = Object.entries(set.marks || {});
+  const inWorld = world?.epochs?.length ? Object.entries(world.epochs[world.epochs.length - 1].places).find(([, p]) => p.set === set.id) : null;
   const page = h("article", { class: "object" },
-    h("a", { class: "back", href: "#/" }, "← Everything"),
+    inWorld ? h("a", { class: "back", href: `#/world/${world.epochs[world.epochs.length - 1].name}/${encodeURIComponent(inWorld[0])}` }, "← The world") : h("a", { class: "back", href: "#/" }, "← Everything"),
     h("h1", {}, set.title || set.name),
     set.about ? h("p", { class: "lede" }, set.about) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Look from" }, lookChips),
     h("div", { class: "controls" }, h("div", { class: "toggles" }, marksBtn, cameraNames.length ? camsBtn : null, blocksBtn, takeBtns)),
     dressing.length ? h("div", { class: "gear", role: "group", "aria-label": "Dressing" }, h("span", { class: "hint" }, "Dressing"), dressing, h("span", { class: "hint" }, "Tap a piece to take it away.")) : null,
+    behind.length ? h("div", { class: "gear", role: "group", "aria-label": "Through the window" }, h("span", { class: "hint" }, "Through the window"), behindChips) : null,
     stage,
     film,
     h("section", { class: "making" },
-      h("h2", {}, "What's on this set"),
+      h("h2", {}, "What's here"),
       h("div", { class: "notes clay-surface" }, h("h3", {}, "Marks"), h("ul", {}, marks.map(([name, m]) =>
         h("li", {}, h("strong", {}, name.replace(/_/g, " ")), ` · ${MARK_WORDS[m.kind] || m.kind}${m.about ? `. ${m.about[0].toUpperCase()}${m.about.slice(1)}.` : ""}`)))),
       cameraNames.length ? h("div", { class: "notes clay-surface" }, h("h3", {}, "Cameras"), h("ul", {}, cameraNames.map((name) =>
@@ -238,10 +247,20 @@ class SetViewer {
         flat.position.fromArray(set.backdrop.center);
         flat.rotation.y = THREE.MathUtils.degToRad(set.backdrop.heading || 0);
         this.scene.add(flat);
+        this.backdrop = flat;
+      }
+      for (const sign of set.signs || []) {
+        // A sign is a small painted flat that is part of the place: a shop sign, a wall painting.
+        const picture = await new THREE.TextureLoader().loadAsync(`sets/${set.id}/${sign.image}`);
+        picture.colorSpace = THREE.SRGBColorSpace;
+        const flat = new THREE.Mesh(new THREE.PlaneGeometry(sign.width_m, sign.height_m), new THREE.MeshBasicMaterial({ map: picture, toneMapped: false }));
+        flat.position.fromArray(sign.center);
+        flat.rotation.y = THREE.MathUtils.degToRad(sign.heading || 0);
+        this.scene.add(flat);
       }
       for (const item of set.dressing || []) {
         const slot = set.slots[item.slot];
-        const prop = (await load(`sets/${set.id}/${item.glb}`)).scene.clone(true);
+        const prop = (await load(`sets/${set.id}/${item.detail || item.glb}`)).scene.clone(true);
         prop.position.fromArray(slot.at);
         prop.rotation.y = THREE.MathUtils.degToRad(slot.heading || 0);
         prop.userData.prop = item.prop;
@@ -335,6 +354,16 @@ class SetViewer {
     return group;
   }
 
+  // Hang another picture where the backdrop is (the ninja's stage: any place in the world, behind the sitter).
+  async setBackdrop(image) {
+    if (!this.backdrop) return;
+    const picture = await new THREE.TextureLoader().loadAsync(`sets/${this.set.id}/${image}`);
+    picture.colorSpace = THREE.SRGBColorSpace;
+    this.backdrop.material.map = picture;
+    this.backdrop.material.needsUpdate = true;
+    this.draw();
+  }
+
   show(key, on) { this.groups[key].visible = on && !(key === "cameras" && this.camera !== this.free); this.shown = { ...(this.shown || {}), [key]: on }; this.draw(); }
 
   setDressing(off) { this.dressing.forEach((prop) => { prop.visible = !off.has(prop.userData.prop); }); this.draw(); }
@@ -408,6 +437,476 @@ class SetViewer {
     this.resize.disconnect();
     this.controls.dispose();
     this.renderer.dispose();
+  }
+}
+
+// ---------- the world ----------
+// Every place on one ground, seen whole: like the full miniature set of a stop-motion film. An epoch is the
+// whole world at one moment; the timeline steps through the ones that have been saved.
+
+const deg = (d) => THREE.MathUtils.degToRad(d || 0);
+const words = (name) => name.replace(/[_-]/g, " ");
+
+function worldCard() {
+  if (!world?.epochs?.length) return null;
+  const now = world.epochs[world.epochs.length - 1];
+  const places = Object.values(now.places).filter((p) => !p.inside);
+  const peek = sets.find((s) => s.id === "boxing-house" && s.picture) || sets.find((s) => places.some((p) => p.set === s.id) && s.picture);
+  return h("a", { class: "card world-card clay-surface", href: "#/world" },
+    h("div", { class: "peek" }, peek ? h("img", { src: `sets/${peek.id}/${peek.picture}`, alt: "" }) : null),
+    h("div", { class: "label" },
+      h("h2", {}, world.title || "The world"),
+      h("p", {}, `See every place at once · ${places.length} places, ${now.toons.length} toons at home`),
+      h("span", { class: "go" }, "Look around →"),
+    ),
+  );
+}
+
+function worldPage(wantedEpoch, wantedPlace) {
+  const epoch = world.epochs.find((e) => e.name === wantedEpoch) || world.epochs.find((e) => e.name === world.now) || world.epochs[world.epochs.length - 1];
+  const state = { place: epoch.places[wantedPlace] ? wantedPlace : null, marks: false };
+  const press = (btn, on) => btn.setAttribute("aria-pressed", String(on));
+  const link = () => history.replaceState(null, "", `#/world/${epoch.name}${state.place ? `/${encodeURIComponent(state.place)}` : ""}`);
+  const stage = h("div", { class: "stage world-stage clay-well" });
+  const card = h("div", {});
+  const loadLine = h("p", { class: "load-line" });
+  // The timeline: every saved epoch, and room for the next.
+  const at = world.epochs.indexOf(epoch);
+  const go = (e) => { location.hash = `#/world/${e.name}`; };
+  const timeline = h("div", { class: "timeline", role: "group", "aria-label": "Epochs" },
+    world.epochs.length > 1 ? h("button", { class: "chip clay-chip step", type: "button", disabled: at === 0, "aria-label": "Earlier", onclick: () => go(world.epochs[at - 1]) }, "←") : null,
+    world.epochs.map((e) => h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(e === epoch), onclick: () => go(e) }, `Epoch ${e.number} · ${e.title}`)),
+    world.epochs.length > 1 ? h("button", { class: "chip clay-chip step", type: "button", disabled: at === world.epochs.length - 1, "aria-label": "Later", onclick: () => go(world.epochs[at + 1]) }, "→") : null,
+    h("button", { class: "chip clay-chip", type: "button", disabled: true, title: "Saved when the world next changes" }, `Epoch ${world.epochs[world.epochs.length - 1].number + 1} · not yet`),
+  );
+  const placeNames = Object.keys(epoch.places);
+  const chips = [[null, "The whole world"], ...placeNames.map((name) => [name, epoch.places[name].label || words(name)])];
+  const chipEls = chips.map(([name, label]) => h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(state.place === name), onclick: () => choose(name) }, label));
+  function choose(name, jump = false) {
+    state.place = name;
+    chipEls.forEach((chip, i) => press(chip, chips[i][0] === name));
+    viewer?.goTo(name, jump);
+    showCard();
+    link();
+  }
+  function showCard() {
+    const place = state.place && epoch.places[state.place];
+    if (!place) {
+      return card.replaceChildren(h("div", { class: "place-card clay-surface" },
+        h("h2", {}, `Epoch ${epoch.number}: ${epoch.title}`),
+        h("p", {}, "Tap a place to go there. Drag to walk round it, pinch or scroll to come closer."),
+      ));
+    }
+    const set = sets.find((s) => s.id === place.set) || {};
+    const marks = Object.keys(set.marks || {}).length, cameras = Object.keys(set.cameras || {}).length;
+    const filmed = takes.filter((t) => t.set === set.id).length;
+    const here = epoch.toons.filter((t) => t.place === state.place).map((t) => t.name);
+    const things = epoch.artifacts.filter((a) => a.place === state.place || epoch.toons.some((t) => t.toon === a.held_by && t.place === state.place));
+    const marksBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.marks), onclick: () => { state.marks = !state.marks; press(marksBtn, state.marks); viewer?.showMarks(state.marks); } }, "Marks");
+    card.replaceChildren(h("div", { class: "place-card clay-surface" },
+      h("h2", {}, place.label || set.title || words(state.place)),
+      h("p", {}, place.about || set.about || ""),
+      here.length ? h("p", { class: "who" }, h("strong", {}, "Here now: "), here.join(", "), ".") : null,
+      things.map((a) => h("p", { class: "who" }, h("strong", {}, `${a.title}. `), a.about, ` ${a.whose}.`)),
+      h("div", { class: "actions" },
+        h("a", { class: "clay-button", href: `#/set/${encodeURIComponent(place.set)}` }, "Open this place"),
+        marks ? marksBtn : null,
+        h("span", { class: "hint" }, `${marks} marks · ${cameras ? `${cameras} cameras` : "a camera that follows"}${filmed ? ` · ${filmed} ${filmed > 1 ? "shots" : "shot"} to play` : ""}`),
+      ),
+    ));
+  }
+  const page = h("article", { class: "object" },
+    h("a", { class: "back", href: "#/" }, "← Everything"),
+    h("h1", {}, world.title || "The world"),
+    world.about ? h("p", { class: "lede" }, world.about) : null,
+    timeline,
+    h("p", { class: "caption" }, epoch.caption),
+    h("div", { class: "places", role: "group", "aria-label": "Places" }, chipEls),
+    stage,
+    card,
+    loadLine,
+  );
+  queueMicrotask(() => {
+    viewer?.dispose();
+    viewer = new WorldViewer(stage, epoch, state, { onPick: (name) => choose(name), onLoad: (text) => { loadLine.textContent = text; } });
+    showCard();
+  });
+  return page;
+}
+
+// A miniature: something small to look at from outside. Orbit, zoom, a camera that can fly from one view to
+// another, and a count of what was fetched. The world view is one. One combined .glb is another (a diorama on
+// its plinth): `new Miniature(stage).show("dioramas/meet-the-cast.glb")` is the whole of it.
+class Miniature {
+  constructor(stage, { status = "Loading…", hint = null, background = 0xe9e4da } = {}) {
+    this.fetched = new Set();
+    stage.replaceChildren();
+    this.el = h("div", { class: "pane" });
+    this.status = h("div", { class: "status" }, status);
+    this.el.append(this.status, hint ? h("div", { class: "hint" }, hint) : "");
+    stage.append(this.el);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.setClearColor(background);
+    this.el.prepend(this.renderer.domElement);
+    this.scene = new THREE.Scene();
+    this.scene.environment = new THREE.PMREMGenerator(this.renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+    const sun = new THREE.DirectionalLight(0xfff4e0, 1.6);
+    sun.position.set(-30, 50, 30);
+    this.scene.add(sun);
+    this.camera = new THREE.PerspectiveCamera(32, 16 / 10, 0.5, 600);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = false;
+    this.controls.maxPolarAngle = Math.PI / 2 - 0.06; // never under the floor
+    this.controls.addEventListener("change", () => this.draw());
+    this.controls.addEventListener("start", () => { this.touched = true; this.flight = null; });
+    this.resize = new ResizeObserver(() => this.layout());
+    this.resize.observe(this.el);
+    this.layout();
+  }
+
+  get(url) { this.fetched.add(url); return load(url); }
+
+  async picture(url) {
+    this.fetched.add(url);
+    const texture = await new THREE.TextureLoader().loadAsync(url);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  // One .glb, whole, framed from a little above. Returns what was added.
+  async show(url) {
+    try {
+      const model = (await this.get(url)).scene.clone(true);
+      this.scene.add(model);
+      this.all = new THREE.Box3().setFromObject(model);
+      this.camera.near = Math.max(0.01, this.all.getSize(new THREE.Vector3()).length() / 200);
+      this.camera.updateProjectionMatrix();
+      this.fly(...this.home(), true);
+      this.status.remove();
+      return model;
+    } catch (err) {
+      this.status.textContent = "Couldn't load this.";
+      console.error(err);
+      return null;
+    }
+  }
+
+  // How far back the camera stands to hold something `across` metres wide, on this screen.
+  back(across) {
+    const half = deg(this.camera.fov / 2);
+    return (across / 2) / Math.tan(half) / Math.min(1, this.camera.aspect);
+  }
+
+  // All of it (`this.all`, a box), from a little above: like looking down at a studio's miniature set.
+  home() {
+    const centre = this.all.getCenter(new THREE.Vector3()), size = this.all.getSize(new THREE.Vector3());
+    const d = this.back(Math.max(size.x, size.z * 1.2, size.y * 1.4) * 0.86);
+    return [new THREE.Vector3(centre.x + d * 0.22, this.all.min.y + d * 0.55, centre.z + d * 0.8), new THREE.Vector3(centre.x, this.all.min.y + size.y * 0.25, centre.z)];
+  }
+
+  // Move the camera to a view: at once, or gliding there.
+  fly(toPos, toAim, jump = false) {
+    const fromPos = this.camera.position.clone(), fromAim = this.controls.target.clone();
+    const began = performance.now(), time = jump || !this.moved ? 0 : 750;
+    this.moved = true;
+    const flight = (this.flight = {});
+    const step = (now) => {
+      if (this.flight !== flight || this.gone) return;
+      const t = time ? Math.min(1, (now - began) / time) : 1;
+      const k = t * t * (3 - 2 * t); // ease in and out
+      this.camera.position.lerpVectors(fromPos, toPos, k);
+      this.controls.target.lerpVectors(fromAim, toAim, k);
+      this.controls.update();
+      this.draw();
+      if (t < 1) requestAnimationFrame(step);
+    };
+    step(performance.now());
+  }
+
+  // How much was fetched so far.
+  loadedSoFar() {
+    const sizes = new Map(performance.getEntriesByType("resource").map((r) => [new URL(r.name).pathname, r.encodedBodySize || r.transferSize || 0]));
+    let bytes = 0;
+    for (const url of this.fetched) bytes += sizes.get(new URL(url, location.href).pathname) || 0;
+    return { files: this.fetched.size, bytes };
+  }
+
+  // What to show when the pane changes shape and nobody has moved the camera yet.
+  rest() { return this.all ? this.home() : null; }
+
+  layout() {
+    const { width, height } = this.el.getBoundingClientRect();
+    if (!width || !height) return;
+    this.renderer.setSize(width, height, false);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    const view = !this.touched && this.rest();
+    if (view) this.fly(...view, true);
+    this.draw();
+  }
+
+  draw() {
+    if (this.pending) return;
+    this.pending = requestAnimationFrame(() => { this.pending = null; this.renderer.render(this.scene, this.camera); });
+  }
+
+  dispose() {
+    this.gone = true;
+    this.resize.disconnect();
+    this.controls.dispose();
+    this.renderer.dispose();
+  }
+}
+
+// The 3D view of the world. Each place is its set, put down where the epoch says (the same arithmetic as
+// standing.placed: turn about the set's origin, then slide it to `at`). The first view loads only what can be
+// seen from far off: each place's block-out, its larger dressing and the toons, all low-poly. What is small
+// or heavy (a kettle, the ring's full mesh, the hall's painting, marks) waits until you come close to its place.
+class WorldViewer extends Miniature {
+  constructor(stage, epoch, state, hooks) {
+    super(stage, { status: "Setting out the world…", hint: "Tap a place" });
+    this.began = performance.now();
+    window.forgeWorld = null;
+    this.epoch = epoch;
+    this.hooks = hooks;
+    this.controls.minDistance = 4;
+    this.controls.maxDistance = 260;
+    this.places = {};
+    this.picks = [];
+    // A tap (not a drag) on a place goes there.
+    let down = null;
+    this.renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
+    this.renderer.domElement.addEventListener("pointerup", (e) => {
+      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+      const name = this.pick(e.clientX, e.clientY);
+      if (name) this.hooks.onPick(name);
+    });
+    this.ground();
+    this.fill(state);
+  }
+
+  // The developer's unfinished floor: plain grey with a faint grid, a few scale cubes, a note or two.
+  ground() {
+    const g = this.epoch.ground;
+    const [w, d] = g.size_m;
+    const grey = new THREE.Color(...g.color);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ color: grey, roughness: 1 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(g.center[0], -0.03, g.center[1]);
+    this.scene.add(floor);
+    const step = g.grid_m || 2, lines = [];
+    for (let x = -w / 2; x <= w / 2 + 1e-6; x += step) lines.push(x, 0, -d / 2, x, 0, d / 2);
+    for (let z = -d / 2; z <= d / 2 + 1e-6; z += step) lines.push(-w / 2, 0, z, w / 2, 0, z);
+    const grid = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(lines, 3)),
+      new THREE.LineBasicMaterial({ color: 0x1c1917, transparent: true, opacity: 0.07 }));
+    grid.position.set(g.center[0], -0.02, g.center[1]);
+    this.scene.add(grid);
+    const cube = new THREE.MeshStandardMaterial({ color: grey.clone().multiplyScalar(0.94), roughness: 1 });
+    for (const c of g.cubes || []) {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(c.size_m, c.size_m, c.size_m), cube);
+      box.position.set(c.at[0], c.size_m / 2, c.at[1]);
+      this.scene.add(box);
+    }
+    for (const note of g.notes || []) {
+      const label = labelSprite(note.text);
+      label.material.sizeAttenuation = false;
+      label.material.opacity = 0.7;
+      label.material.transparent = true;
+      label.scale.multiplyScalar(0.02);
+      label.position.set(note.at[0], 1.6, note.at[1]);
+      this.scene.add(label);
+    }
+  }
+
+  async fill(state) {
+    const { epoch } = this;
+    try {
+      await document.fonts?.load("600 30px Karla").catch(() => null); // the labels are drawn in the page's own lettering
+      const all = new THREE.Box3();
+      const waiting = [];
+      for (const [name, place] of Object.entries(epoch.places)) {
+        const set = sets.find((s) => s.id === place.set);
+        if (!set) continue;
+        const origin = set.frame?.origin || [0, 0, 0];
+        const group = new THREE.Group();
+        group.position.set(place.at[0], place.lift_m || 0, place.at[1]);
+        group.rotation.y = deg((place.facing_deg ?? set.frame?.front_deg ?? 0) - (set.frame?.front_deg || 0));
+        const inner = new THREE.Group(); // the set's own frame: everything in set.json is measured from its origin
+        inner.position.set(-origin[0], -origin[1], -origin[2]);
+        group.add(inner);
+        this.scene.add(group);
+        group.updateMatrixWorld(true);
+        const xs = set.footprint.outline.map((p) => p[0]), zs = set.footprint.outline.map((p) => p[1]);
+        const lo = [Math.min(...xs), Math.min(...zs)], hi = [Math.max(...xs), Math.max(...zs)];
+        const tall = Math.max(3, ...(set.blocks || []).map((b) => b.center[1] + b.size[1] / 2));
+        const entry = { name, place, set, group, inner, close: false, extras: [], lo, hi, tall, area: (hi[0] - lo[0]) * (hi[1] - lo[1]) };
+        this.places[name] = entry;
+        // What a tap lands on: a box over the footprint, never drawn.
+        const pick = new THREE.Mesh(new THREE.BoxGeometry(hi[0] - lo[0], tall, hi[1] - lo[1]));
+        pick.position.set((lo[0] + hi[0]) / 2, tall / 2, (lo[1] + hi[1]) / 2);
+        pick.visible = false;
+        pick.userData.place = name;
+        inner.add(pick);
+        this.picks.push(pick);
+        const label = labelSprite(place.label || set.title || words(name));
+        label.material.sizeAttenuation = false;
+        label.scale.multiplyScalar(place.inside ? 0.022 : 0.028);
+        label.position.set((lo[0] + hi[0]) / 2, tall + (place.inside ? 0.6 : 1.6), (lo[1] + hi[1]) / 2);
+        inner.add(label);
+        entry.label = label;
+        for (const p of set.footprint.outline) all.expandByPoint(inner.localToWorld(new THREE.Vector3(p[0], 0, p[1])));
+        if (place.inside) continue; // drawn by the place it stands in (the ring is the boxing house's dressing)
+        if (set.glb) waiting.push(this.get(`sets/${set.id}/${set.glb}`).then((gltf) => inner.add(gltf.scene.clone(true))));
+        for (const item of set.dressing || []) {
+          if (item.small) continue;
+          waiting.push(this.get(`sets/${set.id}/${item.glb}`).then((gltf) => { entry[`dressing:${item.prop}`] = this.onSlot(entry, item, gltf.scene.clone(true)); }));
+        }
+        for (const sign of set.signs || []) if (!sign.detail) waiting.push(this.sign(entry, sign));
+      }
+      for (const toon of epoch.toons) {
+        const entry = this.places[toon.place];
+        const mark = entry?.set.marks?.[toon.mark];
+        if (!mark) continue;
+        waiting.push(this.get(toon.glb).then((gltf) => {
+          const body = gltf.scene.clone(true);
+          const spot = mark.kind === "sit" ? mark.stand_at : mark.at;
+          body.position.set(spot[0], mark.floor_y || 0, spot[1]);
+          body.rotation.y = deg(mark.facing_deg);
+          body.userData.toon = toon.toon;
+          entry.inner.add(body);
+          entry[`toon:${toon.toon}`] = body;
+        }));
+      }
+      this.all = all;
+      this.goTo(state.place, true);
+      await Promise.all(waiting);
+      this.ready = true;
+      this.status.remove();
+      this.draw();
+      this.report();
+      if (this.places[this.at]) this.comeClose(this.places[this.at]);
+    } catch (err) {
+      this.status.textContent = "Couldn't set out the world.";
+      console.error(err);
+    }
+  }
+
+  onSlot(entry, item, object) {
+    const slot = entry.set.slots[item.slot];
+    object.position.fromArray(slot.at);
+    object.rotation.y = deg(slot.heading);
+    entry.inner.add(object);
+    return object;
+  }
+
+  async sign(entry, sign) {
+    const flat = new THREE.Mesh(new THREE.PlaneGeometry(sign.width_m, sign.height_m), new THREE.MeshBasicMaterial({ map: await this.picture(`sets/${entry.set.id}/${sign.image}`), toneMapped: false }));
+    flat.position.fromArray(sign.center);
+    flat.rotation.y = deg(sign.heading);
+    entry.inner.add(flat);
+    this.draw();
+  }
+
+  // What waits until you come close to a place: its small dressing, heavier versions, wall paintings, what its
+  // toons hold, and the names of who and what is there.
+  async comeClose(entry) {
+    if (entry.close) return;
+    entry.close = true;
+    const { set, inner } = entry, waiting = [];
+    const name = (text, at, size = 0.024) => {
+      const label = labelSprite(text);
+      label.material.sizeAttenuation = false;
+      label.scale.multiplyScalar(size);
+      label.position.copy(at);
+      inner.add(label);
+      entry.extras.push(label);
+    };
+    for (const item of set.dressing || []) {
+      if (item.small) waiting.push(this.get(`sets/${set.id}/${item.glb}`).then((gltf) => { entry[`dressing:${item.prop}`] = this.onSlot(entry, item, gltf.scene.clone(true)); }));
+      if (item.detail) {
+        waiting.push(this.get(`sets/${set.id}/${item.detail}`).then((gltf) => {
+          const light = entry[`dressing:${item.prop}`];
+          if (light) inner.remove(light);
+          entry[`dressing:${item.prop}`] = this.onSlot(entry, item, gltf.scene.clone(true));
+        }));
+      }
+    }
+    for (const sign of set.signs || []) if (sign.detail) waiting.push(this.sign(entry, sign));
+    if (set.backdrop) waiting.push(this.sign(entry, set.backdrop));
+    for (const toon of this.epoch.toons.filter((t) => t.place === entry.name)) {
+      const mark = set.marks[toon.mark], body = entry[`toon:${toon.toon}`];
+      if (!mark || !body) continue;
+      name(toon.name, body.position.clone().add(new THREE.Vector3(0, toon.toon === "troll" ? 3.0 : 2.15, 0)));
+      for (const thing of this.epoch.artifacts.filter((a) => a.held_by === toon.toon && a.glb)) {
+        waiting.push(this.get(thing.glb).then((gltf) => {
+          const held = gltf.scene.clone(true);
+          held.position.fromArray(thing.offset || [0, 1.1, 0.3]);
+          body.add(held);
+        }));
+      }
+    }
+    for (const thing of this.epoch.artifacts.filter((a) => a.place === entry.name)) {
+      const slot = set.slots?.[thing.slot];
+      if (slot) name(thing.title, new THREE.Vector3(slot.at[0], slot.at[1] + (thing.name === "gachapon" ? 3.0 : thing.name === "microphone" ? 2.0 : thing.name === "buy-house" ? 2.5 : 0.75), slot.at[2]), 0.02);
+    }
+    await Promise.all(waiting).catch((err) => console.error(err));
+    entry.settled = true;
+    this.draw();
+    this.report();
+  }
+
+  showMarks(on) {
+    const entry = this.places[this.at];
+    for (const other of Object.values(this.places)) if (other.marks) other.marks.visible = on && other === entry;
+    if (entry && on && !entry.marks) {
+      entry.marks = SetViewer.prototype.markMarkers.call({ set: entry.set });
+      entry.inner.add(entry.marks);
+    }
+    this.draw();
+  }
+
+  pick(x, y) {
+    const box = this.renderer.domElement.getBoundingClientRect();
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((x - box.left) / box.width) * 2 - 1, -((y - box.top) / box.height) * 2 + 1), this.camera);
+    const hits = ray.intersectObjects(this.picks, false).map((hit) => this.places[hit.object.userData.place]);
+    // The smallest place under the finger wins: the ring, not the hall around it.
+    return hits.sort((a, b) => a.area - b.area)[0]?.name;
+  }
+
+  view(name) {
+    const entry = this.places[name];
+    if (!entry) return this.home();
+    const { lo, hi, tall, inner } = entry;
+    const middle = inner.localToWorld(new THREE.Vector3((lo[0] + hi[0]) / 2, tall * 0.25, (lo[1] + hi[1]) / 2));
+    const d = this.back(Math.max(hi[0] - lo[0], (hi[1] - lo[1]) * 0.9) * (this.camera.aspect < 1 ? 1.12 : 0.82));
+    // From out front of the place (its own +z) and a little to one side, looking down into it.
+    const from = inner.localToWorld(new THREE.Vector3((lo[0] + hi[0]) / 2 + d * 0.3, d * 0.5, (lo[1] + hi[1]) / 2 + d * 0.8));
+    return [from, middle];
+  }
+
+  goTo(name, jump = false) {
+    this.at = name;
+    const entry = this.places[name];
+    for (const other of Object.values(this.places)) {
+      other.extras.forEach((o) => { o.visible = other === entry; });
+      if (other.marks) other.marks.visible = false;
+      other.label.visible = other !== entry;
+    }
+    if (entry && this.ready) this.comeClose(entry);
+    this.fly(...this.view(name), jump);
+  }
+
+  rest() { return this.all ? this.view(this.at) : null; }
+
+  // How much was fetched, said plainly under the view.
+  report() {
+    this.loaded = this.loadedSoFar();
+    // For whoever is checking the page from outside (scripts/world/shots.py): what has loaded, and that it has.
+    window.forgeWorld = { ...this.loaded, seconds: (performance.now() - this.began) / 1000, place: this.at || null, settled: !this.places[this.at] || this.places[this.at].settled === true };
+    this.hooks.onLoad(`Loaded so far: ${this.loaded.files} files, ${(this.loaded.bytes / 1e6).toFixed(2)} MB. Small things and heavier versions load when you come close to their place.`);
   }
 }
 
@@ -995,6 +1494,7 @@ async function route() {
   if (!runs.length) {
     [runs, sets, takes] = await Promise.all(["api/runs", "api/sets", "api/takes"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
   }
+  if (!world) world = await fetch("api/world").then((r) => r.json()).catch(() => null);
   comics = await fetch("api/comics").then((r) => r.json()).catch(() => []);
   const reading = location.hash.match(/^#\/comic\/([^/]+)$/);
   const comic = reading && comics.find((c) => c.name === decodeURIComponent(reading[1]));
@@ -1005,6 +1505,13 @@ async function route() {
     window.scrollTo(0, 0);
     return;
   }
+  // #/world[/<epoch>[/<place>]]: the whole world at one epoch, maybe already standing at a place.
+  const inWorld = location.hash.match(/^#\/world(?:\/([^/]+))?(?:\/([^/]+))?$/);
+  if (inWorld && world?.epochs?.length) {
+    app.replaceChildren(worldPage(inWorld[1] && decodeURIComponent(inWorld[1]), inWorld[2] && decodeURIComponent(inWorld[2])));
+    window.scrollTo(0, 0);
+    return;
+  }
   // #/run/<run id>[/<version>]: a link can open a given version. #/set/<set name>[/<shot>[/<camera>]]: a standing set.
   const match = location.hash.match(/^#\/run\/([^/]+)(?:\/([a-z]+))?$/);
   const onSet = location.hash.match(/^#\/set\/([^/]+)(?:\/([^/]+))?(?:\/([a-z_]+))?$/);
@@ -1012,7 +1519,7 @@ async function route() {
   viewer = null;
   const run = match && runs.find((r) => r.id === decodeURIComponent(match[1]));
   const set = onSet && sets.find((x) => x.id === decodeURIComponent(onSet[1]));
-  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [comicShelf(), shelfHeading(), shelf()];
+  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [worldCard(), comicShelf(), shelfHeading(), shelf()];
   app.replaceChildren(...page.filter(Boolean));
   window.scrollTo(0, 0);
 }

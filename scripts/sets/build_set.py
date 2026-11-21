@@ -12,6 +12,9 @@ are built with, from two lists:
     the set's blocks    every block in set.json becomes a box in its `color`.
                         These are the same boxes the contact step keeps a
                         body out of, so what you see is what is in the way.
+                        (A block with "build": false is left out: it only
+                        keeps people out of a piece of dressing, like the
+                        ring in the boxing house.)
     build.json extras   pieces that are only looked at: the floor, a desk
                         top, cushions, a window frame.
 
@@ -93,7 +96,7 @@ def main():
     with open(os.path.join(st["dir"], "build.json")) as f:
         recipe = json.load(f)
     if only in (None, "set"):
-        pieces = [block_piece(b) for b in st["blocks"]] + [turned(p) for p in recipe.get("extras") or []]
+        pieces = [block_piece(b) for b in st["blocks"] if b.get("build", True)] + [turned(p) for p in recipe.get("extras") or []]
         made = build(pieces, os.path.join(st["dir"], st["geometry"].get("glb", "set.glb")), st["name"])
         print("SETBUILD %s: %d pieces, %d triangles, %.1f x %.1f x %.1f m, %d kB -> %s" % (
             st["name"], made["pieces"], made["triangles"], made["size"][0], made["size"][1], made["size"][2], made["bytes"] // 1000, st["geometry"].get("glb", "set.glb")))

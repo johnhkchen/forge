@@ -1,0 +1,393 @@
+{
+ "format": "forge-set/1",
+ "name": "grass",
+ "title": "Theodore's grass",
+ "about": "A large plot of open grass that Roosevelt asked for: room to stride, to box, to breathe. A few trees, a few rocks, one bench.",
+ "stage": "open",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is the middle of the grass; the front is its south edge"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -22.0,
+    -13.0
+   ],
+   [
+    22.0,
+    -13.0
+   ],
+   [
+    22.0,
+    13.0
+   ],
+   [
+    -22.0,
+    13.0
+   ]
+  ],
+  "about": "all of it, its cameras included"
+ },
+ "units": "metres. y is up, the ground is 0. The front is +z: a heading of 0 faces it, 90 faces +x.",
+ "floor": {
+  "areas": [
+   [
+    [
+     -21.0,
+     -12.0
+    ],
+    [
+     21.0,
+     12.0
+    ]
+   ]
+  ]
+ },
+ "ground": {
+  "y": -0.02,
+  "color": [
+   0.72,
+   0.71,
+   0.69
+  ],
+  "size_m": 70.0
+ },
+ "blocks": [
+  {
+   "name": "tree 1 trunk",
+   "kind": "tree",
+   "center": [
+    -17.0,
+    1.463,
+    -8.0
+   ],
+   "size": [
+    0.4,
+    2.925,
+    0.4
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "tree 2 trunk",
+   "kind": "tree",
+   "center": [
+    15.0,
+    1.238,
+    -9.0
+   ],
+   "size": [
+    0.4,
+    2.475,
+    0.4
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "tree 3 trunk",
+   "kind": "tree",
+   "center": [
+    18.0,
+    1.125,
+    6.0
+   ],
+   "size": [
+    0.4,
+    2.25,
+    0.4
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "tree 4 trunk",
+   "kind": "tree",
+   "center": [
+    -14.0,
+    1.012,
+    8.5
+   ],
+   "size": [
+    0.4,
+    2.025,
+    0.4
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "tree 5 trunk",
+   "kind": "tree",
+   "center": [
+    6.0,
+    0.945,
+    -10.5
+   ],
+   "size": [
+    0.4,
+    1.89,
+    0.4
+   ],
+   "heading": 0.0,
+   "color": [
+    0.3,
+    0.2,
+    0.14
+   ]
+  },
+  {
+   "name": "bench seat",
+   "kind": "seat",
+   "center": [
+    -15.3,
+    0.23,
+    -6.025
+   ],
+   "size": [
+    1.8,
+    0.46,
+    0.35
+   ],
+   "heading": 0.0,
+   "color": [
+    0.6,
+    0.45,
+    0.3
+   ]
+  },
+  {
+   "name": "bench back",
+   "kind": "seat",
+   "center": [
+    -15.3,
+    0.475,
+    -6.25
+   ],
+   "size": [
+    1.8,
+    0.95,
+    0.1
+   ],
+   "heading": 0.0,
+   "color": [
+    0.6,
+    0.45,
+    0.3
+   ]
+  }
+ ],
+ "marks": {
+  "stride": {
+   "kind": "stand",
+   "at": [
+    2.0,
+    1.0
+   ],
+   "facing_deg": 20.0,
+   "about": "the middle of the grass: room to stride, to box, to breathe"
+  },
+  "circle": {
+   "kind": "stand",
+   "at": [
+    -6.0,
+    2.0
+   ],
+   "facing_deg": 90.0,
+   "about": "the paler ring in the grass, for boxing outdoors"
+  },
+  "oak": {
+   "kind": "stand",
+   "at": [
+    -15.0,
+    -3.5
+   ],
+   "facing_deg": 150.0,
+   "about": "in the shade of the big tree"
+  },
+  "bench": {
+   "kind": "sit",
+   "at": [
+    -15.3,
+    -6.02
+   ],
+   "stand_at": [
+    -15.3,
+    -5.55
+   ],
+   "facing_deg": 0.0,
+   "seat_height_m": 0.46,
+   "seat": "bench seat",
+   "beside": [
+    "bench back"
+   ],
+   "about": "the bench under the big tree, looking out over the grass"
+  },
+  "north_gate": {
+   "kind": "stand",
+   "at": [
+    -4.0,
+    -11.5
+   ],
+   "facing_deg": 180.0,
+   "about": "the edge nearest the boxing house and its beer garden"
+  },
+  "east_gate": {
+   "kind": "stand",
+   "at": [
+    20.0,
+    4.0
+   ],
+   "facing_deg": 90.0,
+   "about": "the edge nearest the spawn spot"
+  }
+ },
+ "paths": [
+  {
+   "from": "stride",
+   "to": "circle"
+  },
+  {
+   "from": "stride",
+   "to": "north_gate"
+  },
+  {
+   "from": "stride",
+   "to": "east_gate"
+  },
+  {
+   "from": "circle",
+   "to": "oak"
+  },
+  {
+   "from": "oak",
+   "to": "bench"
+  }
+ ],
+ "cameras": {
+  "wide": {
+   "at": [
+    0.0,
+    7.0,
+    12.6
+   ],
+   "aim": [
+    -1.0,
+    0.4,
+    -1.0
+   ],
+   "lens_mm": 20,
+   "sees": [
+    "stride",
+    "circle"
+   ],
+   "about": "the whole plot, from the south edge"
+  },
+  "oak": {
+   "at": [
+    -10.5,
+    1.7,
+    -0.5
+   ],
+   "aim": [
+    -15.2,
+    1.0,
+    -5.2
+   ],
+   "lens_mm": 32,
+   "sees": [
+    "bench",
+    "oak"
+   ],
+   "about": "the bench and the big tree"
+  }
+ },
+ "lights": [
+  {
+   "name": "sun",
+   "kind": "sun",
+   "at": [
+    -8.0,
+    16.0,
+    10.0
+   ],
+   "aim": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "power": 2.6,
+   "color": [
+    1.0,
+    0.96,
+    0.88
+   ]
+  },
+  {
+   "name": "sky",
+   "kind": "area",
+   "at": [
+    6.0,
+    12.0,
+    8.0
+   ],
+   "aim": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "power": 900.0,
+   "color": [
+    0.88,
+    0.93,
+    1.0
+   ],
+   "size_m": 12.0
+  }
+ ],
+ "world": {
+  "color": [
+   0.8,
+   0.86,
+   0.9
+  ],
+  "strength": 0.7
+ },
+ "backdrop": null,
+ "signs": [],
+ "slots": {},
+ "dressing": [],
+ "geometry": {
+  "glb": "set.glb",
+  "move": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "turn_deg": 0.0,
+  "built_by": "python3 scripts/world/places.py, then just set-build grass"
+ }
+}

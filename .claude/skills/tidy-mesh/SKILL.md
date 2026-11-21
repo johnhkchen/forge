@@ -1079,6 +1079,54 @@ calves were inside the couch's front, and the contact step lifted his feet
 front edge (the rest is only drawn). And the two handshake marks were 76 cm
 apart, more than his arms could cover; they are 66 cm apart now.
 
+### The world: every set stands in one place
+
+Nothing is filmed outside the world. `world.json` puts every set down on one
+ground at true size, and the gallery shows it whole (README, "World").
+
+- **Where a set stands is never in its set.json.** `world.json` has one line
+  per place: `{"set": "grass", "at": [0, 13], "facing_deg": 0}`.
+  `standing.placed(set, at, facing_deg)` is all the arithmetic. A shot is
+  still planned and filmed in the set's own frame, so moving a place never
+  changes a shot made on it.
+- **A place can stand inside another.** The ring is `"inside":
+  "boxing-house"`, lifted 1.36 m: its own set and page, drawn in the hall as
+  a piece of dressing (a light copy far off, the full mesh up close).
+- **`just world-check`** after any change to a set that is in the world, or
+  to `world.json`: every place passes `set-check`, no two footprints
+  overlap, every toon stands on a mark that exists, and the newest epoch is
+  the world as it is now. If the world really has changed, save a new epoch
+  (`just world-epoch epoch-1 "Title" "Caption"`); don't edit an old one.
+- **New in set.json, all optional.** `signs` (small painted flats:
+  `{name, image, center, width_m, height_m, heading}`); `detail` on a piece
+  of dressing (a heavier file of the same thing, shown up close) and
+  `small` (too small to see from far off: loaded up close); `"build":
+  false` on a block that only keeps people out of a piece of dressing;
+  `floor_y` on a mark that is on a platform; `backdrop_options` (other
+  pictures that can hang where the backdrop is) and `groups` (marks used
+  together: the stage's `portrait` row).
+- **A place built from data** is written by `scripts/world/places.py`
+  (edit the place there, not its set.json), then `just world-places
+  <place>`. A house is written by `scripts/world/build_house.py` from its
+  `design.json`: change the builder or ask for a new design (`just
+  buy-house <toon>`), don't edit its set.json by hand. The tests rebuild
+  both and compare.
+- **A backdrop is a real place.** The studio is the ninja's photo stage.
+  What hangs behind its window comes from `backdrop_options`: a picture of
+  a place in the world through that place's own camera (`just
+  studio-backdrops` retakes them after a place changes). To put another
+  place behind a sitter, set `backdrop.image` and `backdrop.place` to one
+  of the options.
+- **Toons in the world are still.** `just world-toons` freezes each
+  low-poly character in the pose `world.json` names (from
+  `motion/comic_poses.json`) and writes it with no skeleton. Their pieces
+  are kept apart on purpose: joining them loses the colors painted on all
+  but one.
+- **Keep the first view light.** `python3 scripts/world/test_world.py`
+  fails if the overview passes 30 files, 2.5 MB or 30,000 triangles, or if
+  anything in it is Draco-packed (`just world-stock` unpacks the copies).
+  Anything small or heavy goes behind `small` or `detail`.
+
 ### Adding a set
 
 1. Write `sets/<name>/set.json`. Start from the studio's.

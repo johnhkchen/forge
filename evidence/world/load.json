@@ -1,0 +1,103 @@
+{
+ "about": "What the world view had fetched when each picture was taken (from the page itself: its own files, not three.js or the fonts). A place's number includes the overview, which loads first.",
+ "views": {
+  "overview-phone": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 1.2397000000178815,
+   "place": null,
+   "settled": true
+  },
+  "overview-desktop": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 0.046599999994039534,
+   "place": null,
+   "settled": true
+  },
+  "grass-phone": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 0.343,
+   "place": "grass",
+   "settled": true
+  },
+  "grass-desktop": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 0.04479999998211861,
+   "place": "grass",
+   "settled": true
+  },
+  "boxing-house-phone": {
+   "files": 26,
+   "bytes": 3452103,
+   "seconds": 0.8537000000178814,
+   "place": "boxing-house",
+   "settled": true
+  },
+  "boxing-house-desktop": {
+   "files": 26,
+   "bytes": 3452103,
+   "seconds": 0.689,
+   "place": "boxing-house",
+   "settled": true
+  },
+  "settlement-phone": {
+   "files": 27,
+   "bytes": 2298415,
+   "seconds": 0.5570999999940396,
+   "place": "settlement",
+   "settled": true
+  },
+  "settlement-desktop": {
+   "files": 27,
+   "bytes": 2298415,
+   "seconds": 0.7021000000238419,
+   "place": "settlement",
+   "settled": true
+  },
+  "spawn-phone": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 0.17169999998807908,
+   "place": "spawn",
+   "settled": true
+  },
+  "spawn-desktop": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 0.655,
+   "place": "spawn",
+   "settled": true
+  },
+  "ninja-stage-phone": {
+   "files": 26,
+   "bytes": 2019338,
+   "seconds": 0.7137000000178814,
+   "place": "ninja-stage",
+   "settled": true
+  },
+  "ninja-stage-desktop": {
+   "files": 26,
+   "bytes": 2019338,
+   "seconds": 0.6121999999880791,
+   "place": "ninja-stage",
+   "settled": true
+  },
+  "dancer-house-phone": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 0.7296999999880791,
+   "place": "dancer-house",
+   "settled": true
+  },
+  "dancer-house-desktop": {
+   "files": 24,
+   "bytes": 1864979,
+   "seconds": 0.7147000000178814,
+   "place": "dancer-house",
+   "settled": true
+  }
+ }
+}

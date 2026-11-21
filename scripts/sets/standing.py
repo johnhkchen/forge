@@ -36,8 +36,15 @@ A set is a folder, sets/<name>/, with a set.json:
     lights     fixed: {name, kind (area, spot, sun), at, aim, power, color, size_m}
     backdrop   a painted picture standing behind the set: {image, center, width_m,
                height_m, heading, glow, cameras (the ones it must fill the view of; none: all)}
+    backdrop_options  other pictures that can hang in the backdrop's place, by name:
+               {options: [{place, title, image}]}. The ninja's stage has one per place in the
+               world, so a portrait can be taken in front of any of them
+    signs      painted flats that are part of the place (a shop sign, a wall
+               painting): {name, image, center, width_m, height_m, heading, glow}.
+               Unlike the backdrop, nothing is asked of them but that the picture is there
     slots      named spots dressing can stand on, like a character's sockets
-    dressing   what stands on them now: {prop, slot, glb}; swap freely
+    dressing   what stands on them now: {prop, slot, glb}; swap freely.
+               `detail` is a heavier file of the same thing, for when you come close
     geometry   the set's own .glb and how to put it on the floor: {glb, move, turn_deg}
 
 Everything is in metres, in the shot's own axes: y is up, the ground is x and
@@ -606,9 +613,25 @@ def check(st: dict) -> tuple:
                         say(f"camera \"{name}\" sees past the edge of the backdrop ({across:+.1f} m across, {hit[1]:.1f} m up)")
         seen["backdrop"] = backdrop.get("image")
 
+    for option in (st.get("backdrop_options") or {}).get("options") or []:
+        if not backdrop:
+            say("backdrop_options need a backdrop to hang in the place of")
+            break
+        if not os.path.isfile(os.path.join(st["dir"], option.get("image", ""))):
+            say(f"backdrop option \"{option.get('place')}\": its picture is missing: {option.get('image')}")
+    seen["backdrop_options"] = [o.get("place") for o in (st.get("backdrop_options") or {}).get("options") or []]
+    for sign in st.get("signs") or []:
+        if not os.path.isfile(os.path.join(st["dir"], sign.get("image", ""))):
+            say(f"sign \"{sign.get('name')}\": its picture is missing: {sign.get('image')}")
+        if len(sign.get("center") or []) != 3 or float(sign.get("width_m", 0)) <= 0 or float(sign.get("height_m", 0)) <= 0:
+            say(f"sign \"{sign.get('name')}\" needs center [x, y, z], width_m and height_m")
+    seen["signs"] = [sign.get("name") for sign in st.get("signs") or []]
+
     # Dressing stands on slots the set has.
     slots = st.get("slots") or {}
     for item in st.get("dressing") or []:
+        if item.get("detail") and not os.path.isfile(os.path.join(st["dir"], item["detail"])):
+            say(f"dressing \"{item.get('prop')}\": its detailed file {item['detail']} is missing")
         if item.get("slot") not in slots:
             say(f"dressing \"{item.get('prop')}\" stands on \"{item.get('slot')}\", which is not a slot")
         if not os.path.isfile(os.path.join(st["dir"], item.get("glb", ""))):

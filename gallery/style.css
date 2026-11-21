@@ -137,3 +137,29 @@ html, body { overflow-x: hidden; }
 .object-row .row-gap { flex: 0 0 4px; }
 .stage--object .pane { aspect-ratio: 4 / 3; max-height: 68vh; }
 .stage--object.compare .pane { aspect-ratio: 4 / 3; }
+
+/* ---- the world ---- */
+.world-card { display: grid; grid-template-columns: 132px minmax(0, 1fr); max-width: 520px; margin-top: 20px; }
+.world-card .peek { position: relative; background: var(--clay-well); overflow: hidden; }
+.world-card .peek img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; }
+.world-card .label { padding: 12px 16px 14px; align-self: center; }
+.world-card h2 { font-size: 1.25rem; }
+.world-card .go { display: inline-block; margin-top: 6px; font-weight: 700; color: var(--clay-primary); }
+@media (max-width: 420px) { .world-card { grid-template-columns: 96px minmax(0, 1fr); } }
+.timeline { display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 6px 4px 10px; margin: 0 -4px; scrollbar-width: none; }
+.timeline::-webkit-scrollbar { display: none; }
+.timeline .chip[disabled] { opacity: 0.55; cursor: default; box-shadow: none; background: transparent; border: 1.5px dashed var(--clay-ink-soft); }
+.timeline .step { flex: none; width: 2.3em; padding: 0.5em 0; }
+.caption { margin: 0 0 10px; max-width: 44rem; }
+.world-stage .pane { aspect-ratio: 16 / 10; max-height: 76vh; }
+@media (max-width: 720px) { .world-stage .pane { aspect-ratio: 3 / 4; max-height: 70vh; } }
+.world-stage .pane .hint { position: absolute; left: 10px; bottom: 8px; font-size: 0.8rem; color: var(--clay-ink-soft); pointer-events: none; }
+.places { display: flex; gap: 8px; overflow-x: auto; padding: 10px 4px; margin: 0 -4px; scrollbar-width: none; }
+.places::-webkit-scrollbar { display: none; }
+.place-card { margin-top: 4px; padding: 14px 18px 16px; }
+.place-card h2 { margin: 0; font-size: 1.25rem; }
+.place-card p { margin: 4px 0 0; color: var(--clay-ink-soft); max-width: 44rem; }
+.place-card .who { color: var(--clay-ink); }
+.place-card .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.place-card .actions a.clay-button { text-decoration: none; font-size: 0.92rem; padding: 0.55em 1.05em; }
+.load-line { margin: 10px 0 0; font-size: 0.85rem; color: var(--clay-ink-soft); }

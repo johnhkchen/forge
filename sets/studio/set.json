@@ -2,7 +2,7 @@
  "format": "forge-set/1",
  "name": "studio",
  "title": "The studio",
- "about": "A small talk-show stage: a desk and chair for the host, a couch for two guests, a way on from the wings, a spot to stand and talk, a riser for a band, and a painted skyline out the window.",
+ "about": "The shadow ninja's own photo stage, which he set up himself: a desk and chair, a couch for two, a way on from the wings, a spot to stand and talk, a riser for a band, and a big window. He invites residents in for portraits, and what shows through the window is always a real place in the world.",
  "stage": "shallow",
  "frame": {
   "origin": [
@@ -46,8 +46,19 @@
      4.2,
      4.3
     ]
+   ],
+   [
+    [
+     -3.4,
+     4.3
+    ],
+    [
+     -1.0,
+     5.6
+    ]
    ]
-  ]
+  ],
+  "note": "the stage, and a strip out front of it where the photographer stands"
  },
  "ground": {
   "y": 0.0,
@@ -438,6 +449,52 @@
     "couch arm left"
    ],
    "about": "the far couch seat: where a guest moves down to"
+  },
+  "sitter": {
+   "kind": "stand",
+   "at": [
+    -2.2,
+    2.5
+   ],
+   "facing_deg": 0.0,
+   "about": "where someone stands to have their portrait taken, the window behind them"
+  },
+  "photographer": {
+   "kind": "stand",
+   "at": [
+    -2.2,
+    5.2
+   ],
+   "facing_deg": 180.0,
+   "offstage": true,
+   "about": "where the ninja stands with his pinhole camera, facing the sitter"
+  },
+  "group_1": {
+   "kind": "stand",
+   "at": [
+    -3.0,
+    2.6
+   ],
+   "facing_deg": 0.0,
+   "about": "a group portrait: beside the sitter, on the riser's side"
+  },
+  "group_2": {
+   "kind": "stand",
+   "at": [
+    -1.4,
+    2.6
+   ],
+   "facing_deg": 0.0,
+   "about": "a group portrait: beside the sitter, on the couch's side"
+  },
+  "group_3": {
+   "kind": "stand",
+   "at": [
+    -3.8,
+    2.9
+   ],
+   "facing_deg": 0.0,
+   "about": "a group portrait: the end of the row, nearest the wings"
   }
  },
  "paths": [
@@ -498,6 +555,10 @@
      2.6
     ]
    ]
+  },
+  {
+   "from": "photographer",
+   "to": "sitter"
   }
  ],
  "cameras": {
@@ -520,7 +581,11 @@
     "meet_right",
     "desk_chair",
     "couch_1",
-    "couch_2"
+    "couch_2",
+    "sitter",
+    "group_1",
+    "group_2",
+    "group_3"
    ],
    "about": "the whole stage"
   },
@@ -634,7 +699,7 @@
   "strength": 0.22
  },
  "backdrop": {
-  "image": "backdrop.png",
+  "image": "backdrops/boxing-house.jpg",
   "center": [
    0.3,
    2.3,
@@ -644,7 +709,8 @@
   "height_m": 6.0,
   "heading": 0.0,
   "glow": 1.0,
-  "about": "a city skyline at dusk, painted by Codex; it stands a metre and a half behind the window"
+  "about": "the boxing house, as it stands in the world: a picture taken there through that place's own camera. It stands a metre and a half behind the window",
+  "place": "boxing-house"
  },
  "slots": {
   "desk_left": {
@@ -715,5 +781,46 @@
   ],
   "turn_deg": 0.0,
   "built_by": "just set-build studio (scripts/sets/build_set.py, from the blocks here and the extra pieces in build.json)"
+ },
+ "backdrop_options": {
+  "about": "What can hang behind the window: each is a real place in the world, pictured through one of its own cameras (just studio-backdrops). A portrait session picks one by name; `backdrop.image` is the one hanging now.",
+  "options": [
+   {
+    "place": "boxing-house",
+    "title": "The boxing house",
+    "image": "backdrops/boxing-house.jpg",
+    "camera": "hall"
+   },
+   {
+    "place": "grass",
+    "title": "Theodore's grass",
+    "image": "backdrops/grass.jpg",
+    "camera": "wide"
+   },
+   {
+    "place": "settlement",
+    "title": "The settlement",
+    "image": "backdrops/settlement.jpg",
+    "camera": "wide"
+   },
+   {
+    "place": "dancer-house",
+    "title": "The dancer's house",
+    "image": "backdrops/dancer-house.jpg",
+    "camera": "front"
+   }
+  ]
+ },
+ "groups": {
+  "about": "Marks that are used together. A portrait session stands its sitters on the portrait marks (one sitter: the first; more: along the row) and the photographer on the photographer's.",
+  "portrait": [
+   "sitter",
+   "group_1",
+   "group_2",
+   "group_3"
+  ],
+  "photographer": [
+   "photographer"
+  ]
  }
 }

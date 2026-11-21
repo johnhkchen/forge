@@ -111,19 +111,19 @@ def stand_up(st, scene):
         plane.name = "ground"
         plane.data.materials.append(flat_color("ground", ground.get("color", [0.8, 0.78, 0.74])))
 
-    backdrop = st.get("backdrop")
-    if backdrop:
+    flats = [dict(st["backdrop"], name="backdrop")] if st.get("backdrop") else []
+    for backdrop in flats + list(st.get("signs") or []):  # a sign is a small painted flat, stood up the same way
         w, h = backdrop["width_m"] / 2.0, backdrop["height_m"] / 2.0
-        mesh = bpy.data.meshes.new("backdrop")
+        mesh = bpy.data.meshes.new(backdrop["name"])
         mesh.from_pydata([(-w, 0.0, -h), (w, 0.0, -h), (w, 0.0, h), (-w, 0.0, h)], [], [(0, 1, 2, 3)])
         uv = mesh.uv_layers.new(name="UVMap")
         for corner, spot in zip(uv.data, ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))):
             corner.uv = spot
-        flat = bpy.data.objects.new("backdrop", mesh)
+        flat = bpy.data.objects.new(backdrop["name"], mesh)
         scene.collection.objects.link(flat)
         flat.location = to_blender(backdrop["center"])
         flat.rotation_euler = (0.0, 0.0, math.radians(backdrop.get("heading", 0.0)))
-        mat = bpy.data.materials.new("backdrop")
+        mat = bpy.data.materials.new(backdrop["name"])
         mat.use_nodes = True
         nodes, links = mat.node_tree.nodes, mat.node_tree.links
         nodes.remove(nodes["Principled BSDF"])
@@ -138,7 +138,7 @@ def stand_up(st, scene):
     slots = st.get("slots") or {}
     for item in st.get("dressing") or []:
         slot = slots[item["slot"]]
-        bring_in(os.path.join(st["dir"], item["glb"]), "dressing: " + item["prop"], at=slot["at"], heading=slot.get("heading", 0.0))
+        bring_in(os.path.join(st["dir"], item.get("detail") or item["glb"]), "dressing: " + item["prop"], at=slot["at"], heading=slot.get("heading", 0.0))
 
     for card in st.get("lights") or []:
         kind = {"area": "AREA", "spot": "SPOT", "sun": "SUN"}[card["kind"]]

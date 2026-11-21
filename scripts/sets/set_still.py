@@ -1,6 +1,6 @@
 """One picture of an empty set, for its card in the gallery, in a background Blender.
 
-    Blender -b --factory-startup -P scripts/sets/set_still.py -- <set> [--camera wide] [--out sets/<set>/card.png]
+    Blender -b --factory-startup -P scripts/sets/set_still.py -- <set> [--camera wide] [--out sets/<set>/card.png] [--size 640x360]
 
 The set is stood up exactly as it is filmed (its geometry, backdrop, dressing
 and lights: scripts/motion/set_contact.py) and looked at through one of its
@@ -44,7 +44,8 @@ def main():
     scene.camera = cam
     scene.render.engine = "BLENDER_EEVEE"
     scene.view_settings.view_transform = "Standard"
-    scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = 640, 360, 100
+    wide, tall = [int(v) for v in (args[args.index("--size") + 1] if "--size" in args else "640x360").split("x")]
+    scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = wide, tall, 100
     scene.render.image_settings.file_format = "PNG"
     scene.render.filepath = out
     bpy.ops.render.render(write_still=True)

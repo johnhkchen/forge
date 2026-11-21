@@ -37,6 +37,7 @@ check:
     python3 scripts/motion/test_timeline.py | tail -1
     python3 scripts/motion/test_run_clip.py | tail -1
     python3 scripts/sets/test_sets.py | tail -1
+    python3 scripts/world/world.py check | tail -1
     python3 scripts/comic/test_comic.py | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
@@ -103,6 +104,53 @@ set-from-run set run profile="game" x="0" y="0" z="0":
 # One picture of an empty set through one of its own cameras, for its card in the gallery (sets/<set>/card.png)
 set-card set camera="":
     "{{blender_bin}}" -b --factory-startup -P scripts/sets/set_still.py -- "{{set}}" {{ if camera != "" { "--camera " + camera } else { "" } }} 2>&1 | grep -E '^STILL|Error|Traceback'
+
+# Is the world sound? Every place passes set-check, no two footprints overlap, every toon stands on a mark, and the newest epoch is the world as it is now
+world-check:
+    python3 scripts/world/world.py check
+
+# Write the reset's places (grass, boxing-house, settlement, spawn) as sets from data, letter their signs, and build each in a background Blender (none named: all four)
+world-places *places:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/world/places.py {{places}}
+    python3 scripts/world/signs.py
+    for place in $(python3 scripts/world/places.py {{places}} | awk '{print $2}' | tr -d ':'); do
+        "{{blender_bin}}" -b --factory-startup -P scripts/sets/build_set.py -- "$place" 2>&1 | grep -E '^SETBUILD|Error|Traceback'
+        "{{blender_bin}}" -b --factory-startup -P scripts/sets/set_still.py -- "$place" 2>&1 | grep -E '^STILL|Error|Traceback'
+    done
+
+# Bring the light versions of the runs' objects to where the world uses them (the ring, the kettle, the bread, the microphone, the ninja's camera), unpacked so a browser needs no decoder
+world-stock runs="runs":
+    python3 scripts/world/world.py stock "{{runs}}"
+
+# Stand the world's toons up: each in its pose from world.json, as a small still .glb in world/toons/ (none named: everyone)
+world-toons runs="runs" *toons:
+    "{{blender_bin}}" -b --factory-startup -P scripts/world/pose_toons.py -- "{{runs}}" {{toons}} 2>&1 | grep -E '^TOON|Error|Traceback'
+
+# Save the world as it is now as an epoch (world/epochs/<name>.json). Old epochs are never edited: when the world changes, save a new one
+world-epoch name title="" caption="":
+    python3 scripts/world/world.py save-epoch "{{name}}" {{ if title != "" { "--title \"" + title + "\"" } else { "" } }} {{ if caption != "" { "--caption \"" + caption + "\"" } else { "" } }}
+
+# What the gallery's first view of the world fetches (files and MB), and what waits until you come close
+world-load:
+    python3 scripts/world/world.py load
+
+# Pictures of the gallery's world view at phone and desktop width, into evidence/world/ (the gallery must be running on that port)
+world-shots port="8028" *places:
+    python3 scripts/world/shots.py --port {{port}} {{places}}
+
+# BUY HOUSE: Opus designs a house for a toon from their own brief, and it is built as a set in sets/<house name>/ (a new folder each time). Put it in the world by naming it in world.json
+buy-house toon runs="runs" wish="":
+    baml run buy_house -- --toon "{{toon}}" --runs "{{runs}}" --wish "{{wish}}"
+
+# Build a kept house design again (sets/<house>/design.json), without asking anyone
+house-build house runs="runs":
+    python3 scripts/world/build_house.py "{{house}}" --runs "{{runs}}" | grep -E '^HOUSE'
+
+# Take the pictures that can hang behind the ninja's stage: one of each place in the world, through that place's own camera (sets/studio/backdrops/)
+studio-backdrops:
+    python3 scripts/world/world.py backdrops
 
 # Make a shot from its plan in motion/shots/<shot>.json: choreograph, place our poses, generate the motion (in pieces, if a beat is made from a sentence), measure it, film it. A take (a plan with a segment and roles, like studio-guest-entrance) makes every role and films from every camera of its set
 shoot shot="hero-rooftop":

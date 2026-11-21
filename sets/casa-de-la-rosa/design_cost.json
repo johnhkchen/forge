@@ -1,0 +1,10 @@
+{
+  "toon": "Flamenco Dancer",
+  "model": "opus",
+  "asks": 1,
+  "input_tokens": 2,
+  "cached_input_tokens": 0,
+  "output_tokens": 3183,
+  "seconds": 32,
+  "fixed": []
+}

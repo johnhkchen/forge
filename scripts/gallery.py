@@ -1,10 +1,11 @@
-"""Serve the gallery on the local network: every run, before and after, and every set.
+"""Serve the gallery on the local network: the world, every run, before and after, and every set.
 
     python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR]
 
 Read-only. Serves gallery/ (the page), runs/ and comics/ (the files), sets/
-(the standing sets) and shots/ (what was filmed on them), plus /api/runs,
-/api/comics, /api/sets and /api/takes, lists built from the folders on each
+(the standing sets), world/ (the toons and props that stand in the world) and
+shots/ (what was filmed on the sets), plus /api/runs, /api/comics, /api/sets,
+/api/takes and /api/world (world.json and every saved epoch), built from the folders on each
 request, so a new run, comic or take shows up on reload. Binds to all
 interfaces so a phone on the same Wi-Fi
 can open it; nothing here is meant for the internet.
@@ -24,6 +25,7 @@ RUNS = os.path.join(ROOT, "runs")
 SETS = os.path.join(ROOT, "sets")
 SHOTS = os.path.join(ROOT, "shots")
 COMICS = os.path.join(ROOT, "comics")
+WORLD = os.path.join(ROOT, "world")
 PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 
 mimetypes.add_type("model/gltf-binary", ".glb")
@@ -177,6 +179,22 @@ def all_sets():
     return out
 
 
+def the_world():
+    """The world (world.json) and every saved epoch of it, oldest first. An epoch is the whole world at one moment:
+    where each place stands, who is where, and what the ground is like (scripts/world/world.py)."""
+    world = read_json(os.path.join(ROOT, "world.json"))
+    if not world:
+        return None
+    epochs = []
+    folder = os.path.join(WORLD, "epochs")
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        epoch = read_json(os.path.join(folder, name)) if name.endswith(".json") else None
+        if epoch and epoch.get("places"):
+            epochs.append(epoch)
+    epochs.sort(key=lambda e: e.get("number", 0))
+    return {"title": world.get("title"), "about": world.get("about"), "now": world.get("epoch"), "epochs": epochs}
+
+
 def all_takes():
     """Every shot filmed on a standing set with a cast (shots/<name>/cast-<clip>.json, from render_take.py): who is in
     it, each one's file and size, and the film from each camera."""
@@ -255,6 +273,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(all_sets())
         if path == "/api/takes":
             return self.send_json(all_takes())
+        if path == "/api/world":
+            return self.send_json(the_world())
+        if path.startswith("/world/"):
+            return self.send_file(WORLD, path[len("/world/"):])
         if path == "/api/comics":
             return self.send_json(all_comics())
         if path.startswith("/comics/"):

@@ -92,6 +92,11 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just set-build <set>`, `just set-backdrop <set>`, `just set-card <set>` | build a set's block-out from its data, have Codex paint its backdrop, take its picture for the gallery |
 | `just set-from-run <set> <run folder>` | use an object you already made as a set's geometry |
 | `just shoot <take>`, then `just cast <take> runs "" <clip>` | a take on a set with several people in it (`studio-guest-entrance`): every role's motion, then the cast, filmed from every camera of the set |
+| `just world-check` | is the world sound: every place a sound set, no footprints overlapping, every toon on a mark, the newest epoch up to date |
+| `just buy-house <toon>` | Opus designs a house for a toon from their own brief, and it is built as a set (a new folder each time) |
+| `just world-places`, `just world-stock`, `just world-toons` | build the world's places from data, bring in light copies of the runs' objects, stand the toons up in their poses |
+| `just world-epoch <name> "<title>" "<caption>"` | save the world as it is now as an epoch |
+| `just world-shots <port>` | pictures of the gallery's world view, phone and desktop, into `evidence/world/` |
 | `just clip-to-gallery <shot> <character run> [clip]` | copy the shot's clips into the character's folder, so the gallery shows a "Hero" button; a second cut gets a button of its own |
 | `just comic "<premise>" [strip or scroll] ["<cast>"] ["<places>"] [name]` | make a comic: Opus writes it, one background Blender draws it, code letters it and lays out the page |
 | `just comic-again <name>` | draw and letter `comics/<name>/comic.json` again after editing it by hand; asks no model |
@@ -246,6 +251,50 @@ Everything a shot makes lands in `shots/<name>/`. A step whose file is already t
 
 **What is weak.** Neither motion model can see the set, so in the raw motion a shin clips the wall and a foot dips under the roof; the checks say by how much. Casting a character cures what moving a leg, an arm or the hips can cure, and pins the feet, which drift while planted. It cannot turn a run through the wall into a vault: in the mixed cut the shins still cut 7.5 cm into the wall and the hand ends 25 cm from the wall top. And in the landing the ninja's hand hangs about 20 cm over the roof, because its knee is kept out of it. The numbers are in the skill's "Contact" section. Our hand-written poses are not what the model learned from, so the motion between them is stiffer than motion capture. A "sprint" that has to fit the roof is closer to a run. A sentence gives you a motion, not the motion: Kimodo knows walking, running, sneaking, fighting and everyday moves well and has seen little parkour, and each sentence is at most ten seconds.
 
+## World
+
+Everything lives in one world, the way toys only ever live in one child's room. The gallery shows it whole: every place on one ground, at true size, like the full miniature set of a stop-motion film. Nothing is filmed anywhere that isn't a place in it.
+
+```
+just gallery                    # then open World: #/world/epoch-0
+just world-check
+just buy-house flamenco-dancer
+```
+
+**What stands in it now (Epoch 0).**
+
+| Place | What it is | Who is there |
+|---|---|---|
+| Theodore's grass | a big plot of open grass, a few trees and rocks, one bench | Roosevelt |
+| The boxing house | a timber hall around the ring (the `ring` set stands inside it), a bar, a brew house, a beer garden on the grass | Lincoln, the pirate |
+| The settlement | the troll's stone den and the lizardkin's sun house, a fire they share, their stall with the kettle, the teapots and the bread | the troll, the lizardkin |
+| The spawn spot | the gachapon machine, the landing ring, the BUY HOUSE pedestal | |
+| The ninja's stage | his photo stage (the `studio` set): a sitter's mark, a row for a group, a photographer's mark | the ninja, with his pinhole camera |
+| The dancer's house | Casa de la Rosa: the house she asked for, with her stage and her microphone | the dancer |
+
+Around them is the developer's plain grey floor, with a few grey one-metre cubes and a "TODO" or two: what hasn't been built yet.
+
+**`world.json` says where things are, and nothing else does.** Each place is an ordinary set (see Sets, below), and a set never knows where it stands. `world.json` puts each one down with one line, `{"set": "grass", "at": [0, 13], "facing_deg": 0}`: turn the set until its front faces that way, slide its origin there. Marks, cameras, blocks and the mesh all move together. It also says who stands on which mark, in which pose, and where the story's wondrous artifacts are. `just world-check` reads it and says what is wrong in words: two footprints that overlap, a place off the edge of the ground, a toon on a mark that isn't there.
+
+**Epochs.** An epoch is the whole world saved at one moment, with a title and a one-line caption: `world/epochs/epoch-0.json`. When the world changes, `just world-epoch epoch-1 "A title" "A caption"` saves a new file. Old ones are never edited, so the gallery's timeline can step through them like a time-lapse.
+
+**The world view** (`#/world/epoch-0`, or `#/world/epoch-0/boxing-house` to arrive at a place):
+
+- the whole world from a little above; drag to walk round it, pinch or scroll to come closer;
+- a name on every place. Tap a place (or its name in the row above) and the camera glides there;
+- at a place: who is there, which artifacts, and **Open this place** for its own page with marks, cameras and shots to play. **Marks** is off until you press it;
+- a timeline of epochs, with room for the next.
+
+It is made to open fast on a phone. The first view fetches 24 small files, 1.9 MB, about 20,000 triangles in all: each place's block-out, the toons standing still with no skeleton, nothing that needs a decoder. What is small or heavy waits until you come close to its place: the kettle and the bread, the ring's full mesh, the hall's painted wall. The page says how much it has loaded, under the view. `just world-load` lists the files; `just world-shots` takes the pictures in `evidence/world/`.
+
+**The places are built from data.** `scripts/world/places.py` writes each one as a set: boxes for what is in the way, a few simple pieces for what is only looked at (a roof as a stack of boxes, a tree as a trunk and four lumps), flat colors, no textures. `just world-places` builds them in a background Blender. The gachapon and the BUY HOUSE pedestal are built the same way. The ring, the kettle, the bread, the microphone and the ninja's camera are light copies of their runs (`just world-stock`); the toons are their low-poly versions frozen in a pose (`just world-toons`).
+
+**BUY HOUSE.** In the story, a toon who saves enough presses the developer's big round button and gets a house to their own specification. Here that is `just buy-house <toon>`: Opus reads the toon's own brief and what the story says about them, and designs the house they would want, as a floor plan in plain rectangles: its style, its rooms, its colors, where the stage and the microphone go, which way it faces. Code checks the plan (rooms inside the house and not overlapping, one stage, one practice floor, colors that are colors) and, if it can't be built, shows Opus what is wrong and asks once more. Then `scripts/world/build_house.py` turns the plan into a set with marks and cameras, builds it, and checks it. Asking again makes a different house in a folder of its own; `world.json` says which one stands in the world. The dancer's is `sets/casa-de-la-rosa/`: `design.json` is what Opus drew, `design_cost.json` what it cost (one ask, 32 seconds, 3,183 tokens out; the CLI put it at $1.58).
+
+**The ninja's stage.** The studio is the shadow ninja's own photo stage, and what hangs behind its window is always a real place in the world: `backdrop_options` in its `set.json` names the boxing house, the grass, the settlement and the dancer's house, each a picture taken through that place's own camera (`just studio-backdrops`). Its page in the gallery has a row to swap them.
+
+**What is weak.** The places are block-outs: boxes and lumps in flat colors, charming from a distance and plain up close. The hall has no roof and the houses have none either, so you can see in. Toons stand in one pose each and don't move. Marks are flat: a mark on the stage or in the ring knows how high its floor is, but nothing can walk up to it. The world view lights everything with one sun, so a place looks a little different there than on its own page.
+
 ## Sets
 
 Desi Arnaz built a set that stayed up, put three cameras on it, and filmed a play a week. Talk shows still work that way, and so do we now: a **set** is a place of our own, built once and shot many times, so a new shot only has to say who stands where.
@@ -263,19 +312,20 @@ What a set keeps, in `sets/<name>/set.json`:
 - **Paths.** Which marks people walk between, with a turning point or two where a straight line would cut a corner of the desk. Moves are short, across a shallow stage.
 - **Cameras that never move.** Three on the studio: `wide`, `host`, `guest`. One take is filmed from all of them at once, and you pick the cut afterwards.
 - **Lights that never move**, so every shot on the set looks like the last one.
-- **A painted backdrop.** The city out the studio's window is one picture Codex painted, standing a metre and a half behind the glass. Nothing out there is modelled.
+- **A backdrop.** What shows through the studio's window is one flat picture, standing a metre and a half behind the glass. Nothing out there is modelled. On the ring it is a painting by Codex; on the studio it is a picture of a real place in the world, and it can be swapped for another (see World).
+- **Signs.** Small painted flats that belong to the place: the stall's sign, BUY HOUSE, the hall's painted wall.
 - **What is in the way**, as plain boxes: the desk, the couch, the ropes. They are the same boxes a character's legs and hands are kept out of when it is cast.
 - **Dressing, kept apart.** The mug, the microphone and the plant are small files of their own standing on named slots, the way a sword rides a character's sockets. Swap one or take it away without touching the set.
 
 `just set-check` reads a set and says what is wrong with it, in words: a mark off the floor or too near the desk for a body, a seat too high for the sitting pose, a path that clips the couch, a camera that cuts off someone's head or has a post in front of it, a backdrop that doesn't fill the view.
 
-**Three sets so far.**
+**The first three sets** (the places in World, above, are sets too).
 
 | Set | What it is | Made from |
 |---|---|---|
 | `rooftop` | the roof, ledge and wall of the hero shots | the blocks that used to be written inside each shot. Both hero shots now say `"set": "rooftop"`, and plan to the same requests as before, byte for byte |
 | `ring` | the 1890s wrestling ring | the ring object from `runs/`: the floor is the mat, the ropes and posts are in the way, the corners and centre are marks, the steps are the way in |
-| `studio` | a small talk-show stage: desk and chair, a couch for two, a way on from the wings, a band riser, a skyline | built from data. `just set-build studio` makes its block-out from the boxes in `set.json` and a few extra pieces in `build.json`, in flat colors, in a background Blender. No TRELLIS, one picture from Codex |
+| `studio` | the ninja's stage: desk and chair, a couch for two, a way on from the wings, a band riser, a sitter's mark and a photographer's, a big window | built from data. `just set-build studio` makes its block-out from the boxes in `set.json` and a few extra pieces in `build.json`, in flat colors, in a background Blender. No TRELLIS, one picture from Codex |
 
 **Blocking by marks.** A beat in a shot list says `"to": "meet_left"` (walk there) or `"at": "couch_1"` (stay there: stand, sit down, get up, shake hands). The set then supplies what a shot used to write by hand: the path over the ground, how far along it each pose stands, which way it faces, how high the seat is, where the hand goes. Sitting is our own `sit` pose reached from our own `stand` pose; walking is one sentence to Kimodo, held to the set's path. A shot list that names no marks works exactly as before.
 
@@ -292,7 +342,7 @@ A take can also swap a sentence (`"sentences": {"guest_walks_on": "A person stri
 
 **In the first take** (Roosevelt and Lincoln, 16 seconds): Lincoln's wrist is on its spot to the millimetre; Roosevelt's arms are shorter and his stops 7.4 cm short, so their palms end up 12.6 cm apart (12.1 to 13.7 over the two seconds they hold it). A planted foot strays 0.3 cm at most, nothing goes more than 3 mm through the floor, and no joint leaves its limits. Seated, Lincoln is within a centimetre of his chair and Roosevelt floats 3.2 cm over the couch. Before any character is cast, the box figures land on their marks within 1 cm and their wrists are 14.6 cm apart against a planned 14. All of the motion took 34 jobs and 92 seconds of an RTX 4090: a few cents.
 
-In the gallery, **Sets** has a page per set: the set in 3D with its marks and cameras labelled, a row to look through each fixed camera, its dressing as chips, and a button for each shot filmed there that brings the cast on and plays it.
+In the gallery, **Places** has a page per set: the set in 3D with its marks and cameras labelled, a row to look through each fixed camera, its dressing as chips, and a button for each shot filmed there that brings the cast on and plays it.
 
 **What is weak.** Everyone on a set is brought to the same hip height, which is how they all land on the same marks; so short-legged Roosevelt comes out bigger than long-legged Lincoln, who was the taller man. The handshake only puts two wrists near one spot: the hands lie flat the way a hand rests on a wall, nobody grips, nothing pumps, and a short arm comes up short. A seat is a box, solid down to the floor: a body is kept out of it and can float a few centimetres above it, nothing pulls it down onto the cushion, and nothing knows about the chair's back. The floor is flat, so the ring's steps are a mark at mat height and its ropes have a gap where people come in. Where a walk meets a turn (leaving the handshake) the join is the roughest part of the motion. Nothing keeps two people out of each other, only out of the set. The cameras never move and nobody picks the cut: you get three films. Only the template has been shot; Opus has been shown how to block by marks but has not yet laid out a set shot for real. Filming is slow, about four minutes a camera.
 ## Comics
