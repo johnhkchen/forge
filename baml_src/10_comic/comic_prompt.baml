@@ -26,7 +26,12 @@ class ComicPlacement {
 }
 
 class ComicPanel {
-    framing: "wide" | "two-shot" | "single" | "close-up",
+    framing: "wide" | "two-shot" | "single" | "close-up" | "pov" @description(
+        "pov is seen through the eyes of the first cast member listed",
+    ),
+    look: "ahead" | "down" | "hands" | null @description(
+        "only for pov: where those eyes look. ahead is where the head faces; down is at their own feet and the ground just in front; hands is at their own hands and what they hold. null otherwise",
+    ),
     place: string @description("a place from the kit"),
     camera: string? @description("one of the place's named cameras, only if it lists any; else null"),
     shape: "square" | "wide" | "tall" @description("always square in a strip; vary it in a scroll episode"),
@@ -69,6 +74,9 @@ function WriteComic(premise: string, format: string, kit: string) -> ComicScript
           ${WIDE_CHARS}). A silent panel is often the funniest one.
         - A character whose mouth is hidden shows feeling with its eyes and
           its pose; give it thoughts ("think") more often than speech.
+        - A character marked as never speaking aloud has no speech balloons
+          at all: only thoughts ("think") and the narrator's captions, which
+          are then in that character's own voice.
 
         Staging:
         - Use the four framings on purpose: wide to show where we are,
@@ -76,8 +84,19 @@ function WriteComic(premise: string, format: string, kit: string) -> ComicScript
           that sells the joke.
         - People talking face each other. Keep each character on the same
           side from panel to panel unless they move.
-        - A moment listed with a place belongs to that place: use it there,
-          standing at "there", and it sits where its shot had it.
+        - A clip that belongs to a place is one continuous action that
+          happened there. Use its moments in that place, standing at
+          "there", in the order they happen, and the panels follow the
+          action across the place. Between the named moments you can pick
+          any second of the clip, as clip@seconds.
+        - "pov" puts the reader behind a character's eyes: we see what they
+          see and never their face. Their own hands, feet and whatever they
+          hold are in the picture when they would see them, so choose
+          "look" on purpose: ahead for the view, down for a landing or a
+          careful step, hands for something reached for, gripped or drawn.
+          A pov panel has no balloon tail to its viewer; their thoughts run
+          along the bottom like a film's subtitles, so keep each to a line.
+          Mix pov with a few outside framings so we also see who it is.
 
         ${ctx.output_format()}
 

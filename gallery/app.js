@@ -569,7 +569,11 @@ function panelFigure(comic, panel) {
   figure.style.aspectRatio = `${wide} / ${tall}`;
   const sky = panel.sky || ["#f2efe9", "#e9e2d4"];
   figure.style.backgroundColor = sky[sky.length - 1];
-  if (panel.sky_image) {
+  if (panel.sky_image && panel.sky_css) {
+    // layout.py worked out where the backdrop hangs so its horizon is level with the camera's
+    figure.style.cssText += panel.sky_css;
+    figure.style.backgroundImage = `url("comics/${panel.sky_image}")`;
+  } else if (panel.sky_image) {
     figure.style.backgroundImage = `url("comics/${panel.sky_image}")`;
     figure.style.backgroundSize = `auto ${panel.sky_zoom || 100}%`;
     figure.style.backgroundPosition = "center 42%";
@@ -594,6 +598,7 @@ function comicShelf() {
         h("div", { class: "cover" }, panelFigure(comic, comic.panels[0])),
         h("div", { class: "label" },
           h("h2", {}, comic.title),
+          comic.canon === false ? h("p", {}, h("span", { class: "side-story", title: "Not part of the main story" }, "Side story")) : null,
           h("p", {}, `Read it · ${comic.layout === "strip" ? "a four-panel strip" : `${comic.panels.length} panels, top to bottom`}`),
         ),
       ),
@@ -608,7 +613,8 @@ function shelfHeading() {
 function comicPage(comic) {
   return h("article", { class: "object comic-reader" },
     h("a", { class: "back", href: "#/" }, "← Everything"),
-    h("p", { class: "kicker" }, comic.layout === "strip" ? "A four-panel strip" : `A scroll episode · ${comic.panels.length} panels`),
+    h("p", { class: "kicker" }, comic.layout === "strip" ? "A four-panel strip" : `A scroll episode · ${comic.panels.length} panels`,
+      comic.canon === false ? h("span", { class: "side-story", title: "Not part of the main story" }, "Side story") : null),
     h("h1", {}, comic.title),
     h("div", { class: "comic-sheet clay-surface" },
       h("div", { class: `comic ${comic.layout}` }, comic.panels.map((panel) => panelFigure(comic, panel))),

@@ -1,5 +1,5 @@
 {
-  "about": "Who can be in a comic. `run` is the end of a run folder's name (the part after its date). `version` is the rigged file to draw: profiles/<version>-walk.glb for hand-written poses, profiles/<version>-<clip>.glb for a moment of a clip. `face` says how a drawn expression goes on the head: `whole` covers the face, `eyes` only the strip a mask leaves open; `region` is that area as fractions of the head seen from the front (left, top, right, bottom); `lighten` brightens the drawn face when it comes out darker than the head around it. `clips` lists the clips whose moments a panel may freeze; one made from a shot names the shot, and its poses become named moments.",
+  "about": "Who can be in a comic. `run` is the end of a run folder's name (the part after its date). `version` is the rigged file to draw: profiles/<version>-walk.glb for hand-written poses, profiles/<version>-<clip>.glb for a moment of a clip. `face` says how a drawn expression goes on the head: `whole` covers the face, `eyes` only the strip a mask leaves open; `region` is that area as fractions of the head seen from the front (left, top, right, bottom); `lighten` brightens the drawn face when it comes out darker than the head around it. `silent` marks a character who never speaks aloud: its lines can only be thoughts. `clips` lists the clips whose moments a panel may freeze; one made from a shot names the shot, and its poses become named moments.",
   "cast": {
     "lincoln": {
       "name": "Lincoln",
@@ -21,7 +21,8 @@
       "name": "Ninja",
       "run": "shadow-ninja",
       "version": "midpoly",
-      "about": "a stocky ninja in a dark hooded suit and mask, only the eyes showing, a katana on the back; very serious about being stealthy",
+      "about": "a stocky ninja in a dark hooded suit and mask, only the eyes showing, a katana on the back; a recent arrival who never speaks, loves films, and is quietly working out what life is about",
+      "silent": true,
       "face": {"kind": "eyes", "region": [0.1, 0.46, 0.9, 0.7]},
       "clips": {"walk": {}, "run": {}, "hero": {"shot": "hero-rooftop"}}
     },
