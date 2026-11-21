@@ -33,6 +33,7 @@ CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacO
 EXPORT_PANEL = {"strip": 480, "scroll": 720}  # how wide a panel is in the .png
 GUTTER = 18
 FORMATS = {"strip": "A four-panel strip", "scroll": "A scroll episode"}
+# comic.json may say "canon": false: a comic kept outside the main story. The page and the gallery label it "Side story".
 
 
 def data_uri(path, kind):
@@ -69,7 +70,7 @@ def read(path):
         return f.read()
 
 
-SKY_ZOOM = {"wide": 100, "two-shot": 135, "single": 175, "close-up": 230}  # a backdrop is drawn larger behind a closer shot
+SKY_ZOOM = {"wide": 100, "two-shot": 135, "single": 175, "close-up": 230, "pov": 100}  # a backdrop is drawn larger behind a closer shot
 
 
 def sky_class(panel):
@@ -80,12 +81,31 @@ def figure(panel, number, picture):
     wide, tall = panel["size"]
     sky = panel.get("sky") or ["#f2efe9", "#e9e2d4"]
     look = "aspect-ratio:%d/%d;background-color:%s;" % (wide, tall, sky[-1])
-    if panel.get("sky_image"):
+    if panel.get("sky_css"):
+        look = "aspect-ratio:%d/%d;%s" % (wide, tall, panel["sky_css"])
+    elif panel.get("sky_image"):
         look += "background-size:auto %d%%;" % SKY_ZOOM.get(panel.get("framing"), 100)
     else:
         look += "background-image:linear-gradient(%s,%s);" % (sky[0], sky[-1])
     return ('<figure class="panel %s" style="%s"><img src="%s" alt="%s" width="%d" height="%d">%s</figure>'
             % (sky_class(panel), look, picture, lettering.esc(panel["alt"]), wide, tall, panel["svg"]))
+
+
+def hang_sky(meta):
+    """Where a painted backdrop goes behind one panel, as CSS: big enough to cover the panel, and (when the renderer
+    wrote down where the horizon is) with its own horizon level with the camera's. None for a panel drawn before that."""
+    if not meta.get("sky_image") or meta.get("horizon") is None:
+        return None
+    wide, tall = meta["size"]
+    sky = meta.get("sky") or ["#f2efe9", "#e9e2d4"]
+    zoom = max(SKY_ZOOM.get(meta.get("framing"), 100), 108) / 100.0
+    side = zoom * max(wide, tall)                 # the backdrop is square
+    share = side / tall                           # its height, in panel heights
+    top = meta["horizon"] - (meta.get("sky_horizon") or 0.66) * share   # where its top edge lands, in panel heights
+    position = 100.0 * top / (1.0 - share)
+    color = sky[0] if top > 0 else sky[-1]        # what shows where the picture has run out: sky above it, ground below
+    return "background-color:%s;background-size:%.1f%% auto;background-position:50%% %.1f%%;background-repeat:no-repeat;" % (
+        color, 100.0 * side / wide, position)
 
 
 def sky_rules(folder, panels):
@@ -113,6 +133,7 @@ def page(comic, panels, pictures, skies="", embedded=True, export=False):
     figures = "\n".join(figure(p, n, pictures[n - 1]) for n, p in enumerate(panels, 1))
     count = len(panels)
     kicker = "%s · %d panels" % (FORMATS.get(layout, "A comic"), count) if layout != "strip" else FORMATS["strip"]
+    side = '<span class="side-story">Side story</span>' if comic.get("canon") is False else ""
     style = "\n".join([read(KIT_CSS), font_faces(embedded), read(COMIC_CSS), skies])
     if export:
         width = EXPORT_PANEL[layout] * (count if layout == "strip" else 1) + GUTTER * ((count if layout == "strip" else 1) + 1)
@@ -142,7 +163,7 @@ def page(comic, panels, pictures, skies="", embedded=True, export=False):
 </head>
 <body class="b28-clay comic-page">
 <header class="comic-head">
-  <p class="kicker">%(kicker)s</p>
+  <p class="kicker">%(kicker)s%(side)s</p>
   <h1>%(title)s</h1>
 </header>
 <main class="comic-sheet clay-surface">
@@ -156,7 +177,7 @@ def page(comic, panels, pictures, skies="", embedded=True, export=False):
 </body>
 </html>
 """ % {"title": lettering.esc(comic["title"]), "kicker": kicker, "premise": lettering.esc(comic.get("premise", "")), "style": style,
-       "layout": layout, "figures": figures}
+       "layout": layout, "figures": figures, "side": side}
 
 
 def screenshot(html_path, png_path, width, height):
@@ -185,7 +206,7 @@ def main():
             problems.append("panel %d: %s" % (number, problem))
         file, kind = lighter(folder, meta["file"])
         panels.append({"file": file, "kind": kind, "size": meta["size"], "sky": meta.get("sky"), "sky_image": meta.get("sky_image"),
-                       "framing": meta.get("framing"), "alt": alt_text(number, panel),
+                       "framing": meta.get("framing"), "sky_css": hang_sky(meta), "alt": alt_text(number, panel),
                        "svg": lettering.to_svg(lettered, meta["size"]), "lettering": lettered})
     embedded = [data_uri(os.path.join(folder, p["file"]), p["kind"]) for p in panels]
     skies = sky_rules(folder, panels)
@@ -209,9 +230,10 @@ def main():
         os.remove(export_path)
     with open(os.path.join(folder, "reader.json"), "w") as f:
         json.dump({"name": os.path.basename(folder), "title": comic["title"], "premise": comic.get("premise", ""), "layout": layout,
+                   "canon": comic.get("canon", True),
                    "panels": [dict({k: p[k] for k in ("file", "size", "sky", "alt", "svg")},
                                     sky_image=p["sky_image"][:-4] + ".webp" if p.get("sky_image") and shutil.which("cwebp") else p.get("sky_image"),
-                                    sky_zoom=SKY_ZOOM.get(p.get("framing"), 100)) for p in panels],
+                                    sky_zoom=SKY_ZOOM.get(p.get("framing"), 100), sky_css=p.get("sky_css")) for p in panels],
                    "png": png_name if note is None and "--no-png" not in sys.argv else None, "html": "page.html",
                    "draw_seconds": drawn.get("seconds"), "problems": problems}, f, indent=1)
     print("PAGE %s: %d panels, %s" % (os.path.join(folder, "page.html"), len(panels), png_name if not note else note))

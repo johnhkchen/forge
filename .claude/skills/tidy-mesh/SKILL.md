@@ -1479,7 +1479,37 @@ put the face on, fit the camera to the framing with room at the top for
 balloons, draw. It writes where every head and body landed in the picture
 (`panels.json`), which is all the lettering needs.
 
-**Lettering** (`scripts/comic/lettering.py`, no Blender). For each balloon
+**Through a character's eyes** (`"framing": "pov"`). The camera goes to
+the first cast member's eyes: just in front of the middle of its head, as
+the head bone has it at that pose or clip moment, with a 21 mm lens, which
+is about what one eye takes in. `"look"` aims it: `ahead` is where the head
+faces; `down` tips it 52 degrees and leans toward the feet when they are
+out in front; `hands` leans toward whichever hands are in front of the face
+(one behind the head, as when a sword is drawn over the shoulder, is not
+looked at, and the look falls back to ahead). The viewer's own head and
+neck are taken out with a Mask modifier on the points those two bones hold,
+placed before the ink line so no outline is drawn round the missing head,
+and the body is drawn from outside only for that panel, so the camera does
+not see the inside of its own chest. Both are undone for the next outside
+view; a test checks the two pictures match. `panels.json` notes the eye,
+the head's middle and how much of the body is in frame (`pov`). Anyone
+else in the panel is stood about 1.7 m in front of the viewer, and left,
+right and facing are as the viewer sees them.
+
+A clip made from a shot (`"clips": {"hero": {"shot": "hero-rooftop"}}` in
+`comics/cast.json`) belongs to the places built from that shot. There, at
+`"at": "there"`, any moment of it (`hero:vault_over`, `hero@3.4`) stays
+where the shot had it, so a run of pov panels follows the action across
+the place. Opus is shown the clip's length and what happens when.
+
+`"silent": true` on a cast member means no speech: the checks turn down
+any line of theirs that is not `"think"`. `"canon": false` in a
+`comic.json` marks a side story for the page and the gallery.
+
+**Lettering** (`scripts/comic/lettering.py`, no Blender). A thought from
+someone whose head is not in the picture (a pov panel) is a voice: a dark
+bar along the bottom with light type and no tail, stacked upward in reading
+order. For everything else: For each balloon
 it tries spots on a grid and keeps the cheapest one that breaks no rule: no
 balloon over any face or another balloon; a tail that ends on the rim of
 its speaker's head, leaning toward the mouth, and crosses nobody else's
@@ -1507,6 +1537,14 @@ more. A script is one Opus call of about 6,500 characters in and 1,600 to
 2,200 tokens out.
 
 What is weak, worst first:
+
+- **Pov shows what the clip gives it.** Looking down, a third of the
+  picture can be the viewer's own chest and shoulders, because the eye is
+  in a head that sits low on a stocky body. Looking ahead in the sprint
+  nothing of the body is in frame: the arms swing below the view. The head
+  bone, not the eyes, decides the direction, and the clip's head hardly
+  turns. The painted backdrop only follows the camera up and down, not
+  round, so the same skyline is behind every direction he faces.
 
 - **The face is a flat picture.** Past about 60 degrees the far eye slides
   round the cheek. It is painted over real glasses and a real mustache

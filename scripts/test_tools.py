@@ -1932,9 +1932,66 @@ def test_comic_script(ctx):
         check("%s (%d panels, written by Opus) names only poses, faces and places the runs have" % (name, len(comic["panels"])), not wrong, wrong)
 
 
+def test_comic_pov(ctx):
+    """A panel seen through a character's own eyes: the camera sits at the ninja's eyes at a moment of his rooftop shot, his own head is out of the picture, his hand on the wall is in it, and his thought is lettered as a voice."""
+    sys.path.insert(0, os.path.join(HERE, "comic"))
+    import kit as comic_kit
+    runs = os.path.dirname(ctx["troll"])
+    have = comic_kit.kit(runs)
+    ninja = next((m for m in have["cast"] if m["id"] == "ninja"), None)
+    if not ninja or not ninja.get("shot_clips") or "rooftop" not in {p["name"] for p in have["places"]}:
+        print("    skipped: needs the shadow ninja's run with its hero clip, and the hero-rooftop shot")
+        return
+
+    def shot(framing, look, pose="hero:vault_over", lines=None):
+        return {"framing": framing, "look": look, "place": "rooftop", "camera": None, "shape": "square",
+                "cast": [{"who": "ninja", "at": "there", "facing": "camera", "pose": pose, "expression": "neutral"}],
+                "lines": lines or [], "caption": None, "sfx": None}
+
+    thought = [{"who": "ninja", "says": "Hands on the wall. Hips up.", "how": "think"}]
+    panels = [shot("pov", "hands", lines=thought), shot("wide", None), shot("pov", "ahead"), shot("pov", "down", pose="hero@3.4"), shot("wide", None)]
+    check("the panels pass the checks: pov, a look, a clip moment kept where the shot had it, a silent character thinking",
+          comic_kit.problems({"panels": panels}, have) == [], comic_kit.problems({"panels": panels}, have))
+    folder = comic_folder(ctx, "comic-pov", panels)
+    drawn, reader = draw_comic(ctx, folder)
+    eyes, outside = drawn["panels"][0], drawn["panels"][1]
+    pov = eyes["pov"]
+    apart = sum((a - b) ** 2 for a, b in zip(pov["eye"], pov["head_center"])) ** 0.5
+    check("the camera is at his eyes: %.0f cm from the middle of his head, a head being %.0f cm across" % (apart * 100, pov["head_radius"] * 200),
+          apart <= pov["head_radius"] * 1.15 and pov["lens"] <= 28, pov)
+    check("his own head is not in his own picture (no head is reported for the lettering), and it is back in the outside view",
+          eyes["heads"] == {} and "ninja" in outside["heads"] and outside["pov"] is None, (eyes["heads"], list(outside["heads"])))
+    check("looking at his hands on the vault, %.0f%% of his arms and legs are in frame; looking ahead, %.0f%%" % (
+          pov["seen_of_self"] * 100, drawn["panels"][2]["pov"]["seen_of_self"] * 100), pov["seen_of_self"] > 0.05, (pov, drawn["panels"][2]["pov"]))
+    check("looking down while sneaking, the horizon leaves the top of the picture (%.2f); looking ahead it is inside it (%.2f)" % (
+          drawn["panels"][3]["horizon"], drawn["panels"][2]["horizon"]), drawn["panels"][3]["horizon"] < 0.1 and 0.1 < drawn["panels"][2]["horizon"] < 0.9,
+          (drawn["panels"][3]["horizon"], drawn["panels"][2]["horizon"]))
+
+    # What is actually drawn: his dark hood fills none of the middle of his own view, and his skin-colored hand is there.
+    wide, tall, rows = read_png(os.path.join(folder, "panels", "01.png"))
+    painted = skin = 0
+    for row in rows[::3]:
+        for r, g, b, a in row[::3]:
+            if a > 128:
+                painted += 1
+                if r > 150 and r > b * 1.25 and r - b > 40:
+                    skin += 1
+    check("something of him is drawn in his own view, and some of it is the skin of his hand (%d of %d sampled points)" % (skin, painted),
+          painted > 300 and skin > 20, (skin, painted))
+    _w, _h, first = read_png(os.path.join(folder, "panels", "02.png"))
+    _w, _h, last = read_png(os.path.join(folder, "panels", "05.png"))
+    differs = sum(1 for y in range(0, tall, 3) for x in range(0, wide, 3)
+                  if abs(first[y][x][0] - last[y][x][0]) + abs(first[y][x][1] - last[y][x][1]) + abs(first[y][x][2] - last[y][x][2]) + abs(first[y][x][3] - last[y][x][3]) > 60)
+    check("after pov panels the outside view is drawn exactly as before them: his head is put back (%d points differ)" % differs, differs < 30, differs)
+    voice = reader["panels"][0]["svg"]
+    check("his thought is lettered as a voice along the bottom: text, no tail, no speech balloon",
+          'class="balloon voice"' in voice and "Hands on the wall." in voice and "<polygon" not in voice and not reader["problems"], reader["problems"])
+    check("a painted backdrop is hung with its horizon level with the camera's", all(p.get("sky_css") for p in reader["panels"]) or not reader["panels"][0].get("sky_image"))
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
-         test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_script]
+         test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script]
 
 
 def main(argv):

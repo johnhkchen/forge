@@ -185,9 +185,9 @@ autoremesher:
     rm -rf autoremesher.app; cp -R "$mnt/autoremesher.app" .; hdiutil detach "$mnt" >/dev/null
     ./autoremesher.app/Contents/MacOS/autoremesher --version
 
-# Make a comic from a premise: Opus writes it as panels of data, one background Blender draws every panel in the comic style, code letters it and lays out the page (comics/<name>/page.html and a .png). layout: strip (4 panels) or scroll (6 to 10, for a phone). cast and place narrow what Opus may use ("lincoln, roosevelt", "ring")
-comic premise layout="strip" cast="" place="" name="" runs="runs":
-    baml run comic -- --premise "{{premise}}" --layout "{{layout}}" --cast "{{cast}}" --place "{{place}}" --name "{{name}}" --runs "{{runs}}"
+# Make a comic from a premise: Opus writes it as panels of data, one background Blender draws every panel in the comic style, code letters it and lays out the page (comics/<name>/page.html and a .png). layout: strip (4 panels) or scroll (6 to 10, for a phone). cast and place narrow what Opus may use ("lincoln, roosevelt", "ring"); canon=no marks a side story, outside the main one
+comic premise layout="strip" cast="" place="" name="" runs="runs" canon="yes":
+    baml run comic -- --premise "{{premise}}" --layout "{{layout}}" --cast "{{cast}}" --place "{{place}}" --name "{{name}}" --runs "{{runs}}" --canon "{{canon}}"
 
 # Draw and letter a comic again from its comics/<name>/comic.json, after editing it by hand (asks no model anything)
 comic-again name runs="runs":

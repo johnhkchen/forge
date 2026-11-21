@@ -35,26 +35,36 @@ FRAMINGS = {
     "two-shot": "everyone in the panel from the hips up",
     "single": "one character from the chest up (the first one listed)",
     "close-up": "one character's face (the first one listed)",
+    "pov": "through the eyes of the first one listed: the camera is at its eyes, looking where its head looks; its head is not in the picture, its hands, feet and whatever it holds are, when it would see them",
 }
+LOOKS = {"ahead": "where the head is facing", "down": "down at its own feet and the ground just ahead", "hands": "at its own hands"}
 SPOTS = ["left", "center", "right"]
 FACINGS = ["left", "right", "camera", "away"]
 HOWS = ["say", "think", "shout", "whisper"]
 SHAPES = {"square": (1.0, 1.0), "wide": (1.0, 0.62), "tall": (1.0, 1.3)}
 THERE = "there"  # a spot: where the clip itself has the character at that moment
 
-# Stand-ins until sets/<name>/set.json exists. Colors are the page's (sRGB hex), top to bottom.
+# Stand-ins until sets/<name>/set.json exists. Colors are the page's (sRGB hex), top to bottom; with a painted
+# backdrop (comics/backdrops/<name>.png) they are what shows above and below it, and "sky_horizon" says how far
+# down that picture its horizon is, so it can be hung level with the camera's.
 STAND_INS = {
     "ring": {
         "about": "inside the ropes of an 1890s wrestling ring: canvas mat, wooden corner posts",
         "backdrop": {"run": "1890s-wrestling-ring", "file": "profiles/lowpoly.glb"},
         "front_deg": 0.0, "center": [0.0, 0.55], "apart_m": 0.95, "camera_within_m": 2.4,
-        "sky": ["#f3e3c3", "#e2c492"],
+        "sky": ["#f3e3c3", "#e2c492"], "sky_horizon": 0.63,
     },
     "rooftop": {
         "about": "a flat city rooftop at night with a low wall across it",
         "backdrop": {"shot": "hero-rooftop"},
         "front_deg": 140.0, "center": [3.4, 4.3], "apart_m": 1.1,
-        "sky": ["#1b2a52", "#6a5a8c"],
+        "sky": ["#221c6e", "#1c1a58"], "sky_horizon": 0.7,
+    },
+    "rooftop-dawn": {
+        "about": "the same rooftop and low wall as the sun comes up",
+        "backdrop": {"shot": "hero-rooftop"},
+        "front_deg": 140.0, "center": [3.4, 4.3], "apart_m": 1.1,
+        "sky": ["#3f52ad", "#575a9c"], "sky_horizon": 0.69,
     },
     "plain": {"about": "no place at all: a flat warm background, for a talk panel", "sky": ["#f2efe9", "#e9e2d4"]},
     "dusk": {"about": "no place at all: a flat evening-blue background, for a quiet or night panel", "sky": ["#2a3a66", "#7a6a96"]},
@@ -121,6 +131,29 @@ def moments_of(runs, entry):
             found.append({"name": "%s:%s" % (clip, pose), "clip": clip, "second": round(move["frame"] / float(plan.get("fps", 30)), 3),
                           "about": (about.get(pose) or {}).get("about", pose.replace("_", " ")), "shot": made["shot"]})
     return found
+
+
+def shot_clips_of(runs, entry):
+    """A character's clips that were made from a shot: how long each runs, what happens when, and the places it belongs to
+    (where a moment of it can stay "there", exactly where the shot had it)."""
+    found = []
+    for clip, made in sorted((entry.get("clips") or {}).items()):
+        if not made.get("shot") or not clip_file(runs, entry, clip):
+            continue
+        plan = shot_plan(runs, made["shot"])
+        if not plan:
+            continue
+        fps = float(plan.get("fps", 30))
+        beats = ["%.1f to %.1f s: %s" % (b["first_frame"] / fps, b["last_frame"] / fps, b["name"].lower()) for b in plan.get("beats", [])]
+        found.append({"clip": clip, "seconds": round(plan.get("seconds", plan.get("frames", 0) / fps), 2), "beats": beats,
+                      "places": STAND_INS_OF_SHOT.get(made["shot"], [])})
+    return found
+
+
+def at_home(member, ref, place):
+    """Is this pose a moment of a shot-made clip that belongs to `place`? (So it can stand "there".)"""
+    clip = (ref or "").split(":")[0].split("@")[0]
+    return any(s["clip"] == clip and place in s["places"] for s in member.get("shot_clips") or []) and ("@" in ref or ":" in ref)
 
 
 def expressions_of(who):
@@ -220,7 +253,9 @@ def kit(runs):
         cast.append({
             "id": who, "name": entry["name"], "about": entry["about"],
             "poses": [{"name": name, "about": pose["about"]} for name, pose in library.items()],
-            "moments": [{"name": m["name"], "about": m["about"], "place": STAND_IN_OF_SHOT.get(m["shot"], "")} for m in moments_of(runs, entry)],
+            "moments": [{"name": m["name"], "about": m["about"], "second": m["second"]} for m in moments_of(runs, entry)],
+            "shot_clips": shot_clips_of(runs, entry),
+            "silent": bool(entry.get("silent")),
             "clips": clips,
             "expressions": expressions_of(who),
         })
@@ -228,10 +263,14 @@ def kit(runs):
     for name, place in places(runs).items():
         spots.append({"name": name, "about": place["about"], "marks": sorted(place.get("marks") or {}),
                       "cameras": sorted(place.get("cameras") or {})})
-    return {"cast": cast, "places": spots, "framings": [{"name": n, "about": a} for n, a in FRAMINGS.items()]}
+    return {"cast": cast, "places": spots, "framings": [{"name": n, "about": a} for n, a in FRAMINGS.items()],
+            "looks": [{"name": n, "about": a} for n, a in LOOKS.items()]}
 
 
-STAND_IN_OF_SHOT = {s["backdrop"]["shot"]: name for name, s in STAND_INS.items() if (s.get("backdrop") or {}).get("shot")}
+STAND_INS_OF_SHOT = {}
+for _name, _stand_in in STAND_INS.items():
+    if (_stand_in.get("backdrop") or {}).get("shot"):
+        STAND_INS_OF_SHOT.setdefault(_stand_in["backdrop"]["shot"], []).append(_name)
 
 # "hero@7.25": 7.25 seconds into the clip "hero".
 CLIP_AT = re.compile(r"^([a-z][a-z0-9_-]*)@([0-9]+(?:\.[0-9]+)?)s?$")
@@ -292,11 +331,17 @@ def problems(comic, have):
             marks = (place or {}).get("marks") or []
             if isinstance(at, str) and at not in SPOTS and at != THERE and at not in marks:
                 wrong.append("%s: %s stands at \"%s\", which is not left, center, right%s" % (tag, who, at, "".join(", " + m for m in marks)))
+            if at == THERE and not at_home(cast[who], member.get("pose"), panel.get("place")):
+                wrong.append("%s: %s stands at \"there\", which needs a moment of a clip that belongs to %s" % (tag, who, panel.get("place")))
             if member.get("facing", "camera") not in FACINGS:
                 wrong.append("%s: %s faces \"%s\", which is not one of %s" % (tag, who, member.get("facing"), ", ".join(FACINGS)))
+        if panel.get("look") and panel["look"] not in LOOKS:
+            wrong.append("%s: look \"%s\" is not one of %s" % (tag, panel["look"], ", ".join(LOOKS)))
         for line in panel.get("lines") or []:
             if line.get("who") not in here:
                 wrong.append("%s: %s has a line but is not in the panel" % (tag, line.get("who")))
+            elif cast[line["who"]].get("silent") and line.get("how", "say") != "think":
+                wrong.append("%s: %s never speaks aloud: its lines are thoughts (\"think\")" % (tag, line["who"]))
             if line.get("how", "say") not in HOWS:
                 wrong.append("%s: a line is spoken \"%s\", which is not one of %s" % (tag, line.get("how"), ", ".join(HOWS)))
         if panel.get("shape", "square") not in SHAPES:

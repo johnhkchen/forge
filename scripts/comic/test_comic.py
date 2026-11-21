@@ -95,6 +95,17 @@ def test_lettering():
     check("a panel with far too many words is reported, not lettered over the face",
           crowded["problems"] and "too wordy" in crowded["problems"][0] and not crowded["balloons"], crowded["problems"])
 
+    # Through someone's own eyes: their head is not in the picture, so their thought has nowhere to point.
+    own = {"size": [900, 560], "heads": {}, "bodies": {}}
+    seen = {"lines": [{"who": "ninja", "says": "Slow tracking shot along the ledge.", "how": "think"}, {"who": "ninja", "says": "Let it breathe.", "how": "think"}]}
+    voiced = lettering.letter(own, seen)
+    bars = voiced["balloons"]
+    check("a thought with no head to point at becomes a voice: a bar along the bottom with no tail",
+          len(bars) == 2 and all(b["how"] == "voice" and b["tail"] is None and b["box"][1] > 560 * 0.45 for b in bars) and not voiced["problems"], bars)
+    check("two voice bars stack with the first one read on top, centered, inside the panel",
+          bars[0]["box"][1] + bars[0]["box"][3] <= bars[1]["box"][1] and all(abs(b["box"][0] * 2 + b["box"][2] - 900) < 2 and b["box"][1] + b["box"][3] < 560 for b in bars), bars)
+    drawn = lettering.to_svg(voiced, own["size"])
+    check("the voice is still text, with no tail and no thought bubbles", 'class="voice"' in drawn and "<polygon" not in drawn and "<circle" not in drawn and "Let it breathe." in drawn)
     high = {"size": [900, 560], "heads": {"lincoln": {"center": [200.0, 70.0], "radius": 55.0, "mouth": [220.0, 90.0], "top": [200.0, 10.0]}}, "bodies": {}}
     low = lettering.letter(high, {"lines": [], "caption": "Meanwhile."})
     check("a caption moves to the bottom when a face is where it would go", low["caption"]["box"][1] > 400, low["caption"])
@@ -108,9 +119,10 @@ KIT = {
         {"id": "lincoln", "name": "Lincoln", "about": "", "poses": [{"name": "stand", "about": ""}, {"name": "flex", "about": ""}], "moments": [],
          "clips": ["run", "walk"], "expressions": ["neutral", "happy", "smug"]},
         {"id": "ninja", "name": "Ninja", "about": "", "poses": [{"name": "stand", "about": ""}],
-         "moments": [{"name": "hero:draw", "about": "", "place": "rooftop"}], "clips": ["hero", "walk"], "expressions": []},
+         "moments": [{"name": "hero:draw", "about": "", "second": 11.3}], "clips": ["hero", "walk"], "expressions": [], "silent": True,
+         "shot_clips": [{"clip": "hero", "seconds": 12.0, "beats": [], "places": ["rooftop"]}]},
     ],
-    "places": [{"name": "ring", "about": "", "marks": [], "cameras": []}, {"name": "studio", "about": "", "marks": ["host", "guest"], "cameras": ["wide", "desk"]}],
+    "places": [{"name": "ring", "about": "", "marks": [], "cameras": []}, {"name": "rooftop", "about": "", "marks": [], "cameras": []}, {"name": "studio", "about": "", "marks": ["host", "guest"], "cameras": ["wide", "desk"]}],
     "framings": [],
 }
 
@@ -147,6 +159,14 @@ def test_checks():
           kit.problems({"panels": [panel(cast=[{"who": "ninja", "at": "center", "facing": "camera", "pose": "stand", "expression": "angry"}], lines=[])]}, KIT) == [])
     check("a set's mark and camera are accepted by name",
           kit.problems({"panels": [panel(place="studio", camera="desk", cast=[{"who": "lincoln", "at": "guest", "facing": "left", "pose": "stand", "expression": "happy"}])]}, KIT) == [])
+    eyes = panel(framing="pov", look="hands", place="rooftop", lines=[{"who": "ninja", "says": "Hm.", "how": "think"}],
+                 cast=[{"who": "ninja", "at": "there", "facing": "camera", "pose": "hero@7.9", "expression": "neutral"}])
+    check("a pov panel of a shot's clip moment, kept \"there\", with a thought, is sound", kit.problems({"panels": [eyes]}, KIT) == [], kit.problems({"panels": [eyes]}, KIT))
+    spoken = dict(eyes, lines=[{"who": "ninja", "says": "Hello!", "how": "say"}])
+    check("a character who never speaks is caught speaking", any("never speaks aloud" in f for f in kit.problems({"panels": [spoken]}, KIT)))
+    check("\"there\" is refused away from the clip's own place, and a look that is not a look is caught",
+          any("stands at \"there\"" in f for f in kit.problems({"panels": [dict(eyes, place="ring")]}, KIT))
+          and any("look" in f for f in kit.problems({"panels": [dict(eyes, look="sideways")]}, KIT)))
     poses = kit.poses()
     check("the pose library has the poses a talk needs, each with a sentence about it",
           {"stand", "talk", "point", "shrug", "flex"} <= set(poses) and all(p.get("about") and p.get("bones") is not None for p in poses.values()), sorted(poses))

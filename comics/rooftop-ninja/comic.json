@@ -1,10 +1,12 @@
 {
-  "title": "Silent as a Shadow",
-  "premise": "A very serious ninja crosses a rooftop at night, certain that nobody can see or hear a thing, while everything about the trip is a little louder and clumsier than planned; the last panel is the triumphant sword pose",
+  "title": "First Light",
+  "premise": "Side story, seen mostly through the shadow ninja's own eyes (pov). He never speaks: only his thoughts and captions in his own voice. He is a recent arrival who loves films and is quietly working out what life is about, so he thinks about what he is doing the way a film lover would: shots, takes, lenses, light. Tonight he crosses the rooftop, crouch, look around, sneak along the ledge, sprint, vault the wall, land, to reach the one spot with the perfect view before the sun comes up; the sword comes out only at the very end and only as something to catch the first light on (his pinhole camera stayed at home). Follow the hero clip in order from start to finish on the rooftop, and set the last one or two panels in rooftop-dawn. Use pov for most panels, with two or three outside views (wide or close-up) so we see who it is. Gentle, warm, a little funny, Sanrio-kind; the last panel is quiet, not a punchline.",
   "layout": "scroll",
+  "canon": false,
   "panels": [
     {
       "framing": "wide",
+      "look": null,
       "place": "rooftop",
       "camera": null,
       "shape": "wide",
@@ -17,18 +19,13 @@
           "expression": "neutral"
         }
       ],
-      "lines": [
-        {
-          "who": "ninja",
-          "says": "Silent. Invisible. A whisper in the dark.",
-          "how": "think"
-        }
-      ],
-      "caption": "Midnight. The city sleeps.",
+      "lines": [],
+      "caption": "Tonight's shoot: one rooftop, no crew, one take before sunrise.",
       "sfx": null
     },
     {
-      "framing": "wide",
+      "framing": "pov",
+      "look": "ahead",
       "place": "rooftop",
       "camera": null,
       "shape": "square",
@@ -37,56 +34,14 @@
           "who": "ninja",
           "at": "there",
           "facing": "right",
-          "pose": "hero:sneak_right",
-          "expression": "surprised"
+          "pose": "hero:crouch_look_right",
+          "expression": "neutral"
         }
       ],
       "lines": [
         {
           "who": "ninja",
-          "says": "That was the roof. Ninjas do not creak.",
-          "how": "think"
-        }
-      ],
-      "caption": null,
-      "sfx": "CREEEAK"
-    },
-    {
-      "framing": "close-up",
-      "place": "dusk",
-      "camera": null,
-      "shape": "square",
-      "cast": [
-        {
-          "who": "ninja",
-          "at": "center",
-          "facing": "camera",
-          "pose": "startled",
-          "expression": "surprised"
-        }
-      ],
-      "lines": [],
-      "caption": null,
-      "sfx": "ACHOO!"
-    },
-    {
-      "framing": "single",
-      "place": "dusk",
-      "camera": null,
-      "shape": "square",
-      "cast": [
-        {
-          "who": "ninja",
-          "at": "center",
-          "facing": "camera",
-          "pose": "hands_on_hips",
-          "expression": "smug"
-        }
-      ],
-      "lines": [
-        {
-          "who": "ninja",
-          "says": "A ninja sneeze. Technically a whisper.",
+          "says": "Pan right. All clear. One pigeon, hitting its mark.",
           "how": "think"
         }
       ],
@@ -94,7 +49,33 @@
       "sfx": null
     },
     {
-      "framing": "wide",
+      "framing": "pov",
+      "look": "down",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "right",
+          "pose": "hero:sneak_left",
+          "expression": "neutral"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "Slow tracking shot along the ledge. Let it breathe.",
+          "how": "think"
+        }
+      ],
+      "caption": null,
+      "sfx": null
+    },
+    {
+      "framing": "pov",
+      "look": "ahead",
       "place": "rooftop",
       "camera": null,
       "shape": "wide",
@@ -103,22 +84,48 @@
           "who": "ninja",
           "at": "there",
           "facing": "right",
-          "pose": "hero:sprint_right",
-          "expression": "angry"
+          "pose": "hero:sprint_left",
+          "expression": "surprised"
         }
       ],
       "lines": [
         {
           "who": "ninja",
-          "says": "Swift as the wind. Light as the wind.",
+          "says": "Sky's going pink at the edges. Cut to the chase.",
           "how": "think"
         }
       ],
       "caption": null,
-      "sfx": "CLOMP CLOMP"
+      "sfx": "PATPATPAT"
     },
     {
-      "framing": "wide",
+      "framing": "close-up",
+      "look": null,
+      "place": "rooftop",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "camera",
+          "pose": "hero:sprint_right",
+          "expression": "happy"
+        }
+      ],
+      "lines": [
+        {
+          "who": "ninja",
+          "says": "Every film needs one running scene. This one's mine.",
+          "how": "think"
+        }
+      ],
+      "caption": null,
+      "sfx": null
+    },
+    {
+      "framing": "pov",
+      "look": "hands",
       "place": "rooftop",
       "camera": null,
       "shape": "tall",
@@ -128,21 +135,22 @@
           "at": "there",
           "facing": "right",
           "pose": "hero:vault_over",
-          "expression": "neutral"
+          "expression": "surprised"
         }
       ],
       "lines": [
         {
           "who": "ninja",
-          "says": "Graceful.",
+          "says": "Hands on the wall. Hips up. Don't look down.",
           "how": "think"
         }
       ],
       "caption": null,
-      "sfx": "SCRAAAPE"
+      "sfx": "WHOOSH"
     },
     {
       "framing": "wide",
+      "look": null,
       "place": "rooftop",
       "camera": null,
       "shape": "wide",
@@ -155,26 +163,46 @@
           "expression": "smug"
         }
       ],
+      "lines": [],
+      "caption": "Landed it. Nobody saw. The best takes never have an audience.",
+      "sfx": "TAP"
+    },
+    {
+      "framing": "pov",
+      "look": "ahead",
+      "place": "rooftop",
+      "camera": null,
+      "shape": "square",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "right",
+          "pose": "hero:rise",
+          "expression": "happy"
+        }
+      ],
       "lines": [
         {
           "who": "ninja",
-          "says": "Like a falling leaf.",
+          "says": "There it is. The one spot. Right on time.",
           "how": "think"
         }
       ],
       "caption": null,
-      "sfx": "THUD!"
+      "sfx": null
     },
     {
-      "framing": "wide",
-      "place": "rooftop",
+      "framing": "pov",
+      "look": "hands",
+      "place": "rooftop-dawn",
       "camera": null,
       "shape": "tall",
       "cast": [
         {
           "who": "ninja",
           "at": "there",
-          "facing": "camera",
+          "facing": "right",
           "pose": "hero:hero_stance",
           "expression": "happy"
         }
@@ -182,11 +210,30 @@
       "lines": [
         {
           "who": "ninja",
-          "says": "UNSEEN! UNHEARD! UNSTOPPABLE!",
-          "how": "shout"
+          "says": "Left my pinhole camera at home. The blade can hold the light.",
+          "how": "think"
         }
       ],
-      "caption": "Three streets away, every dog woke up.",
+      "caption": null,
+      "sfx": null
+    },
+    {
+      "framing": "wide",
+      "look": null,
+      "place": "rooftop-dawn",
+      "camera": null,
+      "shape": "wide",
+      "cast": [
+        {
+          "who": "ninja",
+          "at": "there",
+          "facing": "right",
+          "pose": "hero:hero_stance",
+          "expression": "happy"
+        }
+      ],
+      "lines": [],
+      "caption": "Some shots you don't keep. You just stay for them.",
       "sfx": null
     }
   ]
