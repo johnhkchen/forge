@@ -293,7 +293,7 @@ Around them is the developer's plain grey floor, with a few grey one-metre cubes
 
 - on a keyboard, WASD or the arrow keys walk and Shift runs; drag to look round, scroll to come closer;
 - on a phone, push the thumb stick to walk and push it to its edge to run, or tap the ground to walk there; drag anywhere else to look round;
-- the world is solid: walls, furniture, the ring and the other toons are in the way, and the camera never ends up behind a wall. The dancer's stage can be stepped up onto; the ring cannot yet;
+- the world is solid: walls, furniture, the ring and the other toons are in the way, and the camera never ends up behind a wall. The dancer's stage can be stepped up onto; the ring and the boxing house roof cannot yet (no steps to them);
 - walk into a place and a small card names it, says who is there and opens it. Come close to a toon and they say hello. Come close to the gachapon, the BUY HOUSE pedestal, the kettle, the bread, the ninja's camera or the dancer's microphone and the story's line about it shows;
 - "Stop walking" goes back to the view from above.
 

@@ -51,7 +51,8 @@ export function avatars(epoch, runs) {
 
 // The world's solid things as boxes on the floor, in world metres: every block of every place (the same boxes
 // the sets' contact pass uses) and the developer's grey cubes. The ring's own blocks are up on its mat; from
-// the hall floor the ring is one block of the boxing house, so a place inside another adds nothing.
+// the hall floor the ring is one block of the boxing house, so a place inside another adds nothing. The same
+// goes for an upper floor (the boxing house roof, 6 m up, no stairs yet): its blocks are up there, not in the way.
 function solidBoxes(viewer, epoch) {
   const boxes = [];
   for (const entry of Object.values(viewer.places)) {
@@ -254,6 +255,8 @@ export class Walkabout {
     this.solids = solidBoxes(viewer, this.epoch);
     this.wide = this.solids.filter((b) => Math.max(b.hx, b.hz) >= 0.3 && b.top > 1.0); // what a camera can be behind: walls, not posts
     this.floors = [];
+    // An upper floor overhead (the boxing house roof): the camera stays under it while the walker is.
+    this.ceilings = Object.values(viewer.places).filter((entry) => entry.place.inside && (entry.place.lift_m || 0) > HEAD_M);
     this.things = this.artifactSpots();
     try {
       this.floors = await this.raisedFloors();
@@ -604,6 +607,11 @@ export class Walkabout {
     const wanted = look.distance * this.far;
     let clear = wanted;
     for (const box of this.wide) clear = Math.min(clear, reachBeforeBox(look.eye, back, wanted + 0.4, box) - 0.4);
+    const p = new THREE.Vector3();
+    for (const over of this.ceilings) {
+      over.inner.worldToLocal(p.copy(look.eye));
+      if (p.x > over.lo[0] && p.x < over.hi[0] && p.z > over.lo[1] && p.z < over.hi[1] && back.y > 0.05) clear = Math.min(clear, (over.place.lift_m - 0.6 - look.eye.y) / back.y);
+    }
     clear = Math.max(clear, 0.35);
     // come in at once when a wall gets between, go back out gently
     look.reach = clear < look.reach ? clear : look.reach + (clear - look.reach) * (1 - Math.exp(-3.5 * dt));
@@ -760,11 +768,12 @@ export class Walkabout {
           place: walk.place || null, line: walk.line || null, hello: walk.hello || null, touching: walk.touching || null,
           body_r: walk.bodyR, walk_speed: walk.who.walkSpeed, run_speed: walk.who.runSpeed, fps: walk.fps, frames: walk.frames, extra: walk.loaded, load_ms: walk.loadMs,
           camera: walk.viewer.camera.position.toArray(), walking_to: walk.goal ? [walk.goal.x, walk.goal.z] : null,
-          solids: walk.solids.length, floors: walk.floors.length, cast: walk.cast.map((a) => ({ toon: a.toon, ready: a.ready })),
+          solids: walk.solids.length, floors: walk.floors.length, ceilings: walk.ceilings.map((c) => c.name), cast: walk.cast.map((a) => ({ toon: a.toon, ready: a.ready })),
         };
       },
       steer(x, y, run) { walk.script = x === null || x === undefined ? null : { x, y, run }; },
-      put(x, z, headingDeg = 0, lookDeg = headingDeg) {
+      put(x, z, headingDeg = 0, lookDeg = headingDeg, pitchDeg = null) {
+        if (pitchDeg !== null) walk.look.pitch = rad(pitchDeg);
         walk.pos.set(x, walk.floorAt(x, z), z);
         walk.heading = rad(headingDeg);
         walk.look.yaw = rad(lookDeg);

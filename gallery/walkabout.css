@@ -41,7 +41,7 @@
 @media (max-width: 720px) {
   .world-stage .pane.walking { aspect-ratio: 9 / 14; max-height: 82vh; } /* a taller picture to walk in */
   .walk-top { flex-wrap: wrap-reverse; }
-  .walk-card { max-width: 15.5rem; padding: 8px 12px 10px; }
+  .walk-card { max-width: 13rem; padding: 8px 12px 10px; }
   .walk-card h3 { font-size: 0.98rem; }
   .walk-line { font-size: 0.84rem; padding: 8px 12px; }
 }

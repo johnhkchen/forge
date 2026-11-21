@@ -234,6 +234,16 @@ def walk_checks(page, world, runs):
     apart = math.hypot(met["x"] - lincoln[0], met["z"] - lincoln[1])
     said = page.state()
     check("walking at Lincoln he is stopped %.2f m from him" % apart, 0.55 <= apart <= 1.2 and met["touching"] == him["name"], met)
+    upstairs = [name for name, card in world["places"].items() if card.get("inside") == him["place"] and card.get("lift_m", 0) > 2.0]
+    if upstairs:   # an upper floor over this place (the boxing house roof): nothing of it is in the way down here, and the camera stays under it
+        lift = world["places"][upstairs[0]]["lift_m"]
+        page.value("window.forgeWalk.put(%f, %f, %f, %f, 70)" % (start[0], start[1], toward, toward))
+        time.sleep(0.8)
+        under = page.state()
+        check("under %s (%.1f m up) he walked the hall floor freely, and the camera, tipped right up, stays below it (%.1f m)" % (world["places"][upstairs[0]]["label"], lift, under["camera"][1]),
+              met["path_m"] > 1.0 and upstairs == under["ceilings"] and under["camera"][1] < lift - 0.4 and under["y"] == 0, under)
+        page.value("window.forgeWalk.put(%f, %f, %f, %f, 19.5)" % (met["x"], met["z"], toward, toward))
+        time.sleep(0.6)
     check("Lincoln says hello, and the card says he is in %s" % world["places"][him["place"]]["label"],
           said["hello"] == "lincoln" and said["place"] == him["place"] and page.value("document.querySelector('.walk-card h3').textContent") == world["places"][him["place"]]["label"], said)
     ground = world["ground"]
