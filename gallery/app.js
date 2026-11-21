@@ -759,7 +759,10 @@ class WorldViewer extends Miniature {
         inner.add(label);
         entry.label = label;
         for (const p of set.footprint.outline) all.expandByPoint(inner.localToWorld(new THREE.Vector3(p[0], 0, p[1])));
-        if (place.inside) continue; // drawn by the place it stands in (the ring is the boxing house's dressing)
+        // A place inside another is drawn by it when the outer set carries it as dressing (the ring in the boxing
+        // house); one it doesn't carry (the boxing house roof) is drawn here like any other place.
+        const outer = place.inside ? sets.find((s) => s.id === epoch.places[place.inside]?.set) : null;
+        if (outer && (outer.dressing || []).some((d) => d.set === place.set)) continue;
         if (set.glb) waiting.push(this.get(`sets/${set.id}/${set.glb}`).then((gltf) => inner.add(gltf.scene.clone(true))));
         for (const item of set.dressing || []) {
           if (item.small) continue;
