@@ -67,8 +67,8 @@ are how we know everyone's faces.
 | Roosevelt | Theodore's grass |
 | The pirate | The beer garden at dusk, under the string lights |
 | The troll | His stall at the settlement, the kettle steaming |
-| The lizardkin | The doorstep of the cottage he shares with the troll |
-| The dancer | The ninja's stage, at her microphone (her house wasn't finished yet) |
+| The lizardkin | His doorstep at the settlement, across the porch from the troll's |
+| The dancer | The ninja's stage, at her microphone (this was before she bought her house) |
 | The villager | Beside the gachapon, where newcomers arrive |
 | The ninja himself | His own stage, on a timer, holding his pinhole camera |
 
@@ -95,11 +95,13 @@ The world is shown whole, as one place, not scene by scene: like the full
 miniature set of a stop-motion film. We keep it in **epochs**, saved states of
 the whole world.
 
-**Epoch 0** is now:
+**Epoch 0, "The reset"**, is now:
 - Theodore's grass;
-- the boxing house, with its brew house and beer garden;
-- the troll and lizardkin's settlement;
-- the flamenco dancer's house;
+- the boxing house, with the ring inside, a brew house and a beer garden;
+- the troll and lizardkin's settlement, with their stall;
+- the spawn spot, with the gachapon and the BUY HOUSE pedestal;
+- the ninja's stage, a short walk east of the spawn spot;
+- the flamenco dancer's house, Casa de la Rosa;
 - the toons in their places.
 
 ## How this world began: the reset
@@ -114,7 +116,8 @@ just enough to spawn three places:
    beside it on the grass. The pirate wanted a boxing house; Roosevelt
    wanted somewhere to have friends over. This is where "Long Reach" happens.
 3. **The settlement.** A stretch of nearby land that suits the cave troll and
-   the lizardkin for the long haul. They share it, roommates in a new world.
+   the lizardkin for the long haul: two homes joined by a porch, a shared fire,
+   roommates in a new world.
 
 Everything else is still empty.
 
@@ -125,9 +128,15 @@ pedestal with a big round button on it, labelled **BUY HOUSE** in the
 developer's default lettering. It sits near where the gachapon drops new toons.
 
 The flamenco dancer saved her credits longer than anyone. When she pressed it,
-she got a house **to her own specification**, not the developer's. It is the
-first home in the world that someone chose for themselves. It stands on the
-map like everything else, and anyone can go and see it.
+she got a house **to her own specification**, not the developer's. She called
+it **Casa de la Rosa**: whitewashed walls, a terracotta roof, rose-red trim. It
+has a small wooden stage (her tablao) with her microphone on it, a mirrored
+rehearsal floor, a dressing room, a tea corner and a little plaza with chairs
+for friends. She asked for its front to face the spawn spot, so the first thing
+a new arrival sees is a stage and a seat waiting. The sign by the gate says:
+*Pull up a chair.*
+
+It is the first home in the world that someone chose for themselves.
 
 Making a house this way can happen again for anyone who saves enough. (For us:
 a BAML request designs a house from the toon's own brief, and it is built and
@@ -137,10 +146,12 @@ placed in the world like the other places.)
 
 | Place | What happens there | Set |
 |---|---|---|
-| Theodore's grass | Walks, races, outdoor boxing, the beer garden | to build |
+| Theodore's grass | Walks, races, outdoor boxing | built (Epoch 0) |
 | The boxing house | Bouts, a crowd, the bar | the 1890s wrestling ring, inside the painted hall |
 | The ninja's stage | Portraits; Meet the cast | the studio set |
-| The settlement | The troll and lizardkin's home and first business | to build |
+| The settlement | Two homes joined by a porch, a shared fire, and their stall | built (Epoch 0) |
+| The spawn spot | New toons land here; the gachapon; the BUY HOUSE pedestal | built (Epoch 0) |
+| The dancer's house | Rehearsals, small shows for friends | Casa de la Rosa (Epoch 0) |
 
 ## Cast
 
@@ -184,7 +195,5 @@ Ideas we like that haven't happened on the page:
   boarding house.
 - **The villager.** A new arrival who remembers a life before the capsule.
 - **The spirit realm.** A peaceful dreamland where older versions rest.
-- **The troll and lizardkin's stall** by the ring: teapots, bread, and a sign
-  explaining which is which.
 - **Lincoln's counter.** The honest shopkeeper who walks miles to return
   change.
