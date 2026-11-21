@@ -61,6 +61,7 @@ def grass():
     cameras = {
         "wide": {"at": [0.0, 7.0, 12.6], "aim": [-1.0, 0.4, -1.0], "lens_mm": 20, "sees": ["stride", "circle"], "about": "the whole plot, from the south edge"},
         "oak": {"at": [-10.5, 1.7, -0.5], "aim": [-15.2, 1.0, -5.2], "lens_mm": 32, "sees": ["bench", "oak"], "about": "the bench and the big tree"},
+        "ringside": {"at": [-2.2, 1.5, 6.4], "aim": [-6.0, 0.95, 2.0], "lens_mm": 35, "sees": ["circle"], "about": "close on the boxing circle, from its south-east edge"},
     }
     card = kit.set_card("grass", "Theodore's grass", "A large plot of open grass that Roosevelt asked for: room to stride, to box, to breathe. A few trees, a few rocks, one bench.",
                         rect(-22.0, -13.0, 22.0, 13.0), [[[-21.0, -12.0], [21.0, 12.0]]], blocks, marks, paths, cameras, BUILT_BY % "grass",

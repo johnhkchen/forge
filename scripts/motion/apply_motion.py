@@ -77,6 +77,34 @@ def about_z_then_x(z_degrees, x_degrees):
     return [round(math.cos(a) * math.cos(b), 6), round(math.cos(a) * math.sin(b), 6), round(math.sin(a) * math.sin(b), 6), round(math.sin(a) * math.cos(b), 6)]
 
 
+def at_true_size(plain, stretch):
+    """The plain motion with its distances over the ground (and the set's blocks and hand spots) multiplied by `stretch`.
+
+    A motion's lengths are in hip heights, so a character normally plays it in its own strides and
+    covers ground in proportion to its legs. On a set, where the marks and seats are in metres, a
+    character keeps its own size instead, and the motion is stretched so it covers the same metres:
+    stretch is the motion body's hip height over this character's. The hips and both feet move
+    together, so a planted foot stays planted; only the hips' height and how high a foot lifts stay
+    the character's own. Blocks and hand spots are things in the world, so all of their lengths stretch."""
+    if abs(stretch - 1.0) < 1e-6:
+        return plain
+
+    def flat(row):
+        return [round(row[0] * stretch, 5), round(row[1] * stretch, 5)] + list(row[2:])
+
+    out = dict(plain)
+    out["hips"] = [flat(h) for h in plain["hips"]]
+    out["feet"] = {tag: [flat(row) for row in rows] for tag, rows in plain["feet"].items()}
+    out["travel"] = plain.get("travel", 0.0) * stretch
+    if plain.get("hands"):
+        out["hands"] = {tag: [None if row is None else [round(c * stretch, 5) for c in row[:3]] + list(row[3:]) for row in rows]
+                        for tag, rows in plain["hands"].items()}
+    if plain.get("set"):
+        out["set"] = [dict(block, center=[round(c * stretch, 5) for c in block["center"]], size=[round(c * stretch, 5) for c in block["size"]])
+                      for block in plain["set"]]
+    return out
+
+
 def with_tail(plain, measure):
     """The plain motion with turns for tail_1..tail_n added, worked out from what the hips do. Returns (motion, what was added)."""
     count = int(measure.get("tail_bones") or 0)
@@ -111,9 +139,11 @@ def with_tail(plain, measure):
     return dict(plain, turns=turns), {"bones": count, "rise_deg": round(rise, 1), "widest_swing_deg": round(widest, 1), "late_frames_per_bone": TAIL_LATE_FRAMES}
 
 
-def fit(source, plain, name, recipe=None, spec=None, tail=False, echo=None):
+def fit(source, plain, name, recipe=None, spec=None, tail=False, echo=None, true_size=None):
     """A fresh scene with the character from `source` (.glb), rigged, dressed and playing `plain` as the action `name`.
 
+    true_size: the hip height (m) of the body the motion was made on. Given, the character keeps its own
+    size and the motion is stretched to cover the same metres (at_true_size); record["true_size"] says by how much.
     Returns what each step reported. The rig is bpy.data.objects[record["rig"]["rig"]].
     rig.py raises ValueError for a character it cannot fit a skeleton to (not in a T-pose)."""
     spec = spec or {}
@@ -127,6 +157,10 @@ def fit(source, plain, name, recipe=None, spec=None, tail=False, echo=None):
     record["rig"] = run_script("rig.py", dict(spec.get("rig", {}), recipe=recipe["pieces"] if recipe else None), echo)
     if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
         record["cloth"] = run_script("cloth.py", spec.get("cloth", {}), echo)
+    if true_size:
+        stretch = true_size / record["rig"]["measure"]["hip_height"]
+        plain = at_true_size(plain, stretch)
+        record["true_size"] = {"stretch": round(stretch, 4), "height_m": round(record["rig"]["measure"]["height"], 3)}
     if tail:
         plain, added = with_tail(plain, record["rig"]["measure"])
         if added:

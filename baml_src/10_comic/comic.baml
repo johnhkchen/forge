@@ -530,7 +530,7 @@ function comic_blender(step: string, script: string, args: string[], mark: strin
     comic_step(
         step,
         blender,
-        ["-b", "--factory-startup", "-P", `${COMIC_SCRIPTS}/${script}`, "--"].concat(args),
+        ["-b", "--factory-startup", "--python-exit-code", "1", "-P", `${COMIC_SCRIPTS}/${script}`, "--"].concat(args),
         mark,
     )
 }

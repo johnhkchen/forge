@@ -90,6 +90,8 @@ def bring_in(path, name, scale=1.0, at=None, heading=0.0):
             obj.parent = holder
         if obj.type == "MESH" and not obj.find_armature() and obj.name.startswith("Icosphere"):
             obj.hide_render = True  # a bone's display shape is not part of the picture
+        if obj.type == "MESH" and obj.get("under"):
+            obj.hide_render = True  # skin that worn gear hides ("body under: ..."), left out as a game leaves it out
     holder.scale = (scale, scale, scale)
     if at is not None:
         holder.location = to_blender(at)

@@ -29,7 +29,7 @@ function motion_blender(step: string, script: string, args: string[], mark: stri
     let blender = baml.env.get("BLENDER") ?? BLENDER_APP;
     let out = baml.sys.run(
         blender,
-        args = ["-b", "--factory-startup", "-P", `${MOTION_SCRIPTS}/${script}`, "--"].concat(args),
+        args = ["-b", "--factory-startup", "--python-exit-code", "1", "-P", `${MOTION_SCRIPTS}/${script}`, "--"].concat(args),
         timeout = baml.time.Duration.from_minutes(CAST_TIMEOUT_MINUTES),
         capture_output = true,
     ) catch (e) {

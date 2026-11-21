@@ -393,6 +393,8 @@ class SetViewer {
         const holder = new THREE.Group();
         holder.scale.setScalar(1 / (role.size || 1));
         holder.add(gltf.scene);
+        // Dressed, as a game draws it: the skin each piece of gear hides ("body under: ...") stays hidden.
+        gltf.scene.traverse((o) => { if (o.userData.under) o.visible = false; });
         this.scene.add(holder);
         const mixer = new THREE.AnimationMixer(gltf.scene);
         const clip = gltf.animations[0];

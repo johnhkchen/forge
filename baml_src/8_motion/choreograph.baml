@@ -265,7 +265,7 @@ function film(run: Run) -> void {
     let blender = baml.env.get("BLENDER") ?? BLENDER_APP;
     let out = baml.sys.run(
         blender,
-        args = ["-b", "--factory-startup", "-P", `${MOTION_SCRIPTS}/render_shot.py`, "--", run.dir],
+        args = ["-b", "--factory-startup", "--python-exit-code", "1", "-P", `${MOTION_SCRIPTS}/render_shot.py`, "--", run.dir],
         timeout = baml.time.Duration.from_minutes(RENDER_TIMEOUT_MINUTES),
         capture_output = true,
     ) catch (e) {

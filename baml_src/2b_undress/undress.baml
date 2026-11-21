@@ -340,6 +340,8 @@ function headless_result(source: string, script: string, params: string, step: s
         args = [
             "-b",
             "--factory-startup",
+            "--python-exit-code",
+            "1",
             "-P",
             HEADLESS,
             "--",
@@ -524,7 +526,7 @@ function base_sheet(run: Run, body: string, garments: string, sheet: string) -> 
     };
     let out = baml.sys.run(
         baml.env.get("BLENDER") ?? BLENDER_APP,
-        args = ["-b", "--factory-startup", "-P", SHOTS_TOOL, "--", run.path(body), run.path(sheet)]
+        args = ["-b", "--factory-startup", "--python-exit-code", "1", "-P", SHOTS_TOOL, "--", run.path(body), run.path(sheet)]
             .concat(files)
             .concat(votes),
         timeout = baml.time.Duration.from_minutes(UNDRESS_TIMEOUT_MINUTES),

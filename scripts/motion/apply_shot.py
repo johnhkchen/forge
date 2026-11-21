@@ -46,7 +46,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(REPO, "scripts"))
+sys.path.insert(0, os.path.join(REPO, "scripts", "sets"))
 import apply_motion  # noqa: E402
+import standing  # noqa: E402
 import soma_to_plain  # noqa: E402
 from soma import Skeleton  # noqa: E402
 
@@ -283,6 +285,10 @@ def main():
     # What only a shot has: the wall to keep the legs out of, and the spots the plan pins a hand to.
     plain["set"] = set_for(plan, converted["soma_hip_height_m"])
     plain["hands"] = hands_for(plan, converted["soma_hip_height_m"], plain["frames"] + 1)
+    # Filmed on a standing set's own cameras, everyone keeps their real size and the motion is stretched to the
+    # set's metres; filmed by the camera that follows, the set is brought to the character's size instead.
+    on_set = bool(plan.get("standing_set")) and bool(standing.load(plan["standing_set"]).get("cameras"))
+    true_size = converted["soma_hip_height_m"] if on_set else None
     recipe = None
     if os.path.exists(os.path.join(character, "lowpoly_build.json")):
         with open(os.path.join(character, "lowpoly_build.json")) as f:
@@ -295,7 +301,7 @@ def main():
             continue
         # The shared steps: clothes, skeleton, the motion fitted and baked, loose cloth swung (apply_motion.py).
         record = {"version": version, "motion": name, "character": source, "shot": shot, "from_soma": converted}
-        record.update(apply_motion.fit(source, plain, name, recipe, spec))
+        record.update(apply_motion.fit(source, plain, name, recipe, spec, true_size=true_size))
         rig = bpy.data.objects[record["rig"]["rig"]]
         scale = record["rig"]["measure"]["hip_height"] / converted["soma_hip_height_m"]
         record["size_against_soma"] = round(scale, 4)
@@ -304,7 +310,7 @@ def main():
                 link = json.load(f)
             record["prop"] = {"prop": link.get("gear", "prop"), "from": os.path.join(prop_run, PROP_FILES[version]), "grip": link.get("grip")}
             attach_prop(rig, record["prop"]["from"], [c for c in cues if c["prop"] == record["prop"]["prop"]] or cues, plain["frames"], record["prop"])
-        record["against_the_plan"] = measure(rig, plan, scale, None)
+        record["against_the_plan"] = measure(rig, plan, 1.0 if true_size else scale, None)
         glb = os.path.join(shot, "%s-%s.glb" % (version, name))
         flat = False
         made = os.path.join(character, "profiles", version + ".json")

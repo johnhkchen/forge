@@ -119,6 +119,8 @@ def main() -> None:
         for o in scene.objects:  # the bones' display shapes are not part of the picture
             if o.type == "MESH" and not o.find_armature() and o.name.startswith("Icosphere"):
                 o.hide_render = True
+            if o.type == "MESH" and o.get("under"):
+                o.hide_render = True  # skin that worn gear hides ("body under: ..."), left out as a game leaves it out
     scene.render.fps = 30
     scene.frame_start, scene.frame_end = 0, frames - 1
 

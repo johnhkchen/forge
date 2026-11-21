@@ -24,10 +24,11 @@ With --cast <clip>, the characters apply_shot.py made play it (each role's
                          seated body is from its seat
 
 Sizes. A set is in metres and so is the motion, on the motion model's own
-body (SOMA). A character is its own size, so its file plays the motion in its
-own strides. Here each character is brought to the SOMA body's hip height
-(divided by its `size_against_soma`), which puts everyone on the same marks,
-at the same seats, with their hands on the same spot.
+body (SOMA). A character keeps its real size: apply_shot.py stretches the
+motion to cover the set's metres for its legs (the record's "true_size"), so
+everyone is on the same marks with their hands on the same spot, and a tall
+toon stands taller than a short one. (A record from before that was fitted in
+its own strides; it is brought to the SOMA body's hip height instead.)
 
 films.json lists everything filmed. Never touches an open Blender.
 """
@@ -130,7 +131,9 @@ def main():
         label = "role: " + (role or "the figure")
         if clip:
             record = load(os.path.join(where, "%s-%s.json" % (version, clip)))
-            holder, new = set_contact.bring_in(os.path.join(where, "%s-%s.glb" % (version, clip)), label, scale=1.0 / record["size_against_soma"])
+            # A character fitted at its true size (apply_motion.at_true_size) already covers the set's metres.
+            grow = 1.0 if record.get("true_size") else 1.0 / record["size_against_soma"]
+            holder, new = set_contact.bring_in(os.path.join(where, "%s-%s.glb" % (version, clip)), label, scale=grow)
             cast[role] = record
         else:
             holder, new = set_contact.bring_in(os.path.join(where, "motion.glb"), label)
@@ -177,6 +180,7 @@ def main():
             card.update({
                 "character": cast[role]["character"], "glb": "%s/%s-%s.glb" % (take["roles"][role]["folder"], version, clip) if take else "%s-%s.glb" % (version, clip),
                 "size_against_soma": cast[role]["size_against_soma"],
+                "true_size": cast[role].get("true_size"),  # fitted at its real size: shown at scale 1, not by size_against_soma
                 "planted_foot_strays_cm": check["planted_foot_strays_cm"], "foot_slide_cm_per_step": check["foot_slide_cm_per_step"],
                 "through_floor_cm": check["through_floor_cm"], "in_the_set": check.get("in_the_set"),
                 "hand_from_its_spot_cm": check.get("hand_from_its_spot_cm"), "limit_violations": check["limit_violations"],

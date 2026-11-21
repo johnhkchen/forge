@@ -75,6 +75,8 @@ function shape(run: Run, wanted: string[] = DEFAULT_PROFILES) -> void {
         args = [
             "-b",
             "--factory-startup",
+            "--python-exit-code",
+            "1",
             "-P",
             "scripts/tidy_profile.py",
             "--",

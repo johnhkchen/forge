@@ -458,6 +458,20 @@ def sheet_of(ctx, name, grid):
     return path
 
 
+TRUE_SIZE = r"""
+import json, sys
+sys.path.insert(0, sys.argv[sys.argv.index("--") + 1])
+import apply_motion
+plain = {"fps": 30, "frames": 2, "travel": 0.0,
+         "hips": [[0.0, 0.0, -0.05], [0.0, -0.4, -0.02], [0.0, -0.8, -0.05]],
+         "feet": {"l": [[0.1, -0.2, 0.0, 0, 0, 1], [0.1, -0.2, 0.0, 0, 0, 1], [0.1, -0.2, 0.06, 0, 0, 0]],
+                  "r": [[-0.1, 0.2, 0.0, 0, 0, 0], [-0.1, -0.6, 0.04, 0, 0, 0], [-0.1, -1.0, 0.0, 0, 0, 1]]},
+         "turns": {}, "hands": {"r": [None, [0.2, -0.5, 1.1, 1.0], None]},
+         "set": [{"name": "wall", "center": [0.0, -2.0, 0.4], "size": [1.0, 0.2, 0.8], "turn": 0.0}]}
+print("TRUE " + json.dumps({"same": apply_motion.at_true_size(plain, 1.0) is plain, "out": apply_motion.at_true_size(plain, 1.25)}))
+"""
+
+
 PIRATE_BOX = {"min": [-0.17, -0.22, 1.38], "max": [0.17, 0.2, 1.64]}  # beard to hat brim, face to the back of the hair
 
 
@@ -1045,6 +1059,24 @@ def wall_motion(frames=30):
     return {"name": "past the wall", "fps": 30, "frames": frames, "loop": False, "travel": 0.0, "hips": hips, "feet": {"l": left, "r": right}, "turns": {},
             "hands": {"l": hand}, "set": [{"name": "wall", "center": [-0.45, -0.6, 0.125], "size": [0.8, 0.2, 0.25], "turn": 0.0},
                                            {"name": "post", "center": [0.9, -0.5, 0.6], "size": [0.3, 0.3, 1.2], "turn": 0.0}]}
+
+
+def test_true_size(ctx):
+    """On a set, a character keeps its real height and the motion is stretched to cover the set's metres (apply_motion.at_true_size): the hips and feet stretch together over the ground, so a planted foot stays planted; how high the hips ride and a foot lifts stays the character's own; the set's blocks and hand spots are things in the world and stretch whole."""
+    done = subprocess.run([BLENDER, "-b", "--factory-startup", "--python-expr", TRUE_SIZE, "--", os.path.join(HERE, "motion")], capture_output=True, text=True)
+    line = next((l for l in done.stdout.splitlines() if l.startswith("TRUE ")), None)
+    check("at_true_size runs in Blender", line is not None, done.stderr[-400:])
+    if line is None:
+        return
+    got = json.loads(line[5:])
+    out = got["out"]
+    check("a stretch of 1 leaves the motion as it is", got["same"])
+    check("the hips travel 1.25 times as far over the ground, at the same height", [h[1] for h in out["hips"]] == [0.0, -0.5, -1.0] and [h[2] for h in out["hips"]] == [-0.05, -0.02, -0.05], out["hips"])
+    planted = out["feet"]["l"][:2]
+    check("a planted foot stays put while it is planted", planted[0][:3] == planted[1][:3] == [0.125, -0.25, 0.0], planted)
+    check("a lifted foot lifts as high as before", out["feet"]["l"][2][2] == 0.06 and out["feet"]["r"][1][2] == 0.04, out["feet"])
+    check("the wall and the hand's spot stretch whole", out["set"][0]["center"] == [0.0, -2.5, 0.5] and out["set"][0]["size"] == [1.25, 0.25, 1.0]
+          and out["hands"]["r"][1] == [0.25, -0.625, 1.375, 1.0] and out["hands"]["r"][0] is None, (out["set"], out["hands"]))
 
 
 def test_contact(ctx):
@@ -2283,7 +2315,7 @@ def test_auto_body(ctx):
 
 
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_true_size, test_contact, test_drape, test_cloth,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body,
          test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build,
          test_world_places, test_world_house, test_world_toons, test_world_walk, test_world_house_build,

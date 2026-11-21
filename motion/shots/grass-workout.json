@@ -1,0 +1,12 @@
+{
+  "name": "grass-workout",
+  "brief": "A test of the mixed animation scheme on open ground (not a story shot): one person's morning workout on Theodore's grass, about 16 seconds, one continuous take, filmed from the set's own cameras.\n\nThey start standing still on the stride mark. They jog to the circle mark along the set's path and arrive standing. In the circle they shadowbox in place: quick jabs and hooks from a boxing stance, light on their feet but not travelling. Then they throw both fists up over their head, pleased with themselves. They finish standing easy, still on the circle mark.\n\nThis cut mixes the sources on purpose: the opening and closing stands are our own poses; the jog, the shadowboxing and the fists-up are each made from a sentence. The joins between them are what is being tested.",
+  "beats": [
+    { "time": "0-2 s", "action": "stands easy on the stride mark", "driven_by": "stand, at the stride mark" },
+    { "time": "2-7 s", "action": "jogs to the circle mark and arrives standing", "driven_by": "text: a sentence for Kimodo, from the stride mark to the circle mark" },
+    { "time": "7-12 s", "action": "shadowboxes in place: jabs and hooks from a boxing stance", "driven_by": "text: a sentence for Kimodo, staying on the circle mark" },
+    { "time": "12-14 s", "action": "throws both fists up over the head", "driven_by": "text: a sentence for Kimodo, staying on the circle mark" },
+    { "time": "14-16 s", "action": "stands easy on the circle mark", "driven_by": "stand, at the circle mark" }
+  ],
+  "set": "grass"
+}
