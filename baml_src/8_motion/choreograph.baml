@@ -12,8 +12,10 @@
 // join (scripts/motion/timeline.py). Each request to a worker is kept under
 // the hash of its content, so only what changed is ever made again.
 //
-// A shot's plan lives in motion/shots/<name>.json (the brief, the beats, the
-// set). Everything a shot makes goes into shots/<name>/, and a step whose
+// A shot's plan lives in motion/shots/<name>.json (the brief, the beats, and
+// the standing set it is filmed on: see sets.baml). A plan with a `segment`
+// is a take, with more than one person in it; sets.baml makes those.
+// Everything a shot makes goes into shots/<name>/, and a step whose
 // file is already there is skipped, so a shot can be picked up where it
 // stopped, or re-filmed without paying for the motion again.
 //
@@ -35,11 +37,21 @@ const TEXT_BEAT_MAX_KEYS = 4;
 // Pieces, then seams, then the join; one more in case a pass only planned.
 const TIMELINE_PASSES = 4;
 
-/// motion/shots/<name>.json. (Its `set` is read by plan_shot.py, not here.)
+// The library poses that sit: only a seat mark takes them.
+const SEATED_POSES: PoseName[] = ["sit", "sit_talk"];
+
+/// motion/shots/<name>.json.
 class ShotBrief {
     name: string,
     brief: string,
     beats: BeatPlan[],
+    // The standing set it is filmed on, by name (sets/<name>). The older way,
+    // a ledge, roof and wall described here, is still read by plan_shot.py.
+    set: (string | map<string, json>)?,
+    // A take: the segment it plays (motion/segments/<name>.json) and who
+    // plays each role (the end of a run folder's name).
+    segment: string?,
+    roles: map<string, string>?,
 }
 
 class ShotFailed {
@@ -58,6 +70,19 @@ function move_frames(move: Move) -> int {
     4 * move.tokens - 7 - move.early_frames
 }
 
+/// How many frames a beat plays for: its moves', or a text beat's own length.
+function beat_frames(beat: ShotBeat) -> int {
+    if (beat.source == "text") {
+        return beat.frames ?? (beat.seconds * MOTION_FPS).iround();
+    }
+    beat.moves.reduce(
+        (total, m) -> {
+            total + move_frames(m)
+        },
+        0,
+    )
+}
+
 function beat_seconds(beat: ShotBeat) -> float {
     let frames = beat.moves.reduce(
         (total, m) -> {
@@ -68,10 +93,12 @@ function beat_seconds(beat: ShotBeat) -> float {
     frames / MOTION_FPS
 }
 
-/// What is wrong with a shot list, in words Opus can act on. Empty when it is sound.
-function shot_problems(shot: ShotList) -> string[] {
-    let problems: string[] = [];
-    if (shot.path.length() < 2) {
+/// What is wrong with a shot list, in words Opus can act on. Empty when it is
+/// sound. `stage` is the standing set the shot is on, if it is on one.
+function shot_problems(shot: ShotList, stage: StandingSet? = null) -> string[] {
+    let problems: string[] = mark_problems(shot, stage);
+    // On a standing set the marks give the route; anywhere else the shot list draws it.
+    if (shot.path.length() < 2 && !shot.start_mark) {
         problems.push("the path needs at least 2 points");
     }
     let moves = shot.beats.flat_map((b) -> {
@@ -135,7 +162,9 @@ function text_beat_problems(beat: ShotBeat) -> string[] {
     }
     let from = beat.from_m;
     let to = beat.to_m;
-    if (from == null || to == null) {
+    if (beat.to) {
+        // It walks to a mark: the set says where that is along the path.
+    } else if (from == null || to == null) {
         problems.push(
             `beat "${beat.name}": a text beat says where it starts and ends on the path (from_m, to_m)`,
         );
@@ -176,20 +205,31 @@ function steps_back(moves: Move[]) -> string[] {
     out
 }
 
+/// The shot in words, with the standing set it is on (its marks and walks) for Opus to block it by.
+function brief_on_set(brief: string, stage: StandingSet?) -> string {
+    if let on: StandingSet = stage {
+        `${brief}\n\n${on.card()}`
+    } else {
+        brief
+    }
+}
+
 /// Asks Opus for the shot list; if it comes back unsound, shows Opus what is
 /// wrong and asks once more.
 function choreograph(brief: ShotBrief) -> ShotList {
-    let first = Choreograph(brief.brief, brief.beats);
-    let problems = shot_problems(first);
+    let stage = standing_set_of(brief);
+    let words = brief_on_set(brief.brief, stage);
+    let first = Choreograph(words, brief.beats);
+    let problems = shot_problems(first, stage = stage);
     if (!problems) {
         return first;
     }
     log.info(`choreograph: asking again, ${problems.length()} problems: ${problems.join("; ")}`);
     let again = Choreograph(
-        `${brief.brief}\n\nYour last shot list had these problems. Fix every one:\n- ${problems.join("\n- ")}`,
+        `${words}\n\nYour last shot list had these problems. Fix every one:\n- ${problems.join("\n- ")}`,
         brief.beats,
     );
-    let left = shot_problems(again);
+    let left = shot_problems(again, stage = stage);
     if (left) {
         throw ShotFailed { step: "choreograph", reason: left.join("; ") }
     }
@@ -250,9 +290,19 @@ function film(run: Run) -> void {
     }
 }
 
-/// The part of plan.json that says whether the shot is made in pieces.
+/// The part of plan.json that says whether the shot is made in pieces, and which standing set it is on.
 class ShotPlan {
     pieces: json[]?,
+    standing_set: string?,
+
+    /// Does its set have cameras of its own? Then it is filmed from those, not by a camera that follows.
+    function has_set_cameras(self) -> bool {
+        if let name: string = self.standing_set {
+            StandingSet.load(name).cameras.keys().length() > 0
+        } else {
+            false
+        }
+    }
 }
 
 /// One request timeline.py still needs an answer to (todo.json).
@@ -286,23 +336,9 @@ function join_pieces(run: Run) -> void {
     throw ShotFailed { step: "join", reason: `still not joined after ${TIMELINE_PASSES} passes` }
 }
 
-/// Makes one shot from its plan in motion/shots/<shot>.json; returns its folder.
-function shoot(shot: string) -> string {
-    let plan_file = `${SHOT_PLANS}/${shot}.json`;
-    let brief = baml.json.decode<ShotBrief>(baml.fs.read(plan_file));
-    let run = Run { dir: `${SHOTS_DIR}/${shot}` };
-    baml.fs.mkdir(run.dir, baml.fs.MkdirOptions { recursive: true });
-    //# 1. Opus choreographs (or the shot list kept with the plan is used)
-    if (!run.has("shotlist.json")) {
-        let kept = `${SHOT_PLANS}/${shot}.shotlist.json`;
-        if (baml.fs.exists(kept)) {
-            log.info(`choreograph: using ${kept}`);
-            baml.fs.write(run.path("shotlist.json"), baml.fs.read(kept));
-        } else {
-            log.info("choreograph: asking Opus for the shot list");
-            run.save("shotlist.json", choreograph(brief));
-        }
-    }
+/// Steps 2 to 4 for a folder that has its shotlist.json: the poses stood on the
+/// path (or on the set's marks), the motion made, measured, and put on the box figure.
+function make_motion(run: Run, plan_file: string) -> void {
     //# 2. Stand our poses along the path
     motion_script("plan", "plan_shot.py", [run.dir, "--brief", plan_file], "PLAN");
     //# 3. MotionBricks fills in the movement
@@ -318,8 +354,37 @@ function shoot(shot: string) -> string {
     //# 4. Measure it, and put it on the box mannequin
     motion_script("checks", "checks.py", [run.dir], "CHECK");
     motion_script("mannequin", "to_gltf.py", [run.dir], "GLTF");
-    //# 5. Film it
-    if (!run.has("motion.mp4")) {
+}
+
+/// Makes one shot from its plan in motion/shots/<shot>.json; returns its folder.
+function shoot(shot: string) -> string {
+    let plan_file = `${SHOT_PLANS}/${shot}.json`;
+    let brief = baml.json.decode<ShotBrief>(baml.fs.read(plan_file));
+    let run = Run { dir: `${SHOTS_DIR}/${shot}` };
+    baml.fs.mkdir(run.dir, baml.fs.MkdirOptions { recursive: true });
+    if (brief.segment) {
+        // A take: more than one person, each with a shot list from the segment.
+        return shoot_take(run, plan_file);
+    }
+    //# 1. Opus choreographs (or the shot list kept with the plan is used)
+    if (!run.has("shotlist.json")) {
+        let kept = `${SHOT_PLANS}/${shot}.shotlist.json`;
+        if (baml.fs.exists(kept)) {
+            log.info(`choreograph: using ${kept}`);
+            baml.fs.write(run.path("shotlist.json"), baml.fs.read(kept));
+        } else {
+            log.info("choreograph: asking Opus for the shot list");
+            run.save("shotlist.json", choreograph(brief));
+        }
+    }
+    make_motion(run, plan_file);
+    //# 5. Film it: from the set's own cameras if it has them, else with the camera that follows
+    if (run.load<ShotPlan>("plan.json").has_set_cameras()) {
+        if (!run.has("films.json")) {
+            log.info("film: a background Blender is rendering every camera");
+            film_on_set(run);
+        }
+    } else if (!run.has("motion.mp4")) {
         log.info("film: a background Blender is rendering");
         film(run);
     }
@@ -494,7 +559,19 @@ test "the pose names match the library" {
         assert.contains(POSE_CARD, name);
     }
     // ...and there are no names on offer that the library lacks.
-    assert.equal(names.length(), 13)
+    assert.equal(names.length(), 18);
+    // The poses the library marks as seated are the ones only a seat mark takes.
+    let seated = names.filter((name) -> {
+        baml.json.path_or<bool?>(library.poses.get(name) ?? throw "no pose", ".seated", null)
+            ?? false
+    });
+    assert.equal(seated, ["sit", "sit_talk"]);
+    assert.equal(
+        seated,
+        SEATED_POSES.map((pose) -> {
+            `${pose}`
+        }),
+    )
 }
 
 test "the hero shot list kept with its plan is sound" {

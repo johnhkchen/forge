@@ -1,4 +1,4 @@
-// Forge gallery: the shelf of runs, and a before/after viewer for each.
+// Forge gallery: the shelf of runs, a before/after viewer for each, and the sets they are filmed on.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
@@ -20,6 +20,8 @@ const load = (url) => {
 };
 
 let runs = [];
+let sets = [];
+let takes = [];
 let comics = [];
 let viewer = null;
 
@@ -40,18 +42,373 @@ const num = (n) => (n || n === 0 ? n.toLocaleString() : "—");
 // ---------- the shelf ----------
 
 function shelf() {
-  if (!runs.length) {
-    return h("p", { class: "empty" }, "Nothing here yet. Run ", h("code", {}, 'just make "an idea"'), " and reload.");
-  }
-  return h("div", { class: "shelf" }, runs.map((run) =>
-    h("a", { class: "card clay-surface", href: `#/run/${encodeURIComponent(run.id)}` },
-      run.render || run.picture ? h("img", { src: file(run, run.render || run.picture), alt: "", loading: "lazy" }) : null,
-      h("div", { class: "label" },
-        h("h2", {}, run.name),
-        h("p", {}, `${run.profiles.length ? `${run.profiles.length} versions` : "raw mesh only"} · ${run.made.slice(0, 10)}`),
+  const objects = runs.length
+    ? h("div", { class: "shelf" }, runs.map((run) =>
+      h("a", { class: "card clay-surface", href: `#/run/${encodeURIComponent(run.id)}` },
+        run.render || run.picture ? h("img", { src: file(run, run.render || run.picture), alt: "", loading: "lazy" }) : null,
+        h("div", { class: "label" },
+          h("h2", {}, run.name),
+          h("p", {}, `${run.profiles.length ? `${run.profiles.length} versions` : "raw mesh only"} · ${run.made.slice(0, 10)}`),
+        ),
       ),
+    ))
+    : h("p", { class: "empty" }, "Nothing here yet. Run ", h("code", {}, 'just make "an idea"'), " and reload.");
+  if (!sets.length) return objects;
+  // A set is a place of our own to film in: built once, shot many times.
+  return h("div", {},
+    objects,
+    h("section", { class: "sets" },
+      h("h2", {}, "Sets"),
+      h("p", { class: "lede" }, "Places of our own to film in. Each is built once and keeps its marks, cameras and lights, so a new shot only needs to say who stands where."),
+      h("div", { class: "shelf" }, sets.map((set) => {
+        const marks = Object.keys(set.marks || {}).length, cameras = Object.keys(set.cameras || {}).length;
+        const filmed = takes.filter((t) => t.set === set.id).length;
+        return h("a", { class: "card wide clay-surface", href: `#/set/${encodeURIComponent(set.id)}` },
+          set.picture ? h("img", { src: `sets/${set.id}/${set.picture}`, alt: "", loading: "lazy" }) : null,
+          h("div", { class: "label" },
+            h("h2", {}, set.title || set.name),
+            h("p", {}, `${marks} marks · ${cameras ? `${cameras} cameras` : "a camera that follows"}${filmed ? ` · ${filmed} ${filmed > 1 ? "shots" : "shot"} to play` : ""}`),
+          ),
+        );
+      })),
     ),
-  ));
+  );
+}
+
+// ---------- one set ----------
+
+const MARK_WORDS = { stand: "stand here", sit: "sit here", touch: "stand here, hand out", lean: "stand here, hand on it" };
+
+function setPage(set, wantedTake, wantedCamera) {
+  const filmed = takes.filter((t) => t.set === set.id);
+  const cameraNames = Object.keys(set.cameras || {});
+  // Marks and cameras show from the start: they are what the page is for. What is heavier, or only for
+  // checking (the boxes people are kept out of, a shot's characters), waits until it is asked for.
+  // A link can open a shot already playing, through a camera: #/set/<set>/<shot>/<camera>.
+  const state = { marks: true, cameras: true, blocks: false, off: new Set(), take: filmed.find((t) => t.id === wantedTake) || null, look: null };
+  state.look = cameraNames.includes(wantedCamera) ? wantedCamera : state.take && cameraNames.length ? cameraNames[0] : null;
+  if (state.take) state.marks = false;
+  const link = () => history.replaceState(null, "", `#/set/${encodeURIComponent(set.id)}${state.take ? `/${encodeURIComponent(state.take.id)}${state.look ? `/${state.look}` : ""}` : ""}`);
+  const stage = h("div", { class: "stage set-stage clay-well" });
+  const press = (btn, on) => btn.setAttribute("aria-pressed", String(on));
+  const toggle = (label, key, apply) => {
+    const btn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state[key]), onclick: () => { state[key] = !state[key]; press(btn, state[key]); apply(state[key]); } }, label);
+    return btn;
+  };
+  const marksBtn = toggle("Marks", "marks", (on) => viewer?.show("marks", on));
+  const camsBtn = toggle("Cameras", "cameras", (on) => viewer?.show("cameras", on));
+  const blocksBtn = toggle("What's in the way", "blocks", (on) => viewer?.show("blocks", on));
+  // Look through one of the set's fixed cameras, or walk around freely.
+  const looks = [[null, "Look around"], ...cameraNames.map((name) => [name, name[0].toUpperCase() + name.slice(1)])];
+  const lookChips = looks.map(([name, label]) =>
+    h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(state.look === name), onclick: () => look(name) }, label));
+  function look(name) {
+    state.look = name;
+    lookChips.forEach((chip, i) => press(chip, looks[i][0] === name));
+    viewer?.look(name);
+    showFilm();
+    link();
+  }
+  // Dressing is kept apart from the set, so any piece can be taken away.
+  const dressing = (set.dressing || []).map((item) => {
+    const chip = h("button", { class: "chip clay-chip", type: "button", "aria-pressed": "true", title: `on the ${item.slot.replace(/_/g, " ")}`, onclick: () => {
+      if (state.off.has(item.prop)) state.off.delete(item.prop); else state.off.add(item.prop);
+      press(chip, !state.off.has(item.prop));
+      viewer?.setDressing(state.off);
+    } }, item.prop);
+    return chip;
+  });
+  // A shot filmed here: pressed in, its characters come onto the set and play it, over and over.
+  const film = h("div", { class: "film" });
+  const takeBtns = filmed.map((take) => {
+    const btn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": String(state.take === take), onclick: () => {
+      state.take = state.take === take ? null : take;
+      takeBtns.forEach((b, i) => press(b, filmed[i] === state.take));
+      // While a shot plays the marks step aside (press Marks to see them under the cast); they come back after.
+      state.marks = !state.take;
+      press(marksBtn, state.marks);
+      viewer?.show("marks", state.marks);
+      viewer?.play(state.take);
+      if (state.take && !state.look && cameraNames.length) look(cameraNames[0]); else { showFilm(); link(); }
+    } }, `Play: ${take.title}`);
+    return btn;
+  });
+  function showFilm() {
+    const take = state.take;
+    const mp4 = take && state.look && take.films[state.look];
+    if (!take) return film.replaceChildren();
+    const shake = take.handshakes[0];
+    film.replaceChildren(
+      h("p", { class: "about" }, `${take.about || ""} ${Math.round(take.seconds)} seconds, played by ${take.roles.map((r) => r.character.replace(/^[0-9T-]+-/, "").replace(/-/g, " ")).join(" and ")}.${shake ? ` In the handshake their palms are ${shake.palms_apart_cm.typical} cm apart.` : ""}`),
+      mp4 ? h("figure", { class: "clay-surface" },
+        h("video", { src: `shots/${take.id}/${mp4}`, controls: true, loop: true, muted: true, playsinline: true, preload: "none" }),
+        h("figcaption", {}, `The same take as Blender filmed it, from the ${state.look} camera.`)) : null,
+    );
+  }
+
+  const marks = Object.entries(set.marks || {});
+  const page = h("article", { class: "object" },
+    h("a", { class: "back", href: "#/" }, "← Everything"),
+    h("h1", {}, set.title || set.name),
+    set.about ? h("p", { class: "lede" }, set.about) : null,
+    h("div", { class: "versions", role: "group", "aria-label": "Look from" }, lookChips),
+    h("div", { class: "controls" }, h("div", { class: "toggles" }, marksBtn, cameraNames.length ? camsBtn : null, blocksBtn, takeBtns)),
+    dressing.length ? h("div", { class: "gear", role: "group", "aria-label": "Dressing" }, h("span", { class: "hint" }, "Dressing"), dressing, h("span", { class: "hint" }, "Tap a piece to take it away.")) : null,
+    stage,
+    film,
+    h("section", { class: "making" },
+      h("h2", {}, "What's on this set"),
+      h("div", { class: "notes clay-surface" }, h("h3", {}, "Marks"), h("ul", {}, marks.map(([name, m]) =>
+        h("li", {}, h("strong", {}, name.replace(/_/g, " ")), ` · ${MARK_WORDS[m.kind] || m.kind}${m.about ? `. ${m.about[0].toUpperCase()}${m.about.slice(1)}.` : ""}`)))),
+      cameraNames.length ? h("div", { class: "notes clay-surface" }, h("h3", {}, "Cameras"), h("ul", {}, cameraNames.map((name) =>
+        h("li", {}, h("strong", {}, name), ` · ${set.cameras[name].about || ""}, ${set.cameras[name].lens_mm} mm`))),
+        h("p", { class: "hint" }, "They never move. One take is filmed from all of them at once, and the cut is picked afterwards.")) : null,
+      set.backdrop ? h("div", { class: "pictures" }, h("figure", { class: "clay-surface" },
+        h("img", { class: "backdrop", src: `sets/${set.id}/${set.backdrop.image}`, alt: "The painted backdrop", loading: "lazy" }),
+        h("figcaption", {}, `The backdrop: ${set.backdrop.about || "a painted picture"}. Nothing behind the set is modelled.`))) : null,
+    ),
+  );
+  queueMicrotask(() => { viewer?.dispose(); viewer = new SetViewer(stage, set, state); showFilm(); });
+  return page;
+}
+
+// The 3D view of a set: the set, its backdrop and dressing, markers for marks and cameras, and (when asked) a
+// shot's characters playing on it. A set is written y-up in metres, the way a .glb is, so nothing is turned.
+class SetViewer {
+  constructor(stage, set, state) {
+    this.stage = stage;
+    this.set = set;
+    stage.replaceChildren();
+    this.el = h("div", { class: "pane" });
+    this.status = h("div", { class: "status" }, "Loading…");
+    this.el.append(this.status);
+    stage.append(this.el);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    const air = set.world?.color || [0.92, 0.9, 0.86];
+    this.renderer.setClearColor(new THREE.Color(air[0], air[1], air[2]).convertLinearToSRGB());
+    this.el.prepend(this.renderer.domElement);
+    this.scene = new THREE.Scene();
+    this.scene.environment = new THREE.PMREMGenerator(this.renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+    this.free = new THREE.PerspectiveCamera(36, 16 / 9, 0.05, 400);
+    this.camera = this.free;
+    this.controls = new OrbitControls(this.free, this.renderer.domElement);
+    this.controls.enableDamping = false;
+    this.controls.addEventListener("change", () => this.draw());
+    this.groups = { marks: this.markMarkers(), cameras: this.cameraMarkers(), blocks: this.blockLines() };
+    for (const [key, group] of Object.entries(this.groups)) { group.visible = state[key]; this.scene.add(group); }
+    this.fixed = {};
+    for (const [name, card] of Object.entries(set.cameras || {})) {
+      // A lens on a 36 mm wide sensor, in a 16:9 picture.
+      const cam = new THREE.PerspectiveCamera(THREE.MathUtils.radToDeg(2 * Math.atan(36 / (16 / 9) / 2 / card.lens_mm)), 16 / 9, 0.05, 400);
+      cam.position.fromArray(card.at);
+      cam.lookAt(new THREE.Vector3().fromArray(card.aim));
+      this.fixed[name] = cam;
+    }
+    this.dressing = [];
+    this.cast = [];
+    this.resize = new ResizeObserver(() => this.layout());
+    this.resize.observe(this.el);
+    this.fill(state);
+    this.layout();
+  }
+
+  async fill(state) {
+    const { set } = this;
+    try {
+      const box = new THREE.Box3();
+      if (set.glb) {
+        const model = (await load(`sets/${set.id}/${set.glb}`)).scene.clone(true);
+        const move = set.geometry?.move || [0, 0, 0];
+        model.position.fromArray(move);
+        model.rotation.y = THREE.MathUtils.degToRad(set.geometry?.turn_deg || 0);
+        this.scene.add(model);
+      }
+      if (set.ground) {
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(set.ground.size_m || 40, set.ground.size_m || 40), new THREE.MeshStandardMaterial({ color: new THREE.Color(...(set.ground.color || [0.8, 0.78, 0.74])), roughness: 0.9 }));
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = (set.ground.y || 0) - 0.004;
+        this.scene.add(ground);
+      }
+      if (set.backdrop) {
+        const picture = await new THREE.TextureLoader().loadAsync(`sets/${set.id}/${set.backdrop.image}`);
+        picture.colorSpace = THREE.SRGBColorSpace;
+        const flat = new THREE.Mesh(new THREE.PlaneGeometry(set.backdrop.width_m, set.backdrop.height_m), new THREE.MeshBasicMaterial({ map: picture, toneMapped: false }));
+        flat.position.fromArray(set.backdrop.center);
+        flat.rotation.y = THREE.MathUtils.degToRad(set.backdrop.heading || 0);
+        this.scene.add(flat);
+      }
+      for (const item of set.dressing || []) {
+        const slot = set.slots[item.slot];
+        const prop = (await load(`sets/${set.id}/${item.glb}`)).scene.clone(true);
+        prop.position.fromArray(slot.at);
+        prop.rotation.y = THREE.MathUtils.degToRad(slot.heading || 0);
+        prop.userData.prop = item.prop;
+        this.dressing.push(prop);
+        this.scene.add(prop);
+      }
+      this.setDressing(state.off);
+      for (const light of set.lights || []) {
+        const lamp = new THREE.DirectionalLight(new THREE.Color(...(light.color || [1, 1, 1])), light.kind === "sun" ? 1.4 : 0.9);
+        lamp.position.fromArray(light.at);
+        lamp.target.position.fromArray(light.aim || [0, 0, 0]);
+        this.scene.add(lamp, lamp.target);
+      }
+      // Start with the whole set in view, from out front and a little above.
+      // (Framed on where people stand, not on the walls: a stage's walls run well past what the cameras see.)
+      for (const m of Object.values(set.marks || {})) box.expandByPoint(new THREE.Vector3(m.at[0], 0, m.at[1])).expandByPoint(new THREE.Vector3(m.at[0], 1.8, m.at[1]));
+      const centre = box.getCenter(new THREE.Vector3());
+      const size = Math.max(box.getSize(new THREE.Vector3()).length(), 4);
+      this.free.position.set(centre.x + size * 0.4, size * 0.6, centre.z + size * 1.45);
+      this.controls.target.set(centre.x, 0.8, centre.z);
+      this.controls.update();
+      this.status.remove();
+      if (state.look) this.look(state.look);
+      if (state.take) this.play(state.take);
+      this.draw();
+    } catch (err) {
+      this.status.textContent = "Couldn't load this set.";
+      console.error(err);
+    }
+  }
+
+  // A ball on the floor (or on the seat) at every mark, a short line the way it faces, and its name.
+  markMarkers() {
+    const group = new THREE.Group();
+    const blue = new THREE.MeshBasicMaterial({ color: 0x44679b, depthTest: false });
+    const line = new THREE.LineBasicMaterial({ color: 0x44679b, depthTest: false });
+    for (const [name, m] of Object.entries(this.set.marks || {})) {
+      const y = m.kind === "sit" ? m.seat_height_m : 0.02;
+      const at = new THREE.Vector3(m.at[0], y, m.at[1]);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), blue);
+      dot.position.copy(at);
+      dot.renderOrder = 2;
+      const a = THREE.MathUtils.degToRad(m.facing_deg || 0);
+      const way = new THREE.Line(new THREE.BufferGeometry().setFromPoints([at, at.clone().add(new THREE.Vector3(Math.sin(a) * 0.4, 0, Math.cos(a) * 0.4))]), line);
+      way.renderOrder = 2;
+      const label = labelSprite(name.replace(/_/g, " "));
+      label.position.copy(at).add(new THREE.Vector3(0, 0.34, 0));
+      label.scale.multiplyScalar(0.24);
+      group.add(dot, way, label);
+      if (m.touch) {
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), new THREE.MeshBasicMaterial({ color: 0xc2703d, depthTest: false }));
+        hand.position.fromArray(m.touch.at);
+        hand.renderOrder = 2;
+        group.add(hand);
+      }
+    }
+    return group;
+  }
+
+  // Each fixed camera: a small box where it stands, a line to what it aims at, and its name.
+  cameraMarkers() {
+    const group = new THREE.Group();
+    const ink = new THREE.MeshBasicMaterial({ color: 0x1c1917 });
+    for (const [name, card] of Object.entries(this.set.cameras || {})) {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.36), ink);
+      body.position.fromArray(card.at);
+      body.lookAt(new THREE.Vector3().fromArray(card.aim));
+      const aim = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3().fromArray(card.at), new THREE.Vector3().fromArray(card.aim)]),
+        new THREE.LineDashedMaterial({ color: 0x1c1917, dashSize: 0.2, gapSize: 0.15, transparent: true, opacity: 0.45 }));
+      aim.computeLineDistances();
+      const label = labelSprite(`${name} camera`);
+      label.position.fromArray(card.at).add(new THREE.Vector3(0, 0.36, 0));
+      label.scale.multiplyScalar(0.34);
+      group.add(body, aim, label);
+    }
+    return group;
+  }
+
+  // The boxes people are kept out of, as outlines. Each counts as solid from the floor to its top.
+  blockLines() {
+    const group = new THREE.Group();
+    const material = new THREE.LineBasicMaterial({ color: 0xc2703d });
+    for (const block of this.set.blocks || []) {
+      const top = block.center[1] + block.size[1] / 2;
+      if (top < 0.05) continue;
+      const lines = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(block.size[0], top, block.size[2])), material);
+      lines.position.set(block.center[0], top / 2, block.center[2]);
+      lines.rotation.y = THREE.MathUtils.degToRad(block.heading || 0);
+      group.add(lines);
+    }
+    return group;
+  }
+
+  show(key, on) { this.groups[key].visible = on && !(key === "cameras" && this.camera !== this.free); this.shown = { ...(this.shown || {}), [key]: on }; this.draw(); }
+
+  setDressing(off) { this.dressing.forEach((prop) => { prop.visible = !off.has(prop.userData.prop); }); this.draw(); }
+
+  // Through a fixed camera (which cannot be moved), or back to walking around.
+  look(name) {
+    this.camera = (name && this.fixed[name]) || this.free;
+    this.controls.enabled = this.camera === this.free;
+    this.groups.cameras.visible = this.camera === this.free && (this.shown?.cameras ?? true);
+    this.draw();
+  }
+
+  // Bring a take's characters onto the set and play it. Each character's file plays the motion at its own
+  // size; dividing by that size puts everyone on the same marks. One clock drives them all.
+  async play(take) {
+    this.cast.forEach((c) => { c.mixer.stopAllAction(); this.scene.remove(c.holder); });
+    this.cast = [];
+    this.take = take;
+    if (!take) return this.draw();
+    this.status.textContent = "Bringing the cast on…";
+    this.el.append(this.status);
+    try {
+      for (const role of take.roles) {
+        const gltf = await load(`shots/${take.id}/${role.glb}`);
+        if (this.take !== take) return;
+        const holder = new THREE.Group();
+        holder.scale.setScalar(1 / (role.size || 1));
+        holder.add(gltf.scene);
+        this.scene.add(holder);
+        const mixer = new THREE.AnimationMixer(gltf.scene);
+        const clip = gltf.animations[0];
+        if (clip) mixer.clipAction(clip).play();
+        this.cast.push({ holder, mixer, seconds: clip ? clip.duration : 0 });
+      }
+    } catch (err) {
+      this.status.textContent = "Couldn't load this shot.";
+      console.error(err);
+      return;
+    }
+    this.status.remove();
+    const length = Math.max(...this.cast.map((c) => c.seconds), 0.1);
+    const began = performance.now();
+    const step = (now) => {
+      if (this.take !== take || this.gone) return;
+      const t = ((now - began) / 1000) % length;
+      this.cast.forEach((c) => c.mixer.setTime(Math.min(t, c.seconds)));
+      this.draw();
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  layout() {
+    const { width, height } = this.el.getBoundingClientRect();
+    if (!width || !height) return;
+    this.renderer.setSize(width, height, false);
+    this.free.aspect = width / height;
+    this.free.updateProjectionMatrix();
+    this.draw();
+  }
+
+  draw() {
+    if (this.pending) return;
+    this.pending = requestAnimationFrame(() => { this.pending = null; this.renderer.render(this.scene, this.camera); });
+  }
+
+  dispose() {
+    this.gone = true;
+    this.take = null;
+    this.cast.forEach((c) => c.mixer.stopAllAction());
+    this.resize.disconnect();
+    this.controls.dispose();
+    this.renderer.dispose();
+  }
 }
 
 // ---------- one object ----------
@@ -629,7 +986,9 @@ function comicPage(comic) {
 // ---------- routing ----------
 
 async function route() {
-  if (!runs.length) runs = await fetch("api/runs").then((r) => r.json()).catch(() => []);
+  if (!runs.length) {
+    [runs, sets, takes] = await Promise.all(["api/runs", "api/sets", "api/takes"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
+  }
   comics = await fetch("api/comics").then((r) => r.json()).catch(() => []);
   const reading = location.hash.match(/^#\/comic\/([^/]+)$/);
   const comic = reading && comics.find((c) => c.name === decodeURIComponent(reading[1]));
@@ -640,12 +999,15 @@ async function route() {
     window.scrollTo(0, 0);
     return;
   }
-  // #/run/<run id>[/<version>]: a link can open a given version
+  // #/run/<run id>[/<version>]: a link can open a given version. #/set/<set name>[/<shot>[/<camera>]]: a standing set.
   const match = location.hash.match(/^#\/run\/([^/]+)(?:\/([a-z]+))?$/);
+  const onSet = location.hash.match(/^#\/set\/([^/]+)(?:\/([^/]+))?(?:\/([a-z_]+))?$/);
   viewer?.dispose();
   viewer = null;
   const run = match && runs.find((r) => r.id === decodeURIComponent(match[1]));
-  app.replaceChildren(...(run ? [objectPage(run, match[2])] : [comicShelf(), shelfHeading(), shelf()].filter(Boolean)));
+  const set = onSet && sets.find((x) => x.id === decodeURIComponent(onSet[1]));
+  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [comicShelf(), shelfHeading(), shelf()];
+  app.replaceChildren(...page.filter(Boolean));
   window.scrollTo(0, 0);
 }
 

@@ -1,0 +1,402 @@
+{
+ "format": "forge-set/1",
+ "name": "rooftop",
+ "title": "The rooftop",
+ "about": "A flat roof at night: a curved ledge to creep along, a long straight run, and a waist-high wall to vault. The hero shots are filmed here.",
+ "stage": "open",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is where the hero shots start, on the roof edge; the front is the way the ledge sets off"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -4.5,
+    -1.5
+   ],
+   [
+    12.0,
+    -1.5
+   ],
+   [
+    12.0,
+    12.5
+   ],
+   [
+    -4.5,
+    12.5
+   ]
+  ],
+  "about": "the roof, the ledge and room to land past the wall"
+ },
+ "floor": {
+  "areas": [
+   [
+    [
+     -4.5,
+     -1.5
+    ],
+    [
+     12.0,
+     12.5
+    ]
+   ]
+  ],
+  "note": "the walking surface is y = 0; the ledge and the roof are what you stand on"
+ },
+ "wall": "wall",
+ "blocks": [
+  {
+   "name": "ledge 1",
+   "kind": "ledge",
+   "center": [
+    0.0082,
+    -0.15,
+    0.0997
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 4.13
+  },
+  {
+   "name": "ledge 2",
+   "kind": "ledge",
+   "center": [
+    0.0235,
+    -0.15,
+    0.2991
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 5.06
+  },
+  {
+   "name": "ledge 3",
+   "kind": "ledge",
+   "center": [
+    0.045,
+    -0.15,
+    0.4979
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 7.57
+  },
+  {
+   "name": "ledge 4",
+   "kind": "ledge",
+   "center": [
+    0.0815,
+    -0.15,
+    0.6944
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 13.46
+  },
+  {
+   "name": "ledge 5",
+   "kind": "ledge",
+   "center": [
+    0.1343,
+    -0.15,
+    0.8873
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 17.24
+  },
+  {
+   "name": "ledge 6",
+   "kind": "ledge",
+   "center": [
+    0.1997,
+    -0.15,
+    1.0763
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 20.98
+  },
+  {
+   "name": "ledge 7",
+   "kind": "ledge",
+   "center": [
+    0.2775,
+    -0.15,
+    1.2605
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 24.81
+  },
+  {
+   "name": "ledge 8",
+   "kind": "ledge",
+   "center": [
+    0.3677,
+    -0.15,
+    1.4389
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 28.66
+  },
+  {
+   "name": "ledge 9",
+   "kind": "ledge",
+   "center": [
+    0.4695,
+    -0.15,
+    1.611
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 32.41
+  },
+  {
+   "name": "ledge 10",
+   "kind": "ledge",
+   "center": [
+    0.5825,
+    -0.15,
+    1.776
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 36.18
+  },
+  {
+   "name": "ledge 11",
+   "kind": "ledge",
+   "center": [
+    0.7014,
+    -0.15,
+    1.9369
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 36.25
+  },
+  {
+   "name": "ledge 12",
+   "kind": "ledge",
+   "center": [
+    0.8356,
+    -0.15,
+    2.0847
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 46.52
+  },
+  {
+   "name": "ledge 13",
+   "kind": "ledge",
+   "center": [
+    0.9833,
+    -0.15,
+    2.2195
+   ],
+   "size": [
+    0.5,
+    0.3,
+    0.25
+   ],
+   "heading": 48.35
+  },
+  {
+   "name": "roof edge",
+   "kind": "roof",
+   "center": [
+    -0.0463,
+    -0.151,
+    -0.4476
+   ],
+   "size": [
+    1.6,
+    0.3,
+    0.9
+   ],
+   "heading": 5.9
+  },
+  {
+   "name": "roof",
+   "kind": "roof",
+   "center": [
+    4.7347,
+    -0.152,
+    5.3717
+   ],
+   "size": [
+    5.0,
+    0.3,
+    10.2
+   ],
+   "heading": 50.0
+  },
+  {
+   "name": "wall",
+   "kind": "wall",
+   "center": [
+    5.654,
+    0.375,
+    6.143
+   ],
+   "size": [
+    3.2,
+    0.75,
+    0.3
+   ],
+   "heading": 50.0
+  }
+ ],
+ "marks": {
+  "ledge_start": {
+   "kind": "stand",
+   "at": [
+    0.0,
+    0.0
+   ],
+   "facing_deg": 5.9,
+   "about": "the roof edge, where the ledge begins"
+  },
+  "ledge_end": {
+   "kind": "stand",
+   "at": [
+    1.058,
+    2.286
+   ],
+   "facing_deg": 48.6,
+   "about": "where the ledge meets the roof"
+  },
+  "run_up": {
+   "kind": "stand",
+   "at": [
+    4.888,
+    5.5
+   ],
+   "facing_deg": 50.0,
+   "about": "a stride short of the wall"
+  },
+  "landing": {
+   "kind": "stand",
+   "at": [
+    6.726,
+    7.043
+   ],
+   "facing_deg": 50.0,
+   "about": "1.4 m past the wall"
+  }
+ },
+ "paths": [
+  {
+   "from": "ledge_start",
+   "to": "ledge_end",
+   "via": [
+    [
+     0.07,
+     0.646
+    ],
+    [
+     0.278,
+     1.26
+    ],
+    [
+     0.612,
+     1.816
+    ]
+   ]
+  },
+  {
+   "from": "ledge_end",
+   "to": "run_up"
+  }
+ ],
+ "cameras": {},
+ "camera_note": "no fixed cameras: a hero shot's camera follows the character, by the shot list's camera cues",
+ "lights": [
+  {
+   "name": "moon",
+   "kind": "sun",
+   "at": [
+    3.0,
+    9.0,
+    0.0
+   ],
+   "aim": [
+    4.7,
+    0.0,
+    5.4
+   ],
+   "power": 1.7,
+   "color": [
+    0.86,
+    0.9,
+    1.0
+   ]
+  }
+ ],
+ "world": {
+  "color": [
+   0.36,
+   0.42,
+   0.55
+  ],
+  "strength": 0.8
+ },
+ "backdrop": null,
+ "slots": {},
+ "dressing": [],
+ "geometry": {
+  "glb": "set.glb",
+  "move": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "turn_deg": 0.0,
+  "built_by": "python3 scripts/sets/standing.py blocks-glb rooftop"
+ }
+}

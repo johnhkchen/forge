@@ -28,7 +28,12 @@ type PoseName = "crouch"
     | "land_three_point"
     | "rise"
     | "draw"
-    | "hero_stance";
+    | "hero_stance"
+    | "stand"
+    | "sit"
+    | "sit_talk"
+    | "shake"
+    | "shake_dip";
 
 const POSE_CARD = `
     crouch             low crouch, both feet flat, hands near the knees, looking ahead. Still.
@@ -44,6 +49,11 @@ const POSE_CARD = `
     rise               halfway up from the landing, weight on both feet, right hand going to the sword grip over the right shoulder. Still.
     draw               standing, right hand at the grip behind the right shoulder, about to draw. Still.
     hero_stance        feet wide, knees soft, sword held out low to the right, chin up. Still.
+    stand              standing easy, feet under the hips, arms by the sides. Still.
+    sit                sitting on a seat, back straight, hands on the thighs. Still. Only at a seat mark.
+    sit_talk           sitting the same way, leaning in, right hand lifted in mid-sentence. Still. Only at a seat mark.
+    shake              standing, right hand held out in front for a handshake. Still. Pin the right hand.
+    shake_dip          the same handshake a beat later, with a small nod; the hand stays where it was. Still. Pin the right hand.
 `;
 
 type Pin = "left_hand" | "right_hand" | "left_foot" | "right_foot";
@@ -57,7 +67,7 @@ class PathPoint {
 class Move {
     pose: PoseName @description("The library pose the character reaches at the end of this move"),
     at_m: float @description(
-        "Where it reaches the pose: metres along the path from its start. Never less than the move before it",
+        "Where it reaches the pose: metres along the path from its start. Never less than the move before it. 0 in a beat that names a mark: the set works it out",
     ),
     side_m: float @description("Metres to the left of the path at that point (negative: right). Usually 0"),
     facing_deg: float @description(
@@ -100,6 +110,9 @@ class TextKey {
     only: Pin[] @description(
         "Empty: the whole body takes the pose. Otherwise only these hands and feet are held where the pose has them (a hand on a wall top) and the rest of the body is free",
     ),
+    where: ("start" | "end")? @description(
+        "Only on a standing set, in a beat that names a mark: \"start\" puts the pose at the beat's first frame on the mark it leaves, \"end\" at its last frame on the mark it reaches, facing the way that mark faces; at_seconds, at_m and facing_deg are then worked out. null otherwise",
+    ),
 }
 
 class ShotBeat {
@@ -126,6 +139,18 @@ class ShotBeat {
     ),
     keys: TextKey[]? @description(
         "For a text beat: the few moments where a library pose says how the body must be. At most 4. null or empty if none",
+    ),
+    // Blocking on a standing set: a beat names marks, and the set supplies the
+    // path, the distances, the facings, seat heights and hand spots
+    // (scripts/sets/standing.py). null on a shot with no standing set.
+    from: string? @description(
+        "Only on a standing set: the mark the beat starts on, if you want it checked. Usually null",
+    ),
+    to: string? @description(
+        "Only on a standing set: the mark the character walks to in this beat. null if it stays where it is",
+    ),
+    at: string? @description(
+        "Only on a standing set: the mark the character is on for the whole beat (standing, sitting down, getting up, shaking hands). null if the beat walks somewhere",
     ),
     // The rest is set by hand in a kept shot list, not by Opus. frames: the
     // beat's exact length. lead_frames / tail_frames: a run-up and a
@@ -161,8 +186,11 @@ class CameraCue {
 class ShotList {
     title: string @description("A short plain name for the shot"),
     start_pose: PoseName @description("The pose it is holding when the shot starts, at the path's start"),
+    start_mark: string? @description(
+        "Only on a standing set: the mark the shot starts on. null on a shot with no standing set",
+    ),
     path: PathPoint[] @description(
-        "The route over the ground as 4 to 12 points, in order, from where the shot starts to where it ends. Put more points on curves. A smooth curve is drawn through them",
+        "The route over the ground as 4 to 12 points, in order, from where the shot starts to where it ends. Put more points on curves. A smooth curve is drawn through them. Empty on a standing set: the marks give the route",
     ),
     beats: ShotBeat[],
     props: PropCue[] @description(
@@ -221,6 +249,25 @@ function Choreograph(brief: string, beats: BeatPlan[]) -> ShotList {
           or one hand on a wall top (only: ["right_hand"], at the moment the hips pass over).
         - A poses beat that follows a text beat starts with a move into its first pose, as
           usual; that move is where the two are joined.
+
+        HOW MARKS WORK
+        - Only when THE SHOT lists A STANDING SET. Then nobody writes a coordinate: the set
+          has named marks, and you say which mark the shot starts on (start_mark) and, beat
+          by beat, where the character goes. Leave path empty, and every at_m, side_m and
+          facing_deg at 0: the set fills them in.
+        - A beat that walks somewhere says "to": the mark it reaches. Make it a text beat
+          ("A person walks forward at an easy pace."), sized to the distance the set gives
+          for that walk. It may end with a key {"pose": "stand", "where": "end"} so the
+          character arrives standing still, facing the way the mark faces.
+        - A beat that stays put says "at": the mark it is on. Make it a poses beat.
+        - Sitting down is a poses beat at a seat mark: a move to stand (in front of the
+          seat), then a move to sit. Getting up is the reverse. Only seat marks take the
+          sitting poses.
+        - A handshake is a poses beat at a mark with a hand's spot: moves to shake,
+          shake_dip, shake, each pinning right_hand, each after the first with
+          hold_pins_frames equal to its own length in frames. Two people who shake hands
+          are at the two marks that share one hand's spot.
+        - Only walk between marks the set joins with a path.
 
         ${ctx.output_format()}
     `

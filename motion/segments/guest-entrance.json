@@ -1,0 +1,126 @@
+{
+  "name": "guest-entrance",
+  "title": "Guest entrance",
+  "about": "A guest walks on from the wings. The host gets up from the desk and meets them at centre for a handshake. Both sit: the host back at the desk, the guest on the couch.",
+  "needs": {
+    "roles": ["host", "guest"],
+    "marks": ["wings", "meet_left", "meet_right", "desk_chair", "couch_1"]
+  },
+  "sentences": {
+    "guest_walks_on": "A person walks forward at an easy, relaxed pace.",
+    "guest_to_couch": "A person walks a few steps forward, then turns around and stands still.",
+    "host_to_centre": "A person walks forward at an easy pace and comes to a stop.",
+    "host_to_desk": "A person turns around and walks forward a few steps, then turns around and stands still."
+  },
+  "together": ["Handshake"],
+  "beats": [
+    { "time": "0-6 s", "action": "the guest waits a moment in the wings, then walks on to centre; the host, seated at the desk, finishes a thought, gets up and walks to centre", "driven_by": "poses: stand, sit, sit_talk. text: the two walks, each held to the set's path" },
+    { "time": "6-9 s", "action": "they shake right hands at centre", "driven_by": "poses: shake, shake_dip, the right hands pinned to the same spot" },
+    { "time": "9-12 s", "action": "the host walks back round the desk; the guest walks to the couch and turns", "driven_by": "text: two walks that end standing in front of a seat" },
+    { "time": "12-16 s", "action": "both sit; the guest says something, the host answers", "driven_by": "poses: stand, sit, sit_talk" }
+  ],
+  "roles": {
+    "guest": {
+      "title": "Guest entrance: the guest",
+      "start_pose": "stand",
+      "start_mark": "wings",
+      "path": [],
+      "beats": [
+        {
+          "name": "Wait in the wings", "seconds": 0.83, "source": "poses", "at": "wings",
+          "moves": [
+            { "pose": "stand", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 8, "early_frames": 0, "pins": [], "hold_pins_frames": 0 }
+          ]
+        },
+        {
+          "name": "Walk on", "seconds": 5.0, "source": "text", "moves": [], "frames": 150, "to": "meet_left",
+          "prompt": "{guest_walks_on}",
+          "speed_in_mps": 0.0, "speed_out_mps": 0.2, "lead_frames": 0, "tail_frames": 0,
+          "keys": [{ "pose": "stand", "at_seconds": 0, "at_m": 0, "side_m": 0, "facing_deg": 0, "only": [], "where": "start" }],
+          "seed": 0
+        },
+        {
+          "name": "Handshake", "seconds": 3.1, "source": "poses", "at": "meet_left",
+          "moves": [
+            { "pose": "shake", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 8, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 0 },
+            { "pose": "shake_dip", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 },
+            { "pose": "shake", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 },
+            { "pose": "shake_dip", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 },
+            { "pose": "shake", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 }
+          ]
+        },
+        {
+          "name": "To the couch", "seconds": 3.0, "source": "text", "moves": [], "frames": 90, "to": "couch_1",
+          "prompt": "{guest_to_couch}",
+          "speed_in_mps": 0.0, "speed_out_mps": 0.0, "lead_frames": 0, "tail_frames": 0,
+          "keys": [{ "pose": "stand", "at_seconds": 0, "at_m": 0, "side_m": 0, "facing_deg": 0, "only": [], "where": "end" }],
+          "join_in_frames": 21,
+          "seed": 0
+        },
+        {
+          "name": "Sit on the couch", "seconds": 3.87, "source": "poses", "at": "couch_1",
+          "moves": [
+            { "pose": "stand", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 7, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "sit", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 11, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "sit_talk", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "sit", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0 }
+          ]
+        }
+      ],
+      "props": [],
+      "camera": []
+    },
+    "host": {
+      "title": "Guest entrance: the host",
+      "start_pose": "sit",
+      "start_mark": "desk_chair",
+      "path": [],
+      "beats": [
+        {
+          "name": "Rise from the desk", "seconds": 3.03, "source": "poses", "at": "desk_chair",
+          "moves": [
+            { "pose": "sit_talk", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "sit", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 8, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "stand", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 11, "early_frames": 0, "pins": [], "hold_pins_frames": 0 }
+          ]
+        },
+        {
+          "name": "Walk to centre", "seconds": 2.8, "source": "text", "moves": [], "frames": 84, "to": "meet_right",
+          "prompt": "{host_to_centre}",
+          "speed_in_mps": 0.0, "speed_out_mps": 0.2, "lead_frames": 0, "tail_frames": 0,
+          "keys": [{ "pose": "stand", "at_seconds": 0, "at_m": 0, "side_m": 0, "facing_deg": 0, "only": [], "where": "start" }],
+          "seed": 0
+        },
+        {
+          "name": "Handshake", "seconds": 3.1, "source": "poses", "at": "meet_right",
+          "moves": [
+            { "pose": "shake", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 8, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 0 },
+            { "pose": "shake_dip", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 },
+            { "pose": "shake", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 },
+            { "pose": "shake_dip", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 },
+            { "pose": "shake", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 6, "early_frames": 0, "pins": ["right_hand"], "hold_pins_frames": 17 }
+          ]
+        },
+        {
+          "name": "Back to the desk", "seconds": 3.27, "source": "text", "moves": [], "frames": 98, "to": "desk_chair",
+          "prompt": "{host_to_desk}",
+          "speed_in_mps": 0.0, "speed_out_mps": 0.0, "lead_frames": 0, "tail_frames": 0,
+          "keys": [{ "pose": "stand", "at_seconds": 0, "at_m": 0, "side_m": 0, "facing_deg": 0, "only": [], "where": "end" }],
+          "join_in_frames": 29,
+          "seed": 0
+        },
+        {
+          "name": "Sit at the desk", "seconds": 3.6, "source": "poses", "at": "desk_chair",
+          "moves": [
+            { "pose": "stand", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 7, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "sit", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 11, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "sit", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 8, "early_frames": 0, "pins": [], "hold_pins_frames": 0 },
+            { "pose": "sit_talk", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": 8, "early_frames": 0, "pins": [], "hold_pins_frames": 0 }
+          ]
+        }
+      ],
+      "props": [],
+      "camera": []
+    }
+  }
+}
