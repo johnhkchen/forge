@@ -50,6 +50,43 @@
 #       "round": True adds a column around the back (a head seen from
 #       behind); "caps": False leaves the underside open. 150 to 240
 #       triangles, already mirrored across the face's center line.
+#   "body": "body"  a character's whole body with its anatomy, in one piece.
+#       Don't write this one by hand either: landmarks.py finds the
+#       reference's landmarks, keeps its surface under that name and prints
+#       the piece. build.py makes it a trunk (pelvis, waist, ribcage, the
+#       slope up to the neck), a neck, and mirrored arms (a shoulder cap,
+#       upper arm, forearm, wrist), hands (one finger mass and a thumb), legs
+#       (thigh, knee, calf, ankle) and feet (heel, arch, toes), as pieces
+#       named "<name> trunk", "<name> arm"...: about 900 triangles, with
+#       three rings set close at each elbow and knee, where they bend. What
+#       it holds, so you can adjust it after looking:
+#       "landmarks"  {"knee": [x, y, z], ...} puts a landmark right
+#       "girth"      {"waist": [half-width, half-depth], ...} likewise, for
+#                    "neck", "shoulders", "chest", "waist", "hips",
+#                    "upper_arm", "elbow", "forearm", "wrist", "hand",
+#                    "thigh", "knee", "calf", "ankle", "foot"
+#       "follow"     1.0 lays every ring on the kept surface, so it is this
+#                    character's own shape; 0 builds what a body usually
+#                    has from the landmarks and girths alone; between the
+#                    two is a cleaner, evener version of the character
+#       "style"      {"chunky": 1.2} thickens trunk and limbs, {"limbs":
+#                    0.9} the limbs alone, {"head": 1.15} grows the head
+#                    and whatever sits wholly above the chin
+#       "under"      {"trunk": 0.012, "leg": 0.012, "foot": 0.03}: draw a
+#                    stretch in by that many meters where clothes cover it
+#                    ("trunk", "neck", "arm", "hand", "leg", "foot"); or
+#                    [[from, to, meters], ...] along it for a part of one
+#       "detail"     "low", or "mid": twice the sides, five rings at each
+#                    elbow and knee and about twice the rings elsewhere
+#                    (the mid-poly rebuild sets this; leave it out)
+#       "sides"      {"trunk": 8, "arm": 6, "leg": 6, ...} to spend more or
+#                    fewer; "colors": {"trunk": [r, g, b], ...} per stretch;
+#                    "thumb": False for a plain mitten
+#       "body" may also be {"landmarks": {...}, "girth": {...}} written out,
+#       for a body with no reference to read. Its result lists "body":
+#       triangles, rings, and "check_these", the landmarks that were
+#       guesses. Send the piece again to change it; "remove": ["body"]
+#       drops all of it. The recipe keeps the landmarks and joints.
 #
 # For lofts and tubes:
 #   "sides": 8            points around each ring (4 makes a square post)
@@ -141,6 +178,13 @@ def loft_rings(part):
         n, more = numbers(row), extras(row)
         ru, rv = n[3], n[4] if len(n) > 4 else n[3]
         ring = []
+        if more.get("points"):  # the ring's own outline, as offsets from its middle (a "body" piece writes these)
+            for du, dv in more["points"]:
+                p = [0.0, 0.0, 0.0]
+                p[a], p[u], p[v] = n[0], n[1] + du, n[2] + dv
+                ring.append(Vector(p))
+            rings.append(ring)
+            continue
         for pu, pv in outline(part.get("sides", 8), more.get("square", part.get("square", 2)), part.get("turn", 0)):
             reach = pv * (more.get("back", rv) if pv > 0 else rv)
             p = [0.0, 0.0, 0.0]
@@ -217,7 +261,261 @@ def box(part):
     verts = [Vector((x, y, z)) for z in (lo[2], hi[2]) for y in (lo[1], hi[1]) for x in (lo[0], hi[0])]
     return verts, [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
 
-FACING = {"-y": (1, -1.0), "+y": (1, 1.0), "-x": (0, -1.0), "+x": (0, 1.0)}
+# ---- a body with anatomy: one "body" piece becomes a trunk, a neck, arms, hands, legs and feet ----
+
+BODY_SIDES = {"low": {"trunk": 8, "neck": 6, "arm": 6, "hand": 6, "thumb": 4, "leg": 6, "foot": 6},
+              "mid": {"trunk": 16, "neck": 10, "arm": 12, "hand": 8, "thumb": 6, "leg": 12, "foot": 10}}
+BODY_FILL = {"trunk": 20, "neck": 4, "arm": 17, "hand": 7, "leg": 19, "foot": 9}  # mid poly: about this many rings along each stretch
+BODY_TURN = {"hand": 30, "foot": 30}  # six-sided hands and feet lie flat: a face under the sole and the palm, not a ridge
+BODY_AXIS = {"trunk": "z", "neck": "z", "arm": "x", "hand": "x", "leg": "z", "foot": "y"}
+BODY_CAPS = {"trunk": [True, True], "neck": [False, False], "arm": [False, True], "hand": [False, True], "leg": [True, False], "foot": [True, True]}
+BODY_MARKS = ("top", "chin", "neck", "neck_base", "shoulder", "armpit", "chest", "waist", "hips", "crotch", "elbow", "wrist", "fingertip", "knee", "ankle", "heel", "toe")
+BODY_GIRTHS = ("neck", "shoulders", "chest", "waist", "hips", "upper_arm", "elbow", "forearm", "wrist", "hand", "thigh", "knee", "calf", "ankle", "foot")
+
+def oval_reach(t, wide, low, high, square):
+    """How far a rounded oval reaches at angle t: half-width `wide`, half-depth `low` toward -v and `high` toward +v."""
+    c, s = math.cos(t), math.sin(t)
+    deep = high if s > 0 else low
+    return (abs(c / wide) ** square + abs(s / deep) ** square) ** (-1.0 / square)
+
+def kept_reach(radii, t):
+    """How far a kept ring (landmarks.py's distances, evenly around) reaches at angle t."""
+    x = (t % (2 * math.pi)) / (2 * math.pi) * len(radii)
+    i = int(x) % len(radii)
+    return mix(radii[i], radii[(i + 1) % len(radii)], x - int(x))
+
+def kept_row(rows, pos):
+    """A kept surface's ring at a position along its stretch: [middle, middle, distances...], eased between the two nearest."""
+    if pos <= rows[0][0]:
+        return rows[0][1:]
+    for a, b in zip(rows, rows[1:]):
+        if pos <= b[0]:
+            t = (pos - a[0]) / max(b[0] - a[0], 1e-9)
+            return [mix(p, q, t) for p, q in zip(a[1:], b[1:])]
+    return rows[-1][1:]
+
+def body_ring(pos, shape, rows, follow, sides, turn, grow, inset):
+    """One ring of a body stretch, as a loft row. `shape` is what a body usually has there: [middle, middle,
+    half-width, half-depth toward -v, half-depth toward +v, squareness, where to read the kept surface (None =
+    here; False = not at all)]. `rows` is the kept surface (or None), followed by `follow` (1 = all the way).
+    The ring's corners are pushed out to the shape's true width and depth, so a six-sided limb is as wide
+    from the front and as deep from the side as the round one it stands for."""
+    cu, cv, wide, low, high, square, read_at = shape
+    kept = None
+    if rows and follow > 0 and read_at is not False:
+        row = kept_row(rows, pos if read_at is None else read_at)
+        cu, cv, kept = mix(cu, row[0], follow), mix(cv, row[1], follow), row[2:]
+    fine, corners = [], []
+    for i in range(48 + sides):
+        t = 2 * math.pi * i / 48 if i < 48 else math.pi / sides + math.radians(turn) + 2 * math.pi * (i - 48) / sides
+        reach = oval_reach(t, wide, low, high, square)
+        if kept:
+            reach = mix(reach, kept_reach(kept, t), follow)
+        (fine if i < 48 else corners).append((reach * math.cos(t), reach * math.sin(t)))
+    true = [max(p[0] for p in fine), -min(p[0] for p in fine), max(p[1] for p in fine), -min(p[1] for p in fine)]
+    have = [max(p[0] for p in corners), -min(p[0] for p in corners), max(p[1] for p in corners), -min(p[1] for p in corners)]
+    size = (true[0] + true[1] + true[2] + true[3]) / 4
+    scale = max(0.4, grow - inset / max(size, 1e-6))
+    points = []
+    for du, dv in corners:
+        du *= true[0] / max(have[0], 1e-9) if du > 0 else true[1] / max(have[1], 1e-9)
+        dv *= true[2] / max(have[2], 1e-9) if dv > 0 else true[3] / max(have[3], 1e-9)
+        points.append((du * scale, dv * scale))
+    # Re-center on the ring's own box, so the middle and half-sizes written in the row are true (rig.py reads those).
+    mu, mv = (true[0] - true[1]) / 2 * scale, (true[2] - true[3]) / 2 * scale
+    return [round(pos, 4), round(cu + mu, 4), round(cv + mv, 4), round((true[0] + true[1]) / 2 * scale, 4), round((true[2] + true[3]) / 2 * scale, 4),
+            {"points": [[round(du - mu, 4), round(dv - mv, 4)] for du, dv in points]}]
+
+def drawn_in(told, pos):
+    """How far a stretch is drawn in under clothes at a position: one number for all of it, or [[from, to, how far], ...]."""
+    if isinstance(told, (int, float)):
+        return told
+    return max([span[2] for span in told if span[0] <= pos <= span[1]] or [0.0])
+
+def filled(keys, count):
+    """Key rings [[position, shape], ...] with more eased in between, evenly inside each gap, until there are about `count`."""
+    step = (keys[-1][0] - keys[0][0]) / max(count - 1, 1)
+    out = []
+    for a, b in zip(keys, keys[1:]):
+        out.append(a)
+        extra = int((b[0] - a[0]) / step - 0.35)
+        for i in range(1, extra + 1):
+            t = i / (extra + 1)
+            shape = [mix(p, q, t) for p, q in zip(a[1][:6], b[1][:6])]
+            out.append([mix(a[0], b[0], t), shape + [a[1][6] if a[1][6] == b[1][6] else None]])
+    out.append(keys[-1])
+    return out
+
+def climbing(keys, least):
+    """Key rings in order along the stretch, dropping any that would sit on (or behind) the one before."""
+    out = []
+    for key in sorted(keys, key=first):
+        if not out or key[0] - out[-1][0] >= least:
+            out.append(key)
+    return out
+
+def body_parts(part, scene):
+    """The pieces a "body" piece stands for: lofts named "<name> trunk", "<name> neck", "<name> arm"..., rings
+    placed by the landmarks (three close together at each elbow and knee, so they bend), shaped like a body
+    (ribcage, waist, pelvis, a shoulder cap, calf, heel and toes) and, where landmarks.py kept the surface,
+    like this character's own. See the notes at the top."""
+    name = part["name"]
+    told = part["body"]
+    if isinstance(told, str):
+        stored = scene.get("body: " + told)
+        if not stored:
+            raise ValueError("body %r: this scene has no body named %r: run landmarks.py first (\"name\": %r), or give \"body\" the landmarks and girths yourself"
+                             % (name, told, told))
+        told = json.loads(stored)
+    marks = dict(told.get("landmarks", {}), **part.get("landmarks", {}))
+    girth = dict(told.get("girth", {}), **part.get("girth", {}))
+    missing = [k for k in BODY_MARKS if k not in marks] + ["girth " + k for k in BODY_GIRTHS if k not in girth]
+    if missing:
+        raise ValueError("body %r needs %s (landmarks.py prints them all)" % (name, ", ".join(missing)))
+    kept = told.get("scan") or {}
+    center, floor = told.get("center", 0.0), told.get("floor", min(marks["heel"][2], marks["toe"][2]))
+    tall = told.get("height") or marks["top"][2] - floor
+    if abs(center) > 0.02 * tall:
+        raise ValueError("body %r: the figure stands %.2f m off x = 0, and a body is built mirrored across it: center it first" % (name, center))
+    detail = part.get("detail", "low")
+    if detail not in BODY_SIDES:
+        raise ValueError("body %r: \"detail\" is \"low\" or \"mid\", not %r" % (name, detail))
+    follow = min(1.0, max(0.0, part.get("follow", 1.0))) if kept else 0.0
+    style = part.get("style", {})
+    chunky = style.get("chunky", 1.0)
+    limbs = chunky * style.get("limbs", 1.0)
+    under = part.get("under", {})
+    sides = dict(BODY_SIDES[detail], **part.get("sides", {}))
+    step = 0.008 * tall
+
+    # What a body usually has at each ring: [position, [middle, middle, half-width, toward -v, toward +v, squareness, read at]].
+    crotch, hips, waist, chest = marks["crotch"][2], marks["hips"][2], marks["waist"][2], marks["chest"][2]
+    pit, top = marks["armpit"], marks["shoulder"]
+    base, neck, chin, crown = marks["neck_base"][2], marks["neck"][2], marks["chin"][2], marks["top"][2]
+    hips = max(hips, crotch + 2 * step)
+    waist = max(waist, hips + 2 * step)
+    chest = max(chest, waist + 2 * step)
+    high = max(mix(pit[2], top[2], 0.8), chest + 4 * step)  # the shoulder line
+    span = high - chest
+    base = max(base, top[2] + 2 * step, high + 2 * step)
+    neck = max(neck, base)
+    back = [marks[k][1] for k in ("hips", "waist", "chest", "neck_base", "neck")]  # the trunk's middle, front to back, at each
+    w_hip, d_hip = girth["hips"]
+    w_waist, d_waist = girth["waist"]
+    w_chest, d_chest = girth["chest"]
+    w_sh, d_sh = girth["shoulders"]
+    w_neck, d_neck = girth["neck"]
+    trunk = [
+        [crotch, [0, back[0], 0.55 * w_hip, 0.7 * d_hip, 0.75 * d_hip, 2.3, False]],  # between the legs
+        [hips, [0, back[0], w_hip, 0.95 * d_hip, 1.1 * d_hip, 2.4, None]],  # the pelvis at its widest, glutes behind
+        [mix(hips, waist, 0.55), [0, mix(back[0], back[1], 0.55), mix(w_hip, w_waist, 0.6), mix(d_hip, d_waist, 0.6), mix(d_hip, d_waist, 0.5), 2.3, None]],
+        [waist, [0, back[1], w_waist, d_waist, d_waist, 2.2, None]],
+        [mix(waist, chest, 0.5), [0, mix(back[1], back[2], 0.5), mix(w_waist, w_chest, 0.6), mix(d_waist, d_chest, 0.6), mix(d_waist, d_chest, 0.6), 2.4, None]],
+        [chest, [0, back[2], w_chest, 1.06 * d_chest, d_chest, 2.6, None]],  # the ribcage at its deepest
+        [chest + 0.33 * span, [0, mix(back[2], back[3], 0.2), w_sh, d_sh, d_sh, 2.8, None]],  # the upper chest, and the shoulder blades behind
+        [chest + 0.67 * span, [0, mix(back[2], back[3], 0.4), w_sh, 0.95 * d_sh, d_sh, 2.7, None]],
+        [high, [0, mix(back[2], back[3], 0.6), 0.98 * w_sh, 0.85 * d_sh, 0.95 * d_sh, 2.6, None]],  # the shoulder line
+        [mix(high, base, 0.5), [0, mix(back[2], back[3], 0.85), mix(w_sh, 1.4 * w_neck, 0.65), 0.7 * d_sh, 0.85 * d_sh, 2.2, None]],  # the slope up to the neck
+        [base, [0, back[3], 1.4 * w_neck, 1.2 * d_neck, 1.3 * d_neck, 2.0, None]],
+    ]
+    head_tall = max(crown - chin, 0.05 * tall)
+    throat = [
+        [base - 0.03 * tall, [0, back[3], 1.25 * w_neck, 1.15 * d_neck, 1.2 * d_neck, 2.0, mix(base, neck, 0.5)]],
+        [mix(base, neck, 0.5), [0, mix(back[3], back[4], 0.5), 1.1 * w_neck, 1.05 * d_neck, 1.1 * d_neck, 2.0, None]],
+        [max(neck, base + step), [0, back[4], w_neck, d_neck, d_neck, 2.0, neck]],
+        [max(chin + 0.25 * head_tall, neck + 2 * step), [0, back[4], w_neck, d_neck, d_neck, 2.0, neck]],  # up inside the head
+    ]
+    elbow, wrist, tip = marks["elbow"], marks["wrist"], marks["fingertip"]
+    d_up, h_up = girth["upper_arm"]
+    d_el, h_el = girth["elbow"]
+    d_fo, h_fo = girth["forearm"]
+    d_wr, h_wr = girth["wrist"]
+    d_ha, h_ha = girth["hand"]
+    arm_y, arm_z = (pit[1] + top[1]) / 2, (pit[2] + top[2]) / 2
+    # How far the elbow's outer loops sit from its middle. The rings next along stay four times as far off, so the
+    # three read as one joint (rig.py takes rings set closer than the rest for where a limb bends).
+    bend = min(0.5 * h_el, 0.09 * (elbow[0] - pit[0]), 0.09 * (wrist[0] - elbow[0]))
+    arm = [
+        [pit[0] - 0.8 * h_up, [arm_y, arm_z, 1.05 * d_up, 1.1 * h_up, 1.15 * h_up, 2.2, None]],  # inside the trunk
+        [pit[0] + 0.02 * (elbow[0] - pit[0]), [arm_y, arm_z, 1.1 * d_up, 1.02 * h_up, 1.2 * h_up, 2.2, None]],  # the shoulder cap
+        [min(mix(pit[0], elbow[0], 0.5), elbow[0] - 4 * bend), [mix(arm_y, elbow[1], 0.5), mix(arm_z, elbow[2], 0.5), d_up, h_up, 1.04 * h_up, 2.1, None]],  # the upper arm's belly
+        [elbow[0] - bend, [elbow[1], elbow[2], 1.02 * d_el, 1.02 * h_el, 1.02 * h_el, 2.1, None]],
+        [elbow[0], [elbow[1], elbow[2], d_el, h_el, h_el, 2.1, None]],
+        [elbow[0] + bend, [elbow[1], elbow[2], mix(d_el, d_fo, 0.4), mix(h_el, h_fo, 0.4), mix(h_el, h_fo, 0.4), 2.1, None]],
+        [max(mix(elbow[0], wrist[0], 0.33), elbow[0] + 4 * bend), [mix(elbow[1], wrist[1], 0.33), mix(elbow[2], wrist[2], 0.33), d_fo, h_fo, h_fo, 2.1, None]],  # the forearm's belly
+        [mix(elbow[0], wrist[0], 0.7), [mix(elbow[1], wrist[1], 0.7), mix(elbow[2], wrist[2], 0.7), mix(d_fo, d_wr, 0.6), mix(h_fo, h_wr, 0.6), mix(h_fo, h_wr, 0.6), 2.2, None]],
+        [wrist[0], [wrist[1], wrist[2], d_wr, h_wr, h_wr, 2.3, None]],
+    ]
+    long = tip[0] - wrist[0]
+    hand = [
+        [wrist[0], [wrist[1], wrist[2], d_wr, h_wr, h_wr, 2.3, None]],
+        [wrist[0] + 0.2 * long, [mix(wrist[1], tip[1], 0.2), mix(wrist[2], tip[2], 0.2), 0.95 * d_ha, h_ha, h_ha, 3.0, None]],  # the heel of the hand
+        [wrist[0] + 0.5 * long, [mix(wrist[1], tip[1], 0.5), mix(wrist[2], tip[2], 0.5), d_ha, 0.9 * h_ha, 0.9 * h_ha, 3.0, None]],  # the knuckles
+        [wrist[0] + 0.8 * long, [mix(wrist[1], tip[1], 0.8), mix(wrist[2], tip[2], 0.8), 0.85 * d_ha, 0.6 * h_ha, 0.6 * h_ha, 3.0, None]],  # the fingers, as one mass
+        [wrist[0] + 0.99 * long, [tip[1], tip[2], 0.5 * d_ha, 0.35 * h_ha, 0.35 * h_ha, 3.0, wrist[0] + 0.93 * long]],
+    ]
+    knee, ankle = marks["knee"], marks["ankle"]
+    w_th, d_th = girth["thigh"]
+    w_kn, d_kn = girth["knee"]
+    w_ca, d_ca = girth["calf"]
+    w_an, d_an = girth["ankle"]
+    fold = min(0.5 * d_kn, 0.09 * (knee[2] - ankle[2]), 0.09 * (crotch - knee[2]))  # the same for the knee
+    hip_x = mix(knee[0], 0.5 * w_hip, 0.8)
+    leg = [
+        [ankle[2], [ankle[0], ankle[1], w_an, d_an, d_an, 2.2, None]],
+        [mix(ankle[2], knee[2], 0.32), [mix(ankle[0], knee[0], 0.32), mix(ankle[1], knee[1], 0.32), mix(w_an, w_ca, 0.6), mix(d_an, d_ca, 0.55), mix(d_an, d_ca, 0.7), 2.1, None]],
+        [min(mix(ankle[2], knee[2], 0.67), knee[2] - 4 * fold), [mix(ankle[0], knee[0], 0.67), mix(ankle[1], knee[1], 0.67), w_ca, 0.92 * d_ca, 1.12 * d_ca, 2.1, None]],  # the calf, fullest behind
+        [knee[2] - fold, [knee[0], knee[1], mix(w_kn, w_ca, 0.3), d_kn, 0.95 * d_kn, 2.2, None]],
+        [knee[2], [knee[0], knee[1], w_kn, 1.06 * d_kn, 0.94 * d_kn, 2.3, None]],  # the knee, its cap in front
+        [knee[2] + fold, [knee[0], knee[1], mix(w_kn, w_th, 0.3), mix(d_kn, d_th, 0.3), mix(d_kn, d_th, 0.3), 2.2, None]],
+        [max(mix(knee[2], crotch, 0.55), knee[2] + 4 * fold), [mix(knee[0], hip_x, 0.55), knee[1], w_th, 1.02 * d_th, d_th, 2.1, None]],  # the thigh
+        [crotch - 0.01 * tall, [hip_x, mix(knee[1], back[0], 0.7), 1.12 * w_th, 1.05 * d_th, 1.12 * d_th, 2.2, None]],
+        [crotch + 0.07 * tall, [0.5 * w_hip, back[0], 0.5 * w_hip, 0.85 * d_hip, 0.95 * d_hip, 2.3, None]],  # up inside the pelvis
+    ]
+    heel, toe = marks["heel"], marks["toe"]
+    span, w_ft, rise = heel[1] - toe[1], girth["foot"][0], ankle[2] - floor
+    foot = []
+    for share, wide, bottom, peak in ((0.01, 0.55, 0.0, 0.24), (0.15, 0.9, 0.0, 0.34), (0.33, 1.0, 0.0, 0.44),   # the toes, and the ball of the foot
+                                      (0.58, 0.8, 0.06, 0.8), (0.8, 0.72, 0.0, 1.0), (0.99, 0.5, 0.05, 0.55)):  # the arch, under the ankle, the heel
+        low, high = floor + bottom * rise, floor + peak * rise
+        foot.append([toe[1] + share * span, [toe[0], (low + high) / 2, wide * w_ft, (high - low) / 2, (high - low) / 2, 3.0, None]])
+    if detail == "mid":  # five loops at each elbow and knee, one more on the shoulder
+        arm += [[elbow[0] - 0.5 * bend, list(arm[3][1])], [elbow[0] + 0.5 * bend, list(arm[5][1])],
+                [pit[0] + 0.16 * (elbow[0] - pit[0]), [mix(arm_y, elbow[1], 0.16), mix(arm_z, elbow[2], 0.16), 1.05 * d_up, h_up, 1.18 * h_up, 2.2, None]]]
+        leg += [[knee[2] - 0.5 * fold, list(leg[3][1])], [knee[2] + 0.5 * fold, list(leg[5][1])]]
+    stretches = {"trunk": trunk, "neck": throat, "arm": arm, "hand": hand, "leg": leg, "foot": foot}
+
+    color = list(part.get("color", (0.6, 0.6, 0.6)))[:3]
+    colors = part.get("colors", {})
+    made, rings = [], {}
+    for key in ("trunk", "neck", "arm", "hand", "leg", "foot"):
+        keys = climbing(stretches[key], 0.3 * step if key == "foot" else step)
+        if detail == "mid":  # and rings eased in along every stretch
+            keys = climbing(filled(keys, BODY_FILL[key]), 0.3 * step)
+        rows = kept.get("trunk" if key == "neck" else key)
+        grow = chunky if key in ("trunk", "neck") else limbs
+        turn = BODY_TURN.get(key, 0) if sides[key] == 6 else 0
+        loft = [body_ring(pos, shape, rows, follow, sides[key], turn, grow, drawn_in(under.get(key, 0.0), pos)) for pos, shape in keys]
+        piece = {"name": "%s %s" % (name, key), "of": name, "stretch": key, "loft": BODY_AXIS[key], "sides": sides[key], "rings": loft,
+                 "color": list(colors.get(key, color))[:3], "caps": BODY_CAPS[key]}
+        if key not in ("trunk", "neck"):
+            piece["mirror"] = True
+        made.append(piece)
+        rings[key] = len(loft)
+    if part.get("thumb", True):  # a block for the thumb, forward of the palm
+        y, z = hand[1][1][0], hand[1][1][1]
+        thick = 0.3 * d_ha * limbs
+        made.append({"name": name + " thumb", "of": name, "stretch": "thumb", "sides": sides["thumb"], "mirror": True, "color": list(colors.get("hand", color))[:3], "up": [0, 0, 1], "caps": [False, True],
+                     "tube": [[round(wrist[0] + 0.2 * long, 4), round(y - 0.5 * d_ha, 4), round(z - 0.15 * h_ha, 4), round(1.1 * thick, 4), round(0.9 * h_ha, 4)],
+                              [round(wrist[0] + 0.38 * long, 4), round(y - d_ha - 0.1 * long, 4), round(z - 0.3 * h_ha, 4), round(thick, 4), round(0.8 * h_ha, 4)],
+                              [round(wrist[0] + 0.52 * long, 4), round(y - d_ha - 0.2 * long, 4), round(z - 0.4 * h_ha, 4), round(0.6 * thick, 4), round(0.5 * h_ha, 4)]]})
+    # The first piece carries what the whole body was asked for and built from; the recipe keeps it (see the end of this file).
+    made[0]["body"] = {"spec": part, "landmarks": marks, "joints": told.get("joints"), "found": told.get("found"), "rings": rings,
+                       "loops": {"elbow": 5 if detail == "mid" else 3, "knee": 5 if detail == "mid" else 3},
+                       "kept": {"name": part["body"], "data": told} if isinstance(part["body"], str) else None}
+    return made
+
+FACING ={"-y": (1, -1.0), "+y": (1, 1.0), "-x": (0, -1.0), "+x": (0, 1.0)}
 # What a face needs to read at this size, as shares of the head's height or of a row's half-width.
 KINDS = {
     "creature": {"brow": 0.08, "scowl": 0.5, "nose_wide": 0.3, "mouth_wide": 0.62, "ear_long": 0.24, "ear_up": 0.6},
@@ -522,6 +820,7 @@ def make_piece(part, owner, scene):
     piece["piece_of"] = owner
     piece["piece"] = part["name"]
     piece["gear"] = part.get("gear") or ""
+    piece["of"] = part.get("of") or ""  # the "body" piece this one was made for
     piece["spec"] = json.dumps(part)  # the recipe, so the same piece can be built again, denser
     scene.collection.objects.link(piece)
     piece.hide_set(True)
@@ -615,10 +914,17 @@ if ref is None:
 name = PARAMS["name"] or ref.name + " (light)"
 
 pieces = {o["piece"]: o for o in scene.objects if o.get("piece_of") == name}
-for gone in PARAMS["remove"] + [p["name"] for p in PARAMS["parts"]]:
+asked = []
+for part in PARAMS["parts"]:
+    if "body" in part and "loft" not in part:  # a body: the trunk, neck, arms, hands, legs and feet it stands for
+        asked += body_parts(part, scene)
+    else:
+        asked.append(part)
+going = PARAMS["remove"] + [p["name"] for p in PARAMS["parts"]]
+for gone in going + [n for n, o in pieces.items() if o.get("of") in going]:
     if gone in pieces:
         bpy.data.objects.remove(pieces.pop(gone), do_unlink=True)
-for part in PARAMS["parts"]:
+for part in asked:
     pieces[part["name"]] = make_piece(part, name, scene)
 if not pieces:
     raise ValueError("nothing to build: PARAMS['parts'] is empty")
@@ -640,11 +946,22 @@ for piece in pieces.values():
     if group_name(piece) not in groups:
         groups.append(group_name(piece))
 
+# A body piece's own notes: what it was asked for, its landmarks, and the "head" size its style asks for.
+bodies = [json.loads(p["spec"]).get("body") for p in pieces.values() if p.get("of")]
+bodies = [b for b in bodies if isinstance(b, dict) and b.get("spec")]
+big_head = bodies[0]["spec"].get("style", {}).get("head", 1.0) if bodies else 1.0
+chin = Vector((0.0, bodies[0]["landmarks"]["neck"][1], bodies[0]["landmarks"]["chin"][2])) if bodies else None
+
 joined = bmesh.new()
 marks = []  # for each face, which group it belongs to
 for piece in pieces.values():
+    before = len(joined.verts)
     joined.from_mesh(piece.data)
     marks += [groups.index(group_name(piece))] * len(piece.data.polygons)
+    if big_head != 1.0 and not piece.get("of") and min(v.co.z for v in piece.data.vertices) > chin.z - 0.02 * (ref.dimensions.z or 1.0):
+        joined.verts.ensure_lookup_table()  # the head and all that sits on it (hair, a hat, glasses) grow from the chin
+        for i in range(before, len(joined.verts)):
+            joined.verts[i].co = chin + (joined.verts[i].co - chin) * big_head
 joined.to_mesh(light.data)
 joined.free()
 smooth = PARAMS["shading"] == "smooth"
@@ -686,6 +1003,8 @@ if wanted is not False:
         faces += [tuple(start + i for i in poly.vertices) for poly in piece.data.polygons]
     heads = [[v.co for v in p.data.vertices] for p in flesh if "head" in json.loads(p.get("spec", "{}"))]
     top = [sum(p.x for p in heads[0]) / len(heads[0]), sum(p.y for p in heads[0]) / len(heads[0]), max(p.z for p in heads[0])] if heads else None
+    if top and big_head != 1.0:
+        top = list(chin + (Vector(top) - chin) * big_head)
     sockets, tall = find_sockets(points, faces, top, moved)
     for key, spot in sockets.items():
         marker = bpy.data.objects.new("socket: " + key, None)
@@ -707,8 +1026,11 @@ if len(recipe) == len(pieces):
     for part in recipe:
         if part.get("scan") and scene.get("face: " + part["scan"]):
             scans[part["scan"]] = json.loads(scene["face: " + part["scan"]])
-    light["forge_build"] = json.dumps({"version": 1, "object": name, "shading": PARAMS["shading"], "gear": list(listed.values()),
-                                       "sockets": sockets, "pieces": recipe, "scans": scans})
+    build = {"version": 1, "object": name, "shading": PARAMS["shading"], "gear": list(listed.values()),
+             "sockets": sockets, "pieces": recipe, "scans": scans}
+    if bodies:  # where this character's joints and landmarks are, for whatever reads the recipe next (a skeleton, say)
+        build["landmarks"], build["joints"] = bodies[0]["landmarks"], bodies[0]["joints"]
+    light["forge_build"] = json.dumps(build)
 elif "forge_build" in light:
     del light["forge_build"]
 
@@ -726,6 +1048,11 @@ if len(groups) > 1:
     result["gear_not_built"] = [g["name"] for g in listed.values() if g.get("kind") != "held" and "gear: " + g["name"] not in groups]
 if sockets:
     result["sockets"] = sockets
+if bodies:
+    mine = [o for o in pieces.values() if o.get("of") == bodies[0]["spec"]["name"]]
+    result["body"] = {"triangles": sum(triangles(o.data) for o in mine), "rings": bodies[0]["rings"], "loops": bodies[0]["loops"],
+                      "landmarks": bodies[0]["landmarks"],
+                      "check_these": {k: v for k, v in (bodies[0].get("found") or {}).items() if v != "shape"}}
 if PARAMS["check"]:
     rng = random.Random(0)
     size = max(ref.dimensions)
