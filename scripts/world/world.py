@@ -144,6 +144,9 @@ def check(world):
         for b in names[i + 1:]:
             if world["places"][a].get("inside") == b or world["places"][b].get("inside") == a:
                 continue
+            pa, pb = world["places"][a], world["places"][b]
+            if pa.get("inside") and pa.get("inside") == pb.get("inside") and abs(pa.get("lift_m", 0.0) - pb.get("lift_m", 0.0)) >= 2.0:
+                continue  # two floors of one building (the ring at 1.4 m, the roof at 6 m) may share ground
             if crosses(outlines[a], outlines[b]):
                 say("the footprints of \"%s\" and \"%s\" overlap" % (a, b))
     for cube in ground.get("cubes") or []:

@@ -6,52 +6,303 @@
  "units": "metres. y is up, the ground is 0. A heading of 0 faces +z (south, toward you in the first view); 90 faces +x (east).",
  "epoch": "epoch-0",
  "ground": {
-  "center": [8.0, 2.0],
-  "size_m": [84.0, 66.0],
-  "color": [0.72, 0.71, 0.69],
+  "center": [
+   8.0,
+   2.0
+  ],
+  "size_m": [
+   84.0,
+   66.0
+  ],
+  "color": [
+   0.72,
+   0.71,
+   0.69
+  ],
   "grid_m": 2.0,
   "cubes": [
-   {"at": [-30.0, -27.0], "size_m": 1.0},
-   {"at": [-28.2, -27.4], "size_m": 2.0},
-   {"at": [45.0, -24.0], "size_m": 1.0},
-   {"at": [46.0, 30.0], "size_m": 1.0},
-   {"at": [44.4, 30.6], "size_m": 0.5},
-   {"at": [-30.0, 31.0], "size_m": 1.0},
-   {"at": [12.0, 31.5], "size_m": 1.0}
+   {
+    "at": [
+     -30.0,
+     -27.0
+    ],
+    "size_m": 1.0
+   },
+   {
+    "at": [
+     -28.2,
+     -27.4
+    ],
+    "size_m": 2.0
+   },
+   {
+    "at": [
+     45.0,
+     -24.0
+    ],
+    "size_m": 1.0
+   },
+   {
+    "at": [
+     46.0,
+     30.0
+    ],
+    "size_m": 1.0
+   },
+   {
+    "at": [
+     44.4,
+     30.6
+    ],
+    "size_m": 0.5
+   },
+   {
+    "at": [
+     -30.0,
+     31.0
+    ],
+    "size_m": 1.0
+   },
+   {
+    "at": [
+     12.0,
+     31.5
+    ],
+    "size_m": 1.0
+   }
   ],
   "notes": [
-   {"at": [-28.0, 30.0], "text": "TODO"},
-   {"at": [43.0, -26.0], "text": "TODO: more world"},
-   {"at": [-27.0, -24.5], "text": "1 m"}
+   {
+    "at": [
+     -28.0,
+     30.0
+    ],
+    "text": "TODO"
+   },
+   {
+    "at": [
+     43.0,
+     -26.0
+    ],
+    "text": "TODO: more world"
+   },
+   {
+    "at": [
+     -27.0,
+     -24.5
+    ],
+    "text": "1 m"
+   }
   ]
  },
  "places": {
-  "grass": {"set": "grass", "at": [0.0, 13.0], "facing_deg": 0.0, "label": "Theodore's grass"},
-  "boxing-house": {"set": "boxing-house", "at": [-12.0, -13.5], "facing_deg": 0.0, "label": "The boxing house"},
-  "ring": {"set": "ring", "at": [-12.0, -13.5], "facing_deg": 0.0, "inside": "boxing-house", "lift_m": 1.36, "label": "The ring"},
-  "settlement": {"set": "settlement", "at": [22.0, -9.5], "facing_deg": 0.0, "label": "The settlement"},
-  "spawn": {"set": "spawn", "at": [28.0, 4.5], "facing_deg": 0.0, "label": "The spawn spot"},
-  "ninja-stage": {"set": "studio", "at": [45.0, 2.0], "facing_deg": -90.0, "label": "The ninja's stage", "whose": "ninja",
-   "about": "The shadow ninja's own photo stage. He set it up himself, a short walk from where new toons land, and invites residents in for portraits. Whatever shows through its window is a real place in this world."},
-  "dancer-house": {"set": "casa-de-la-rosa", "at": [30.0, 19.5], "facing_deg": 180.0, "label": "The dancer's house", "whose": "dancer",
-   "about": "The first home anyone chose for themselves. She asked for its front to look out on the spawn spot, so every new arrival sees a stage and a seat waiting."}
+  "grass": {
+   "set": "grass",
+   "at": [
+    0.0,
+    13.0
+   ],
+   "facing_deg": 0.0,
+   "label": "Theodore's grass"
+  },
+  "boxing-house": {
+   "set": "boxing-house",
+   "at": [
+    -12.0,
+    -13.5
+   ],
+   "facing_deg": 0.0,
+   "label": "The boxing house"
+  },
+  "ring": {
+   "set": "ring",
+   "at": [
+    -12.0,
+    -13.5
+   ],
+   "facing_deg": 0.0,
+   "inside": "boxing-house",
+   "lift_m": 1.36,
+   "label": "The ring"
+  },
+  "rooftop": {
+   "set": "rooftop",
+   "at": [
+    -15.25,
+    -18.0
+   ],
+   "facing_deg": 0.0,
+   "inside": "boxing-house",
+   "lift_m": 6.0,
+   "label": "The boxing house roof",
+   "about": "The flat roof of the boxing house, with a ledge and a low wall. The ninja climbs up here before dawn to watch the sun come up over the world."
+  },
+  "settlement": {
+   "set": "settlement",
+   "at": [
+    22.0,
+    -9.5
+   ],
+   "facing_deg": 0.0,
+   "label": "The settlement"
+  },
+  "spawn": {
+   "set": "spawn",
+   "at": [
+    28.0,
+    4.5
+   ],
+   "facing_deg": 0.0,
+   "label": "The spawn spot"
+  },
+  "ninja-stage": {
+   "set": "studio",
+   "at": [
+    45.0,
+    2.0
+   ],
+   "facing_deg": -90.0,
+   "label": "The ninja's stage",
+   "whose": "ninja",
+   "about": "The shadow ninja's own photo stage. He set it up himself, a short walk from where new toons land, and invites residents in for portraits. Whatever shows through its window is a real place in this world."
+  },
+  "dancer-house": {
+   "set": "casa-de-la-rosa",
+   "at": [
+    30.0,
+    19.5
+   ],
+   "facing_deg": 180.0,
+   "label": "The dancer's house",
+   "whose": "dancer",
+   "about": "The first home anyone chose for themselves. She asked for its front to look out on the spawn spot, so every new arrival sees a stage and a seat waiting."
+  }
  },
  "artifacts": [
-  {"name": "gachapon", "title": "The gachapon machine", "about": "Brings new toons into the world, one capsule at a time.", "whose": "Everyone's", "place": "spawn", "slot": "machine", "wondrous": true},
-  {"name": "buy-house", "title": "BUY HOUSE", "about": "The developer's plain pedestal with a big round button. Save enough credits, press it, and you get a house to your own specification.", "whose": "The developer's", "place": "spawn", "slot": "pedestal", "wondrous": false},
-  {"name": "pinhole-camera", "title": "The pinhole box camera", "about": "Lets us see the world through its owner's eyes. His prints are the strips.", "whose": "The shadow ninja's", "held_by": "ninja", "offset": [0.0, 1.08, 0.3],
-   "glb": "world/props/pinhole-camera.glb", "from_run": "handmade-pinhole-box-camera", "wondrous": true},
-  {"name": "kettle", "title": "The kettle of tea", "about": "Always pours, and is never quite empty.", "whose": "The troll and the lizardkin's stall", "place": "settlement", "slot": "stall_kettle", "wondrous": true},
-  {"name": "bread", "title": "The bread", "about": "A slice meets a toon's need for a good meal.", "whose": "The troll and the lizardkin's stall", "place": "settlement", "slot": "stall_bread", "wondrous": true},
-  {"name": "microphone", "title": "The microphone", "about": "The first thing we ever heard from this cast came through it.", "whose": "The flamenco dancer's", "place": "dancer-house", "slot": "microphone", "wondrous": true}
+  {
+   "name": "gachapon",
+   "title": "The gachapon machine",
+   "about": "Brings new toons into the world, one capsule at a time.",
+   "whose": "Everyone's",
+   "place": "spawn",
+   "slot": "machine",
+   "wondrous": true
+  },
+  {
+   "name": "buy-house",
+   "title": "BUY HOUSE",
+   "about": "The developer's plain pedestal with a big round button. Save enough credits, press it, and you get a house to your own specification.",
+   "whose": "The developer's",
+   "place": "spawn",
+   "slot": "pedestal",
+   "wondrous": false
+  },
+  {
+   "name": "pinhole-camera",
+   "title": "The pinhole box camera",
+   "about": "Lets us see the world through its owner's eyes. His prints are the strips.",
+   "whose": "The shadow ninja's",
+   "held_by": "ninja",
+   "offset": [
+    0.0,
+    1.08,
+    0.3
+   ],
+   "glb": "world/props/pinhole-camera.glb",
+   "from_run": "handmade-pinhole-box-camera",
+   "wondrous": true
+  },
+  {
+   "name": "kettle",
+   "title": "The kettle of tea",
+   "about": "Always pours, and is never quite empty.",
+   "whose": "The troll and the lizardkin's stall",
+   "place": "settlement",
+   "slot": "stall_kettle",
+   "wondrous": true
+  },
+  {
+   "name": "bread",
+   "title": "The bread",
+   "about": "A slice meets a toon's need for a good meal.",
+   "whose": "The troll and the lizardkin's stall",
+   "place": "settlement",
+   "slot": "stall_bread",
+   "wondrous": true
+  },
+  {
+   "name": "microphone",
+   "title": "The microphone",
+   "about": "The first thing we ever heard from this cast came through it.",
+   "whose": "The flamenco dancer's",
+   "place": "dancer-house",
+   "slot": "microphone",
+   "wondrous": true
+  }
  ],
  "toons": [
-  {"toon": "roosevelt", "name": "Roosevelt", "run": "roosevelt-wrestler-1890s", "glb": "world/toons/roosevelt.glb", "place": "grass", "mark": "stride", "pose": "hands_on_hips"},
-  {"toon": "lincoln", "name": "Lincoln", "run": "young-lincoln-frontier-wrestler", "glb": "world/toons/lincoln.glb", "place": "boxing-house", "mark": "ringside", "pose": "stand"},
-  {"toon": "pirate", "name": "The pirate", "run": "stocky-pirate-deckhand", "glb": "world/toons/pirate.glb", "place": "boxing-house", "mark": "brew_door", "pose": "laugh"},
-  {"toon": "ninja", "name": "The ninja", "run": "shadow-ninja", "glb": "world/toons/ninja.glb", "place": "ninja-stage", "mark": "photographer", "pose": "think"},
-  {"toon": "dancer", "name": "The dancer", "run": "flamenco-dancer", "glb": "world/toons/dancer.glb", "place": "dancer-house", "mark": "stage", "pose": "cheer"},
-  {"toon": "troll", "name": "The troll", "run": "cave-troll", "glb": "world/toons/troll.glb", "place": "settlement", "mark": "stall_troll", "pose": "stand"},
-  {"toon": "lizardkin", "name": "The lizardkin", "run": "lizardkin-warrior", "glb": "world/toons/lizardkin.glb", "place": "settlement", "mark": "stall_lizardkin", "pose": "talk"}
+  {
+   "toon": "roosevelt",
+   "name": "Roosevelt",
+   "run": "roosevelt-wrestler-1890s",
+   "glb": "world/toons/roosevelt.glb",
+   "place": "grass",
+   "mark": "stride",
+   "pose": "hands_on_hips"
+  },
+  {
+   "toon": "lincoln",
+   "name": "Lincoln",
+   "run": "young-lincoln-frontier-wrestler",
+   "glb": "world/toons/lincoln.glb",
+   "place": "boxing-house",
+   "mark": "ringside",
+   "pose": "stand"
+  },
+  {
+   "toon": "pirate",
+   "name": "The pirate",
+   "run": "stocky-pirate-deckhand",
+   "glb": "world/toons/pirate.glb",
+   "place": "boxing-house",
+   "mark": "brew_door",
+   "pose": "laugh"
+  },
+  {
+   "toon": "ninja",
+   "name": "The ninja",
+   "run": "shadow-ninja",
+   "glb": "world/toons/ninja.glb",
+   "place": "ninja-stage",
+   "mark": "photographer",
+   "pose": "think"
+  },
+  {
+   "toon": "dancer",
+   "name": "The dancer",
+   "run": "flamenco-dancer",
+   "glb": "world/toons/dancer.glb",
+   "place": "dancer-house",
+   "mark": "stage",
+   "pose": "cheer"
+  },
+  {
+   "toon": "troll",
+   "name": "The troll",
+   "run": "cave-troll",
+   "glb": "world/toons/troll.glb",
+   "place": "settlement",
+   "mark": "stall_troll",
+   "pose": "stand"
+  },
+  {
+   "toon": "lizardkin",
+   "name": "The lizardkin",
+   "run": "lizardkin-warrior",
+   "glb": "world/toons/lizardkin.glb",
+   "place": "settlement",
+   "mark": "stall_lizardkin",
+   "pose": "talk"
+  }
  ]
 }

@@ -124,6 +124,18 @@
    "lift_m": 1.36,
    "label": "The ring"
   },
+  "rooftop": {
+   "set": "rooftop",
+   "at": [
+    -15.25,
+    -18.0
+   ],
+   "facing_deg": 0.0,
+   "inside": "boxing-house",
+   "lift_m": 6.0,
+   "label": "The boxing house roof",
+   "about": "The flat roof of the boxing house, with a ledge and a low wall. The ninja climbs up here before dawn to watch the sun come up over the world."
+  },
   "settlement": {
    "set": "settlement",
    "at": [
