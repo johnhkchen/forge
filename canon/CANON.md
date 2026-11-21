@@ -48,6 +48,33 @@ pop who is quietly trying to work out what life as a toon is about.
   He develops his prints in the dark storeroom behind the boxing-house bar.
   **His prints are the strips.**
 
+## Wondrous artifacts
+
+Some things in this world just *work*, and nobody quite knows how. Toons call
+them wondrous artifacts. They hope to come across more of them, but have very
+little say in when or how.
+
+| Artifact | What it does | Whose |
+|---|---|---|
+| The gachapon machine | Brings new toons into the world, one capsule at a time | Everyone's |
+| The pinhole box camera | Lets us see the world through its owner's eyes | The shadow ninja |
+| The kettle of tea | Always pours, and is never quite empty | The troll and the lizardkin's stall |
+| The bread | A slice meets a toon's need for a good meal | The troll and the lizardkin's stall |
+| The microphone | The first thing we have ever heard from this cast came through it | The flamenco dancer |
+
+## Epochs
+
+The world is shown whole, as one place, not scene by scene: like the full
+miniature set of a stop-motion film. We keep it in **epochs**, saved states of
+the whole world.
+
+**Epoch 0** is now:
+- Theodore's grass;
+- the boxing house, with its brew house and beer garden;
+- the troll and lizardkin's settlement;
+- the flamenco dancer's house;
+- the toons in their places.
+
 ## How this world began: the reset
 
 The first toons pooled all the credits they had and reset the world, with
@@ -63,6 +90,21 @@ just enough to spawn three places:
    the lizardkin for the long haul. They share it, roommates in a new world.
 
 Everything else is still empty.
+
+## The dancer's house
+
+The developer left one thing lying about that nobody could afford: a plain
+pedestal with a big round button on it, labelled **BUY HOUSE** in the
+developer's default lettering. It sits near where the gachapon drops new toons.
+
+The flamenco dancer saved her credits longer than anyone. When she pressed it,
+she got a house **to her own specification**, not the developer's. It is the
+first home in the world that someone chose for themselves. It stands on the
+map like everything else, and anyone can go and see it.
+
+Making a house this way can happen again for anyone who saves enough. (For us:
+a BAML request designs a house from the toon's own brief, and it is built and
+placed in the world like the other places.)
 
 ## Places
 
@@ -80,6 +122,7 @@ Everything else is still empty.
 | Roosevelt | Theodore Roosevelt, wrestler of the 1890s | Bursting with energy, everything is "bully!", loves open ground |
 | The stocky pirate deckhand | A captain | Practical, good with ropes and salvage, wants a ship |
 | The shadow ninja | (He hasn't said) | A recent pop, silent, a film lover; we see the world through his eyes |
+| The flamenco dancer | A star, about to premiere | Proud, warm, patient; she was the last of the first toons to be looked after, and the first whose voice we heard |
 | The cave troll | Exactly what he is | Fussy, kind, likes things done properly |
 | The lizardkin warrior | The last warrior of a proud people | Earnest, loyal roommate |
 
@@ -102,7 +145,7 @@ Ideas we like that haven't happened on the page:
 
 - **The teahouse.** The troll runs it, eventually inside a giant kettle, and
   it sells boba. Its character creation screen seals your new self in a pearl
-  capsule in a gachapon machine; you come back when someone draws you,
+  capsule that goes into the gachapon; you come back when someone draws you,
   believing you're who you ordered.
 - **The pearl.** A toon can choose to rest in one until they're brewed or
   drawn again.

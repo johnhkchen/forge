@@ -112,7 +112,7 @@ function objectPage(run, wanted) {
     bareBtn.setAttribute("aria-pressed", String(state.bare));
     for (const name of run.base.garments) if (state.bare) state.off.add(name); else state.off.delete(name);
     render();
-  } }, "Without clothes");
+  } }, "Show the fitting form");
   const socketsBtn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => { state.sockets = !state.sockets; socketsBtn.setAttribute("aria-pressed", String(state.sockets)); viewer?.setSockets(state.sockets); } }, "Where props go");
   // One clip at a time. Pressed in, the character walks or runs on the spot, or plays a hero shot from start
   // to end, over and over, with the view following it; let go, it stands still in its T-pose.
@@ -150,7 +150,7 @@ function objectPage(run, wanted) {
         } }, g.gear);
         return chip;
       }),
-      h("span", { class: "hint" }, bare ? "This is the real body, made from a second picture. Tap a piece to put it on." : "Tap a piece to take it off."),
+      h("span", { class: "hint" }, bare ? "The fitting form her clothes were cut to fit. Tap a piece to put it back on." : "Tap a piece to take it off."),
     );
   }
 
@@ -209,12 +209,17 @@ function objectPage(run, wanted) {
       ? h("div", { class: "versions", role: "group", "aria-label": "Version" }, chips)
       : h("div", { class: "versions object-row", role: "group", "aria-label": "Version" }, chips, h("span", { class: "row-gap" }), compareBtn, wireBtn),
     run.character
-      ? h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, run.base ? bareBtn : null, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn))
+      ? h("div", { class: "controls" }, h("div", { class: "toggles" }, compareBtn, wireBtn, clipBtns.walk, clipBtns.run, clipBtns.hero, clipBtns.hero_mixed, socketsBtn))
       : null,
     gearRow,
     stage,
     factsBox,
     about,
+    // How a hiding garment was made is a note for the curious, kept below the fold and phrased with care:
+    // the fitting form, not "without clothes".
+    run.base ? h("div", { class: "notes clay-surface" }, h("h3", {}, "How the clothes were made"),
+      h("p", {}, "The clothes were cut from the first picture and fitted onto a form made from a second one, so nothing under them is guessed."),
+      bareBtn) : null,
     making(run),
   );
   queueMicrotask(render);
