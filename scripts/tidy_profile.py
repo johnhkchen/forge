@@ -45,6 +45,7 @@ does all of it). With no clip there, the profile is skipped with a note.
 """
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -814,15 +815,115 @@ def drape(run_dir, name):
     return run_script("drape.py", {"object": name, "pieces": recipe["pieces"] if recipe else None})
 
 
-FIT_PASSES = 2  # fit_clothes looks again after easing the cloth, at most this many times in all
+# A fit is kept only if it does at least this well against the cloth as draped: the routine's visible skin through
+# clothes down by a tenth, the walk's no more (give or take), and the deepest spot no deeper than this, in cm (the
+# routine's single deepest spot, over 312 frames pushed to the limit, moves about more than the walk's).
+FIT_KEEP = {"routine_at_most": 0.9, "walk_at_most": 1.1, "walk_slack": 5, "deeper_cm": {"walk": 0.5, "routine": 1.0}}
+
+
+def fitting_copy(light, tags, scene):
+    """The draped block-out as meshes of their own, as export.py writes them: the body (its faces hidden under gear
+    apart, tagged "under"), each piece of gear. Every point carries "fit_src", the block-out's point it came from."""
+    source = light.data.attributes.get("fit_src") or light.data.attributes.new("fit_src", "INT", "POINT")
+    source.data.foreach_set("value", list(range(len(light.data.vertices))))
+    under = light.data.attributes.get("forge_under")
+    parts = []
+    for index, tag in enumerate(tags):
+        cuts = [0, 1] if under is not None and tag.get("forge") == "body" else [None]
+        for cut in cuts:
+            me = light.data.copy()
+            bm = bmesh.new()
+            bm.from_mesh(me)
+            mark = bm.faces.layers.int.get("forge_group")
+            hidden = bm.faces.layers.int.get("forge_under") if cut is not None else None
+            bm.faces.ensure_lookup_table()
+            gone = [f for f in bm.faces if f[mark] != index or (hidden is not None and (f[hidden] != 0) != bool(cut))]
+            bmesh.ops.delete(bm, geom=gone, context="FACES")
+            bm.to_mesh(me)
+            bm.free()
+            if not me.polygons:
+                bpy.data.meshes.remove(me)
+                continue
+            part = bpy.data.objects.new("fit: " + tag["name"] + (" (under gear)" if cut else ""), me)
+            part.matrix_world = light.matrix_world.copy()
+            for key, value in tag.items():
+                if key != "name":
+                    part[key] = value
+            if cut:
+                part["under"] = "gear"
+            part["fit_part"] = 1
+            scene.collection.objects.link(part)
+            parts.append(part)
+    return parts
+
+
+def fitting_round(light, tags, recipe, name):
+    """One working copy, rigged and taken through the range-of-motion routine, and its cloth fitted to it
+    (fit_cloth.py moves the block-out's points). The copy is thrown away. Returns fit_cloth.py's result."""
+    scene = bpy.context.scene
+    parts = fitting_copy(light, tags, scene)
+    hidden = light.hide_get()
+    light.hide_set(True)
+    before = set(bpy.data.actions)
+    try:
+        run_script("rig.py", {"meshes": [p.name for p in parts], "recipe": recipe["pieces"] if recipe else None, "name": "fit rig"})
+        run_script("cloth.py", {"rig": "fit rig", "bones": False})
+        run_script("rom.py", {"rig": "fit rig"})
+        run_script("animate.py", {"rig": "fit rig", "motion": "rom", "contact": False, "check": False})
+        return run_script("fit_cloth.py", {"source": name, "rig": "fit rig"})
+    finally:
+        rig = bpy.data.objects.get("fit rig")
+        for part in parts:
+            me = part.data
+            bpy.data.objects.remove(part, do_unlink=True)
+            bpy.data.meshes.remove(me)
+        if rig is not None:
+            arm = rig.data
+            bpy.data.objects.remove(rig, do_unlink=True)
+            bpy.data.armatures.remove(arm)
+        for action in set(bpy.data.actions) - before:
+            bpy.data.actions.remove(action)
+        light.hide_set(hidden)
+        if light.data.attributes.get("fit_src") is not None:
+            light.data.attributes.remove(light.data.attributes["fit_src"])
+
+
+def judge_fit(run_dir, name, folder):
+    """How much visible skin comes through clothes in the block-out `name` as it is now, measured the way the cloth
+    test measures it: written to folder/midpoly.glb (shape only), given its walk and the routine by this same runner
+    (the walk and rom profiles), and checked with cloth_check.py. Returns the background Blender (Popen) to wait on."""
+    os.makedirs(folder, exist_ok=True)
+    run_script("export.py", {"object": name, "path": os.path.join(folder, "midpoly.glb"), "materials": False, "draco": False, "check": False})
+    here = os.path.abspath(__file__)
+    blender = bpy.app.binary_path
+    script = ("{b} -b --factory-startup --python-exit-code 1 -P {tp} -- {src} {out} walk rom > {out}/made.log 2>&1 && "
+              "{b} -b --factory-startup --python-exit-code 1 -P {cc} -- {out}/midpoly-walk.glb {out}/midpoly-rom.glb > {out}/checked.log 2>&1").format(
+        b=shlex.quote(blender), tp=shlex.quote(here), cc=shlex.quote(os.path.join(os.path.dirname(here), "cloth_check.py")),
+        src=shlex.quote(os.path.join(run_dir, "scene.blend")), out=shlex.quote(folder))
+    return subprocess.Popen(["/bin/sh", "-c", script])
+
+
+def judged(folder):
+    """What judge_fit measured: {"walk": point-frames, "walk_deepest_cm", "routine", "routine_deepest_cm"}, or None."""
+    rows = []
+    with open(os.path.join(folder, "checked.log")) as f:
+        rows = [json.loads(line[6:]) for line in f if line.startswith("CLOTH ")]
+    if len(rows) != 2:
+        return None
+    out = {}
+    for label, row in zip(("walk", "routine"), rows):
+        out[label], out[label + "_deepest_cm"] = row["poke_through"]["point_frames"], row["poke_through"]["deepest_cm"]
+    return out
 
 
 def fit_clothes(run_dir, name):
     """Ease tight clothes out where the body comes through them in motion (fit_cloth.py), on the draped block-out
-    `name`, before anything is baked. A copy is split into body and gear, rigged, and taken through the
-    range-of-motion routine (rom.py); fit_cloth.py moves the block-out's cloth points out by how far the skin
-    came through, and the copy is thrown away. Done again if the first pass still found some. Returns each pass's
-    result, or None for a block-out with no gear."""
+    `name`, before anything is baked, and keep it only if it helps. A working copy is rigged and taken through the
+    range-of-motion routine (rom.py), and the cloth fitted to it. Then the block-out as it was and as fitted are each
+    written out, walked and taken through the routine by the walk and rom profiles, and measured as the cloth test
+    measures them (cloth_check.py), side by side in background Blenders. The fit is kept if the routine shows clearly
+    less skin, the walk no more, and neither goes any deeper (FIT_KEEP); otherwise every cloth point goes back where it
+    was. Returns what was measured and decided, or None for a block-out with no gear."""
     light = bpy.data.objects[name]
     tags = json.loads(light.get("forge_groups", "[]"))
     if len(tags) < 2 or tags[0].get("forge") != "body":
@@ -830,54 +931,27 @@ def fit_clothes(run_dir, name):
     recipe = read_recipe(run_dir)
     scene = bpy.context.scene
     kept_frames = (scene.frame_start, scene.frame_end, scene.frame_current, scene.render.fps)
-    passes = []
-    for _ in range(FIT_PASSES):
-        source = light.data.attributes.get("fit_src") or light.data.attributes.new("fit_src", "INT", "POINT")
-        source.data.foreach_set("value", list(range(len(light.data.vertices))))
-        parts = []
-        for index, tag in enumerate(tags):  # the groups as meshes of their own, as export.py writes them
-            me = light.data.copy()
-            bm = bmesh.new()
-            bm.from_mesh(me)
-            mark = bm.faces.layers.int.get("forge_group")
-            bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[mark] != index], context="FACES")
-            bm.to_mesh(me)
-            bm.free()
-            part = bpy.data.objects.new("fit: " + tag["name"], me)
-            part.matrix_world = light.matrix_world.copy()
-            for key, value in tag.items():
-                if key != "name":
-                    part[key] = value
-            part["fit_part"] = 1
-            scene.collection.objects.link(part)
-            parts.append(part)
-        hidden = light.hide_get()
-        light.hide_set(True)
-        before = set(bpy.data.actions)
-        try:
-            run_script("rig.py", {"meshes": [p.name for p in parts], "recipe": recipe["pieces"] if recipe else None, "name": "fit rig"})
-            run_script("cloth.py", {"rig": "fit rig", "bones": False})
-            run_script("rom.py", {"rig": "fit rig"})
-            run_script("animate.py", {"rig": "fit rig", "motion": "rom", "contact": False, "check": False})
-            passes.append(run_script("fit_cloth.py", {"source": name, "rig": "fit rig"}))
-        finally:
-            rig = bpy.data.objects.get("fit rig")
-            for part in parts:
-                me = part.data
-                bpy.data.objects.remove(part, do_unlink=True)
-                bpy.data.meshes.remove(me)
-            if rig is not None:
-                arm = rig.data
-                bpy.data.objects.remove(rig, do_unlink=True)
-                bpy.data.armatures.remove(arm)
-            for action in set(bpy.data.actions) - before:
-                bpy.data.actions.remove(action)
-            light.hide_set(hidden)
-            light.data.attributes.remove(light.data.attributes["fit_src"])
-            scene.frame_start, scene.frame_end, scene.frame_current, scene.render.fps = kept_frames
-        if not passes[-1]["cloth_points_moved"] or passes[-1]["moved_cm"]["most"] < 0.3:
-            break
-    return passes
+    was = [v.co.copy() for v in light.data.vertices]
+    trial = tempfile.mkdtemp(prefix="forge-fit-")
+    unfitted = judge_fit(run_dir, name, os.path.join(trial, "as-draped"))
+    try:
+        fitted_result = fitting_round(light, tags, recipe, name)
+    finally:
+        scene.frame_start, scene.frame_end, scene.frame_current, scene.render.fps = kept_frames
+    refitted = judge_fit(run_dir, name, os.path.join(trial, "fitted"))
+    unfitted.wait()
+    refitted.wait()
+    before, after = judged(os.path.join(trial, "as-draped")), judged(os.path.join(trial, "fitted"))
+    keep = bool(before and after
+                and after["routine"] <= FIT_KEEP["routine_at_most"] * before["routine"]
+                and after["walk"] <= FIT_KEEP["walk_at_most"] * before["walk"] + FIT_KEEP["walk_slack"]
+                and all(after[k + "_deepest_cm"] <= before[k + "_deepest_cm"] + FIT_KEEP["deeper_cm"][k] for k in ("walk", "routine")))
+    if not keep:
+        for v, co in zip(light.data.vertices, was):
+            v.co = co
+        light.data.update()
+    shutil.rmtree(trial, ignore_errors=True)
+    return {"kept": keep, "skin_through_point_frames": {"as_draped": before, "fitted": after}, "fit": fitted_result}
 
 
 def paint_face(run_dir):

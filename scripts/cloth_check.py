@@ -55,6 +55,57 @@ def posed(objects, deps):
     return points, normals, faces, owner
 
 
+def poke_over(body, gear, rig, frames, every=1):
+    """Skin through clothes over some frames of the rig's action, for meshes already in the scene: body meshes
+    tagged "under" (hidden while dressed) count only toward "all". Standing still (the rig at rest) decides which
+    body points the gear covers. Returns {"drawn": [point-frames, deepest m], "all": [...], "covered", "covered_drawn",
+    "worst_frame", "through": {gear: point-frames}, "tall", "frames"}."""
+    scene = bpy.context.scene
+    if rig:
+        rig.data.pose_position = "REST"
+    scene.frame_set(frames[0] if frames else 0)
+    deps = bpy.context.evaluated_depsgraph_get()
+    points, normals, faces, owner = posed(body, deps)
+    gpoints, gnormals, gfaces, gowner = posed(gear, deps)
+    tall = max(p.z for p in points) - min(p.z for p in points)
+    reach = 0.04 * tall
+    cloth = BVHTree.FromPolygons(gpoints, gfaces)
+    covered = [i for i, (p, n) in enumerate(zip(points, normals)) if under_cloth(cloth, p, n, reach)]
+    drawn = [not body[owner[i]].get("under") for i in range(len(points))]
+    if rig:
+        rig.data.pose_position = "POSE"
+    poke = {"drawn": [0, 0.0], "all": [0, 0.0]}
+    worst_frame, most, through = None, 0, {}
+    face_gear = []
+    for obj in gear:
+        face_gear += [obj.get("gear") or obj.name] * len(obj.data.polygons)
+    looked = frames[::max(1, int(every))]
+    for f in looked:
+        scene.frame_set(f)
+        deps = bpy.context.evaluated_depsgraph_get()
+        points, normals, faces, owner = posed(body, deps)
+        gpoints, gnormals, gfaces, gowner = posed(gear, deps)
+        cloth = BVHTree.FromPolygons(gpoints, gfaces)
+        here = 0
+        for i in covered:
+            p, n = points[i], normals[i]
+            if cloth.ray_cast(p + n * 1e-4, n, reach)[0] is not None:
+                continue
+            behind = cloth.ray_cast(p - n * 1e-4, -n, 0.03 * tall)
+            if behind[0] is None or behind[3] < 0.001 or behind[1].dot(n) < 0.2:  # the far wall of a sleeve faces the other way: not it
+                continue
+            for key in (("drawn", "all") if drawn[i] else ("all",)):
+                poke[key][0] += 1
+                poke[key][1] = max(poke[key][1], behind[3])
+            here += drawn[i]
+            if drawn[i]:
+                through[face_gear[behind[2]]] = through.get(face_gear[behind[2]], 0) + 1
+        if here > most:
+            worst_frame, most = f, here
+    return {"drawn": poke["drawn"], "all": poke["all"], "covered": len(covered), "covered_drawn": sum(1 for i in covered if drawn[i]),
+            "worst_frame": worst_frame, "through": through, "tall": tall, "frames": len(looked)}
+
+
 def check(path):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = 30  # what every motion here is baked at; the importer lays keys out by the scene's rate
@@ -80,8 +131,6 @@ def check(path):
     reach = 0.04 * tall
     cloth = BVHTree.FromPolygons(gpoints, gfaces)
     skin = BVHTree.FromPolygons(points, faces)
-    covered = [i for i, (p, n) in enumerate(zip(points, normals)) if under_cloth(cloth, p, n, reach)]
-    drawn = [not body[owner[i]].get("under") for i in range(len(points))]
     gaps = {}
     for index, obj in enumerate(gear):
         off, inside = [], 0
@@ -97,37 +146,10 @@ def check(path):
                                              "inside_the_body": inside, "points": len(off)}
 
     # Moving: is the cloth still over each covered point, or behind it?
-    if rig:
-        rig.data.pose_position = "POSE"
-    poke = {"drawn": [0, 0.0], "all": [0, 0.0]}
-    worst_frame, most, through = None, 0, {}
-    face_gear = []
-    for index, obj in enumerate(gear):
-        face_gear += [obj.get("gear") or obj.name] * len(obj.data.polygons)
-    for f in frames:
-        scene.frame_set(f)
-        deps = bpy.context.evaluated_depsgraph_get()
-        points, normals, faces, owner = posed(body, deps)
-        gpoints, gnormals, gfaces, gowner = posed(gear, deps)
-        cloth = BVHTree.FromPolygons(gpoints, gfaces)
-        here = 0
-        for i in covered:
-            p, n = points[i], normals[i]
-            if cloth.ray_cast(p + n * 1e-4, n, reach)[0] is not None:
-                continue
-            behind = cloth.ray_cast(p - n * 1e-4, -n, 0.03 * tall)
-            if behind[0] is None or behind[3] < 0.001 or behind[1].dot(n) < 0.2:  # the far wall of a sleeve faces the other way: not it
-                continue
-            for key in (("drawn", "all") if drawn[i] else ("all",)):
-                poke[key][0] += 1
-                poke[key][1] = max(poke[key][1], behind[3])
-            here += drawn[i]
-            if drawn[i]:
-                through[face_gear[behind[2]]] = through.get(face_gear[behind[2]], 0) + 1
-        if here > most:
-            worst_frame, most = f, here
-    total = max(len(covered) * len(frames), 1)
-    seen = max(sum(1 for i in covered if drawn[i]) * len(frames), 1)
+    moving = poke_over(body, gear, rig, frames)
+    poke, worst_frame, through = {"drawn": moving["drawn"], "all": moving["all"]}, moving["worst_frame"], moving["through"]
+    total = max(moving["covered"] * len(frames), 1)
+    seen = max(moving["covered_drawn"] * len(frames), 1)
 
     # Loose-cloth bones: how far they swing, and whether a joint goes into a leg.
     bones = [b.name for b in rig.data.bones if b.name.startswith("cloth_")] if rig else []
@@ -161,7 +183,7 @@ def check(path):
     return {
         "file": path, "height": round(tall, 3), "frames": len(frames), "clip": action.name if action else None,
         "body_meshes": sorted(o.name for o in body), "gear_meshes": sorted(o.name for o in gear),
-        "covered_points": len(covered), "covered_points_drawn": sum(1 for i in covered if drawn[i]),
+        "covered_points": moving["covered"], "covered_points_drawn": moving["covered_drawn"],
         "poke_through": {"point_frames": poke["drawn"][0], "share_%": round(100 * poke["drawn"][0] / seen, 3), "deepest_cm": round(100 * poke["drawn"][1], 2),
                          "worst_frame": worst_frame, "through": through,
                          "if_all_were_drawn": {"point_frames": poke["all"][0], "share_%": round(100 * poke["all"][0] / total, 3), "deepest_cm": round(100 * poke["all"][1], 2)}},
@@ -187,5 +209,6 @@ def off_rod(a, b, p):
     return (p - (a + ab * t)).length
 
 
-for path in sys.argv[sys.argv.index("--") + 1:]:
-    print("CLOTH " + json.dumps(check(os.path.abspath(path))))
+if __name__ == "__main__":  # imported by tidy_profile.py for poke_over
+    for path in sys.argv[sys.argv.index("--") + 1:]:
+        print("CLOTH " + json.dumps(check(os.path.abspath(path))))
