@@ -14,7 +14,9 @@
   "keep": {"x": [-5.5, 1.15], "z": [-0.2, 6.05], "top_m": 3.5},
   "dressing": ["plant"]
  },
- "paint_px": 512,
+ "paint_px": 1024,
+ "maps": "color",
+ "prop_px": 512,
  "poses": {
   "shutter": {
    "about": "the photographer: leaning in a little, right hand out on the camera, left hand up to say hold still",
@@ -50,25 +52,25 @@
   }
  },
  "props": {
-  "camera": {"run": "handmade-pinhole-box-camera", "file": "profiles/lowpoly.glb", "scale": 2.0, "title": "The pinhole box camera", "note": "bigger than life, the way a toy's things are"},
+  "camera": {"run": "handmade-pinhole-box-camera", "file": "profiles/web.glb", "scale": 2.0, "title": "The pinhole box camera", "note": "bigger than life, the way a toy's things are"},
   "tripod": {"built": "tripod"},
-  "microphone": {"run": "vintage-stage-microphone", "file": "profiles/lowpoly.glb", "scale": 0.8, "title": "The microphone"},
-  "kettle": {"run": "iron-kettle", "file": "profiles/lowpoly.glb", "scale": 1.2, "title": "The kettle of tea"},
+  "microphone": {"run": "vintage-stage-microphone", "file": "profiles/web.glb", "scale": 0.8, "title": "The microphone"},
+  "kettle": {"run": "iron-kettle", "file": "profiles/web.glb", "scale": 1.2, "title": "The kettle of tea"},
   "teacup": {"built": "teacup", "scale": 2.0}
  },
  "toons": [
-  {"toon": "ninja", "name": "The ninja", "run": "shadow-ninja", "version": "midpoly", "pose": "shutter", "mark": "photographer", "looks_at": "dancer",
+  {"toon": "ninja", "name": "The ninja", "run": "shadow-ninja", "version": "web", "pose": "shutter", "mark": "photographer", "looks_at": "dancer",
    "holds": [{"prop": "camera", "hand": "right", "grip": "top"}]},
-  {"toon": "lincoln", "name": "Lincoln", "run": "young-lincoln-frontier-wrestler", "version": "midpoly", "pose": "tall_and_proper", "at": [-3.65, 1.4], "on": "band riser", "faces": "ninja", "looks_at": "camera"},
-  {"toon": "roosevelt", "name": "Roosevelt", "run": "roosevelt-wrestler-1890s", "version": "midpoly", "pose": "flex_and_wave", "at": [-2.6, 1.4], "on": "band riser", "faces": "ninja", "looks_at": [6.0, 1.5, 5.5]},
-  {"toon": "dancer", "name": "The dancer", "run": "flamenco-dancer", "version": "midpoly", "pose": "at_the_microphone", "mark": "sitter", "faces": "ninja", "looks_at": "camera",
+  {"toon": "lincoln", "name": "Lincoln", "run": "young-lincoln-frontier-wrestler", "version": "web", "pose": "tall_and_proper", "at": [-3.65, 1.4], "on": "band riser", "faces": "ninja", "looks_at": "camera"},
+  {"toon": "roosevelt", "name": "Roosevelt", "run": "roosevelt-wrestler-1890s", "version": "web", "pose": "flex_and_wave", "at": [-2.6, 1.4], "on": "band riser", "faces": "ninja", "looks_at": [6.0, 1.5, 5.5]},
+  {"toon": "dancer", "name": "The dancer", "run": "flamenco-dancer", "version": "web", "pose": "at_the_microphone", "mark": "sitter", "faces": "ninja", "looks_at": "camera",
    "beside": [{"prop": "microphone", "offset": [0.22, 0.66]}]},
-  {"toon": "troll", "name": "The troll", "run": "cave-troll", "version": "lowpoly", "pose": "teacup", "at": [0.05, 2.75], "faces": "ninja", "looks_at": "camera",
+  {"toon": "troll", "name": "The troll", "run": "cave-troll", "version": "web", "pose": "teacup", "at": [0.05, 2.75], "faces": "ninja", "looks_at": "camera",
    "holds": [{"prop": "teacup", "hand": "right", "grip": "bottom"}]},
-  {"toon": "lizardkin", "name": "The lizardkin", "run": "lizardkin-warrior", "version": "lowpoly", "pose": "at_attention", "at": [-1.2, 2.6], "faces": "ninja", "looks_at": "camera",
+  {"toon": "lizardkin", "name": "The lizardkin", "run": "lizardkin-warrior", "version": "web", "pose": "at_attention", "at": [-1.2, 2.6], "faces": "ninja", "looks_at": "camera",
    "holds": [{"prop": "kettle", "hand": "right", "grip": "top"}]},
-  {"toon": "pirate", "name": "The pirate", "run": "stocky-pirate-deckhand", "version": "lowpoly", "pose": "tip_hat", "mark": "group_1", "faces": "ninja", "looks_at": "camera"},
-  {"toon": "villager", "name": "The villager", "run": "plain-young-villager", "version": "midpoly", "pose": "peek", "at": [-4.38, 2.95], "facing_deg": 20, "looks_at": "camera", "peeks": true}
+  {"toon": "pirate", "name": "The pirate", "run": "stocky-pirate-deckhand", "version": "web", "pose": "tip_hat", "mark": "group_1", "faces": "ninja", "looks_at": "camera"},
+  {"toon": "villager", "name": "The villager", "run": "plain-young-villager", "version": "web", "pose": "peek", "at": [-4.38, 2.95], "facing_deg": 20, "looks_at": "camera", "peeks": true}
  ],
  "free_props": [
   {"prop": "tripod", "under": "camera"}

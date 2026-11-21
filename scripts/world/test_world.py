@@ -68,8 +68,16 @@ def test_places():
         wrong, _ = standing.check(world_file.place_set(place))
         check("%s (the %s set) passes set-check" % (name, place["set"]), not wrong, wrong[:3])
     outlines = {name: world_file.outline_of(place) for name, place in world["places"].items()}
-    apart = [(a, b) for a in outlines for b in outlines if a < b and world["places"][a].get("inside") != b and world["places"][b].get("inside") != a and world_file.crosses(outlines[a], outlines[b])]
-    check("no two footprints overlap (the ring is inside the boxing house, by design)", not apart and world["places"]["ring"]["inside"] == "boxing-house", apart)
+    spots = world["places"]
+
+    def stacked(a, b):  # two floors of one building, like the ring (1.4 m) and the roof (6 m) of the boxing house
+        pa, pb = spots[a], spots[b]
+        return pa.get("inside") and pa.get("inside") == pb.get("inside") and abs(pa.get("lift_m", 0.0) - pb.get("lift_m", 0.0)) >= 2.0
+
+    apart = [(a, b) for a in outlines for b in outlines if a < b and spots[a].get("inside") != b and spots[b].get("inside") != a
+             and not stacked(a, b) and world_file.crosses(outlines[a], outlines[b])]
+    check("no two footprints overlap (the ring and the roof are inside the boxing house, by design)",
+          not apart and spots["ring"]["inside"] == "boxing-house", apart)
     check("the ring stands wholly inside the boxing house", world_file.within(outlines["ring"], outlines["boxing-house"]))
     grass, garden = outlines["grass"], outlines["boxing-house"]
     check("the beer garden is beside the grass: under a metre between them", 0.0 <= min(p[1] for p in grass) - max(p[1] for p in garden) < 1.0)

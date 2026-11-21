@@ -1129,8 +1129,8 @@ ground at true size, and the gallery shows it whole (README, "World").
 
 ### Dioramas: a moment on a base
 
-A diorama is one moment of the story, built from the real low-poly and
-mid-poly files and stood on a wooden base: the toys on the basement shelf,
+A diorama is one moment of the story, built from the real files (web
+versions, or mid and low poly) and stood on a wooden base: the toys on the basement shelf,
 where the portraits and comics are the world as the toons imagine it
 (README, "Dioramas"). The newest one opens the gallery's front page.
 
@@ -1161,9 +1161,20 @@ where the portraits and comics are the world as the toons imagine it
   held prop touching its holder away from the hand, anything over the edge
   of the base, and how much of each head shows from the first camera. A
   build with any of these wrong says so and exits 1.
-- **Keep it light.** One `.glb`, no skeletons, Draco, WebP at 512 px, no
-  bump or shine maps on the toons, under 2 MB and 60,000 triangles
-  (`diorama.BUDGET`); `python3 scripts/diorama/test_diorama.py` holds the
+- **A toon's `version` can be `web`**: the detailed mesh, which has no
+  skeleton. `build_diorama.py` binds it to the skeleton of the toon's
+  mid-poly file (or low-poly, if that is all there is) before posing:
+  nearest-surface weights from the rigged mesh, points in one place welded
+  (a web mesh is thousands of patches that only touch), eight rounds of
+  smoothing, four bones a point. Read the `bind` lines: worst edge, one in
+  a thousand, share over twice. Past 5x, or over 1% past twice, the toon is
+  built from its rigged version instead and the build says which. Slivers
+  under 2 mm are left out of the figures. To see a bind you doubt, put a
+  camera behind the cast (`at`/`aim`) and `just diorama-draft`.
+- **Keep it light.** One `.glb`, no skeletons, Draco, WebP, `paint_px`
+  1024 for web toons, color only unless `"maps": "all"`, under 6 MB and
+  320,000 triangles (`diorama.BUDGET`); the stills are taken before the
+  pictures are made small; `python3 scripts/diorama/test_diorama.py` holds the
   kept ones to it. Unlike the world's first view, a diorama is
   Draco-packed, so the page fetches the decoder (about 60 kB) once.
 - **A new diorama** gets the next `number`; the highest is the front page

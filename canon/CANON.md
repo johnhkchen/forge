@@ -102,7 +102,8 @@ the whole world.
 
 **Epoch 0, "The reset"**, is now:
 - Theodore's grass;
-- the boxing house, with the ring inside, a brew house and a beer garden;
+- the boxing house, with the ring inside, a flat roof you can climb onto, a brew
+  house and a beer garden;
 - the troll and lizardkin's settlement, with their stall;
 - the spawn spot, with the gachapon and the BUY HOUSE pedestal;
 - the ninja's stage, a short walk east of the spawn spot;
@@ -153,6 +154,7 @@ placed in the world like the other places.)
 |---|---|---|
 | Theodore's grass | Walks, races, outdoor boxing | built (Epoch 0) |
 | The boxing house | Bouts, a crowd, the bar | the 1890s wrestling ring, inside the painted hall |
+| The boxing house roof | The ninja's lookout before dawn | the rooftop set, on top of the hall |
 | The ninja's stage | Portraits; Meet the cast | the studio set |
 | The settlement | Two homes joined by a porch, a shared fire, and their stall | built (Epoch 0) |
 | The spawn spot | New toons land here; the gachapon; the BUY HOUSE pedestal | built (Epoch 0) |
@@ -183,7 +185,8 @@ politically.
 **Side stories** (not canon, kept for fun):
 
 - **First Light** (`comics/rooftop-ninja`): seen through the ninja's eyes, in
-  thought only, as he crosses the rooftops before dawn to catch the sunrise.
+  thought only, as he crosses the boxing house roof before dawn to catch the
+  sunrise. (The roof is canon; this particular morning isn't.)
 
 ## Not yet seen
 

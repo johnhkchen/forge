@@ -1821,7 +1821,7 @@ def build_diorama(ctx, plan, out, *flags):
 
 
 def test_diorama_build(ctx):
-    """Dioramas: the builder poses the cast from their runs and places everything on the base. Nobody is in anybody, feet are on the floor, props are in hands and on surfaces, every face shows from the front, and the one light .glb (Draco, WebP) opens again. A plan with two toons pushed together is refused."""
+    """Dioramas: the builder binds each toon's detailed web mesh to the skeleton of its rigged version (no edge pulled far), poses the cast and places everything on the base. Nobody is in anybody, feet are on the floor, props are in hands and on surfaces, every face shows from the front, and the one light .glb (Draco, WebP) opens again. A plan with two toons pushed together is refused."""
     diorama = test_diorama.diorama
     runs = os.path.dirname(ctx["troll"])
     name = diorama.shelf()[0]["name"]
@@ -1835,9 +1835,9 @@ def test_diorama_build(ctx):
     finished = record is not None and any("built, nothing wrong" in l for l in lines)
     check("the builder runs to the end", finished, "" if finished else tail)
     facts = test_diorama.built_checks(spec, record, out, name)
-    check("every toon comes from the version its plan names: mid poly is heavier than low poly",
-          min(t["triangles"] for t in record["toons"].values() if t["version"] == "midpoly") > max(t["triangles"] for t in record["toons"].values() if t["version"] == "lowpoly"),
-          {who: (t["version"], t["triangles"]) for who, t in record["toons"].items()})
+    check("every toon wears the version its plan names (web: the detailed mesh, over 10,000 triangles each)",
+          all(t["version"] == t["asked_for"] and (t["version"] != "web" or t["triangles"] > 10000) for t in record["toons"].values()),
+          {who: (t["asked_for"], t["version"], t["triangles"]) for who, t in record["toons"].items()})
     on_riser = [who for who, t in record["toons"].items() if t["floor_m"] > 0.01]
     check("whoever stands on something stands at its height (%s)" % ", ".join(on_riser), len(on_riser) == sum(1 for t in spec["toons"] if t.get("on")), on_riser)
     stills = [os.path.join(out, s[k]) for s in record["stills"] for k in ("picture", "small")]
