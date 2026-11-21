@@ -11,16 +11,19 @@ page tells it where he is (`window.forgeWalk`). What it shows:
            sheet and the walker's two files, under a megabyte
   start    the link drops Roosevelt where he lives, on Theodore's grass, with his still figure put away;
            everyone with a walk and a run is in the picker, and only Roosevelt can be picked
+  calm     the picture fills the screen and the page behind is put away; over it is one slim bar (who is
+           walking, and Done); a place's name and a line of the story come up and go again
   feet     W walks him, Shift runs him, and the body goes over the ground as fast as the clip says its feet
            do (within 10%), so the foot that is down hardly slides; standing still is a pose, not the T
   solid    he can't walk through a block (the troll's den), another toon (Lincoln) or off the world; a
            stage is stepped up onto
-  places   in a place its card shows, with who is there and "Open this place"; by the stall, the kettle's
+  places   on arriving, the place's name and who is there (a tap opens it); by the stall, the kettle's
            line from the story; by a toon, a hello
-  phone    the thumb stick walks him and, pushed to its edge, runs him; a tap on the ground walks him there
+  phone    a thumb on the lower half brings up the stick under it: it walks him and, pushed to its edge,
+           runs him; a tap on the ground walks him there
   stop     "Stop walking" puts everything back
 
---shots DIR also saves pictures, phone and desktop: walking on the grass, and at the settlement's stall.
+--shots DIR also saves pictures: on the grass, in the boxing house and at the stall; phone, phone in dark mode, desktop.
 RUNS_DIR (default: runs) must hold Roosevelt's run. `run(runs)` hands the same checks to scripts/test_tools.py.
 """
 
@@ -171,9 +174,19 @@ def walk_checks(page, world, runs):
     have = sorted(t["toon"] for t in world["toons"] if all(glob.glob(os.path.join(runs, "*-" + t["run"], "profiles", "lowpoly-%s.glb" % clip)) for clip in ("walk", "run")))
     check("the picker lists everyone with a walk and a run (%d toons), and only Roosevelt can be picked today" % len(have),
           sorted(a["toon"] for a in said["cast"]) == have and [a["toon"] for a in said["cast"] if a["ready"]] == ["roosevelt"], said["cast"])
-    check("the page says who is walking, and how to stop", page.value("document.querySelector('.walk-who').textContent").startswith("Walking as: Roosevelt") and page.value("document.querySelector('.walk-stop').textContent") == "Stop walking")
+    bar = json.loads(page.value("""JSON.stringify({ who: document.querySelector('.walk-who').textContent, whoSays: document.querySelector('.walk-who').getAttribute('aria-label'),
+        stop: document.querySelector('.walk-stop').textContent, stopSays: document.querySelector('.walk-stop').getAttribute('aria-label'),
+        buttons: [...document.querySelectorAll('.walk-panel button:not(.walk-option)')].length })"""))
+    check("one slim bar: who is walking (\"%s\") and \"%s\", and no other buttons" % (bar["who"], bar["stop"]),
+          bar["who"].startswith("Roosevelt") and bar["whoSays"].startswith("Walking as Roosevelt") and bar["stop"] == "Done" and bar["stopSays"] == "Stop walking" and bar["buttons"] == 2, bar)
+    full = json.loads(page.value("""(() => { const b = document.querySelector('.pane.walking').getBoundingClientRect(), shown = (q) => [...document.querySelectorAll(q)].filter((e) => getComputedStyle(e).visibility !== 'hidden' && e.getClientRects().length).length;
+        return JSON.stringify({ box: [b.left, b.top, b.width, b.height], screen: [innerWidth, innerHeight], page: shown('.masthead, .places, .timeline, .place-card, .lede, .walk-bar') }); })()"""))
+    check("the picture fills the screen (%d x %d), and the page behind it is put away" % tuple(full["screen"]), full["box"] == [0, 0] + full["screen"] and full["page"] == 0, full)
     check("his still figure is put away while he is out walking", page.value("window.forgeWalk.stillFigureShown()") is False)
-    check("the place card says where he is: %s" % world["places"][me["place"]]["label"], page.until("document.querySelector('.walk-card h3')?.textContent", 10) == world["places"][me["place"]]["label"])
+    check("the place's name comes up at the top: %s" % world["places"][me["place"]]["label"], page.until("document.querySelector('.walk-toast.on strong')?.textContent", 10) == world["places"][me["place"]]["label"])
+    page.until("!document.querySelector('.walk-toast.on') && !document.querySelector('.walk-hint.on')", 12)
+    check("and goes again, with the first hint: nothing stays on the picture but the bar",
+          page.until("[...document.querySelectorAll('.walk-toast, .walk-sub, .walk-hint, .walk-stick')].every((e) => getComputedStyle(e).opacity === '0')", 5))
     with open(os.path.join(glob.glob(os.path.join(runs, "*-" + me["run"]))[-1], "profiles", "lowpoly-walk.json")) as f:
         walk_speed = json.load(f)["walk"]["gait"]["speed_m_s"]
     with open(os.path.join(glob.glob(os.path.join(runs, "*-" + me["run"]))[-1], "profiles", "lowpoly-run.json")) as f:
@@ -244,8 +257,8 @@ def walk_checks(page, world, runs):
               met["path_m"] > 1.0 and upstairs == under["ceilings"] and under["camera"][1] < lift - 0.4 and under["y"] == 0, under)
         page.value("window.forgeWalk.put(%f, %f, %f, %f, 19.5)" % (met["x"], met["z"], toward, toward))
         time.sleep(0.6)
-    check("Lincoln says hello, and the card says he is in %s" % world["places"][him["place"]]["label"],
-          said["hello"] == "lincoln" and said["place"] == him["place"] and page.value("document.querySelector('.walk-card h3').textContent") == world["places"][him["place"]]["label"], said)
+    check("Lincoln says hello in a line at the bottom, and the name that came up was %s" % world["places"][him["place"]]["label"],
+          said["hello"] == "lincoln" and (said["said"] or "").startswith("Lincoln: ") and said["place"] == him["place"] and page.value("document.querySelector('.walk-toast strong').textContent") == world["places"][him["place"]]["label"], said)
     ground = world["ground"]
     edge = ground["center"][0] + ground["size_m"][0] / 2
     page.value("window.forgeWalk.put(%f, %f, 90)" % (edge - 2.0, ground["center"][1] + ground["size_m"][1] / 2 - 3.0))
@@ -267,13 +280,17 @@ def walk_checks(page, world, runs):
         customer = json.load(f)["marks"]["customer"]
     spot, _ = in_world(world, "settlement", *customer["at"])
     page.value("window.forgeWalk.put(%f, %f, %f)" % (spot[0], spot[1], world["places"]["settlement"].get("facing_deg", 0) + customer["facing_deg"]))
-    line = page.until("document.querySelector('.walk-line:not([hidden])')?.textContent", 10)
+    page.until("window.forgeWalk.state().line", 10)
     said = page.state()
     told = next(a for a in world["artifacts"] if a["name"] == said["line"])
-    check("in front of the stall, the story's line for what is on it: \"%s\"" % line, said["line"] in ("kettle", "bread") and told["about"] in line and told["title"] in line, said)
-    card = page.value("document.querySelector('.walk-card').innerText")
-    check("the card names the place, who is there, and opens it", world["places"]["settlement"]["label"] in card and "The troll" in card and "Open this place" in card
-          and page.value("document.querySelector('.walk-card a').getAttribute('href')") == "#/set/settlement", card)
+    # lines take turns (a hello may come first): watch until the thing's line has had its go
+    line = page.until("(window.walkLines = (window.walkLines || new Set()).add(document.querySelector('.walk-sub.on')?.textContent || ''), [...window.walkLines].find((t) => t.includes(%s)))" % json.dumps(told["about"]), 20)
+    check("in front of the stall, the story's line for what is on it: \"%s\"" % line, said["line"] in ("kettle", "bread") and told["title"] in line, said)
+    toast = json.loads(page.value("JSON.stringify({ text: document.querySelector('.walk-toast').textContent, href: document.querySelector('.walk-toast').getAttribute('href') })"))
+    check("the name that came up says the place and who is there, and a tap on it opens the place: \"%s\"" % toast["text"],
+          toast["text"].startswith(world["places"]["settlement"]["label"]) and "the troll" in toast["text"] and toast["href"] == "#/set/settlement", toast)
+    page.until("!document.querySelector('.walk-sub.on') && !document.querySelector('.walk-toast.on')", 20)
+    check("and after a few seconds the lines are gone again", True)
     page.until("window.forgeWorld && window.forgeWorld.settled", 20)
     return before
 
@@ -282,17 +299,20 @@ def phone_checks(page, world):
     print("  phone: the thumb stick and a tap on the ground")
     me = next(t for t in world["toons"] if t["toon"] == "roosevelt")
     start_walk(page, world["name"])
-    left, top, wide, tall = page.box(".walk-stick")
-    check("there is a thumb stick, big enough for a thumb (%d px)" % wide, wide >= 96 and tall >= 96)
-    cx, cy = left + wide / 2, top + tall / 2
+    left, top, wide, tall = page.box(".pane.walking canvas")
+    check("no thumb stick shows until a thumb lands", page.value("document.querySelectorAll('.walk-stick.on').length") == 0)
+    cx, cy = left + wide * 0.3, top + tall * 0.76     # a thumb, on the lower half of the picture
     page.touch("touchStart", cx, cy)
-    page.touch("touchMove", cx, cy - wide * 0.2)
+    page.touch("touchMove", cx, cy - 20)
     time.sleep(0.7)
+    stick = page.box(".walk-stick.on")
+    check("the stick appears where the thumb landed (%d px across)" % stick[2], abs(stick[0] + stick[2] / 2 - cx) < 3 and abs(stick[1] + stick[3] / 2 - cy) < 3 and 80 <= stick[2] <= 120, stick)
     gentle = page.record(1.5)
-    page.touch("touchMove", cx, cy - wide * 0.5)
+    page.touch("touchMove", cx, cy - 60)
     time.sleep(0.9)
     hard = page.record(1.5)
     page.touch("touchEnd")
+    check("and goes when the thumb lifts", page.value("document.querySelectorAll('.walk-stick.on').length") == 0)
     said = page.state()
     check("pushed a little he walks (%.2f m/s), pushed to the edge he runs (%.2f m/s), let go he stops" % (gentle["speed_m_s"], hard["speed_m_s"]),
           gentle["gait"] == "walk" and 0.4 < gentle["speed_m_s"] <= said["walk_speed"] * 1.05 and hard["gait"] == "run" and abs(hard["speed_m_s"] - said["run_speed"]) / said["run_speed"] <= WITHIN, [gentle, hard])
@@ -318,37 +338,38 @@ def phone_checks(page, world):
     page.touch("touchStart", left + wide / 2, top + tall / 2)
     page.touch("touchEnd")
     page.until("window.forgeWalk === null", 10)
-    back = json.loads(page.value("""JSON.stringify({ hash: location.hash, panel: Boolean(document.querySelector('.walk-panel')), button: document.querySelector('.walk-bar button').textContent })"""))
-    check("\"Stop walking\" takes the panel away and the page is the world view again", not back["panel"] and back["button"] == "Walk around" and back["hash"].startswith("#/world/%s" % world["name"]) and "walk" not in back["hash"], back)
+    back = json.loads(page.value("""JSON.stringify({ hash: location.hash, panel: Boolean(document.querySelector('.walk-panel')), button: document.querySelector('.walk-bar button').textContent,
+        full: document.documentElement.classList.contains('walk-full'), masthead: getComputedStyle(document.querySelector('.masthead')).visibility })"""))
+    check("\"Done\" takes the panel away and the page is the world view again", not back["panel"] and not back["full"] and back["masthead"] == "visible" and back["button"] == "Walk around"
+          and back["hash"].startswith("#/world/%s" % world["name"]) and "walk" not in back["hash"], back)
     return frames
 
 
 def take_shots(page, world, out):
-    """Pictures for a person to look at: walking on the grass, and at the settlement's stall, phone and desktop."""
+    """Pictures for a person to look at: on the grass, in the boxing house and at the settlement's stall; on a phone by day and in dark mode, and on a desktop."""
     with open(os.path.join(REPO, "sets", "settlement", "set.json")) as f:
         customer = json.load(f)["marks"]["customer"]
+    with open(os.path.join(REPO, "sets", "boxing-house", "set.json")) as f:
+        ringside = json.load(f)["marks"]["ringside"]
     stall, _ = in_world(world, "settlement", customer["at"][0] + 0.9, customer["at"][1] + 0.5)
-    taken = []
-    for size_name, size in (("phone", PHONE), ("desktop", DESKTOP)):
+    hall, _ = in_world(world, "boxing-house", ringside["at"][0], ringside["at"][1] + 2.4)
+    away = [world["ground"]["center"][0], world["ground"]["center"][1] + world["ground"]["size_m"][1] / 2 - 2.0]   # nowhere: so arriving is fresh
+    spots = [("grass", None), ("boxing-house", (hall[0], hall[1], 180, 180)), ("stall", (stall[0], stall[1], 200, 205))]
+    for size_name, size, theme in (("phone", PHONE, "light"), ("phone-dark", PHONE, "dark"), ("desktop", DESKTOP, "light")):
         page.size(*size)
+        page.tab.ask("Emulation.setEmulatedMedia", features=[{"name": "prefers-color-scheme", "value": theme}])
         start_walk(page, world["name"])
-        page.key("w", True)
-        time.sleep(2.2)
-        path = os.path.join(out, "grass-%s.png" % size_name)
-        page.picture(path)
-        page.key("w", False)
-        taken.append(path)
-        page.value("window.forgeWalk.put(%f, %f, 200, 205)" % tuple(stall))
-        page.until("Boolean(document.querySelector('.walk-line:not([hidden])'))", 10)
-        page.until("window.forgeWorld && window.forgeWorld.settled", 20)
-        time.sleep(1.2)
-        path = os.path.join(out, "stall-%s.png" % size_name)
-        page.picture(path)
-        taken.append(path)
-        frames = page.record(3.0)
-        print("    %s: %.0f frames a second at the stall" % (size_name, frames["fps"]))
-    for path in taken:
-        print("SHOT %s" % os.path.relpath(path, REPO))
+        for name, spot in spots:
+            if spot:
+                page.value("window.forgeWalk.put(%f, %f, 0, 0)" % tuple(away))
+                time.sleep(0.6)
+                page.value("window.forgeWalk.put(%f, %f, %f, %f)" % spot)
+            page.until("window.forgeWorld && window.forgeWorld.settled", 20)
+            time.sleep(1.4)   # the name of the place is up, and a line if there is one
+            path = os.path.join(out, "%s-%s.png" % (name, size_name))
+            page.picture(path)
+            print("SHOT %s" % os.path.relpath(path, REPO))
+    page.tab.ask("Emulation.setEmulatedMedia", features=[])
 
 
 def run(runs, port=None, shots_dir=None, gpu=False):

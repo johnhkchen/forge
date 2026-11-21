@@ -524,7 +524,7 @@ function worldPage(wantedEpoch, wantedPlace, wantedWalker) {
   async function walk(on) {
     if (on === state.walking) return;
     state.walking = on;
-    walkBar.hidden = on; // while walking, the one way out is "Stop walking" on the picture itself
+    walkBar.hidden = on; // while walking the picture fills the screen, and the one way out is "Done" on it
     walkNote.textContent = "Steer Roosevelt round the world yourself.";
     link();
     if (!on) {
@@ -533,7 +533,6 @@ function worldPage(wantedEpoch, wantedPlace, wantedWalker) {
       return choose(here); // the view from above, at the place you walked to
     }
     try {
-      stage.scrollIntoView({ block: "center", behavior: "smooth" });
       await walkAround(viewer, epoch, wantedWalker, {
         onStop: () => walk(false),
         onPlace: (name) => { state.place = name; chipEls.forEach((chip, i) => press(chip, chips[i][0] === name)); viewer?.arrive(name); showCard(); },
@@ -858,6 +857,7 @@ class WorldViewer extends Miniature {
       label.material.sizeAttenuation = false;
       label.scale.multiplyScalar(size);
       label.position.copy(at);
+      label.visible = !this.walkabout; // while walking, names show only close by (walkabout.js decides)
       inner.add(label);
       entry.extras.push(label);
       return label;
@@ -879,7 +879,6 @@ class WorldViewer extends Miniature {
       if (!mark || !body) continue;
       const tag = name(toon.name, body.position.clone().add(new THREE.Vector3(0, toon.toon === "troll" ? 3.0 : 2.15, 0)));
       tag.userData.toon = toon.toon; // whoever is out walking takes their name with them
-      tag.visible = this.walkabout?.who.toon !== toon.toon;
       for (const thing of this.epoch.artifacts.filter((a) => a.held_by === toon.toon && a.glb)) {
         waiting.push(this.get(thing.glb).then((gltf) => {
           const held = gltf.scene.clone(true);

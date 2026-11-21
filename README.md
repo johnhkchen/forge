@@ -289,13 +289,14 @@ Around them is the developer's plain grey floor, with a few grey one-metre cubes
 - at a place: who is there, which artifacts, and **Open this place** for its own page with marks, cameras and shots to play. **Marks** is off until you press it;
 - a timeline of epochs, with room for the next.
 
-**Walk around.** Press "Walk around" (or open `#/world/epoch-0/walk`) and you are Roosevelt, on Theodore's grass, seen from behind and a little above:
+**Walk around.** Press "Walk around" (or open `#/world/epoch-0/walk`) and you are Roosevelt, on Theodore's grass, seen from behind and a little above. The picture fills the screen and the page steps back; over it there is one slim bar, his name on the left and **Done** on the right.
 
 - on a keyboard, WASD or the arrow keys walk and Shift runs; drag to look round, scroll to come closer;
-- on a phone, push the thumb stick to walk and push it to its edge to run, or tap the ground to walk there; drag anywhere else to look round;
+- on a phone, put a thumb down on the lower half and drag: a stick appears under it, push to walk, push to its edge to run. Tap the ground to walk there; drag the upper half to look round;
 - the world is solid: walls, furniture, the ring and the other toons are in the way, and the camera never ends up behind a wall. The dancer's stage can be stepped up onto; the ring and the boxing house roof cannot yet (no steps to them);
-- walk into a place and a small card names it, says who is there and opens it. Come close to a toon and they say hello. Come close to the gachapon, the BUY HOUSE pedestal, the kettle, the bread, the ninja's camera or the dancer's microphone and the story's line about it shows;
-- "Stop walking" goes back to the view from above.
+- arriving at a place, its name and who is there come up at the top for a few seconds; tap that to open the place. Close to a toon, their name shows and they say hello in a line at the bottom. Close to the gachapon, the BUY HOUSE pedestal, the kettle, the bread, the ninja's camera or the dancer's microphone, the story's line about it comes up there too. One line at a time, and nothing stays;
+- it follows the phone's dark mode: ink with paper lettering, where by day it is paper with ink;
+- "Done" (or Esc) goes back to the view from above.
 
 His feet don't slide: the walk and run clips play on the spot and each says how fast it covers the ground (1.31 and 3.26 m/s for him), so the body is moved at exactly the clip's speed times how fast the clip is playing. Standing still is made in the page from the walk itself, with a slow breath. Nothing of this is fetched until you ask to walk: then one script, one style sheet and his two low-poly files, 0.66 MB. "Walking as: Roosevelt" opens a list of every toon that has a walk and a run; the others say "coming soon", and switching one on is adding its name to `READY` in `gallery/walkabout.js`. `just world-walk` tries all of it in a headless Chrome at phone size.
 

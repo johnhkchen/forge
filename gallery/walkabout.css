@@ -1,48 +1,81 @@
-/* Walking around the world (walkabout.js): what sits over the picture while you walk. Fetched with it. */
+/* Walking around the world (walkabout.js). Fetched with it.
+   The world first, the page barely there: the picture fills the screen, with one slim bar over it.
+   A place's name comes and goes at the top; a line of the story comes and goes at the bottom. */
 
-.pane.walking > .hint { display: none; }
-.pane.walking { cursor: grab; }
-.walk-panel { position: absolute; inset: 0; pointer-events: none; font-size: 0.9rem; }
-.walk-panel > * > * { pointer-events: auto; }
-
-.walk-top { position: absolute; inset: 10px 10px auto 10px; display: flex; gap: 8px; align-items: flex-start; justify-content: flex-end; }
-.walk-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; margin-left: auto; }
-.walk-pick { position: relative; }
-.walk-who { border: none; padding: 0.5em 0.9em; font: 0.88rem var(--clay-font-body); color: var(--clay-ink); cursor: pointer; white-space: nowrap; transition: var(--clay-press); }
-.walk-who[aria-expanded="true"] { box-shadow: var(--clay-shadow-pressed); }
-.walk-who .caret { margin-left: 0.4em; color: var(--clay-ink-soft); }
-.walk-stop { font-size: 0.88rem; padding: 0.5em 1em; white-space: nowrap; }
-
-.walk-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 2; min-width: 12.5rem; padding: 6px; display: grid; gap: 2px; }
-.walk-menu[hidden], .walk-card[hidden], .walk-line[hidden], .walk-status[hidden] { display: none; }
-.walk-option { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border: none; background: none; padding: 0.45em 0.7em; border-radius: var(--clay-radius-sm); font: 600 0.9rem var(--clay-font-body); color: var(--clay-ink); text-align: left; cursor: pointer; }
-.walk-option[aria-pressed="true"] { background: var(--clay-well); box-shadow: var(--clay-shadow-pressed); }
-.walk-option[disabled] { color: var(--clay-ink-soft); cursor: default; font-weight: 400; }
-.walk-option small { font-size: 0.78rem; color: var(--clay-ink-soft); }
-
-.walk-card { padding: 10px 14px 12px; max-width: min(17rem, 56%); margin-right: auto; }
-.walk-card h3 { margin: 0; font-size: 1.05rem; line-height: 1.2; }
-.walk-card p { margin: 3px 0 0; color: var(--clay-ink-soft); font-size: 0.86rem; line-height: 1.35; }
-.walk-card a.clay-button { display: inline-block; margin-top: 8px; padding: 0.4em 0.9em; font-size: 0.84rem; text-decoration: none; }
-
-.walk-status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 16px; color: var(--clay-ink-soft); }
-
-.walk-bottom { position: absolute; inset: auto 10px 10px 10px; display: flex; gap: 10px; align-items: flex-end; }
-.walk-line { margin: 0 0 0 auto; padding: 9px 14px; max-width: 26rem; line-height: 1.35; color: var(--clay-ink); }
-.walk-line em { color: var(--clay-ink-soft); }
-.walk-keys { margin: 0; padding: 5px 10px; border-radius: var(--clay-radius-pill); background: color-mix(in srgb, var(--clay-bg) 82%, transparent); color: var(--clay-ink-soft); font-size: 0.8rem; pointer-events: none !important; }
-.walk-keys kbd { display: inline-block; min-width: 1.5em; padding: 0 0.35em; margin: 0 1px; text-align: center; font: 600 0.74rem var(--clay-font-body); color: var(--clay-ink); background: var(--clay-surface-raised); border-radius: 0.35rem; box-shadow: var(--clay-shadow-raised); }
-
-/* The thumb stick: a well with a raised knob in it. Push to walk, push further to run (the knob turns blue). */
-.walk-stick { flex: none; position: relative; width: 124px; height: 124px; border-radius: 50%; background: color-mix(in srgb, var(--clay-well) 78%, transparent); box-shadow: var(--clay-shadow-pressed); touch-action: none; -webkit-user-select: none; user-select: none; }
-.walk-knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--clay-surface-raised); box-shadow: var(--clay-shadow-raised); transition: background 120ms var(--clay-ease); }
-.walk-knob.run { background: var(--clay-primary); }
-
-@media (max-width: 720px) {
-  .world-stage .pane.walking { aspect-ratio: 9 / 14; max-height: 82vh; } /* a taller picture to walk in */
-  .walk-top { flex-wrap: wrap-reverse; }
-  .walk-card { max-width: 13rem; padding: 8px 12px 10px; }
-  .walk-card h3 { font-size: 0.98rem; }
-  .walk-line { font-size: 0.84rem; padding: 8px 12px; }
+/* The page steps back while you walk (walkabout.js puts .walk-full on <html>). */
+html.walk-full, html.walk-full body { overflow: hidden; overscroll-behavior: none; }
+html.walk-full .masthead, html.walk-full .object > :not(.world-stage) { visibility: hidden; }
+html.walk-full .world-stage { box-shadow: none; }
+.world-stage .pane.walking {
+  position: fixed; inset: 0; z-index: 50;
+  width: 100vw; height: 100vh; height: 100dvh; max-height: none;
+  aspect-ratio: auto; border-radius: 0; cursor: grab;
 }
-@media (prefers-reduced-motion: reduce) { .walk-knob { transition: none; } }
+.pane.walking > .hint { display: none; }
+
+/* Everything over the picture is drawn in two tones taken from the clay kit: warm paper with ink on it by
+   day, ink with paper on it when the phone is in dark mode. See-through, so the world shows behind. */
+.walk-panel {
+  --walk-paper: color-mix(in srgb, var(--clay-bg) 80%, transparent);
+  --walk-solid: color-mix(in srgb, var(--clay-bg) 95%, transparent);
+  --walk-ink: var(--clay-ink);
+  --walk-soft: var(--clay-ink-soft);
+  --walk-shade: 0 2px 10px color-mix(in srgb, var(--clay-ink) 14%, transparent);
+  position: absolute; inset: 0; pointer-events: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  font: 0.84rem/1.35 var(--clay-font-body); color: var(--walk-ink);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+@media (prefers-color-scheme: dark) {
+  .walk-panel {
+    --walk-paper: color-mix(in srgb, var(--clay-ink) 74%, transparent);
+    --walk-solid: color-mix(in srgb, var(--clay-ink) 94%, transparent);
+    --walk-ink: var(--clay-bg);
+    --walk-soft: color-mix(in srgb, var(--clay-bg) 68%, transparent);
+    --walk-shade: 0 2px 10px color-mix(in srgb, var(--clay-ink) 40%, transparent);
+  }
+}
+
+/* The one bar: who you are (left), Done (right). */
+.walk-top { position: relative; display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px 0; }
+.walk-top > * { pointer-events: auto; }
+.walk-pick { position: relative; }
+.walk-who, .walk-stop {
+  border: none; border-radius: var(--clay-radius-pill); padding: 0.42em 0.9em; min-height: 32px;
+  background: var(--walk-paper); color: var(--walk-ink); box-shadow: var(--walk-shade);
+  font: 600 0.84rem var(--clay-font-body); cursor: pointer; white-space: nowrap;
+  transition: transform 130ms var(--clay-ease), background 130ms var(--clay-ease);
+}
+.walk-who:active, .walk-stop:active, .walk-who[aria-expanded="true"] { transform: translateY(1px); background: var(--walk-solid); }
+.walk-who:focus-visible, .walk-stop:focus-visible, .walk-toast:focus-visible { outline: 2px solid var(--clay-primary); outline-offset: 2px; }
+.walk-who .caret { margin-left: 0.4em; color: var(--walk-soft); font-size: 0.8em; }
+.walk-menu { position: absolute; left: 0; top: calc(100% + 6px); z-index: 2; min-width: 12rem; padding: 5px; display: grid; gap: 1px; border-radius: var(--clay-radius); background: var(--walk-solid); box-shadow: var(--walk-shade); }
+.walk-menu[hidden], .walk-status[hidden] { display: none; }
+.walk-option { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border: none; background: none; padding: 0.45em 0.7em; border-radius: var(--clay-radius-sm); font: 600 0.86rem var(--clay-font-body); color: var(--walk-ink); text-align: left; cursor: pointer; }
+.walk-option[aria-pressed="true"] { background: color-mix(in srgb, var(--walk-ink) 10%, transparent); }
+.walk-option[disabled] { color: var(--walk-soft); cursor: default; font-weight: 400; }
+.walk-option small { font-size: 0.76rem; color: var(--walk-soft); }
+
+/* What comes and goes: a place's name (top), a line of the story or a hello (bottom), the first hint. */
+.walk-toast, .walk-sub, .walk-hint {
+  position: absolute; left: 50%; margin: 0; max-width: min(calc(100% - 28px), 30rem); width: max-content;
+  border-radius: var(--clay-radius-pill); background: var(--walk-paper); color: var(--walk-ink); box-shadow: var(--walk-shade);
+  opacity: 0; transform: translate(-50%, 4px); transition: opacity 320ms var(--clay-ease), transform 320ms var(--clay-ease);
+  text-align: center; text-decoration: none;
+}
+.walk-toast.on, .walk-sub.on, .walk-hint.on { opacity: 1; transform: translate(-50%, 0); }
+.walk-toast { top: calc(env(safe-area-inset-top) + 52px); padding: 0.4em 1em; color: var(--walk-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.walk-toast strong { color: var(--walk-ink); }
+.walk-toast.on { pointer-events: auto; cursor: pointer; }
+.walk-sub { bottom: calc(env(safe-area-inset-bottom) + 22px); padding: 0.5em 1.1em; border-radius: var(--clay-radius); }
+.walk-hint { bottom: calc(env(safe-area-inset-bottom) + 22px); padding: 0.4em 1em; color: var(--walk-soft); font-size: 0.8rem; }
+.walk-sub.on ~ .walk-hint, .walk-hint:has(~ .walk-sub.on) { opacity: 0; }
+.walk-status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 0.45em 1em; border-radius: var(--clay-radius-pill); background: var(--walk-paper); color: var(--walk-soft); }
+
+/* The thumb stick: it appears where the thumb lands, and goes when the thumb lifts. The knob turns blue for a run. */
+.walk-stick { position: absolute; width: 104px; height: 104px; margin: -52px 0 0 -52px; border-radius: 50%; background: color-mix(in srgb, var(--walk-paper) 55%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--walk-ink) 16%, transparent); opacity: 0; transition: opacity 140ms var(--clay-ease); }
+.walk-stick.on { opacity: 1; }
+.walk-knob { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: var(--walk-paper); box-shadow: var(--walk-shade); transition: background 120ms var(--clay-ease); }
+.walk-knob.run { background: color-mix(in srgb, var(--clay-primary) 85%, transparent); }
+
+@media (prefers-reduced-motion: reduce) { .walk-toast, .walk-sub, .walk-hint, .walk-stick, .walk-knob { transition: none; } }

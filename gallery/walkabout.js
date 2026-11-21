@@ -26,7 +26,9 @@ const DEAD = 0.14;          // stick: closer to the middle than this is "not pus
 const RUN_AT = 0.86;        // stick: pushed further than this is a run
 const SPEED_UP = 6.0, SLOW_DOWN = 9.0; // m/s per second
 const TURN = 11.0;          // how quickly the body turns to face the way it is going (1/s)
-const NEAR_TOON = 3.0, NEAR_THING = 2.7, NEAR_PLACE = 6.0; // m
+const NEAR_TOON = 3.0, NEAR_THING = 2.7, NEAR_PLACE = 6.0, NEAR_NAME = 7.0; // m
+const STICK_REACH = 46;     // px from where the thumb landed to the stick's edge
+const TOAST_S = 3.2, LINE_S = 4.2, HINT_S = 5.5; // how long a place's name, a line of the story and the first hint stay up
 const STEP_UP = 0.3;        // a floor raised by less than this can be stepped onto
 const CAMERA = { fov: 46, near: 0.12, distance: 5.4, pitch: 0.34, low: 0.06, high: 1.25, closest: 1.0, furthest: 14 };
 
@@ -232,7 +234,6 @@ export class Walkabout {
     this.clock = 0;
     this.frames = 0;
     this.fps = 0;
-    this.says = {};            // toon -> its hello label
     this.undo = [];            // what to take back when walking stops
   }
 
@@ -272,6 +273,7 @@ export class Walkabout {
     viewer.camera.updateProjectionMatrix();
     this.bind();
     this.loadMs = performance.now() - before;
+    this.hint(this.touch ? "Drag to walk · tap the ground to go there" : "WASD or arrows to walk · Shift to run · drag to look");
     this.publish();
     this.last = performance.now();
     this.tick = this.tick.bind(this);
@@ -326,7 +328,6 @@ export class Walkabout {
       const body = entry?.[`toon:${toon.toon}`];
       if (!body) continue;
       body.visible = toon.toon !== this.who.toon;
-      for (const o of entry.extras) if (o.userData.toon) o.visible = o.userData.toon !== this.who.toon && entry.name === this.viewer.at; // and their name goes with them
       if (!body.visible) continue;
       const box = new THREE.Box3().setFromObject(body), size = box.getSize(new THREE.Vector3());
       const at = body.getWorldPosition(new THREE.Vector3());
@@ -413,18 +414,25 @@ export class Walkabout {
       if (e.code === "Escape") return this.onStop?.();
       if (!KEYS[e.code]) return;
       this.keys.add(KEYS[e.code]);
+      this.hint(null);
       if (KEYS[e.code] !== "run") e.preventDefault(); // the arrows would scroll the page
     });
     this.listen(window, "keyup", (e) => this.keys.delete(KEYS[e.code]));
     this.listen(window, "blur", () => this.keys.clear());
 
-    // On the picture itself: a tap on the ground walks there, a drag turns the camera, two fingers or the wheel come closer.
+    // On the picture itself. A tap on the ground walks there. A finger that lands on the lower half and drags is
+    // the thumb stick: it appears under the thumb and goes when the thumb lifts. Any other drag turns the camera
+    // (a mouse always does). Two fingers, or the wheel, come closer.
     const fingers = new Map();
     let spread = 0;
+    const others = () => [...fingers.values()].filter((f) => !f.stick);
     this.listen(canvas, "pointerdown", (e) => {
-      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), moved: false });
+      const box = canvas.getBoundingClientRect();
+      const stick = e.pointerType !== "mouse" && e.clientY > box.top + box.height / 2 && ![...fingers.values()].some((f) => f.stick);
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), moved: false, stick });
       canvas.setPointerCapture?.(e.pointerId);
       spread = 0;
+      this.closeMenu();
     });
     this.listen(canvas, "pointermove", (e) => {
       const f = fingers.get(e.pointerId);
@@ -433,12 +441,14 @@ export class Walkabout {
       f.x = e.clientX;
       f.y = e.clientY;
       if (Math.hypot(f.x - f.x0, f.y - f.y0) > 8) f.moved = true;
-      if (fingers.size === 1 && f.moved) {
+      if (f.stick) {
+        if (f.moved) this.showStick(f.x0, f.y0, f.x - f.x0, f.y - f.y0);
+      } else if (others().length === 1 && f.moved) {
         this.look.yaw -= dx * 0.0065;
         this.look.pitch = clamp(this.look.pitch + dy * 0.0045, CAMERA.low, CAMERA.high);
         this.look.held = this.clock + 2.5; // leave the camera where it was put for a moment
-      } else if (fingers.size === 2) {
-        const [a, b] = [...fingers.values()], now = Math.hypot(a.x - b.x, a.y - b.y);
+      } else if (others().length === 2) {
+        const [a, b] = others(), now = Math.hypot(a.x - b.x, a.y - b.y);
         if (spread) this.look.distance = clamp(this.look.distance * (spread / now), CAMERA.closest + 1, CAMERA.furthest);
         spread = now;
         a.moved = b.moved = true;
@@ -448,6 +458,7 @@ export class Walkabout {
       const f = fingers.get(e.pointerId);
       fingers.delete(e.pointerId);
       spread = 0;
+      if (f?.stick) this.hideStick();
       if (f && !f.moved && e.type === "pointerup" && performance.now() - f.t < 450) this.tap(e.clientX, e.clientY);
     };
     this.listen(canvas, "pointerup", lift);
@@ -456,6 +467,27 @@ export class Walkabout {
       e.preventDefault();
       this.look.distance = clamp(this.look.distance * Math.exp(e.deltaY * 0.0012), CAMERA.closest + 1, CAMERA.furthest);
     }, { passive: false });
+  }
+
+  // The thumb stick, where the thumb landed: push to walk, push to its edge to run.
+  showStick(x0, y0, dx, dy) {
+    const box = this.panel.getBoundingClientRect(), far = Math.hypot(dx, dy);
+    if (far > STICK_REACH) { dx *= STICK_REACH / far; dy *= STICK_REACH / far; }
+    this.stick.x = dx / STICK_REACH;
+    this.stick.y = -dy / STICK_REACH;
+    this.stickEl.style.left = `${x0 - box.left}px`;
+    this.stickEl.style.top = `${y0 - box.top}px`;
+    this.stickEl.classList.add("on");
+    this.knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    this.knob.classList.toggle("run", Math.hypot(this.stick.x, this.stick.y) >= RUN_AT);
+    this.hint(null);
+  }
+
+  hideStick() {
+    this.stick.x = this.stick.y = 0;
+    this.stickEl.classList.remove("on");
+    this.knob.style.transform = "";
+    this.knob.classList.remove("run");
   }
 
   // A tap on the ground: walk there, in a straight line, sliding round what is in the way.
@@ -637,21 +669,26 @@ export class Walkabout {
       this.showPlace(inside);
       this.onPlace?.(this.place);
     }
-    let said = null;
-    for (const o of this.others) {
-      const near = Math.hypot(o.x - this.pos.x, o.z - this.pos.z) < NEAR_TOON + o.r;
-      if (near) said = o.toon.toon;
-      if (near && !this.says[o.toon.toon]) {
-        const label = this.labelSprite(HELLO[o.toon.toon] || "Hello!");
-        label.material.sizeAttenuation = false;
-        label.scale.multiplyScalar(0.026);
-        label.position.copy(o.body.position).add(new THREE.Vector3(0, o.tall + 0.72, 0));
-        o.entry.inner.add(label);
-        this.says[o.toon.toon] = label;
+    // Names: only the toons a few metres off, and small. What a thing is called comes as a line when you reach it.
+    for (const entry of Object.values(viewer.places)) {
+      for (const tag of entry.extras) {
+        const who = tag.userData.toon && this.others.find((o) => o.toon.toon === tag.userData.toon);
+        tag.visible = Boolean(who) && Math.hypot(who.x - this.pos.x, who.z - this.pos.z) < NEAR_NAME;
+        if (who && !tag.userData.full) { // small and a little faint while walking; put back when it stops
+          tag.userData.full = tag.scale.clone();
+          tag.scale.multiplyScalar(0.7);
+          tag.material.transparent = true;
+          tag.material.opacity = 0.82;
+        }
       }
-      if (this.says[o.toon.toon]) this.says[o.toon.toon].visible = near;
     }
-    this.hello = said;
+    let said = null;
+    for (const o of this.others) if (Math.hypot(o.x - this.pos.x, o.z - this.pos.z) < NEAR_TOON + o.r) said = o.toon;
+    if ((said?.toon || null) !== this.hello) {
+      if (this.hello) this.unsay(`hello:${this.hello}`); // walked away: their line goes with them
+      this.hello = said?.toon || null;
+      if (said) this.say(`hello:${said.toon}`, this.h("strong", {}, `${said.name}: `), HELLO[said.toon] || "Hello!");
+    }
     let nearest = null, best = NEAR_THING;
     for (const spot of this.things) {
       const who = spot.holder && this.others.find((o) => o.toon.toon === spot.holder);
@@ -661,76 +698,75 @@ export class Walkabout {
       if (far < best) { best = far; nearest = spot.thing; }
     }
     if ((nearest?.name || null) !== this.line) {
+      if (this.line) this.unsay(`thing:${this.line}`);
       this.line = nearest?.name || null;
-      this.showLine(nearest);
+      if (nearest) this.say(`thing:${nearest.name}`, this.h("strong", {}, `${nearest.title}. `), nearest.about);
     }
   }
 
   // ----- what is on the picture -----
+  // As little as possible: the picture fills the screen, with one slim bar (who you are, and Done). A place's
+  // name comes and goes at the top; a line of the story or a hello comes and goes at the bottom, one at a time.
 
   buildPanel() {
-    const { h } = this, pane = this.viewer.el;
-    const touch = matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0 || innerWidth <= 720;
+    const { h } = this, pane = this.viewer.el, page = document.documentElement;
+    this.touch = matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+    this.scrolled = window.scrollY;
+    page.classList.add("walk-full"); // the page steps back: walkabout.css hides it and gives the picture the whole screen
     pane.classList.add("walking");
     this.nameEl = h("strong", {}, this.who.name);
-    this.menu = h("div", { class: "walk-menu clay-surface", hidden: true });
-    const whoBtn = h("button", { class: "walk-who clay-chip", type: "button", "aria-haspopup": "true", "aria-expanded": "false", onclick: () => {
+    this.menu = h("div", { class: "walk-menu", hidden: true });
+    this.whoBtn = h("button", { class: "walk-who", type: "button", "aria-haspopup": "true", "aria-expanded": "false", "aria-label": `Walking as ${this.who.name}. Choose who walks`, onclick: () => {
       this.menu.hidden = !this.menu.hidden;
-      whoBtn.setAttribute("aria-expanded", String(!this.menu.hidden));
-    } }, "Walking as: ", this.nameEl, h("span", { class: "caret", "aria-hidden": "true" }, "▾"));
-    this.card = h("div", { class: "walk-card clay-surface", hidden: true });
-    this.lineEl = h("p", { class: "walk-line clay-surface", hidden: true, role: "status" });
-    this.statusEl = h("div", { class: "walk-status clay-surface", hidden: true });
+      this.whoBtn.setAttribute("aria-expanded", String(!this.menu.hidden));
+    } }, this.nameEl, h("span", { class: "caret", "aria-hidden": "true" }, "▾"));
+    this.toast = h("a", { class: "walk-toast", role: "status" });
+    this.lineEl = h("p", { class: "walk-sub", role: "status" });
+    this.hintEl = h("p", { class: "walk-hint" });
+    this.statusEl = h("div", { class: "walk-status", hidden: true });
     this.knob = h("div", { class: "walk-knob" });
-    this.stickEl = h("div", { class: "walk-stick", role: "application", "aria-label": "Thumb stick: push to walk, push further to run" }, this.knob);
-    this.panel = h("div", { class: `walk-panel${touch ? " touch" : ""}` },
+    this.stickEl = h("div", { class: "walk-stick", "aria-hidden": "true" }, this.knob);
+    this.panel = h("div", { class: "walk-panel" },
       h("div", { class: "walk-top" },
-        this.card,
-        h("div", { class: "walk-tools" },
-          h("div", { class: "walk-pick" }, whoBtn, this.menu),
-          h("button", { class: "walk-stop clay-button", type: "button", onclick: () => this.onStop?.() }, "Stop walking"),
-        ),
+        h("div", { class: "walk-pick" }, this.whoBtn, this.menu),
+        h("button", { class: "walk-stop", type: "button", "aria-label": "Stop walking", onclick: () => this.onStop?.() }, "Done"),
       ),
-      this.statusEl,
-      h("div", { class: "walk-bottom" },
-        touch ? this.stickEl : h("p", { class: "walk-keys" }, h("kbd", {}, "W"), h("kbd", {}, "A"), h("kbd", {}, "S"), h("kbd", {}, "D"), " or the arrows to walk · ", h("kbd", {}, "Shift"), " to run · drag to look round · click the ground to walk there"),
-        this.lineEl,
-      ),
+      this.toast, this.statusEl, this.stickEl, this.hintEl, this.lineEl,
     );
     pane.append(this.panel);
-    this.undo.push(() => { this.panel.remove(); pane.classList.remove("walking"); });
-    if (!touch) return;
-    // The thumb stick: push to walk, push further to run.
-    let held = null;
-    const set = (e) => {
-      const box = this.stickEl.getBoundingClientRect(), reach = box.width / 2 - 22;
-      let x = e.clientX - (box.left + box.width / 2), y = e.clientY - (box.top + box.height / 2);
-      const far = Math.hypot(x, y);
-      if (far > reach) { x *= reach / far; y *= reach / far; }
-      this.stick.x = x / reach;
-      this.stick.y = -y / reach;
-      this.knob.style.transform = `translate(${x}px, ${y}px)`;
-      this.knob.classList.toggle("run", Math.hypot(this.stick.x, this.stick.y) >= RUN_AT);
-    };
-    const let_go = (e) => {
-      if (e.pointerId !== held) return;
-      held = null;
-      this.stick.x = this.stick.y = 0;
-      this.knob.style.transform = "";
-      this.knob.classList.remove("run");
-    };
-    this.listen(this.stickEl, "pointerdown", (e) => { held = e.pointerId; this.stickEl.setPointerCapture?.(e.pointerId); set(e); e.preventDefault(); });
-    this.listen(this.stickEl, "pointermove", (e) => { if (e.pointerId === held) set(e); });
-    this.listen(this.stickEl, "pointerup", let_go);
-    this.listen(this.stickEl, "pointercancel", let_go);
+    this.lines = [];
+    this.undo.push(() => {
+      clearTimeout(this.toastTimer);
+      clearTimeout(this.lineTimer);
+      clearTimeout(this.hintTimer);
+      this.panel.remove();
+      pane.classList.remove("walking");
+      page.classList.remove("walk-full");
+      window.scrollTo(0, this.scrolled);
+    });
+  }
+
+  // The first few seconds only: how to move. It goes as soon as you do.
+  hint(text) {
+    clearTimeout(this.hintTimer);
+    this.hintEl.classList.toggle("on", Boolean(text));
+    if (!text) return;
+    this.hintEl.textContent = text;
+    this.hintTimer = setTimeout(() => this.hint(null), HINT_S * 1000);
+  }
+
+  closeMenu() {
+    this.menu.hidden = true;
+    this.whoBtn.setAttribute("aria-expanded", "false");
   }
 
   // The picker: everyone who has a walk and a run. Today only the READY ones can be chosen.
   fillMenu() {
     const { h } = this;
+    this.whoBtn.setAttribute("aria-label", `Walking as ${this.who.name}. Choose who walks`);
     this.menu.replaceChildren(...this.cast.map((a) => h("button", {
       class: "walk-option", type: "button", disabled: !a.ready, "aria-pressed": String(a === this.who),
-      onclick: () => { this.menu.hidden = true; if (a !== this.who) this.become(a).catch((err) => { console.error(err); this.status("Couldn't fetch them."); }); },
+      onclick: () => { this.closeMenu(); if (a !== this.who) this.become(a).catch((err) => { console.error(err); this.status("Couldn't fetch them."); }); },
     }, a.name, a.ready ? null : h("small", {}, "coming soon"))));
   }
 
@@ -739,21 +775,47 @@ export class Walkabout {
     this.statusEl.textContent = text || "";
   }
 
+  // Arriving at a place: its name and who is there, at the top, for a few seconds. A tap on it opens the place.
   showPlace(entry) {
-    const { h } = this;
-    this.card.hidden = !entry;
+    clearTimeout(this.toastTimer);
+    this.toast.classList.remove("on");
     if (!entry) return;
-    const here = this.epoch.toons.filter((t) => t.toon !== this.who.toon && (t.place === entry.name || this.epoch.places[t.place]?.inside === entry.name)).map((t) => t.name);
-    this.card.replaceChildren(
-      h("h3", {}, entry.place.label || entry.set.title || entry.name),
-      h("p", {}, here.length ? `Here now: ${here.join(", ")}, and you.` : "Just you here for now."),
-      h("a", { class: "clay-button", href: `#/set/${encodeURIComponent(entry.place.set)}` }, "Open this place"),
-    );
+    const here = this.epoch.toons.filter((t) => t.toon !== this.who.toon && (t.place === entry.name || this.epoch.places[t.place]?.inside === entry.name))
+      .map((t) => t.name.replace(/^The /, "the "));
+    this.toast.replaceChildren(this.h("strong", {}, entry.place.label || entry.set.title || entry.name), here.length ? ` · ${here.join(", ")}` : "");
+    this.toast.href = `#/set/${encodeURIComponent(entry.place.set)}`;
+    this.toast.setAttribute("aria-label", `${entry.place.label || entry.name}. Open this place`);
+    this.toast.classList.add("on");
+    this.toastTimer = setTimeout(() => this.toast.classList.remove("on"), TOAST_S * 1000);
   }
 
-  showLine(thing) {
-    this.lineEl.hidden = !thing;
-    if (thing) this.lineEl.replaceChildren(this.h("strong", {}, `${thing.title}. `), thing.about, thing.whose ? this.h("em", {}, ` ${thing.whose}.`) : "");
+  // A line at the bottom: a hello, or what the story says about a thing. One at a time; the next waits its turn.
+  say(key, ...words) {
+    if (this.saying === key || this.lines.some((l) => l.key === key)) return;
+    this.lines.push({ key, words });
+    if (!this.saying) this.nextLine();
+  }
+
+  // Whoever or whatever said it is behind you now: the line goes, and the next has its turn.
+  unsay(key) {
+    this.lines = this.lines.filter((l) => l.key !== key);
+    if (this.saying !== key) return;
+    clearTimeout(this.lineTimer);
+    this.lineEl.classList.remove("on");
+    this.lineTimer = setTimeout(() => this.nextLine(), 350);
+  }
+
+  nextLine() {
+    const line = this.lines.shift();
+    this.saying = line?.key || null;
+    this.lineEl.classList.toggle("on", Boolean(line));
+    if (!line) return;
+    this.lineEl.replaceChildren(...line.words);
+    this.said = this.lineEl.textContent;
+    this.lineTimer = setTimeout(() => {
+      this.lineEl.classList.remove("on");
+      this.lineTimer = setTimeout(() => this.nextLine(), 350); // let it fade before the next
+    }, LINE_S * 1000);
   }
 
   // ----- for whoever is checking from outside (scripts/world/test_walkabout.py) -----
@@ -765,7 +827,7 @@ export class Walkabout {
       state() {
         return {
           who: walk.who.toon, x: walk.pos.x, y: walk.pos.y, z: walk.pos.z, heading_deg: THREE.MathUtils.radToDeg(walk.heading), speed: walk.speed, gait: walk.gait,
-          place: walk.place || null, line: walk.line || null, hello: walk.hello || null, touching: walk.touching || null,
+          place: walk.place || null, line: walk.line || null, hello: walk.hello || null, touching: walk.touching || null, said: walk.said || null,
           body_r: walk.bodyR, walk_speed: walk.who.walkSpeed, run_speed: walk.who.runSpeed, fps: walk.fps, frames: walk.frames, extra: walk.loaded, load_ms: walk.loadMs,
           camera: walk.viewer.camera.position.toArray(), walking_to: walk.goal ? [walk.goal.x, walk.goal.z] : null,
           solids: walk.solids.length, floors: walk.floors.length, ceilings: walk.ceilings.map((c) => c.name), cast: walk.cast.map((a) => ({ toon: a.toon, ready: a.ready })),
@@ -844,7 +906,7 @@ export class Walkabout {
     this.undo.forEach((fn) => fn());
     this.leave();
     if (this.pin) viewer.scene.remove(this.pin);
-    for (const label of Object.values(this.says)) label.removeFromParent();
+    for (const entry of Object.values(viewer.places)) for (const tag of entry.extras) if (tag.userData.full) { tag.scale.copy(tag.userData.full); tag.material.opacity = 1; delete tag.userData.full; }
     for (const toon of this.epoch.toons) { const body = viewer.places[toon.place]?.[`toon:${toon.toon}`]; if (body) body.visible = true; }
     if (this.was) { viewer.camera.fov = this.was.fov; viewer.camera.near = this.was.near; viewer.camera.updateProjectionMatrix(); }
     viewer.controls.enabled = true;
