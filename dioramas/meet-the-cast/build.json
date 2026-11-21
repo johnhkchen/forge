@@ -1,0 +1,325 @@
+{
+ "format": "forge-diorama-build/1",
+ "name": "meet-the-cast",
+ "plinth": {
+  "across_m": 7.49,
+  "deep_m": 7.09,
+  "tall_m": 0.85,
+  "plate": [
+   "Meet the cast",
+   "Epoch 0 \u00b7 The reset"
+  ],
+  "toy": "1:12, so 62 cm across on the shelf"
+ },
+ "cameras": {
+  "front": {
+   "at": [
+    4.812,
+    6.157,
+    18.618
+   ],
+   "aim": [
+    -2.175,
+    0.906,
+    2.925
+   ],
+   "lens_mm": 50.0,
+   "holds_m": 12.93,
+   "about": "From the front of the shelf"
+  },
+  "over_his_shoulder": {
+   "at": [
+    -4.363,
+    3.127,
+    14.294
+   ],
+   "aim": [
+    -2.006,
+    1.331,
+    3.202
+   ],
+   "lens_mm": 60.0,
+   "holds_m": 6.89,
+   "about": "Over the ninja's shoulder"
+  },
+  "the_cast": {
+   "at": [
+    5.547,
+    2.989,
+    13.513
+   ],
+   "aim": [
+    -2.006,
+    1.331,
+    2.316
+   ],
+   "lens_mm": 75.0,
+   "holds_m": 6.53,
+   "about": "The cast, close"
+  },
+  "roosevelt": {
+   "at": [
+    4.024,
+    2.694,
+    10.762
+   ],
+   "aim": [
+    -2.841,
+    1.127,
+    1.976
+   ],
+   "lens_mm": 85.0,
+   "holds_m": 4.77,
+   "about": "Roosevelt, waving at somebody else"
+  }
+ },
+ "measured": {
+  "touching": {
+   "camera + ninja": "at the hand (within 11 cm of it)",
+   "kettle + lizardkin": "at the hand (within 9 cm of it)",
+   "teacup + troll": "at the hand (within 22 cm of it)"
+  },
+  "feet_off_floor_cm": {
+   "dancer": 0.0,
+   "lincoln": 0.0,
+   "lizardkin": 0.0,
+   "ninja": 0.0,
+   "pirate": 0.0,
+   "roosevelt": 0.0,
+   "troll": 0.0,
+   "villager": 0.0
+  },
+  "hand_to_prop_cm": {
+   "ninja holds camera": 0.0,
+   "troll holds teacup": 0.0,
+   "lizardkin holds kettle": 0.0
+  },
+  "prop_off_surface_cm": {
+   "microphone": 0.0,
+   "tripod": 0.53,
+   "camera on tripod": 0.0
+  },
+  "seen_from_front": {
+   "dancer": 1.0,
+   "lincoln": 1.0,
+   "lizardkin": 1.0,
+   "ninja": 1.0,
+   "pirate": 1.0,
+   "roosevelt": 1.0,
+   "troll": 1.0,
+   "villager": 0.89
+  }
+ },
+ "problems": [],
+ "toons": {
+  "ninja": {
+   "version": "midpoly",
+   "pose": {
+    "pose": "shutter"
+   },
+   "at": [
+    -2.2,
+    5.2
+   ],
+   "floor_m": 0.0,
+   "facing_deg": 180.0,
+   "triangles": 4391
+  },
+  "lincoln": {
+   "version": "midpoly",
+   "pose": {
+    "pose": "tall_and_proper"
+   },
+   "at": [
+    -3.65,
+    1.4
+   ],
+   "floor_m": 0.3,
+   "facing_deg": 20.9,
+   "triangles": 6684
+  },
+  "roosevelt": {
+   "version": "midpoly",
+   "pose": {
+    "pose": "flex_and_wave"
+   },
+   "at": [
+    -2.6,
+    1.4
+   ],
+   "floor_m": 0.3,
+   "facing_deg": 6.0,
+   "triangles": 5390
+  },
+  "dancer": {
+   "version": "midpoly",
+   "pose": {
+    "pose": "at_the_microphone"
+   },
+   "at": [
+    -2.2,
+    2.5
+   ],
+   "floor_m": 0.0,
+   "facing_deg": 0.0,
+   "triangles": 4381
+  },
+  "troll": {
+   "version": "lowpoly",
+   "pose": {
+    "pose": "teacup"
+   },
+   "at": [
+    0.05,
+    2.75
+   ],
+   "floor_m": 0.0,
+   "facing_deg": -42.6,
+   "triangles": 1254
+  },
+  "lizardkin": {
+   "version": "lowpoly",
+   "pose": {
+    "pose": "at_attention"
+   },
+   "at": [
+    -1.2,
+    2.6
+   ],
+   "floor_m": 0.0,
+   "facing_deg": -21.0,
+   "triangles": 1032
+  },
+  "pirate": {
+   "version": "lowpoly",
+   "pose": {
+    "pose": "tip_hat"
+   },
+   "at": [
+    -3.0,
+    2.6
+   ],
+   "floor_m": 0.0,
+   "facing_deg": 17.1,
+   "triangles": 976
+  },
+  "villager": {
+   "version": "midpoly",
+   "pose": {
+    "pose": "peek"
+   },
+   "at": [
+    -4.38,
+    2.95
+   ],
+   "floor_m": 0.0,
+   "facing_deg": 20.0,
+   "triangles": 5298
+  }
+ },
+ "props": {
+  "camera": {
+   "at": [
+    -2.023,
+    0.536,
+    4.871
+   ],
+   "triangles": 458
+  },
+  "tripod": {
+   "at": [
+    -2.022,
+    0.0,
+    4.871
+   ],
+   "triangles": 188
+  },
+  "microphone": {
+   "at": [
+    -2.42,
+    0.0,
+    3.16
+   ],
+   "triangles": 666
+  },
+  "kettle": {
+   "at": [
+    -1.589,
+    0.818,
+    2.909
+   ],
+   "triangles": 790
+  },
+  "teacup": {
+   "at": [
+    -0.625,
+    1.645,
+    3.06
+   ],
+   "triangles": 124
+  }
+ },
+ "glb": {
+  "bytes": 683288,
+  "meshes": 43,
+  "triangles": 33575,
+  "draco": true,
+  "pictures": [
+   "image/webp"
+  ],
+  "nodes": [
+   "plinth: base",
+   "plinth: plate",
+   "plinth: plate words",
+   "plinth: plate words.001",
+   "prop: camera",
+   "prop: kettle",
+   "prop: microphone",
+   "prop: teacup",
+   "prop: teacup.001",
+   "prop: tripod",
+   "prop: tripod.001",
+   "set: backdrop",
+   "set: studio",
+   "toon: dancer",
+   "toon: lincoln",
+   "toon: lizardkin",
+   "toon: ninja",
+   "toon: pirate",
+   "toon: roosevelt",
+   "toon: troll",
+   "toon: villager"
+  ]
+ },
+ "stills": [
+  {
+   "camera": "front",
+   "about": "From the front of the shelf",
+   "picture": "stills/front.jpg",
+   "small": "stills/front-small.jpg"
+  },
+  {
+   "camera": "over_his_shoulder",
+   "about": "Over the ninja's shoulder",
+   "picture": "stills/over_his_shoulder.jpg",
+   "small": "stills/over_his_shoulder-small.jpg"
+  },
+  {
+   "camera": "the_cast",
+   "about": "The cast, close",
+   "picture": "stills/the_cast.jpg",
+   "small": "stills/the_cast-small.jpg"
+  },
+  {
+   "camera": "roosevelt",
+   "about": "Roosevelt, waving at somebody else",
+   "picture": "stills/roosevelt.jpg",
+   "small": "stills/roosevelt-small.jpg"
+  }
+ ],
+ "opens_again": {
+  "meshes": 43,
+  "triangles": 33575
+ },
+ "seconds": 10.1
+}

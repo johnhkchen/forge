@@ -1,0 +1,92 @@
+{
+ "format": "forge-diorama/1",
+ "name": "meet-the-cast",
+ "number": 1,
+ "title": "Meet the cast",
+ "caption": "The ninja's first group photo, a breath before the shutter. Everyone is looking at the lens, except Roosevelt.",
+ "epoch": "epoch-0",
+ "about": "The photo session on the ninja's stage, at the perfect moment: all seven residents in front of his pinhole camera, the newest one only just arrived.",
+ "units": "metres, in the studio's own axes: y is up, z is toward the front of the stage. A heading of 0 faces the front; 90 faces +x.",
+ "set": {
+  "name": "studio",
+  "backdrop": "boxing-house",
+  "why_this_backdrop": "The boxing house is the one place all of them share: Roosevelt wanted somewhere to have friends over.",
+  "keep": {"x": [-5.5, 1.15], "z": [-0.2, 6.05], "top_m": 3.5},
+  "dressing": ["plant"]
+ },
+ "paint_px": 512,
+ "poses": {
+  "shutter": {
+   "about": "the photographer: leaning in a little, right hand out on the camera, left hand up to say hold still",
+   "bones": {"spine": [8, 0, 0], "chest": [6, 0, 0], "head": [-10, 0, 0], "upper_arm_r": [0, 44, -62], "forearm_r": [0, 0, -30], "upper_arm_l": [0, -48, -24], "forearm_l": [0, -52, 0]}
+  },
+  "tall_and_proper": {
+   "about": "standing very straight for a photograph, hands folded in front",
+   "bones": {"chest": [-3, 0, 0], "upper_arm": [0, 70, -14], "forearm": [0, 14, -44]}
+  },
+  "flex_and_wave": {
+   "about": "one arm flexed like a strongman, the other up and out, waving at somebody off to the side, chest turned their way",
+   "bones": {"chest": [-5, 0, 18], "upper_arm_r": [0, 8, 0], "forearm_r": [0, -128, 0], "upper_arm_l": [0, -38, 6], "forearm_l": [0, -22, 0], "hand_l": [0, -24, 0]}
+  },
+  "at_the_microphone": {
+   "about": "a dancer's flourish: one arm curved overhead, the other hand out toward the microphone, chin up",
+   "bones": {"chest": [-6, 0, 0], "head": [-6, 0, 0], "upper_arm_l": [0, -62, -10], "forearm_l": [0, -58, 0], "upper_arm_r": [0, 48, -34], "forearm_r": [0, -10, -36]}
+  },
+  "teacup": {
+   "about": "one hand held out in front at the chest with a cup in it, the other arm easy at the side",
+   "bones": {"upper_arm_l": [0, 74, -4], "forearm_l": [0, 0, -14], "upper_arm_r": [0, 66, -30], "forearm_r": [0, -8, -84], "head": [4, 0, 0]}
+  },
+  "at_attention": {
+   "about": "a warrior standing guard: chest out, one hand in front carrying something, the other fist on the hip",
+   "bones": {"chest": [-6, 0, 0], "upper_arm_r": [0, 62, -34], "forearm_r": [0, -4, -40], "upper_arm_l": [0, 46, 14], "forearm_l": [0, 92, -14]}
+  },
+  "tip_hat": {
+   "about": "one hand up to the brim of a hat, a small nod, the other arm easy at the side",
+   "bones": {"head": [4, 0, 0], "upper_arm_r": [0, 22, -42], "forearm_r": [0, -36, -116], "upper_arm_l": [0, 74, -4], "forearm_l": [0, 0, -14]}
+  },
+  "peek": {
+   "about": "leaning out sideways from behind something, one hand raised in a small hello",
+   "bones": {"spine": [0, 12, 0], "chest": [0, 9, 0], "neck": [0, -6, 0], "head": [0, -10, 0], "upper_arm_l": [0, 30, -30], "forearm_l": [0, -96, -10], "upper_arm_r": [0, 74, -4], "forearm_r": [0, 0, -14]}
+  }
+ },
+ "props": {
+  "camera": {"run": "handmade-pinhole-box-camera", "file": "profiles/lowpoly.glb", "scale": 2.0, "title": "The pinhole box camera", "note": "bigger than life, the way a toy's things are"},
+  "tripod": {"built": "tripod"},
+  "microphone": {"run": "vintage-stage-microphone", "file": "profiles/lowpoly.glb", "scale": 0.8, "title": "The microphone"},
+  "kettle": {"run": "iron-kettle", "file": "profiles/lowpoly.glb", "scale": 1.2, "title": "The kettle of tea"},
+  "teacup": {"built": "teacup", "scale": 2.0}
+ },
+ "toons": [
+  {"toon": "ninja", "name": "The ninja", "run": "shadow-ninja", "version": "midpoly", "pose": "shutter", "mark": "photographer", "looks_at": "dancer",
+   "holds": [{"prop": "camera", "hand": "right", "grip": "top"}]},
+  {"toon": "lincoln", "name": "Lincoln", "run": "young-lincoln-frontier-wrestler", "version": "midpoly", "pose": "tall_and_proper", "at": [-3.65, 1.4], "on": "band riser", "faces": "ninja", "looks_at": "camera"},
+  {"toon": "roosevelt", "name": "Roosevelt", "run": "roosevelt-wrestler-1890s", "version": "midpoly", "pose": "flex_and_wave", "at": [-2.6, 1.4], "on": "band riser", "faces": "ninja", "looks_at": [6.0, 1.5, 5.5]},
+  {"toon": "dancer", "name": "The dancer", "run": "flamenco-dancer", "version": "midpoly", "pose": "at_the_microphone", "mark": "sitter", "faces": "ninja", "looks_at": "camera",
+   "beside": [{"prop": "microphone", "offset": [0.22, 0.66]}]},
+  {"toon": "troll", "name": "The troll", "run": "cave-troll", "version": "lowpoly", "pose": "teacup", "at": [0.05, 2.75], "faces": "ninja", "looks_at": "camera",
+   "holds": [{"prop": "teacup", "hand": "right", "grip": "bottom"}]},
+  {"toon": "lizardkin", "name": "The lizardkin", "run": "lizardkin-warrior", "version": "lowpoly", "pose": "at_attention", "at": [-1.2, 2.6], "faces": "ninja", "looks_at": "camera",
+   "holds": [{"prop": "kettle", "hand": "right", "grip": "top"}]},
+  {"toon": "pirate", "name": "The pirate", "run": "stocky-pirate-deckhand", "version": "lowpoly", "pose": "tip_hat", "mark": "group_1", "faces": "ninja", "looks_at": "camera"},
+  {"toon": "villager", "name": "The villager", "run": "plain-young-villager", "version": "midpoly", "pose": "peek", "at": [-4.38, 2.95], "facing_deg": 20, "looks_at": "camera", "peeks": true}
+ ],
+ "free_props": [
+  {"prop": "tripod", "under": "camera"}
+ ],
+ "lights": [
+  {"name": "shelf lamp", "kind": "area", "at": [-1.0, 8.5, 8.0], "aim": [-2.2, 0.8, 2.6], "power": 1000.0, "color": [1.0, 0.86, 0.68], "size_m": 6.0},
+  {"name": "room fill", "kind": "area", "at": [7.5, 4.0, 10.0], "aim": [-2.0, 1.0, 3.0], "power": 220.0, "color": [0.86, 0.9, 1.0], "size_m": 7.0}
+ ],
+ "cameras": {
+  "front": {"about": "From the front of the shelf", "round_deg": 24, "above_deg": 17, "lens_mm": 50, "fstop": 5.6, "focus": "dancer", "margin": 1.02},
+  "over_his_shoulder": {"about": "Over the ninja's shoulder", "round_deg": -12, "above_deg": 9, "lens_mm": 60, "fstop": 2.8, "focus": "dancer",
+   "frames": ["ninja", "camera", "lincoln", "roosevelt", "dancer", "troll", "pirate", "villager"]},
+  "the_cast": {"about": "The cast, close", "round_deg": 34, "above_deg": 7, "lens_mm": 75, "fstop": 4.0, "focus": "dancer",
+   "frames": ["lincoln", "roosevelt", "dancer", "troll", "lizardkin", "pirate", "villager"]},
+  "roosevelt": {"about": "Roosevelt, waving at somebody else", "round_deg": 38, "above_deg": 8, "lens_mm": 85, "fstop": 2.8, "focus": "roosevelt",
+   "frames": ["roosevelt", "lincoln", "dancer"]}
+ },
+ "stills": ["front", "over_his_shoulder", "the_cast", "roosevelt"],
+ "plinth": {"margin_m": 0.3, "height_m": 0.85, "toy_scale": 12, "label": {"width_m": 3.0, "height_m": 0.44}},
+ "basement": {"wall": [0.78, 0.69, 0.58], "air": {"color": [1.0, 0.9, 0.78], "strength": 0.12}}
+}

@@ -163,3 +163,32 @@ html, body { overflow-x: hidden; }
 .place-card .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
 .place-card .actions a.clay-button { text-decoration: none; font-size: 0.92rem; padding: 0.55em 1.05em; }
 .load-line { margin: 10px 0 0; font-size: 0.85rem; color: var(--clay-ink-soft); }
+
+/* ---- the front page: the newest diorama, the world beside it, earlier ones on a shelf ---- */
+.state { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 10px; }
+.state .words h1 { margin: 2px 0 4px; font-size: 1.9rem; line-height: 1.15; }
+.state .words .caption { margin: 0 0 8px; color: var(--clay-ink-soft); }
+.state .epoch { display: inline-block; padding: 0.3em 0.9em; border-radius: var(--clay-radius-pill); background: var(--clay-well); font-weight: 700; font-size: 0.86rem; text-decoration: none; }
+.state .show { min-width: 0; }
+.diorama-stage .pane { aspect-ratio: 16 / 10; max-height: 74vh; background: #e6dccb; }
+.diorama-stage .pane .hint { position: absolute; left: 10px; bottom: 8px; font-size: 0.8rem; color: var(--clay-ink-soft); pointer-events: none; }
+.angles { display: flex; gap: 8px; overflow-x: auto; padding: 10px 4px 4px; margin: 0 -4px; scrollbar-width: none; }
+.angles::-webkit-scrollbar { display: none; }
+.state .load-line { margin: 6px 0 0; }
+.beside { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.stills { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.still { display: block; padding: 5px; transition: var(--clay-press); }
+.still:active { transform: translateY(1px); box-shadow: var(--clay-shadow-pressed); }
+.still img { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: calc(var(--clay-radius-sm) - 2px); background: var(--clay-well); }
+.beside .world-card { margin-top: 0; max-width: none; }
+.past h2 { margin: 2px 0 6px; font-size: 1.05rem; }
+.past .none { margin: 0; padding: 12px 14px; border: 1.5px dashed var(--clay-border); border-radius: var(--clay-radius); color: var(--clay-ink-soft); font-size: 0.9rem; }
+.past-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.past-card img { aspect-ratio: 16 / 10; }
+.past-card h3 { margin: 0; font-size: 0.98rem; }
+@media (min-width: 900px) {
+  .state { grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); gap: 12px 24px; }
+  .state .words { grid-column: 1 / -1; }
+  .stills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) { .diorama-stage .pane { aspect-ratio: 5 / 4; max-height: 64vh; } .state .words h1 { font-size: 1.6rem; } }

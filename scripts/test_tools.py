@@ -31,10 +31,12 @@ BLENDER = os.environ.get("BLENDER", "/Applications/Blender.app/Contents/MacOS/Bl
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "sets"))
 sys.path.insert(0, os.path.join(HERE, "world"))
+sys.path.insert(0, os.path.join(HERE, "diorama"))
 import blockout_recipe  # noqa: E402
 import check_safe  # noqa: E402
 import test_sets  # noqa: E402  (the standing sets' own cases, which need no Blender)
 import test_world  # noqa: E402  (the world's own cases, which need no Blender either)
+import test_diorama  # noqa: E402  (the dioramas' own cases, which need no Blender either)
 
 
 def blender(base, steps, save=None):
@@ -1789,6 +1791,76 @@ def test_world_house_build(ctx):
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def test_diorama_plan(ctx):
+    """Dioramas: every plan is sound against the runs it poses (marks, poses, props, cameras, a saved epoch), and a broken plan is told why; what is kept is the last clean build, and the front page gets the newest."""
+    runs = os.path.dirname(ctx["troll"])
+    have = all(glob.glob(os.path.join(runs, "*-" + t["run"])) for name in test_diorama.diorama.names() for t in test_diorama.diorama.load(name)["toons"])
+    if not have:
+        print("    the cast's runs are not all here: the plans are checked without their files")
+    test_diorama.test_plan(runs if have else None)
+    test_diorama.test_built()
+    test_diorama.test_shelf()
+
+
+def build_diorama(ctx, plan, out, *flags):
+    """Run the diorama builder in a background Blender; returns (its DIORAMA lines, its build.json or None)."""
+    done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "diorama", "build_diorama.py"), "--", plan, "--runs", os.path.dirname(ctx["troll"]), "--out", out] + list(flags),
+                          capture_output=True, text=True)
+    lines = [l for l in done.stdout.splitlines() if l.startswith("DIORAMA ")]
+    record = None
+    if os.path.isfile(os.path.join(out, "build.json")):
+        with open(os.path.join(out, "build.json")) as f:
+            record = json.load(f)
+    return lines, record, (done.stdout + done.stderr)[-900:]
+
+
+def test_diorama_build(ctx):
+    """Dioramas: the builder poses the cast from their runs and places everything on the base. Nobody is in anybody, feet are on the floor, props are in hands and on surfaces, every face shows from the front, and the one light .glb (Draco, WebP) opens again. A plan with two toons pushed together is refused."""
+    diorama = test_diorama.diorama
+    runs = os.path.dirname(ctx["troll"])
+    name = diorama.shelf()[0]["name"]
+    spec = diorama.load(name)
+    wrong, _ = diorama.check(spec, runs)
+    if wrong:
+        print("    skipped: needs the whole cast's runs under %s (%s)" % (runs, wrong[0]))
+        return
+    out = os.path.join(ctx["out"], "diorama")
+    lines, record, tail = build_diorama(ctx, name, out)
+    finished = record is not None and any("built, nothing wrong" in l for l in lines)
+    check("the builder runs to the end", finished, "" if finished else tail)
+    facts = test_diorama.built_checks(spec, record, out, name)
+    check("every toon comes from the version its plan names: mid poly is heavier than low poly",
+          min(t["triangles"] for t in record["toons"].values() if t["version"] == "midpoly") > max(t["triangles"] for t in record["toons"].values() if t["version"] == "lowpoly"),
+          {who: (t["version"], t["triangles"]) for who, t in record["toons"].items()})
+    on_riser = [who for who, t in record["toons"].items() if t["floor_m"] > 0.01]
+    check("whoever stands on something stands at its height (%s)" % ", ".join(on_riser), len(on_riser) == sum(1 for t in spec["toons"] if t.get("on")), on_riser)
+    stills = [os.path.join(out, s[k]) for s in record["stills"] for k in ("picture", "small")]
+    check("%d pictures and a card were taken on the shelf" % len(record["stills"]), len(record["stills"]) == len(spec["stills"]) and all(os.path.getsize(p) > 4000 for p in stills + [os.path.join(out, "card.png")]))
+    wide, tall, rows = read_png(os.path.join(out, "card.png"))
+    shades = {tuple(v // 32 for v in px[:3]) for row in rows[::25] for px in row[::25]}
+    check("the card is a picture of something: %d x %d, many shades" % (wide, tall), wide == 800 and len(shades) > 20, len(shades))
+    check("nothing was written into the runs or the kept diorama", not glob.glob(os.path.join(runs, "*", "diorama*")) and os.path.getmtime(os.path.join(spec["dir"], "build.json")) < os.path.getmtime(os.path.join(out, "build.json")))
+    check("the same plan builds the same .glb, to the triangle", facts["triangles"] == (diorama.built(name) or {}).get("glb", {}).get("triangles"), facts["triangles"])
+
+    # Two toons pushed together: the plan still reads as sound (they are 40 cm apart), and the build says they are in each other.
+    crowded = os.path.join(ctx["out"], "diorama-crowded", name)
+    os.makedirs(crowded, exist_ok=True)
+    plan = {k: v for k, v in spec.items() if k != "dir"}
+    plan["toons"] = [dict(t) for t in plan["toons"]]
+    first, second = plan["toons"][-1], plan["toons"][-2]
+    st = diorama.standing.load(spec["set"]["name"])
+    spot = diorama.spot_of(spec, st, second)[0]
+    first.pop("mark", None)
+    first.pop("on", None)
+    first["at"] = [spot[0] + 0.4, spot[1]]
+    with open(os.path.join(crowded, "diorama.json"), "w") as f:
+        json.dump(plan, f)
+    lines, record, tail = build_diorama(ctx, os.path.join(crowded, "diorama.json"), crowded, "--no-stills")
+    said = [l for l in lines if "PROBLEM" in l and "are in each other" in l]
+    refused = bool(said) and record is not None and bool(record["problems"])
+    check("%s pushed into %s: the build says they are in each other" % (first["toon"], second["toon"]), refused, "" if refused else tail)
+
+
 def read_png(path):
     """An 8-bit RGB or RGBA .png as (wide, tall, rows of (r, g, b, a) tuples), read with nothing but zlib."""
     import zlib
@@ -2208,7 +2280,8 @@ TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body,
          test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build,
-         test_world_places, test_world_house, test_world_toons, test_world_house_build]
+         test_world_places, test_world_house, test_world_toons, test_world_house_build,
+         test_diorama_plan, test_diorama_build]
 
 
 def main(argv):

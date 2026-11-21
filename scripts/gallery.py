@@ -1,11 +1,12 @@
-"""Serve the gallery on the local network: the world, every run, before and after, and every set.
+"""Serve the gallery on the local network: the newest diorama, the world, every run, before and after, and every set.
 
     python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR]
 
 Read-only. Serves gallery/ (the page), runs/ and comics/ (the files), sets/
-(the standing sets), world/ (the toons and props that stand in the world) and
+(the standing sets), world/ (the toons and props that stand in the world),
+dioramas/ (story moments on a base) and
 shots/ (what was filmed on the sets), plus /api/runs, /api/comics, /api/sets,
-/api/takes and /api/world (world.json and every saved epoch), built from the folders on each
+/api/takes, /api/dioramas (newest first) and /api/world (world.json and every saved epoch), built from the folders on each
 request, so a new run, comic or take shows up on reload. Binds to all
 interfaces so a phone on the same Wi-Fi
 can open it; nothing here is meant for the internet.
@@ -15,6 +16,7 @@ import json
 import mimetypes
 import os
 import socket
+import sys
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse
@@ -26,6 +28,9 @@ SETS = os.path.join(ROOT, "sets")
 SHOTS = os.path.join(ROOT, "shots")
 COMICS = os.path.join(ROOT, "comics")
 WORLD = os.path.join(ROOT, "world")
+DIORAMAS = os.path.join(ROOT, "dioramas")
+sys.path.insert(0, os.path.join(ROOT, "scripts", "diorama"))
+import diorama as diorama_file  # noqa: E402  (what a diorama is, and its card for the front page)
 PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 
 mimetypes.add_type("model/gltf-binary", ".glb")
@@ -281,6 +286,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_file(WORLD, path[len("/world/"):])
         if path == "/api/comics":
             return self.send_json(all_comics())
+        if path == "/api/dioramas":
+            return self.send_json(diorama_file.shelf())
+        if path.startswith("/dioramas/"):
+            return self.send_file(DIORAMAS, path[len("/dioramas/"):])
         if path.startswith("/comics/"):
             return self.send_file(COMICS, path[len("/comics/"):])
         if path.startswith("/runs/"):

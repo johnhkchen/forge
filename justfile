@@ -39,6 +39,7 @@ check:
     python3 scripts/sets/test_sets.py | tail -1
     python3 scripts/world/world.py check | tail -1
     python3 scripts/comic/test_comic.py | tail -1
+    python3 scripts/diorama/test_diorama.py | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -302,6 +303,26 @@ comic-style out +files:
 # Picture every comic pose (motion/comic_poses.json) on one rigged character, to check a new pose
 comic-poses file out:
     "{{blender_bin}}" -b --factory-startup -P scripts/comic/pose_sheet.py -- "{{file}}" "{{out}}" 2>&1 | grep -E '^POSES|Error|Traceback'
+
+# Build a diorama from its plan (dioramas/<name>/diorama.json) in a background Blender: the toons posed and placed on a wooden base, as one light diorama.glb, with its pictures and its card
+diorama name runs="runs":
+    "{{blender_bin}}" -b --factory-startup -P scripts/diorama/build_diorama.py -- "{{name}}" --runs "{{runs}}" 2>&1 | grep -E '^DIORAMA|Error|Traceback'
+
+# Is a diorama's plan sound? Marks, poses, props and cameras that exist, nobody planned inside anybody (none named: every diorama)
+diorama-check *names:
+    python3 scripts/diorama/diorama.py check {{names}}
+
+# Try a pose or a camera: quick small pictures of a diorama into dioramas/<name>/draft/, and what the build would measure. Writes nothing else (cameras: one or more, with commas; none: the first)
+diorama-draft name cameras="" runs="runs":
+    "{{blender_bin}}" -b --factory-startup -P scripts/diorama/build_diorama.py -- "{{name}}" --runs "{{runs}}" --draft {{cameras}} 2>&1 | grep -E '^DIORAMA|Error|Traceback'
+
+# What the gallery's front page fetches for a diorama (files and MB), and what waits for a tap
+diorama-load name:
+    python3 scripts/diorama/diorama.py load "{{name}}"
+
+# Pictures of the gallery's front page at phone and desktop width, and every byte it fetched, into evidence/diorama/ (the gallery must be running on that port)
+diorama-shots port="8028":
+    python3 scripts/diorama/shots.py --port {{port}}
 
 # Vendor the b28 clay style kit into the gallery
 sync-kit:

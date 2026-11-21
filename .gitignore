@@ -14,3 +14,6 @@ comics/kit.json
 comics/*/panels/*.png
 comics/style/
 comics/cast/*/faces.png
+
+# Quick tries of a diorama (just diorama-draft)
+dioramas/*/draft/

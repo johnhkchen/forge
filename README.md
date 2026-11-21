@@ -97,6 +97,10 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just world-places`, `just world-stock`, `just world-toons` | build the world's places from data, bring in light copies of the runs' objects, stand the toons up in their poses |
 | `just world-epoch <name> "<title>" "<caption>"` | save the world as it is now as an epoch |
 | `just world-shots <port>` | pictures of the gallery's world view, phone and desktop, into `evidence/world/` |
+| `just diorama <name>` | build a diorama from `dioramas/<name>/diorama.json`: the toons posed and placed on a wooden base, as one light `.glb`, with its pictures and its card (see "Dioramas") |
+| `just diorama-check [name]` | is a diorama's plan sound, before building it? |
+| `just diorama-draft <name> [camera,camera]` | try a pose or a camera: quick small pictures into `dioramas/<name>/draft/`, and what the build would measure. Writes nothing else |
+| `just diorama-load <name>`, `just diorama-shots <port>` | what the front page fetches for a diorama; pictures of the front page, phone and desktop, with every byte it loaded, into `evidence/diorama/` |
 | `just clip-to-gallery <shot> <character run> [clip]` | copy the shot's clips into the character's folder, so the gallery shows a "Hero" button; a second cut gets a button of its own |
 | `just comic "<premise>" [strip or scroll] ["<cast>"] ["<places>"] [name]` | make a comic: Opus writes it, one background Blender draws it, code letters it and lays out the page |
 | `just comic-again <name>` | draw and letter `comics/<name>/comic.json` again after editing it by hand; asks no model |
@@ -110,7 +114,7 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just recipe <run folder>` | for a run from before recipes were kept: get its block-out's recipe back from the transcript, so `midpoly` can be made |
 | `just auto-body <run folder> <out folder>` | give a finished character a body with anatomy, without Claude: its landmarks are found, a body is built from them, and its own head and gear go back on. Writes into the out folder, never the run |
 | `just anatomy-check <run folder> <out.png> low=<file.glb>…` | measure low-poly and mid-poly bodies against the detailed mesh: landmarks, proportions, outlines, cross-sections, and a sheet to look at |
-| `just gallery` | look at every object, raw vs cleaned-up, and read the comics, on this Mac or a phone on the same Wi-Fi |
+| `just gallery` | the newest diorama out front, then the world, every object raw vs cleaned-up, and the comics, on this Mac or a phone on the same Wi-Fi |
 | `just transcript <run folder> <step>` | read the Blender code Claude ran in a step (`polish`, `parts`, `lowpoly`) |
 | `just test-tools` | try the Blender scripts on real runs in a background Blender (your open Blender is left alone) |
 | `just check-safe` | check that the Blender scripts will get past the add-on's safe mode |
@@ -294,6 +298,69 @@ It is made to open fast on a phone. The first view fetches 24 small files, 1.9 M
 **The ninja's stage.** The studio is the shadow ninja's own photo stage, and what hangs behind its window is always a real place in the world: `backdrop_options` in its `set.json` names the boxing house, the grass, the settlement and the dancer's house, each a picture taken through that place's own camera (`just studio-backdrops`). Its page in the gallery has a row to swap them.
 
 **What is weak.** The places are block-outs: boxes and lumps in flat colors, charming from a distance and plain up close. The hall has no roof and the houses have none either, so you can see in. Toons stand in one pose each and don't move. Marks are flat: a mark on the stage or in the ring knows how high its floor is, but nothing can walk up to it. The world view lights everything with one sun, so a place looks a little different there than on its own page.
+
+## Dioramas
+
+The portraits and the comics are the world the way the toons imagine it. A **diorama** is the other layer: the toys themselves. It is one moment of the story, built from the real game assets (low poly and mid poly, a little clunky, which suits them) and stood on a wooden base with a brass plate, like a collector's piece on a shelf in the basement. Think of the Lego Movie: the world in the child's head, and the table in the basement it is played on. A diorama shows the table.
+
+```
+just diorama meet-the-cast        # pose, place, measure, write the .glb and the pictures (about 10 seconds)
+just diorama-draft meet-the-cast the_cast,roosevelt     # quick pictures while you change a pose
+just gallery                      # the newest diorama opens the front page
+```
+
+**The first one is "Meet the cast"** (`dioramas/meet-the-cast/`): the photo session on the ninja's stage, a breath before the shutter.
+
+| Who | Where | Doing what | Version |
+|---|---|---|---|
+| The ninja | the `photographer` mark | behind his pinhole camera on a little tripod, right hand on it, left hand up: hold still | mid poly |
+| Lincoln | the back row, on the band riser | standing very straight, hands folded | mid poly |
+| Roosevelt | beside him on the riser | one arm flexed, the other waving at somebody off the base: the only one not looking at the lens | mid poly |
+| The dancer | the `sitter` mark, front and centre | a flourish, at her microphone | mid poly |
+| The troll | the right end of the row | holding a very small teacup | low poly (all there is) |
+| The lizardkin | at the troll's side | at attention, carrying the kettle | low poly (all there is) |
+| The pirate | the `group_1` mark | tipping his tricorn | low poly (all there is) |
+| The villager | by the wing flat, at the edge | peeking in with a small hello, just arrived | mid poly |
+
+Behind them hangs the boxing house, the one place they all share. Mid poly is used wherever a toon has one, because a face reads better up close; the troll, the lizardkin and the pirate only exist as low poly.
+
+**`diorama.json` is the whole plan**, and it is meant to be edited by hand:
+
+```json
+{
+ "title": "Meet the cast", "epoch": "epoch-0", "number": 1,
+ "caption": "The ninja's first group photo, a breath before the shutter. Everyone is looking at the lens, except Roosevelt.",
+ "set": {"name": "studio", "backdrop": "boxing-house", "keep": {"x": [-5.5, 1.15], "z": [-0.2, 6.05], "top_m": 3.5}, "dressing": ["plant"]},
+ "poses": {"tip_hat": {"about": "one hand up to the brim of a hat, a small nod", "bones": {"upper_arm_r": [0, 22, -42], "forearm_r": [0, -36, -116]}}},
+ "props": {"camera": {"run": "handmade-pinhole-box-camera", "scale": 2.0}, "tripod": {"built": "tripod"}, "teacup": {"built": "teacup", "scale": 2.0}},
+ "toons": [
+  {"toon": "ninja", "run": "shadow-ninja", "version": "midpoly", "pose": "shutter", "mark": "photographer", "looks_at": "dancer",
+   "holds": [{"prop": "camera", "hand": "right", "grip": "top"}]},
+  {"toon": "roosevelt", "run": "roosevelt-wrestler-1890s", "version": "midpoly", "pose": "flex_and_wave", "at": [-2.6, 1.4], "on": "band riser",
+   "faces": "ninja", "looks_at": [6.0, 1.5, 5.5]}
+ ],
+ "free_props": [{"prop": "tripod", "under": "camera"}],
+ "cameras": {"front": {"about": "From the front of the shelf", "round_deg": 24, "above_deg": 17, "lens_mm": 50, "fstop": 5.6, "focus": "dancer"}},
+ "stills": ["front", "over_his_shoulder", "the_cast", "roosevelt"],
+ "plinth": {"margin_m": 0.3, "height_m": 0.85, "toy_scale": 12}
+}
+```
+
+- **The set is cut like a cake.** `keep` says which slice of a standing set stays on the base, and `backdrop` names one of the stage's own backdrops (a real place in the world).
+- **A toon** names its run, `lowpoly` or `midpoly`, a pose, and where it stands: one of the set's marks, or a spot (`at`), maybe `on` something like the riser. It can face somebody (`faces`) and turn its head to somebody or something (`looks_at`). A pose is a name from `motion/comic_poses.json`, one written in the diorama's own `poses`, or a moment of a clip (`"walk@0.4"`).
+- **Props go where hands are.** What a toon `holds` is put in that hand; what stands `beside` it is put on the floor next to it. The tripod stands `under` the camera and is built as tall as it needs to be, so the hand, the camera and the tripod always meet.
+- **Cameras** are either put somewhere (`at`, `aim`) or given a direction (`round_deg` round the front, `above_deg` up) and backed off until what they frame fits. The first one in `stills` is the hero, and the card.
+- **The base** is sized to the slice, with a brass plate that says the title and the epoch. `toy_scale` only sets how soft the background goes in the pictures: a 1:12 toy photographed up close.
+
+**What the build checks**, and refuses to call finished if any fail: nobody stands in anybody else or in the set; every pair of feet is on its floor; every held prop is in its hand and touches its holder only there; everything else stands on the floor or on what is under it; nothing hangs over the edge of the base; and every face shows from the front camera (someone marked `"peeks": true` may be half hidden). The numbers are kept in `build.json`.
+
+**What it writes.** `diorama.glb` is everything on the base in one file with no skeletons: Draco-packed, pictures as WebP no bigger than 512 px, no bump maps. "Meet the cast" is 33,575 triangles and 0.68 MB. `stills/` holds a picture through each camera, taken on a shelf in front of a plain warm wall, with a small copy of each; `card.png` is the first, small.
+
+**The front page** of the gallery opens with the newest diorama (the highest `number`) as the **State of the world**: the thing itself to turn over, at a gentle angle, swaying slowly until you touch it; its title, caption and epoch; a row of other angles to fly to; its pictures. The world card sits beside it (below it on a phone). When a second diorama is made, this one moves down to **Earlier moments**, and each has a page of its own (`#/diorama/<name>`).
+
+Opening the front page cold on a phone fetches 1.9 MB before the first screen is ready: the diorama 0.68 MB and its four small pictures 0.11 MB, three.js and the mesh decoder 0.31 MB, the page and its lists 0.26 MB, fonts 0.08 MB, and 0.47 MB of pictures from further down the page. `just diorama-shots` measures it again and takes the pictures in `evidence/diorama/`.
+
+**What is weak.** Hands are mittens: a prop is put at the palm, nobody grips, and the ninja's hand rests on his camera's rope handle more than on its shutter. Poses are turned bone by bone and tried by eye with `just diorama-draft`; nothing solves an arm to reach a thing. The troll's head is a snout sunk in his chest, so "looking at the lens" barely shows on him. The base's plate is real lettering but small: you have to come close to read it. The camera, the kettle, the cup and the microphone are sized by hand to read as toys (the camera is twice life size). The basement is one shelf and one wall. And further down the same front page, the objects' cards still load full-size portraits (about 2 MB each) as you scroll: the diorama is light, the shelf under it is not.
 
 ## Sets
 

@@ -1127,6 +1127,54 @@ ground at true size, and the gallery shows it whole (README, "World").
   anything in it is Draco-packed (`just world-stock` unpacks the copies).
   Anything small or heavy goes behind `small` or `detail`.
 
+### Dioramas: a moment on a base
+
+A diorama is one moment of the story, built from the real low-poly and
+mid-poly files and stood on a wooden base: the toys on the basement shelf,
+where the portraits and comics are the world as the toons imagine it
+(README, "Dioramas"). The newest one opens the gallery's front page.
+
+    just diorama-check <name>                 # the plan, with no Blender
+    just diorama-draft <name> [camera,camera] # quick pictures and the measurements; writes only draft/
+    just diorama <name>                       # the real build: diorama.glb, stills/, card.png, build.json
+
+- **`dioramas/<name>/diorama.json` is the whole plan.** The set and the
+  slice of it to keep, each toon (run, version, pose, mark or spot, what it
+  faces and looks at, what it holds, what stands beside it), free props,
+  lights, cameras, and the base. `scripts/diorama/diorama.py` says what
+  every key means and checks a plan; `build_diorama.py` builds it.
+- **Everything is in the set's own axes**, like a shot: metres, y up, z
+  toward the front, a heading of 0 facing the front. Use the set's marks
+  (the studio's `photographer`, `sitter`, `group_1`..`group_3`) and add
+  spots with `at` when a group needs more room.
+- **Posing reuses the comics' way.** `scripts/comic/stage.py` brings a
+  rigged `<version>-walk.glb` in, strikes a pose (turns of our plain bones
+  from the T-pose, as in `motion/comic_poses.json`) or freezes a clip at a
+  moment, and stands it on its spot. A pose only this moment needs goes in
+  the diorama's own `poses`, not in the comic library. For a right arm,
+  write the left side's numbers: `_r` is mirrored for you.
+- **Props follow hands, not the other way round.** There is no reaching:
+  pose the arm, and the prop is put at the palm (`holds`), the tripod is
+  built to stand `under` the camera. To move a prop, move the arm.
+- **Read what the build measures** before looking at the picture: pairs in
+  each other (triangles that cross), feet off the floor, hand to prop, a
+  held prop touching its holder away from the hand, anything over the edge
+  of the base, and how much of each head shows from the first camera. A
+  build with any of these wrong says so and exits 1.
+- **Keep it light.** One `.glb`, no skeletons, Draco, WebP at 512 px, no
+  bump or shine maps on the toons, under 2 MB and 60,000 triangles
+  (`diorama.BUDGET`); `python3 scripts/diorama/test_diorama.py` holds the
+  kept ones to it. Unlike the world's first view, a diorama is
+  Draco-packed, so the page fetches the decoder (about 60 kB) once.
+- **A new diorama** gets the next `number`; the highest is the front page
+  and the rest go to "Earlier moments". Don't edit a shown diorama into a
+  different moment: make a new one, the way epochs are saved.
+
+What is weak: mitten hands and no grip, poses tuned by eye, prop sizes
+chosen by hand, one shelf and one wall for a basement, and nothing checks
+a pose for an elbow bent the wrong way (`just poses` does that only for
+the motion library).
+
 ### Adding a set
 
 1. Write `sets/<name>/set.json`. Start from the studio's.

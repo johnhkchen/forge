@@ -1,4 +1,4 @@
-// Forge gallery: the world seen whole, the shelf of runs, a before/after viewer for each, and the sets they are filmed on.
+// Forge gallery: the newest diorama out front, the world seen whole, the shelf of runs, a before/after viewer for each, and the sets they are filmed on.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
@@ -23,6 +23,7 @@ let runs = [];
 let sets = [];
 let takes = [];
 let comics = [];
+let dioramas = [];
 let world = null;
 let viewer = null;
 
@@ -453,7 +454,7 @@ function worldCard() {
   const places = Object.values(now.places).filter((p) => !p.inside);
   const peek = sets.find((s) => s.id === "boxing-house" && s.picture) || sets.find((s) => places.some((p) => p.set === s.id) && s.picture);
   return h("a", { class: "card world-card clay-surface", href: "#/world" },
-    h("div", { class: "peek" }, peek ? h("img", { src: `sets/${peek.id}/${peek.picture}`, alt: "" }) : null),
+    h("div", { class: "peek" }, peek ? h("img", { src: `sets/${peek.id}/${peek.picture}`, alt: "", loading: "lazy" }) : null),
     h("div", { class: "label" },
       h("h2", {}, world.title || "The world"),
       h("p", {}, `See every place at once · ${places.length} places, ${now.toons.length} toons at home`),
@@ -536,7 +537,8 @@ function worldPage(wantedEpoch, wantedPlace) {
 
 // A miniature: something small to look at from outside. Orbit, zoom, a camera that can fly from one view to
 // another, and a count of what was fetched. The world view is one. One combined .glb is another (a diorama on
-// its plinth): `new Miniature(stage).show("dioramas/meet-the-cast.glb")` is the whole of it.
+// its plinth): `new Miniature(stage).show("dioramas/meet-the-cast/diorama.glb")` is the whole of it, and
+// DioramaViewer, below, adds the front page's manners: a gentle first angle and a slow idle turn.
 class Miniature {
   constructor(stage, { status = "Loading…", hint = null, background = 0xe9e4da } = {}) {
     this.fetched = new Set();
@@ -908,6 +910,167 @@ class WorldViewer extends Miniature {
     window.forgeWorld = { ...this.loaded, seconds: (performance.now() - this.began) / 1000, place: this.at || null, settled: !this.places[this.at] || this.places[this.at].settled === true };
     this.hooks.onLoad(`Loaded so far: ${this.loaded.files} files, ${(this.loaded.bytes / 1e6).toFixed(2)} MB. Small things and heavier versions load when you come close to their place.`);
   }
+}
+
+// ---------- dioramas ----------
+
+// A diorama is one moment of the story, built from the real game assets and stood on a wooden base: the toys
+// on the basement shelf, where the portraits and the comics are the world as the toons imagine it. One light
+// .glb each (dioramas/<name>/diorama.glb). The newest opens the front page; the others wait on a shelf under it.
+
+const SWAY_DEG = 16, SWAY_S = 26, SWAY_AGAIN_MS = 6000; // the idle turn: this far each way, this slowly, this long after a touch
+
+class DioramaViewer extends Miniature {
+  constructor(stage, diorama, hooks = {}) {
+    super(stage, { status: "Setting it on the shelf…", hint: "Drag to turn it", background: 0xe6dccb });
+    this.began = performance.now();
+    window.forgeDiorama = null;
+    this.diorama = diorama;
+    this.hooks = hooks;
+    this.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.controls.addEventListener("start", () => { this.hold(); this.el.querySelector(".hint")?.remove(); });
+    this.controls.addEventListener("end", () => this.letGo());
+    this.inView = true;
+    this.watch = new IntersectionObserver(([entry]) => { this.inView = entry.isIntersecting; if (this.inView) this.idle(); else this.swaying = null; });
+    this.watch.observe(this.el);
+    this.fill();
+  }
+
+  async fill() {
+    const model = await this.show(`dioramas/${encodeURIComponent(this.diorama.name)}/${this.diorama.glb}`);
+    if (!model || this.gone) return;
+    const across = this.all.getSize(new THREE.Vector3()).length();
+    this.controls.minDistance = across * 0.12;
+    this.controls.maxDistance = across * 3;
+    const loaded = this.loadedSoFar();
+    // For whoever is checking the page from outside (scripts/diorama/shots.py): what has loaded, and that it has.
+    window.forgeDiorama = { ...loaded, seconds: (performance.now() - this.began) / 1000, settled: true };
+    this.hooks.onLoad?.(loaded);
+    this.idle();
+  }
+
+  // A camera of the diorama's own (build.json), as this screen can hold it: the same direction, far enough back
+  // to keep what that camera framed in the picture.
+  viewOf(view) {
+    const aim = new THREE.Vector3(...view.aim), from = new THREE.Vector3(...view.at).sub(aim).normalize();
+    const half = Math.tan(deg(this.camera.fov / 2));
+    const away = Math.max(view.holds_m / 2 / (half * this.camera.aspect), view.holds_m / 1.6 / 2 / half) * 0.94;
+    return [aim.clone().addScaledVector(from, away), aim];
+  }
+
+  home() {
+    const first = Object.values(this.diorama.views || {})[0];
+    return first ? this.viewOf(first) : super.home();
+  }
+
+  view(name) {
+    const view = (this.diorama.views || {})[name];
+    if (!view) return;
+    this.hold();
+    this.touched = true;
+    this.fly(...this.viewOf(view));
+    this.letGo(900);
+  }
+
+  hold() {
+    clearTimeout(this.again);
+    this.swaying = null;
+  }
+
+  letGo(after = 0) {
+    clearTimeout(this.again);
+    this.again = setTimeout(() => this.idle(), SWAY_AGAIN_MS + after);
+  }
+
+  // The idle turn: a slow sway either side of wherever the camera was left, so the front stays the front.
+  idle() {
+    if (this.calm || this.gone || !this.all || !this.inView || this.swaying) return;
+    const sway = (this.swaying = { from: this.camera.position.clone().sub(this.controls.target), began: performance.now() });
+    const up = new THREE.Vector3(0, 1, 0);
+    const step = (now) => {
+      if (this.swaying !== sway || this.gone) return;
+      if (!document.hidden) {
+        const angle = deg(SWAY_DEG) * Math.sin(((now - sway.began) / 1000) * ((2 * Math.PI) / SWAY_S));
+        this.camera.position.copy(this.controls.target).add(sway.from.clone().applyAxisAngle(up, angle));
+        this.camera.lookAt(this.controls.target);
+        this.draw();
+      }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  layout() {
+    const swaying = this.swaying;
+    this.swaying = null;
+    super.layout();
+    if (swaying) this.idle();
+  }
+
+  dispose() {
+    this.hold();
+    this.watch.disconnect();
+    super.dispose();
+  }
+}
+
+// One diorama, laid out: what it is called, the thing itself to turn over, other angles, and its pictures.
+function dioramaView(diorama, kicker, beside = []) {
+  const stage = h("div", { class: "stage diorama-stage clay-well" });
+  const loadLine = h("p", { class: "load-line" });
+  const views = Object.entries(diorama.views || {});
+  const pictures = `dioramas/${encodeURIComponent(diorama.name)}/`;
+  queueMicrotask(() => {
+    viewer?.dispose();
+    viewer = new DioramaViewer(stage, diorama, {
+      onLoad: (loaded) => { loadLine.textContent = `One file, ${mb(loaded.bytes || diorama.bytes)}${diorama.triangles ? `, ${num(diorama.triangles)} triangles` : ""}. The pictures open full size when you tap them.`; },
+    });
+  });
+  return h("section", { class: "state" },
+    h("header", { class: "words" },
+      h("p", { class: "kicker" }, kicker),
+      h("h1", {}, diorama.title),
+      h("p", { class: "caption" }, diorama.caption),
+      diorama.epoch?.title ? h("a", { class: "epoch", href: `#/world/${encodeURIComponent(diorama.epoch.name)}` }, `Epoch ${diorama.epoch.number} · ${diorama.epoch.title}`) : null,
+    ),
+    h("div", { class: "show" },
+      stage,
+      views.length > 1 ? h("div", { class: "angles", role: "group", "aria-label": "Look from" },
+        views.map(([name, view]) => h("button", { class: "chip clay-chip", type: "button", onclick: () => viewer?.view?.(name) }, view.about || words(name)))) : null,
+      loadLine,
+    ),
+    h("aside", { class: "beside" },
+      diorama.stills.length ? h("div", { class: "stills" }, diorama.stills.map((still) =>
+        h("a", { class: "still clay-surface", href: pictures + still.picture, target: "_blank", rel: "noopener", title: still.about || words(still.camera) },
+          h("img", { src: pictures + still.small, alt: still.about || words(still.camera), width: 480, height: 300, loading: "lazy", decoding: "async" })))) : null,
+      beside,
+    ),
+  );
+}
+
+// The front page opens with the newest diorama: the state of the world. The world card sits beside it, and
+// the earlier dioramas wait on a shelf, newest first.
+function stateOfTheWorld() {
+  const built = dioramas.filter((d) => d.glb);
+  if (!built.length) return worldCard();
+  const [now, ...earlier] = built;
+  const past = h("div", { class: "past" },
+    h("h2", {}, "Earlier moments"),
+    earlier.length
+      ? h("div", { class: "past-row" }, earlier.map((d) =>
+        h("a", { class: "card clay-surface past-card", href: `#/diorama/${encodeURIComponent(d.name)}` },
+          d.card ? h("img", { src: `dioramas/${encodeURIComponent(d.name)}/${d.card}`, alt: "", loading: "lazy" }) : null,
+          h("div", { class: "label" }, h("h3", {}, d.title), h("p", {}, `Epoch ${d.epoch.number}`)))))
+      : h("p", { class: "none" }, "This is the first one. When the next is made, this one moves down here."),
+  );
+  return dioramaView(now, "State of the world", [worldCard(), past]);
+}
+
+function dioramaPage(diorama) {
+  return h("article", { class: "object" },
+    h("a", { class: "back", href: "#/" }, "← Everything"),
+    dioramaView(diorama, `Diorama ${diorama.number}`),
+  );
 }
 
 // ---------- one object ----------
@@ -1495,7 +1658,7 @@ async function route() {
     [runs, sets, takes] = await Promise.all(["api/runs", "api/sets", "api/takes"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
   }
   if (!world) world = await fetch("api/world").then((r) => r.json()).catch(() => null);
-  comics = await fetch("api/comics").then((r) => r.json()).catch(() => []);
+  [comics, dioramas] = await Promise.all(["api/comics", "api/dioramas"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
   const reading = location.hash.match(/^#\/comic\/([^/]+)$/);
   const comic = reading && comics.find((c) => c.name === decodeURIComponent(reading[1]));
   if (comic) {
@@ -1512,6 +1675,14 @@ async function route() {
     window.scrollTo(0, 0);
     return;
   }
+  // #/diorama/<name>: one diorama on its own (the newest is the front page).
+  const shown = location.hash.match(/^#\/diorama\/([^/]+)$/);
+  const diorama = shown && dioramas.find((d) => d.name === decodeURIComponent(shown[1]) && d.glb);
+  if (diorama) {
+    app.replaceChildren(dioramaPage(diorama));
+    window.scrollTo(0, 0);
+    return;
+  }
   // #/run/<run id>[/<version>]: a link can open a given version. #/set/<set name>[/<shot>[/<camera>]]: a standing set.
   const match = location.hash.match(/^#\/run\/([^/]+)(?:\/([a-z]+))?$/);
   const onSet = location.hash.match(/^#\/set\/([^/]+)(?:\/([^/]+))?(?:\/([a-z_]+))?$/);
@@ -1519,7 +1690,7 @@ async function route() {
   viewer = null;
   const run = match && runs.find((r) => r.id === decodeURIComponent(match[1]));
   const set = onSet && sets.find((x) => x.id === decodeURIComponent(onSet[1]));
-  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [worldCard(), comicShelf(), shelfHeading(), shelf()];
+  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [stateOfTheWorld(), comicShelf(), shelfHeading(), shelf()];
   app.replaceChildren(...page.filter(Boolean));
   window.scrollTo(0, 0);
 }
