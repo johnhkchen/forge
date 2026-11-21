@@ -137,6 +137,10 @@ world-epoch name title="" caption="":
 world-load:
     python3 scripts/world/world.py load
 
+# Try walking around the world in a headless Chrome at phone size: a scripted walk, what is solid, what places say (add a folder to also take pictures)
+world-walk runs="runs" shots="":
+    python3 scripts/world/test_walkabout.py "{{runs}}" {{ if shots != "" { "--shots \"" + shots + "\"" } else { "" } }}
+
 # Pictures of the gallery's world view at phone and desktop width, into evidence/world/ (the gallery must be running on that port)
 world-shots port="8028" *places:
     python3 scripts/world/shots.py --port {{port}} {{places}}

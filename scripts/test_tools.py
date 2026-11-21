@@ -36,6 +36,7 @@ import blockout_recipe  # noqa: E402
 import check_safe  # noqa: E402
 import test_sets  # noqa: E402  (the standing sets' own cases, which need no Blender)
 import test_world  # noqa: E402  (the world's own cases, which need no Blender either)
+import test_walkabout  # noqa: E402  (walking around the world, in a headless Chrome)
 import test_diorama  # noqa: E402  (the dioramas' own cases, which need no Blender either)
 
 
@@ -1772,6 +1773,11 @@ def test_world_toons(ctx):
     test_world.test_load()
 
 
+def test_world_walk(ctx):
+    """The world: walking around it. In a headless Chrome at phone size, a scripted walk moves Roosevelt at his clips' own speeds (feet don't slide), he can't pass through a block, a toon or the world's edge, places and artifacts say their piece, and nothing of it is fetched until asked for."""
+    test_walkabout.run(os.path.dirname(ctx["troll"]))
+
+
 def test_world_house_build(ctx):
     """The world: a house design is built into a set in a background Blender (build_house.py), and what comes out is sound and low-poly."""
     name = "test-house-build"
@@ -2280,7 +2286,7 @@ TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_contact, test_drape, test_cloth,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body,
          test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build,
-         test_world_places, test_world_house, test_world_toons, test_world_house_build,
+         test_world_places, test_world_house, test_world_toons, test_world_walk, test_world_house_build,
          test_diorama_plan, test_diorama_build]
 
 

@@ -163,6 +163,11 @@ html, body { overflow-x: hidden; }
 .place-card .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
 .place-card .actions a.clay-button { text-decoration: none; font-size: 0.92rem; padding: 0.55em 1.05em; }
 .load-line { margin: 10px 0 0; font-size: 0.85rem; color: var(--clay-ink-soft); }
+/* "Walk around": the button that starts a walk (the rest is walkabout.css, fetched with walkabout.js) */
+.walk-bar { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 2px 0 12px; }
+.walk-bar[hidden] { display: none; }
+.walk-bar .hint { color: var(--clay-ink-soft); font-size: 0.9rem; }
+.walk-bar .clay-button { font-size: 0.95rem; padding: 0.55em 1.2em; }
 
 /* ---- the front page: the newest diorama, the world beside it, earlier ones on a shelf ---- */
 .state { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 10px; }

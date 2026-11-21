@@ -463,11 +463,11 @@ function worldCard() {
   );
 }
 
-function worldPage(wantedEpoch, wantedPlace) {
+function worldPage(wantedEpoch, wantedPlace, wantedWalker) {
   const epoch = world.epochs.find((e) => e.name === wantedEpoch) || world.epochs.find((e) => e.name === world.now) || world.epochs[world.epochs.length - 1];
-  const state = { place: epoch.places[wantedPlace] ? wantedPlace : null, marks: false };
+  const state = { place: epoch.places[wantedPlace] ? wantedPlace : null, marks: false, walking: false };
   const press = (btn, on) => btn.setAttribute("aria-pressed", String(on));
-  const link = () => history.replaceState(null, "", `#/world/${epoch.name}${state.place ? `/${encodeURIComponent(state.place)}` : ""}`);
+  const link = () => history.replaceState(null, "", `#/world/${epoch.name}${state.walking ? "/walk" : state.place ? `/${encodeURIComponent(state.place)}` : ""}`);
   const stage = h("div", { class: "stage world-stage clay-well" });
   const card = h("div", {});
   const loadLine = h("p", { class: "load-line" });
@@ -484,6 +484,7 @@ function worldPage(wantedEpoch, wantedPlace) {
   const chips = [[null, "The whole world"], ...placeNames.map((name) => [name, epoch.places[name].label || words(name)])];
   const chipEls = chips.map(([name, label]) => h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(state.place === name), onclick: () => choose(name) }, label));
   function choose(name, jump = false) {
+    if (state.walking) walk(false);
     state.place = name;
     chipEls.forEach((chip, i) => press(chip, chips[i][0] === name));
     viewer?.goTo(name, jump);
@@ -516,6 +517,36 @@ function worldPage(wantedEpoch, wantedPlace) {
       ),
     ));
   }
+  // Walk around: steer a toon through the world yourself (walkabout.js, fetched when this is first pressed).
+  const walkBtn = h("button", { class: "clay-button", type: "button", onclick: () => walk(!state.walking) }, "Walk around");
+  const walkNote = h("span", { class: "hint" }, "Steer Roosevelt round the world yourself.");
+  const walkBar = h("div", { class: "walk-bar" }, walkBtn, walkNote);
+  async function walk(on) {
+    if (on === state.walking) return;
+    state.walking = on;
+    walkBar.hidden = on; // while walking, the one way out is "Stop walking" on the picture itself
+    walkNote.textContent = "Steer Roosevelt round the world yourself.";
+    link();
+    if (!on) {
+      const here = state.place;
+      viewer?.walkabout?.stop();
+      return choose(here); // the view from above, at the place you walked to
+    }
+    try {
+      stage.scrollIntoView({ block: "center", behavior: "smooth" });
+      await walkAround(viewer, epoch, wantedWalker, {
+        onStop: () => walk(false),
+        onPlace: (name) => { state.place = name; chipEls.forEach((chip, i) => press(chip, chips[i][0] === name)); viewer?.arrive(name); showCard(); },
+      });
+      if (!state.walking) viewer?.walkabout?.stop(); // stopped while it was still fetching
+    } catch (err) {
+      console.error(err);
+      state.walking = false;
+      walkBar.hidden = false;
+      walkNote.textContent = "Couldn't start the walk: nobody here has a walk and a run to load.";
+      link();
+    }
+  }
   const page = h("article", { class: "object" },
     h("a", { class: "back", href: "#/" }, "← Everything"),
     h("h1", {}, world.title || "The world"),
@@ -523,6 +554,7 @@ function worldPage(wantedEpoch, wantedPlace) {
     timeline,
     h("p", { class: "caption" }, epoch.caption),
     h("div", { class: "places", role: "group", "aria-label": "Places" }, chipEls),
+    walkBar,
     stage,
     card,
     loadLine,
@@ -531,6 +563,7 @@ function worldPage(wantedEpoch, wantedPlace) {
     viewer?.dispose();
     viewer = new WorldViewer(stage, epoch, state, { onPick: (name) => choose(name), onLoad: (text) => { loadLine.textContent = text; } });
     showCard();
+    if (wantedPlace === "walk") walk(true); // #/world/<epoch>/walk
   });
   return page;
 }
@@ -681,12 +714,12 @@ class WorldViewer extends Miniature {
     let down = null;
     this.renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
     this.renderer.domElement.addEventListener("pointerup", (e) => {
-      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+      if (this.walkabout || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return; // while walking, a tap is "walk there"
       const name = this.pick(e.clientX, e.clientY);
       if (name) this.hooks.onPick(name);
     });
     this.ground();
-    this.fill(state);
+    this.filled = this.fill(state);
   }
 
   // The developer's unfinished floor: plain grey with a faint grid, a few scale cubes, a note or two.
@@ -824,6 +857,7 @@ class WorldViewer extends Miniature {
       label.position.copy(at);
       inner.add(label);
       entry.extras.push(label);
+      return label;
     };
     for (const item of set.dressing || []) {
       if (item.small) waiting.push(this.get(`sets/${set.id}/${item.glb}`).then((gltf) => { entry[`dressing:${item.prop}`] = this.onSlot(entry, item, gltf.scene.clone(true)); }));
@@ -840,7 +874,9 @@ class WorldViewer extends Miniature {
     for (const toon of this.epoch.toons.filter((t) => t.place === entry.name)) {
       const mark = set.marks[toon.mark], body = entry[`toon:${toon.toon}`];
       if (!mark || !body) continue;
-      name(toon.name, body.position.clone().add(new THREE.Vector3(0, toon.toon === "troll" ? 3.0 : 2.15, 0)));
+      const tag = name(toon.name, body.position.clone().add(new THREE.Vector3(0, toon.toon === "troll" ? 3.0 : 2.15, 0)));
+      tag.userData.toon = toon.toon; // whoever is out walking takes their name with them
+      tag.visible = this.walkabout?.who.toon !== toon.toon;
       for (const thing of this.epoch.artifacts.filter((a) => a.held_by === toon.toon && a.glb)) {
         waiting.push(this.get(thing.glb).then((gltf) => {
           const held = gltf.scene.clone(true);
@@ -890,15 +926,21 @@ class WorldViewer extends Miniature {
   }
 
   goTo(name, jump = false) {
+    this.arrive(name);
+    this.fly(...this.view(name), jump);
+  }
+
+  // Be at a place (or at none) without moving the camera: its small things and names show, its big label hides.
+  arrive(name) {
     this.at = name;
     const entry = this.places[name];
     for (const other of Object.values(this.places)) {
-      other.extras.forEach((o) => { o.visible = other === entry; });
+      other.extras.forEach((o) => { o.visible = other === entry && !(o.userData.toon && o.userData.toon === this.walkabout?.who.toon); });
       if (other.marks) other.marks.visible = false;
       other.label.visible = other !== entry;
     }
     if (entry && this.ready) this.comeClose(entry);
-    this.fly(...this.view(name), jump);
+    if (this.walkabout) this.report();
   }
 
   rest() { return this.all ? this.view(this.at) : null; }
@@ -910,6 +952,20 @@ class WorldViewer extends Miniature {
     window.forgeWorld = { ...this.loaded, seconds: (performance.now() - this.began) / 1000, place: this.at || null, settled: !this.places[this.at] || this.places[this.at].settled === true };
     this.hooks.onLoad(`Loaded so far: ${this.loaded.files} files, ${(this.loaded.bytes / 1e6).toFixed(2)} MB. Small things and heavier versions load when you come close to their place.`);
   }
+
+  dispose() {
+    this.walkabout?.stop();
+    super.dispose();
+  }
+}
+
+// Walk around the world: a toon you steer, seen from behind (gallery/walkabout.js). That file, its style sheet
+// and the walker's own two files are fetched here, the first time someone asks to walk, and not before.
+async function walkAround(worldViewer, epoch, who, hooks) {
+  await worldViewer.filled;
+  if (worldViewer.gone || !worldViewer.ready) throw new Error("the world is not set out");
+  const { startWalk } = await import("./walkabout.js");
+  return startWalk({ viewer: worldViewer, epoch, sets, runs, who, h, labelSprite, ...hooks });
 }
 
 // ---------- dioramas ----------
@@ -1669,9 +1725,10 @@ async function route() {
     return;
   }
   // #/world[/<epoch>[/<place>]]: the whole world at one epoch, maybe already standing at a place.
-  const inWorld = location.hash.match(/^#\/world(?:\/([^/]+))?(?:\/([^/]+))?$/);
+  // #/world/<epoch>/walk[/<toon>]: walking around it.
+  const inWorld = location.hash.match(/^#\/world(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/);
   if (inWorld && world?.epochs?.length) {
-    app.replaceChildren(worldPage(inWorld[1] && decodeURIComponent(inWorld[1]), inWorld[2] && decodeURIComponent(inWorld[2])));
+    app.replaceChildren(worldPage(inWorld[1] && decodeURIComponent(inWorld[1]), inWorld[2] && decodeURIComponent(inWorld[2]), inWorld[3] && decodeURIComponent(inWorld[3])));
     window.scrollTo(0, 0);
     return;
   }
