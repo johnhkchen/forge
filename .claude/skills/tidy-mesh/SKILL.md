@@ -905,6 +905,217 @@ What is weak, most visible first:
 - **Tails, hips, elbows and heads are not tested.** The lizardkin's tail tip
   still dips 0.4 cm in its run.
 
+## Sets: a place of our own, built once and shot many times
+
+A shot used to carry its own scenery: the roof, the ledge and the wall were
+written inside each hero shot's plan. A **set** takes that out of the shot
+and keeps it, the way a TV studio keeps its talk-show stage standing all
+season. It lives in `sets/<name>/`:
+
+| File | What it is |
+|---|---|
+| `set.json` | the floor, what is in the way, marks, paths, cameras, lights, backdrop, slots and dressing |
+| `set.glb` | the set to look at. A block-out is enough |
+| `backdrop.png`, `backdrop.txt` | the painted picture behind the set, and the words Codex painted it from |
+| `build.json` | only for a set built from data: the pieces that are just looked at, and the dressing |
+| `dressing/<prop>.glb` | each piece of dressing, standing at 0, 0, 0 |
+| `card.png` | one picture of the empty set, for the gallery |
+
+All of it is committed. A set is small (the studio is 25 kB of mesh and one
+0.8 MB picture) and a shot cannot be planned, checked or filmed without it,
+so it belongs with the code, not in `runs/`. The full-size picture Codex
+paints (`backdrop-full.png`) is the one thing left out.
+
+Everything is in metres in the shot's own axes: y up, the ground is x and z,
+a heading of 0 faces +z and grows toward +x. A stage faces +z: that is where
+its cameras are.
+
+### What set.json holds
+
+```json
+"frame": { "origin": [0.0, 0.0, 0.0], "front_deg": 0.0 },
+"footprint": { "outline": [[-7.5, -1.5], [6.5, -1.5], [6.5, 10.8], [-7.5, 10.8]] },
+"blocks": [{ "name": "desk", "kind": "desk", "center": [2.2, 0.375, 2.1], "size": [1.6, 0.75, 0.7], "heading": 0.0 }],
+"marks": {
+  "wings":      { "kind": "stand", "at": [-4.7, 2.75], "facing_deg": 90.0, "offstage": true },
+  "couch_1":    { "kind": "sit", "at": [0.27, 0.95], "stand_at": [0.27, 1.4], "facing_deg": 10.0,
+                  "seat_height_m": 0.46, "seat": "couch seat", "beside": ["couch back", "couch arm right"] },
+  "meet_left":  { "kind": "touch", "at": [-0.78, 2.75], "facing_deg": 90.0,
+                  "touch": { "hand": "right", "at": [-0.4, 1.05, 2.75] } }
+},
+"paths": [{ "from": "desk_chair", "to": "meet_right", "via": [[1.1, 1.52], [0.72, 2.3]] }],
+"cameras": { "host": { "at": [0.6, 1.35, 8.5], "aim": [2.1, 1.05, 1.2], "lens_mm": 85, "sees": ["desk_chair"] } },
+"lights": [{ "name": "key", "kind": "area", "at": [-3.0, 4.6, 7.0], "aim": [0.0, 1.0, 1.6], "power": 320.0 }],
+"backdrop": { "image": "backdrop.png", "center": [0.3, 2.3, -1.2], "width_m": 9.0, "height_m": 6.0 },
+"slots": { "desk_right": { "at": [2.72, 0.75, 2.05], "heading": -15.0 } },
+"dressing": [{ "prop": "mug", "slot": "desk_right", "glb": "dressing/mug.glb" }]
+```
+
+- **A set is written in its own frame.** `frame` gives its origin and which
+  way its front faces; marks, cameras, blocks, lights and the backdrop are
+  all measured from that origin, and `set.glb` is built around it
+  (`geometry.move` is 0; `standing.py adopt` bakes a move into a .glb that
+  came from a run). `footprint` is the ground it takes up, cameras and all.
+  A set.json never says where the set is. A world file can, later: one line
+  per set, `{"at": [x, z], "facing_deg": 90}`, and `standing.placed(set, at,
+  facing_deg)` turns any point or heading of the set into the world's. A
+  shot is planned and filmed in the set's frame, so moving a set changes no
+  shot. The ring's footprint has `"open_toward_deg": 90`: its +x side ends
+  close to the ropes and is kept clear, for the hall to grow on.
+- **Blocks** are written the way a shot's `plan.json` has always carried its
+  `set` (name, kind, center, size as across, tall, through, heading), which
+  is what `apply_shot.py` hands to `animate.py`'s contact step. So a set's
+  blocks reach the contact step with no new code there. Remember what that
+  step assumes: **a block is solid from the floor up to its top.** A desk is
+  a box, not a table top; keep a seated person's feet out of its footprint.
+  `"see_through": true` (ropes) stops a body but not a camera.
+- **The floor is y = 0**, always. The ring's floor is its mat, so its
+  geometry was moved down by the mat's height when it was taken from the
+  run, and `"ground": {"y": -1.36}` says where the hall floor is.
+- **A seat mark** names the block sat on and has two spots: `at`, where the
+  hips are when seated, and `stand_at`, in front of it. Its own seat and
+  whatever is `beside` it (a chair's back, a couch's arm) do not count as in
+  its way.
+- **Two touch marks that share one hand's spot** are a handshake.
+
+### `just set-check`
+
+`python3 scripts/sets/standing.py check <set>` says what is wrong, in words.
+It checks that every mark stands on the floor with 22 cm of room for a body;
+that a seat is within 6 cm of the height our `sit` pose is written for (0.46
+m), is as high as the block it names, and has its standing spot 25 to 70 cm
+in front; that a hand's spot is within an arm's reach and not inside a
+block; that two marks sharing a spot face each other 0.7 to 1.05 m apart;
+that every path stays on the floor and clear of blocks along the curve
+people will really walk; that each camera holds the head, chest and feet of
+every mark it says it `sees`, with no block between; that on a stage
+(`"stage": "shallow"`) the floor is at most 5 m deep, every camera is out
+front and every mark is seen by one; that the backdrop is behind everyone
+and fills each camera's view (or a wall does); that dressing stands on slots
+that exist; that every block is inside the set's geometry; and that the set
+has a frame and a footprint that holds its marks, blocks, floor and cameras,
+with its geometry built around its origin.
+
+### Blocking: a shot list names marks
+
+`ShotList` has `start_mark`; a beat has `from`, `to` and `at`; a text beat's
+key can say `"where": "start"` or `"end"`. `plan_shot.py` hands a shot list
+that names marks to `standing.stage_marks`, which fills in what the rest of
+the shot path already reads:
+
+| The shot list says | The set supplies |
+|---|---|
+| `"to": "meet_left"` on a text beat | the path's ground points (through the set's turning points), `from_m`, `to_m` |
+| `"at": "couch_1"` on a poses beat | each move's `at_m` and `facing_deg`: a seated pose over the seat, any other on `stand_at` |
+| a key `"where": "end"` | its time, place and the mark's facing, so the walk ends standing the right way round |
+| a move that pins `right_hand` at a touch mark | the wrist's spot, written over the pose's own in `plan.json` |
+| a seated pose | which block is sat on and over which frames (`plan.json`'s `stage.seats`) |
+
+Then `standing.into_plan` puts the set's blocks into `plan.json` as `set`,
+so the cast's contact step gets them. A shot list that names no mark is
+passed through untouched, which is how the rooftop shots still plan to the
+requests they always did (`python3 scripts/sets/test_sets.py` proves it
+against the hashes from before).
+
+Sitting is ours: `stand`, `sit`, `sit_talk`, `shake` and `shake_dip` are in
+`author_poses.py` with the rest (`"seated": true` marks the two that sit),
+and MotionBricks moves between them. Walking between marks is a Kimodo
+sentence held to the set's path, ending in our `stand` pose.
+
+### Segments and takes
+
+`motion/segments/<name>.json` is a routine written once: a shot list per
+role, in marks, with `{sentence}` slots for the walks and a `together` list
+of beats everyone must reach on the same frame. `scripts/motion/segment.py`
+turns a take (`motion/shots/<take>.json`: set, segment, who plays whom) into
+`shots/<take>/<role>/shotlist.json` and refuses a template whose roles are
+different lengths or whose `together` beats fall out of step. From there
+each role is an ordinary shot in its own folder: `plan_shot.py`,
+`timeline.py`, `checks.py`, `apply_shot.py` all run on it unchanged.
+
+### Filming: every camera at once
+
+`scripts/motion/render_take.py` stands the set up (`set_contact.stand_up`:
+geometry, ground, backdrop, dressing, lights, cameras), brings every role
+on, and renders one `.mp4` and one strip per camera. Each character's file
+plays the motion at its own size, so each is divided by its
+`size_against_soma` there: everyone is brought to the motion model's hip
+height, and so onto the same marks, seats and hand spot. The gallery's set
+page does the same.
+
+With everyone on the stage it measures what no single character's file can
+(`cast-<clip>.json`): how far apart two right palms and wrists are over a
+handshake, and how far the lowest point of a seated body is from its seat's
+top.
+
+### What the first take measured
+
+`studio-guest-entrance`: Roosevelt walks on, Lincoln gets up from the desk,
+they shake hands at centre, both sit. 475 frames, cast on the low-poly
+characters with their gear (mid-poly files are made too).
+
+| | Lincoln (host) | Roosevelt (guest) |
+|---|---|---|
+| size against the motion's body | 1.08 | 0.89 |
+| a planted foot strays, at most | 0.003 cm | 0.3 cm |
+| foot slide in one step | 0.006 cm | 0.63 cm |
+| through the floor | 0.02 cm | 0.28 cm |
+| deepest in the set | 0.08 cm (a toe) | 0 |
+| turns outside a joint limit | 0 | 0 |
+| wrist from its spot in the handshake | 0.0 cm | 7.4 cm (his arm is too short) |
+| lowest point over the seat, against its top | 0.7 to 0.9 cm above | 3.2 cm above |
+| hips raised to clear the seat, at most | 12.2 cm | 15.9 cm |
+
+Between them, over the 69 frames the hands are held: palms 12.6 cm apart
+typically (12.1 to 13.7), wrists 17.3 cm (15.0 to 21.7; planned 14.0). On
+the box figures, before casting: every beat ends within 1 cm of its mark
+(2.5 cm for one walk), the hips are over the seat within 0.7 cm, wrists 14.6
+cm apart. The motion took 34 jobs, 92 seconds of worker time on an RTX 4090.
+
+Two things were learned on the way, and are now how the studio is written.
+The first take had the seat blocks as deep as the cushions; Roosevelt's
+calves were inside the couch's front, and the contact step lifted his feet
+41 cm to get them out. A seat's block now stops 13 cm short of the cushion's
+front edge (the rest is only drawn). And the two handshake marks were 76 cm
+apart, more than his arms could cover; they are 66 cm apart now.
+
+### Adding a set
+
+1. Write `sets/<name>/set.json`. Start from the studio's.
+2. Geometry: `just set-build <name>` (boxes from the blocks, plus
+   `build.json`), or `just set-from-run <name> runs/<an object> game <x> <y>
+   <z>` to use something already made, moved onto the set's origin, or `python3 scripts/sets/standing.py blocks-glb
+   <name>` for plain boxes.
+3. `just set-backdrop <name>` paints `backdrop.png` from `backdrop.txt`.
+4. `just set-check <name>` until it says sound, then `just set-card <name>`.
+
+### What is weak
+
+- **One hip height for everyone.** It is what puts two characters on the
+  same marks, and it makes a short-legged character bigger than a
+  long-legged one. The cure is to play each at its true size and stretch
+  only the travel over the ground, which means changing what
+  `soma_to_plain.py` hands `animate.py`; not done.
+- **The handshake is two wrists near a spot.** The hands lie flat, palm
+  down (that is `animate.py`'s rule for a hand resting on something), there
+  is no grip and no pumping, and an arm too short for the spot stops short.
+- **A seat only pushes up.** The contact step keeps a body out of the seat's
+  block and raises the hips to do it; nothing presses a floating body down
+  onto the seat, and a chair's back is not felt at all.
+- **The floor is flat.** The ring's steps are a mark at the mat's height,
+  and the front ropes have a gap for coming in.
+- **People are kept out of the set, not out of each other.**
+- **Joins around a turn are rough**: leaving the handshake, the body's speed
+  jumps about ten times what is usual for the shot.
+- **Fixed cameras only, and no cut.** Three films come out; nothing picks
+  between them.
+- **Choreograph has only been tried offline with marks** (its prompt and a
+  parsed reply). The one take so far came from the segment template.
+- **Paths are declared, not found.** A walk between two marks with no path
+  in `set.json` is a straight line, and `set-check` only tests the declared
+  ones.
+- **Filming is slow**: about four minutes a camera for 16 seconds.
+
 ## Clothes that sit on the body and move with it
 
 A block-out's gear is tubes and boxes built roughly around the body. Left

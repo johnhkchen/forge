@@ -20,8 +20,12 @@ Writes:
                           per piece instead
     <shot>/plan.json      where and when each move should end, for the checks:
                           frames, ground points, headings, pins, the curve,
-                          and the set (ledge, roof, wall) as plain blocks,
-                          stood along the same curve from the brief's `set`
+                          and the set as plain blocks. The brief's `set`
+                          names a standing set (sets/<name>/set.json: its
+                          blocks, and marks the shot list's beats can name;
+                          see scripts/sets/standing.py). The older way, a
+                          ledge, roof and wall described in the brief and
+                          stood along the curve, still works
 
 Nothing here reads a motion clip. Every rotation it sends comes from
 motion/poses.json.
@@ -284,6 +288,14 @@ def set_blocks(path: Path, card: dict, end_m: float) -> tuple:
     """The set as plain blocks standing along the path: a ledge in short
     pieces that follow the curve, one roof slab, and the wall. The walking
     surface is y = 0 everywhere."""
+    if isinstance(card, str):
+        # A standing set, by name: its blocks are where the set has them, whatever the path does.
+        sys.path.insert(0, os.path.join(REPO, "scripts", "sets"))
+        import standing
+
+        st = standing.load(card)
+        blocks = standing.plan_blocks(st)
+        return blocks, next((b for b in blocks if b["name"] == st.get("wall")), None)
     blocks, wall = [], None
 
     def block(name, kind, s, size, y):
@@ -314,7 +326,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("shot")
     parser.add_argument("--poses", default=os.path.join(REPO, "motion", "poses.json"))
-    parser.add_argument("--brief", help="the shot's plan (motion/shots/<name>.json); its `set` is stood along the path")
+    parser.add_argument("--brief", help="the shot's plan (motion/shots/<name>.json); its `set` names a standing set, or is stood along the path")
+    parser.add_argument("--set", dest="standing", help="a standing set by name (sets/<name>), when there is no brief to name it")
     args = parser.parse_args()
     with open(os.path.join(args.shot, "shotlist.json")) as f:
         shot = json.load(f)
@@ -324,6 +337,21 @@ def main() -> None:
     if args.brief:
         with open(args.brief) as f:
             set_card = json.load(f).get("set")
+    standing_set = None
+    if args.standing or isinstance(set_card, str):
+        # A standing set: marks the beats name become the path, distances and facings; its blocks go in the plan.
+        sys.path.insert(0, os.path.join(REPO, "scripts", "sets"))
+        import standing
+
+        standing_set, set_card = standing.load(args.standing or set_card), None
+        shot = standing.stage_marks(shot, standing_set, library)
+
+    def keep_plan(record):
+        if standing_set:
+            standing.into_plan(record, standing_set, shot)
+        with open(os.path.join(args.shot, "plan.json"), "w") as f:
+            json.dump(record, f, indent=1)
+
     sk = Skeleton.load()
     if any(beat.get("source", "poses") != "poses" for beat in shot["beats"]):
         # Beats from more than one maker: the shot is made in pieces and joined (timeline.py).
@@ -332,8 +360,7 @@ def main() -> None:
         record, requests = timeline.lay_out(shot, library, sk, set_card)
         for request in requests.values():
             timeline.keep_request(args.shot, request)
-        with open(os.path.join(args.shot, "plan.json"), "w") as f:
-            json.dump(record, f, indent=1)
+        keep_plan(record)
         for beat in record["beats"]:
             print(f"PLAN {beat['name']} ({beat['source']}): {beat['seconds']} s (planned {beat['planned_seconds']} s), frames {beat['first_frame']}-{beat['last_frame']}")
         for seam in record["seams"]:
@@ -343,8 +370,7 @@ def main() -> None:
     request, record = plan(shot, library, sk, set_card)
     with open(os.path.join(args.shot, "request.json"), "w") as f:
         json.dump(request, f, separators=(",", ":"))
-    with open(os.path.join(args.shot, "plan.json"), "w") as f:
-        json.dump(record, f, indent=1)
+    keep_plan(record)
     for beat in record["beats"]:
         print(f"PLAN {beat['name']}: {beat['seconds']} s (planned {beat['planned_seconds']} s), frames {beat['first_frame']}-{beat['last_frame']}")
     print(f"PLAN {len(request['targets'])} moves, {record['frames']} frames, {record['seconds']} s, path {record['path_length_m']} m")

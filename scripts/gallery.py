@@ -1,10 +1,12 @@
-"""Serve the gallery on the local network: every run, before and after.
+"""Serve the gallery on the local network: every run, before and after, and every set.
 
-    python3 scripts/gallery.py [--port 8028] [--runs DIR]
+    python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR]
 
-Read-only. Serves gallery/ (the page), runs/ and comics/ (the files), plus
-/api/runs and /api/comics, lists built from the folders on each request, so
-a new run or comic shows up on reload. Binds to all interfaces so a phone on the same Wi-Fi
+Read-only. Serves gallery/ (the page), runs/ and comics/ (the files), sets/
+(the standing sets) and shots/ (what was filmed on them), plus /api/runs,
+/api/comics, /api/sets and /api/takes, lists built from the folders on each
+request, so a new run, comic or take shows up on reload. Binds to all
+interfaces so a phone on the same Wi-Fi
 can open it; nothing here is meant for the internet.
 """
 import argparse
@@ -19,11 +21,14 @@ from urllib.parse import unquote, urlparse
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PAGE = os.path.join(ROOT, "gallery")
 RUNS = os.path.join(ROOT, "runs")
+SETS = os.path.join(ROOT, "sets")
+SHOTS = os.path.join(ROOT, "shots")
 COMICS = os.path.join(ROOT, "comics")
 PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 
 mimetypes.add_type("model/gltf-binary", ".glb")
 mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("video/mp4", ".mp4")
 
 
 def read_json(path):
@@ -152,6 +157,55 @@ def all_runs():
     return [run_summary(f) for f in sorted(folders, reverse=True)]
 
 
+def all_sets():
+    """Every standing set (sets/<name>/set.json), as its page needs it: the set.json itself, and which of its files are there."""
+    out = []
+    if not os.path.isdir(SETS):
+        return out
+    for name in sorted(os.listdir(SETS)):
+        card = read_json(os.path.join(SETS, name, "set.json"))
+        if not card:
+            continue
+        has = lambda f: bool(f) and os.path.isfile(os.path.join(SETS, name, f))
+        card["id"] = name
+        card["glb"] = (card.get("geometry") or {}).get("glb", "set.glb") if has((card.get("geometry") or {}).get("glb", "set.glb")) else None
+        card["picture"] = "card.png" if has("card.png") else ((card.get("backdrop") or {}).get("image") if has((card.get("backdrop") or {}).get("image")) else None)
+        card["dressing"] = [d for d in card.get("dressing") or [] if has(d.get("glb"))]
+        if card.get("backdrop") and not has(card["backdrop"].get("image")):
+            card["backdrop"] = None
+        out.append(card)
+    return out
+
+
+def all_takes():
+    """Every shot filmed on a standing set with a cast (shots/<name>/cast-<clip>.json, from render_take.py): who is in
+    it, each one's file and size, and the film from each camera."""
+    out = []
+    if not os.path.isdir(SHOTS):
+        return out
+    for name in sorted(os.listdir(SHOTS)):
+        folder = os.path.join(SHOTS, name)
+        take = read_json(os.path.join(folder, "take.json")) or {}
+        for file in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+            if not (file.startswith("cast-") and file.endswith(".json")):
+                continue
+            cast = read_json(os.path.join(folder, file))
+            if not cast:
+                continue
+            roles = []
+            for role, card in (cast.get("roles") or {}).items():
+                if not card.get("glb") or not os.path.isfile(os.path.join(folder, card["glb"])):
+                    continue
+                mid = card["glb"].replace("lowpoly-", "midpoly-")
+                roles.append({"role": role, "character": os.path.basename(os.path.dirname(card.get("character", ""))), "size": card.get("size_against_soma", 1.0),
+                              "glb": card["glb"], "midpoly": mid if mid != card["glb"] and os.path.isfile(os.path.join(folder, mid)) else None})
+            out.append({
+                "id": name, "clip": cast.get("clip"), "set": cast.get("set"), "title": take.get("title") or name.replace("-", " ").capitalize(),
+                "about": take.get("about"), "seconds": cast.get("seconds"), "roles": roles,
+                "films": {camera: film.get("mp4") for camera, film in (cast.get("films") or {}).items() if film.get("mp4") and os.path.isfile(os.path.join(folder, film["mp4"]))},
+                "handshakes": cast.get("handshakes") or [],
+            })
+    return out
 def all_comics():
     """Every lettered comic in comics/: what its reader.json holds (scripts/comic/layout.py writes it)."""
     if not os.path.isdir(COMICS):
@@ -197,12 +251,20 @@ class Handler(SimpleHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         if path == "/api/runs":
             return self.send_json(all_runs())
+        if path == "/api/sets":
+            return self.send_json(all_sets())
+        if path == "/api/takes":
+            return self.send_json(all_takes())
         if path == "/api/comics":
             return self.send_json(all_comics())
         if path.startswith("/comics/"):
             return self.send_file(COMICS, path[len("/comics/"):])
         if path.startswith("/runs/"):
             return self.send_file(RUNS, path[len("/runs/"):])
+        if path.startswith("/sets/"):
+            return self.send_file(SETS, path[len("/sets/"):])
+        if path.startswith("/shots/"):
+            return self.send_file(SHOTS, path[len("/shots/"):])
         if path in ("/", ""):
             return self.send_file(PAGE, "index.html")
         return self.send_file(PAGE, path.lstrip("/"))
@@ -224,8 +286,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8028)
     parser.add_argument("--runs", default=RUNS, help="the folder of runs to show (default: runs/)")
+    parser.add_argument("--shots", default=SHOTS, help="the folder of shots, for takes filmed on a set (default: shots/)")
     args = parser.parse_args()
     RUNS = os.path.abspath(args.runs)
+    SHOTS = os.path.abspath(args.shots)
     server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
     print("Forge gallery", flush=True)
     print("  on this Mac:   http://localhost:%d" % args.port)

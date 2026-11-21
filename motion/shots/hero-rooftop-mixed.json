@@ -33,22 +33,5 @@
       "driven_by": "rise, draw, hero_stance; the sword goes from the back to the right hand"
     }
   ],
-  "set": {
-    "ledge": {
-      "from_m": 0.0,
-      "to_m": 2.6,
-      "width_m": 0.5
-    },
-    "roof": {
-      "from_m": 2.3,
-      "past_the_end_m": 2.5,
-      "width_m": 5.0
-    },
-    "wall": {
-      "at_m": 8.6,
-      "height_m": 0.75,
-      "thickness_m": 0.3,
-      "width_m": 3.2
-    }
-  }
+  "set": "rooftop"
 }

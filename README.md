@@ -39,6 +39,8 @@ Every run gets its own folder, `runs/<time>-<name>/`:
 | `run/ask.json`, `run/clip.json`, `run/loop.json`, `profiles/lowpoly-run.glb`, `profiles/midpoly-run.glb` (each with a `.json`) | step 5, characters, when Kimodo can be reached: the sentence and speed, the clip as made, the loop cut from it, and the two versions running |
 | `props.json` | step 6 (which prop goes where, and the folder each one was made in) |
 
+Sets live outside `runs/`, in `sets/<name>/` (see "Sets"), and are kept with the code.
+
 A step is skipped if its file is already there, so `just resume runs/<folder>` picks up where a run stopped.
 
 ## Setup
@@ -86,6 +88,10 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just cloth-check <file.glb>…` | measure a dressed character: how much skin comes through its clothes over the walk, how far they sit off the body |
 | `just shoot [shot]` | make a shot from its plan in `motion/shots/`: Opus lays it out, our poses are placed, MotionBricks fills in the movement (and Kimodo makes any beat that is a sentence), it is measured and filmed |
 | `just cast <shot> <character run> [prop run] [clip]` | put a character (and what it carries) in a finished shot; `clip` names the cut (`hero`, or `hero-mixed` for a second one) |
+| `just set-check [set]` | is a standing set sound? Marks on the floor and clear of the furniture, seats the right height, every camera holding its marks (see "Sets") |
+| `just set-build <set>`, `just set-backdrop <set>`, `just set-card <set>` | build a set's block-out from its data, have Codex paint its backdrop, take its picture for the gallery |
+| `just set-from-run <set> <run folder>` | use an object you already made as a set's geometry |
+| `just shoot <take>`, then `just cast <take> runs "" <clip>` | a take on a set with several people in it (`studio-guest-entrance`): every role's motion, then the cast, filmed from every camera of the set |
 | `just clip-to-gallery <shot> <character run> [clip]` | copy the shot's clips into the character's folder, so the gallery shows a "Hero" button; a second cut gets a button of its own |
 | `just comic "<premise>" [strip or scroll] ["<cast>"] ["<places>"] [name]` | make a comic: Opus writes it, one background Blender draws it, code letters it and lays out the page |
 | `just comic-again <name>` | draw and letter `comics/<name>/comic.json` again after editing it by hand; asks no model |
@@ -221,7 +227,7 @@ How a shot gets made:
 
 1. **You write the plan in words**, in `motion/shots/<name>.json`: what happens when, and where the walls and ledges are.
 2. **Opus lays it out.** It turns the plan into a shot list: which pose, where along the path, how fast, for how long. It never writes a joint angle. (`Choreograph` in `baml_src/8_motion`)
-3. **The poses are ours.** `motion/poses.json` holds thirteen of them (crouch, look left, sneak step, sprint stride, vault, landing, draw, hero stance...), each written by hand in `scripts/motion/author_poses.py` as "hips here, this foot there, that hand on the wall". Each is checked as a body before it is saved: no limb overstretched, no knee bending backwards, feet flat where they stand, weight over the feet. `just poses` rebuilds them.
+3. **The poses are ours.** `motion/poses.json` holds eighteen of them (crouch, look left, sneak step, sprint stride, vault, landing, draw, hero stance, and for a set: stand, sit, shake hands...), each written by hand in `scripts/motion/author_poses.py` as "hips here, this foot there, that hand on the wall". Each is checked as a body before it is saved: no limb overstretched, no knee bending backwards, feet flat where they stand, weight over the feet. `just poses` rebuilds them.
 4. **MotionBricks fills in the movement between the poses.** That is NVIDIA's motion model, running on a second RunPod endpoint of your own (`motionbricks_worker/`). It also scales to zero.
 5. **The result is measured and filmed** on a plain box figure: how far the feet slide, whether anything goes through the floor or the wall, whether the hand is on the wall top, how far each beat ends from where it was planned (`checks.json`, `motion.mp4`, `strip.png`).
 6. **`just cast` puts a real character in it.** The motion goes through the same skeleton, joint limits and planted feet as the walk, its clothes sit and swing the same way, and the sword rides on the character's back until the draw, then in its hand. The character's own shoes, shins and hands are kept out of the roof and the wall, and a hand the plan pins (the wall top in the vault) is put on its spot. `just clip-to-gallery` adds a "Hero" button for it in the gallery.
@@ -240,6 +246,55 @@ Everything a shot makes lands in `shots/<name>/`. A step whose file is already t
 
 **What is weak.** Neither motion model can see the set, so in the raw motion a shin clips the wall and a foot dips under the roof; the checks say by how much. Casting a character cures what moving a leg, an arm or the hips can cure, and pins the feet, which drift while planted. It cannot turn a run through the wall into a vault: in the mixed cut the shins still cut 7.5 cm into the wall and the hand ends 25 cm from the wall top. And in the landing the ninja's hand hangs about 20 cm over the roof, because its knee is kept out of it. The numbers are in the skill's "Contact" section. Our hand-written poses are not what the model learned from, so the motion between them is stiffer than motion capture. A "sprint" that has to fit the roof is closer to a run. A sentence gives you a motion, not the motion: Kimodo knows walking, running, sneaking, fighting and everyday moves well and has seen little parkour, and each sentence is at most ten seconds.
 
+## Sets
+
+Desi Arnaz built a set that stayed up, put three cameras on it, and filmed a play a week. Talk shows still work that way, and so do we now: a **set** is a place of our own, built once and shot many times, so a new shot only has to say who stands where.
+
+```
+just set-check studio
+just shoot studio-guest-entrance
+just cast studio-guest-entrance runs "" guest-entrance
+```
+
+What a set keeps, in `sets/<name>/set.json`:
+
+- **Its own frame and footprint.** Everything in the file is measured from the set's own origin, with a front (where a stage's cameras are) and an outline of the ground it takes up. Nothing says where the set is in the world, so a set can be picked up and put down as one piece.
+- **Marks.** Named spots: a place to stand (`wings`, `monologue`, `centre`), a seat with its height and the spot in front of it you stand on (`desk_chair`, `couch_1`), a place to stand with a spot for a hand (`meet_left` and `meet_right`, which share one spot: a handshake). A shot names marks and never writes a coordinate.
+- **Paths.** Which marks people walk between, with a turning point or two where a straight line would cut a corner of the desk. Moves are short, across a shallow stage.
+- **Cameras that never move.** Three on the studio: `wide`, `host`, `guest`. One take is filmed from all of them at once, and you pick the cut afterwards.
+- **Lights that never move**, so every shot on the set looks like the last one.
+- **A painted backdrop.** The city out the studio's window is one picture Codex painted, standing a metre and a half behind the glass. Nothing out there is modelled.
+- **What is in the way**, as plain boxes: the desk, the couch, the ropes. They are the same boxes a character's legs and hands are kept out of when it is cast.
+- **Dressing, kept apart.** The mug, the microphone and the plant are small files of their own standing on named slots, the way a sword rides a character's sockets. Swap one or take it away without touching the set.
+
+`just set-check` reads a set and says what is wrong with it, in words: a mark off the floor or too near the desk for a body, a seat too high for the sitting pose, a path that clips the couch, a camera that cuts off someone's head or has a post in front of it, a backdrop that doesn't fill the view.
+
+**Three sets so far.**
+
+| Set | What it is | Made from |
+|---|---|---|
+| `rooftop` | the roof, ledge and wall of the hero shots | the blocks that used to be written inside each shot. Both hero shots now say `"set": "rooftop"`, and plan to the same requests as before, byte for byte |
+| `ring` | the 1890s wrestling ring | the ring object from `runs/`: the floor is the mat, the ropes and posts are in the way, the corners and centre are marks, the steps are the way in |
+| `studio` | a small talk-show stage: desk and chair, a couch for two, a way on from the wings, a band riser, a skyline | built from data. `just set-build studio` makes its block-out from the boxes in `set.json` and a few extra pieces in `build.json`, in flat colors, in a background Blender. No TRELLIS, one picture from Codex |
+
+**Blocking by marks.** A beat in a shot list says `"to": "meet_left"` (walk there) or `"at": "couch_1"` (stay there: stand, sit down, get up, shake hands). The set then supplies what a shot used to write by hand: the path over the ground, how far along it each pose stands, which way it faces, how high the seat is, where the hand goes. Sitting is our own `sit` pose reached from our own `stand` pose; walking is one sentence to Kimodo, held to the set's path. A shot list that names no marks works exactly as before.
+
+**Segments.** The things a show does every night are written once, as a segment (`motion/segments/`): a shot list per role, in marks. `guest-entrance` is the first: the guest walks on from the wings, the host gets up from the desk and meets them at centre, they shake hands, both sit. A take of it only says who plays whom:
+
+```json
+{ "set": "studio", "segment": "guest-entrance",
+  "roles": { "host": "young-lincoln-frontier-wrestler", "guest": "roosevelt-wrestler-1890s" } }
+```
+
+A take can also swap a sentence (`"sentences": {"guest_walks_on": "A person strides forward, waving."}`) or a mark (`"marks": {"couch_1": "couch_2"}`). Everything it makes lands in `shots/<name>/`: a folder per role (each an ordinary shot, with its own `checks.json`), then `lowpoly-<clip>-<camera>.mp4` and a strip of stills for every camera, and `cast-<clip>.json` with what was measured.
+
+**The handshake** is the first time two characters touch. Both marks share one spot; each plan puts that character's wrist a palm's length short of it; the same step that puts the ninja's hand on the wall top puts each hand there. With both on the stage, the film step measures how far apart the palms really are.
+
+**In the first take** (Roosevelt and Lincoln, 16 seconds): Lincoln's wrist is on its spot to the millimetre; Roosevelt's arms are shorter and his stops 7.4 cm short, so their palms end up 12.6 cm apart (12.1 to 13.7 over the two seconds they hold it). A planted foot strays 0.3 cm at most, nothing goes more than 3 mm through the floor, and no joint leaves its limits. Seated, Lincoln is within a centimetre of his chair and Roosevelt floats 3.2 cm over the couch. Before any character is cast, the box figures land on their marks within 1 cm and their wrists are 14.6 cm apart against a planned 14. All of the motion took 34 jobs and 92 seconds of an RTX 4090: a few cents.
+
+In the gallery, **Sets** has a page per set: the set in 3D with its marks and cameras labelled, a row to look through each fixed camera, its dressing as chips, and a button for each shot filmed there that brings the cast on and plays it.
+
+**What is weak.** Everyone on a set is brought to the same hip height, which is how they all land on the same marks; so short-legged Roosevelt comes out bigger than long-legged Lincoln, who was the taller man. The handshake only puts two wrists near one spot: the hands lie flat the way a hand rests on a wall, nobody grips, nothing pumps, and a short arm comes up short. A seat is a box, solid down to the floor: a body is kept out of it and can float a few centimetres above it, nothing pulls it down onto the cushion, and nothing knows about the chair's back. The floor is flat, so the ring's steps are a mark at mat height and its ropes have a gap where people come in. Where a walk meets a turn (leaving the handshake) the join is the roughest part of the motion. Nothing keeps two people out of each other, only out of the set. The cameras never move and nobody picks the cut: you get three films. Only the template has been shot; Opus has been shown how to block by marks but has not yet laid out a set shot for real. Filming is slow, about four minutes a camera.
 ## Comics
 
 Webcomics got cheap by a few habits: one drawing "hand" used on everything, the same poses and framings again and again, plain backgrounds, a sheet of faces to swap, and words doing the work. We have 3D characters that can already stand, walk and vault a wall, so a panel is a frozen moment of one of them, drawn in one style. A panel takes about a quarter of a second to draw.

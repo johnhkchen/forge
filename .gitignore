@@ -6,6 +6,9 @@ tools/
 .claude/worktrees/
 __pycache__/
 /shots/
+
+# The picture Codex paints for a backdrop, full size; the smaller backdrop.png is what is kept
+sets/*/backdrop-full.png
 comics/_*/
 comics/kit.json
 comics/*/panels/*.png
