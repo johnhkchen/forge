@@ -72,6 +72,11 @@ are how we know everyone's faces.
 | The villager | Beside the gachapon, where newcomers arrive |
 | The ninja himself | His own stage, on a timer, holding his pinhole camera |
 
+When every resident had sat for him, the ninja asked them all in at once.
+That first group photo, with the boxing house behind them, the troll holding
+his teacup, the villager only just arrived and Roosevelt waving at somebody
+else, is the first **diorama**: a moment of the story kept as toys on a shelf.
+
 **Meet the cast** is the series that comes out of those sessions: one resident
 at a time, on his stage, in front of the place they love.
 

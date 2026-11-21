@@ -47,7 +47,7 @@ function shelf() {
   const objects = runs.length
     ? h("div", { class: "shelf" }, runs.map((run) =>
       h("a", { class: "card clay-surface", href: `#/run/${encodeURIComponent(run.id)}` },
-        run.portrait || run.render || run.picture ? h("img", { src: file(run, run.portrait || run.render || run.picture), alt: "", loading: "lazy" }) : null,
+        run.card || run.portrait || run.render || run.picture ? h("img", { src: file(run, run.card || run.portrait || run.render || run.picture), alt: "", loading: "lazy" }) : null,
         h("div", { class: "label" },
           h("h2", {}, run.name),
           h("p", {}, `${run.profiles.length ? `${run.profiles.length} versions` : "raw mesh only"} · ${run.made.slice(0, 10)}`),

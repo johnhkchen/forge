@@ -15,6 +15,7 @@ import argparse
 import json
 import mimetypes
 import os
+import subprocess
 import socket
 import sys
 from http import HTTPStatus
@@ -36,6 +37,23 @@ PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 mimetypes.add_type("model/gltf-binary", ".glb")
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("video/mp4", ".mp4")
+
+
+
+def card_thumbnail(run_dir, name):
+    """card.jpg beside the run's picture: 480 px, made once with macOS's sips (and again if the picture changes).
+    The gallery's cards use it; the full picture is still there for the object page."""
+    if not name:
+        return None
+    source = os.path.join(run_dir, name)
+    card = os.path.join(run_dir, "card.jpg")
+    if not os.path.exists(card) or os.path.getmtime(card) < os.path.getmtime(source):
+        try:
+            subprocess.run(["sips", "-Z", "480", "-s", "format", "jpeg", "-s", "formatOptions", "82", source, "--out", card],
+                           capture_output=True, timeout=30, check=True)
+        except (OSError, subprocess.SubprocessError):
+            return name
+    return "card.jpg"
 
 
 def read_json(path):
@@ -144,6 +162,8 @@ def run_summary(folder):
         "picture": "image.png" if has("image.png") else None,
         # The shadow ninja's portrait of this toon (canon: his photoshoots), used as its card when there is one.
         "portrait": "portrait.png" if has("portrait.png") else None,
+        # A small copy of whichever picture the card shows, so the front page doesn't pull full-size PNGs.
+        "card": card_thumbnail(run_dir, "portrait.png" if has("portrait.png") else "render.png" if has("render.png") else "image.png" if has("image.png") else None),
         "render": "render.png" if has("render.png") else None,
         "raw": "profiles/raw.glb" if has("profiles/raw.glb") else ("mesh.glb" if has("mesh.glb") else None),
         "gpu": mesh.get("gpu"),
