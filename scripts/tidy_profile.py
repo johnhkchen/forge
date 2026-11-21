@@ -279,9 +279,31 @@ def apply_modifier(obj, mod):
     bpy.ops.object.modifier_apply(modifier=mod.name)
 
 
+def triangle_count(obj):
+    return sum(len(p.vertices) - 2 for p in obj.data.polygons)
+
+
 def reduce(obj, budget):
+    """Bring a piece down to about `budget` quads' worth of triangles. Decimate can't touch a tangled piece
+    (the pinhole camera's spout: 25,000 faces on 7,900 points, edges shared by three or more faces) and hands
+    it back as it was; then the piece is wrapped in a clean skin first and that is reduced."""
+    want = budget * 2
     mod = obj.modifiers.new("Decimate", "DECIMATE")
-    mod.ratio = min(1.0, budget * 2 / max(sum(len(p.vertices) - 2 for p in obj.data.polygons), 1))
+    mod.ratio = min(1.0, want / max(triangle_count(obj), 1))
+    apply_modifier(obj, mod)
+    if triangle_count(obj) <= max(want * 4, 400):
+        return
+    skin = wrapped(obj, max(world_size(obj)))
+    if skin is None:
+        return
+    old = obj.data
+    obj.data = skin.data
+    obj.matrix_world = skin.matrix_world.copy()  # the skin has the piece's turn and scale applied
+    bpy.data.objects.remove(skin, do_unlink=True)
+    if old.users == 0:
+        bpy.data.meshes.remove(old)
+    mod = obj.modifiers.new("Decimate", "DECIMATE")
+    mod.ratio = min(1.0, want / max(triangle_count(obj), 1))
     apply_modifier(obj, mod)
 
 
