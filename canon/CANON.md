@@ -136,8 +136,10 @@ politically.
    he can't get past Lincoln's arms. Forty minutes later he concedes and asks
    for a rematch tomorrow.
 
-(The rooftop ninja episode in `comics/rooftop-ninja` was a test of the comic
-tools, not canon: in canon the ninja watches rather than performs.)
+**Side stories** (not canon, kept for fun):
+
+- **First Light** (`comics/rooftop-ninja`): seen through the ninja's eyes, in
+  thought only, as he crosses the rooftops before dawn to catch the sunrise.
 
 ## Not yet seen
 
