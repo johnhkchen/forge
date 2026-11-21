@@ -135,6 +135,8 @@ def run_summary(folder):
         "size_m": brief.get("size_m"),
         "character": bool(brief.get("character")),
         "picture": "image.png" if has("image.png") else None,
+        # The shadow ninja's portrait of this toon (canon: his photoshoots), used as its card when there is one.
+        "portrait": "portrait.png" if has("portrait.png") else None,
         "render": "render.png" if has("render.png") else None,
         "raw": "profiles/raw.glb" if has("profiles/raw.glb") else ("mesh.glb" if has("mesh.glb") else None),
         "gpu": mesh.get("gpu"),
