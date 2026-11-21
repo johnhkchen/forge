@@ -103,6 +103,8 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just motion-health`, `just motion-info`, `just motion-selftest` | is the motion endpoint up, what is it running, and does it work end to end |
 | `just text-info` | what the sentence-to-motion model has fetched and loaded (the first call fetches it) |
 | `just recipe <run folder>` | for a run from before recipes were kept: get its block-out's recipe back from the transcript, so `midpoly` can be made |
+| `just auto-body <run folder> <out folder>` | give a finished character a body with anatomy, without Claude: its landmarks are found, a body is built from them, and its own head and gear go back on. Writes into the out folder, never the run |
+| `just anatomy-check <run folder> <out.png> low=<file.glb>…` | measure low-poly and mid-poly bodies against the detailed mesh: landmarks, proportions, outlines, cross-sections, and a sheet to look at |
 | `just gallery` | look at every object, raw vs cleaned-up, and read the comics, on this Mac or a phone on the same Wi-Fi |
 | `just transcript <run folder> <step>` | read the Blender code Claude ran in a step (`polish`, `parts`, `lowpoly`) |
 | `just test-tools` | try the Blender scripts on real runs in a background Blender (your open Blender is left alone) |
@@ -135,6 +137,18 @@ A face is the first thing anyone looks at and the first thing this pipeline got 
 - **In the walk, the head and what sits on it follow the head bone alone**, so the jaw doesn't bend with the neck.
 
 `just face-sheet` draws every version's face next to the picture and `just face-check` measures them. Weak spots: the detailed `final.glb` itself keeps TRELLIS's face (make `hero` for a painted one); the paint is a front view, so ears and temples are still TRELLIS's; glasses and eye patches are painted flat onto the face as well as built; and a head sunk between the shoulders (the troll) isn't found without a block-out to say where it is. More in the skill's notes.
+
+## Bodies with anatomy
+
+Built by hand from tubes, a low-poly body came out as stacked tubes: no shoulder cap, no waist between ribcage and pelvis, no calf, a mitten for a hand, a box for a foot. So the body is no longer built by hand:
+
+- **The landmarks are found, not guessed.** A tool reads the detailed mesh (or the real body under hiding clothes, when the run has one) and finds the chin, neck, shoulders, armpits, chest, waist, hips, crotch, elbows, wrists, knees and ankles, how long the hands and feet are, and the body's own shape all the way along. Where a landmark doesn't show (an elbow inside a straight sleeve) it sits where a body usually has it, and says so.
+- **One "body" piece builds the lot**: a trunk with ribcage, waist and pelvis, a neck, arms with a shoulder cap, hands with a thumb, legs with a knee and a calf, feet with a heel and toes. About 900 triangles, with three rings close together at each elbow and knee, which is where the skeleton then puts those joints.
+- **Style is a few numbers on that piece**: chunkier, slimmer limbs, a bigger head, or cleaner shapes that follow the picture less closely.
+- **Mid poly adds anatomy, not only roundness**: five rings at each elbow and knee and twice as many everywhere else, each laid on the detailed mesh, so the chest, shoulder blades and kneecaps it has come through.
+- **The landmarks stay in the recipe** (`lowpoly_build.json`, `landmarks` and `joints`) for whatever needs them next.
+
+Claude now adds the head, hair and gear to that body and checks it against a short anatomy list. `just auto-body <run folder> <out folder>` does the body for a finished run without Claude, keeping its head and gear; `just anatomy-check` measures any version against the detailed mesh (landmarks, proportions, outlines, cross-sections) and draws a sheet. What is weak, and the numbers on eight characters, are in the skill's "Anatomy" section; the sheets are in `docs/anatomy/`.
 
 ## Gear comes off
 
@@ -302,14 +316,17 @@ What a comic is made from:
 - **The hand** is `toon.py` in the skill: flat color in three tones of light, each texture simplified to a few steps, and an ink line that stays the same width on screen near and far. The same on every character, prop and set, so low-poly roughness reads as a style. `just comic-style` shows any character before and after.
 - **Poses** come from three places: thirteen written by hand for talking (`motion/comic_poses.json`: stand, talk, point, flex, shrug...), any moment of a walk, a run or a shot (`run@0.4`), and the named poses a shot was built from (`hero:vault_over`), which stay where the shot had them.
 - **Expressions.** Codex draws each cast member's head eight times (neutral, happy, angry, surprised, sad, smug, talking, shouting), working from the head sheet and from our own comic-style picture of the 3D head, so the drawing has our look and that head's shape. One image per character. A panel projects the face it wants onto the front of the head. A masked character gets only its eyes. `just expressions <who>`.
-- **Four framings**: wide, two-shot, single, close-up. The camera is fitted to the characters each time, with room left at the top for balloons.
-- **Places**: the wrestling ring and the shot's rooftop stand in as backdrops, each with a painted picture behind it (one Codex image, reused in every panel); or a flat color for a talk panel.
+- **Five framings**: wide, two-shot, single, close-up, and pov. For the first four the camera is fitted to the characters each time, with room left at the top for balloons.
+- **Through someone's eyes (pov).** The camera sits at the eyes of the first character in the panel and looks where its head looks at that moment of its clip, or down at its feet, or at its hands (`"look"`). Its own head and neck are left out of the picture; its hands, knees, feet and what it holds are there when it would see them. Its thoughts have no head to point at, so they run along the bottom like a film's subtitles.
+- **Someone who never speaks.** `"silent": true` in `comics/cast.json` (the shadow ninja) means that character gets no speech balloons, only thoughts and captions; the script is turned down if it gives them one.
+- **A side story.** `"canon": false` in a comic's `comic.json` (`just comic ... canon=no`) keeps it outside the main story; the page and the gallery show a small "Side story" label. `comics/rooftop-ninja` ("First Light") is one: the ninja's rooftop run, seen through his eyes.
+- **Places**: the wrestling ring and the shot's rooftop (by night and at dawn) stand in as backdrops, each with a painted picture behind it (one Codex image, reused in every panel); or a flat color for a talk panel. The painted picture is hung so its horizon is level with the camera's, so it slides out of view when a panel looks down.
 
 `comics/<name>/comic.json` is the whole comic. Change a pose or a line by hand and run `just comic-again <name>`: nothing is asked of any model. The gallery has a Comics shelf; open one to read it.
 
 **Sets.** A panel names a place, and optionally one of the place's cameras and marks. Today the places are stand-ins listed in `scripts/comic/kit.py`. When a `sets/<name>/set.json` exists it is used instead, through one function there (`from_set_json`); nothing else in the comics code reads a set file.
 
-**What is weak.** A drawn face is a flat picture on a 3D head: fine from the front and three-quarter, wrong in a true profile, and it sits on top of real glasses or a mustache. The hand-written poses are stiff, with mitten hands and no fingers. Nobody holds anything except the ninja's sword in its shot. The lettering measures text by letter widths, not by a browser, so a line can come out a few pixels wider than planned. Two characters are never checked for standing inside each other. More in the skill's "Comics" section.
+**What is weak.** Through his own eyes the ninja sees a lot of his own chest when he looks down, and nothing of himself when he looks ahead while running, because the arms of the clip swing low. A drawn face is a flat picture on a 3D head: fine from the front and three-quarter, wrong in a true profile, and it sits on top of real glasses or a mustache. The hand-written poses are stiff, with mitten hands and no fingers. Nobody holds anything except the ninja's sword in its shot. The lettering measures text by letter widths, not by a browser, so a line can come out a few pixels wider than planned. Two characters are never checked for standing inside each other. More in the skill's "Comics" section.
 
 The detailed versions (`hero`, `quads`, `web`, `game`, `mobile`) still have the clothes as part of the body. They come from the picture, and the picture shows the character dressed.
 

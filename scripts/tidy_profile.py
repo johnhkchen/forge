@@ -769,9 +769,12 @@ def rebuild(run_dir, params):
     level, tried, result = 1, [], None
     while True:
         sides, rings = blockout_recipe.DENSER[level]
+        parts, bodies = blockout_recipe.mid_parts(recipe["pieces"], sides, rings, size)
+        for name, kept in bodies.items():  # a body's own surface, as landmarks.py read it: its mid-poly rings are laid on it
+            bpy.context.scene["body: " + name] = json.dumps(kept)
         result = run_script("build.py", {
             "reference": full.name, "check": 0, "shading": "smooth", "crease": params.get("crease", 40),
-            "parts": [blockout_recipe.denser(p, sides, rings, size) for p in recipe["pieces"]],
+            "parts": parts,
             "gear": recipe.get("gear") or [], "sockets": recipe.get("sockets") or False,
         })
         tried.append({"sides": sides, "rings": rings, "triangles": result["triangles"]})
@@ -789,7 +792,7 @@ def rebuild(run_dir, params):
     faces = made.data.polygons
     return {"object": result["object"], "faces": len(faces), "triangles": result["triangles"],
             "quads": sum(1 for p in faces if len(p.vertices) == 4),
-            "pieces": len(recipe["pieces"]),
+            "pieces": len(recipe["pieces"]), "body": result.get("body") and {k: result["body"][k] for k in ("triangles", "rings", "loops")},
             "tried": tried, "groups": [g["name"] for g in result.get("groups", [])], "sockets": result.get("sockets")}
 
 

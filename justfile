@@ -196,6 +196,14 @@ recipe run:
     "{{blender_bin}}" -b --factory-startup -P scripts/replay_blockout.py -- "{{run}}" 2>&1 | grep -E '^REPLAY|^replay:'
     cp "{{run}}/replay/lowpoly_build.json" "{{run}}/lowpoly_build.json"
 
+# Give a finished character an anatomical body without asking Claude: landmarks, a body built from them, the run's own head and gear kept. Writes lowpoly.glb and lowpoly_build.json into OUT (never the run's own), e.g. `just auto-body runs/<run> /tmp/new` then copy the two files into a copy of the run and `just tidy` it
+auto-body run out *flags:
+    "{{blender_bin}}" -b --factory-startup -P scripts/auto_body.py -- "{{run}}" "{{out}}" {{flags}} 2>&1 | grep -E '^AUTOBODY|Error|Traceback'
+
+# Measure low-poly and mid-poly bodies against a run's detailed mesh: landmarks, proportions, outlines, cross-sections (out.png and out.json). Each file is label=path, e.g. low=runs/<run>/profiles/lowpoly.glb
+anatomy-check run out +files:
+    "{{blender_bin}}" -b --factory-startup -P scripts/anatomy_check.py -- "{{run}}" "{{out}}" {{files}} 2>&1 | grep -E '^ANATOMY|Error|Traceback'
+
 # Install AutoRemesher (MIT, adaptive quad remesher) into tools/ for the profiles (macOS)
 autoremesher:
     #!/usr/bin/env bash
@@ -207,9 +215,9 @@ autoremesher:
     rm -rf autoremesher.app; cp -R "$mnt/autoremesher.app" .; hdiutil detach "$mnt" >/dev/null
     ./autoremesher.app/Contents/MacOS/autoremesher --version
 
-# Make a comic from a premise: Opus writes it as panels of data, one background Blender draws every panel in the comic style, code letters it and lays out the page (comics/<name>/page.html and a .png). layout: strip (4 panels) or scroll (6 to 10, for a phone). cast and place narrow what Opus may use ("lincoln, roosevelt", "ring")
-comic premise layout="strip" cast="" place="" name="" runs="runs":
-    baml run comic -- --premise "{{premise}}" --layout "{{layout}}" --cast "{{cast}}" --place "{{place}}" --name "{{name}}" --runs "{{runs}}"
+# Make a comic from a premise: Opus writes it as panels of data, one background Blender draws every panel in the comic style, code letters it and lays out the page (comics/<name>/page.html and a .png). layout: strip (4 panels) or scroll (6 to 10, for a phone). cast and place narrow what Opus may use ("lincoln, roosevelt", "ring"); canon=no marks a side story, outside the main one
+comic premise layout="strip" cast="" place="" name="" runs="runs" canon="yes":
+    baml run comic -- --premise "{{premise}}" --layout "{{layout}}" --cast "{{cast}}" --place "{{place}}" --name "{{name}}" --runs "{{runs}}" --canon "{{canon}}"
 
 # Draw and letter a comic again from its comics/<name>/comic.json, after editing it by hand (asks no model anything)
 comic-again name runs="runs":

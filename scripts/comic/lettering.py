@@ -6,7 +6,9 @@ from two things the renderer wrote down: how big the picture is and where each h
   - a balloon never covers a face (any face, not only its speaker's), nor another balloon, nor the caption;
   - a tail points at its speaker's head and stops just short of it, and does not cross anyone else's face;
   - balloons read in order: a later one is never above and to the left of an earlier one;
-  - everything stays inside the panel.
+  - everything stays inside the panel;
+  - a thought from someone whose head is not in the picture (a panel seen through their own eyes) is lettered as
+    a voice: a dark bar along the bottom, like a film's subtitle, with no tail to point anywhere.
 
 When the words do not fit, the type is made a little smaller, three times at most; after that the panel is
 reported as too wordy, which is the script's fault, not the picture's.
@@ -184,7 +186,29 @@ def letter(meta, panel):
             caption = {"lines": text, "box": [round(v, 1) for v in box], "size": round(size * 0.9, 1)}
             taken.append(box)
         balloons, earlier, failed = [], [], False
+        # The voice of whoever's eyes these are: bars stacked up from the bottom, the first one read on top.
+        voices = [l for l in lines if l["who"] not in heads and l.get("how", "say") == "think"]
+        bottom = tall - EDGE * wide * 1.6
+        placed_voices = {}
+        for line in reversed(voices):
+            type_size = size * 0.95
+            words = wrap(line["says"], type_size, wide * 0.8)
+            w = max(text_width(l, type_size) for l in words) + 2 * PAD[0] * type_size
+            h = len(words) * type_size * LINE + 2 * PAD[1] * 0.7 * type_size
+            box = [(wide - w) / 2, bottom - h, w, h]
+            if box[1] < tall * 0.45 or any(box_hits_circle(box, f["center"], f["radius"] * FACE_CLEAR) for f in heads.values()):
+                failed = True
+                break
+            bottom = box[1] - GAP * wide
+            taken.append(box)
+            placed_voices[id(line)] = {"who": line["who"], "how": "voice", "lines": words, "box": [round(v, 1) for v in box], "tail": None,
+                                       "size": round(type_size, 1)}
         for line in lines:
+            if failed:
+                break
+            if id(line) in placed_voices:
+                balloons.append(placed_voices[id(line)])
+                continue
             how = line.get("how", "say")
             type_size = size * (1.14 if how == "shout" else 0.92 if how == "whisper" else 1.0)
             words, tw, th = best_wrap(line["says"], type_size, wide * 0.6)
@@ -273,6 +297,16 @@ def to_svg(layout, size):
                        % (x + cap["size"] * 0.55, y + cap["size"] * (0.35 + 0.82) + i * cap["size"] * LINE, cap["size"], esc(line)))
         out.append("</g>")
     for b in layout["balloons"]:
+        if b["how"] == "voice":
+            x, y, w, h = b["box"]
+            out.append('<g class="balloon voice" data-who="%s"><rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="%.1f" fill="#1c1917" fill-opacity="0.78"/>'
+                       % (esc(b["who"]), x, y, w, h, b["size"] * 0.3))
+            first = y + (h - len(b["lines"]) * b["size"] * LINE) / 2 + b["size"] * 0.9
+            for i, line in enumerate(b["lines"]):
+                out.append('<text class="voice" x="%.1f" y="%.1f" font-size="%.1f" text-anchor="middle" font-style="italic">%s</text>'
+                           % (x + w / 2, first + i * b["size"] * LINE, b["size"], esc(line)))
+            out.append("</g>")
+            continue
         shapes = balloon_shapes(b, stroke)
         dash = ' stroke-dasharray="%.1f %.1f"' % (stroke * 2.2, stroke * 1.8) if b["how"] == "whisper" else ""
         fat = stroke * (3.0 if b["how"] == "shout" else 2.0)

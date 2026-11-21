@@ -1,7 +1,7 @@
 const LOWPOLY_TOOLS = ["open", "measure", "build", "export"];
-const CHARACTER_TOOLS = ["open", "measure", "face", "build", "export"];
+const CHARACTER_TOOLS = ["open", "measure", "face", "landmarks", "build", "export"];
 // A character with clothes on also lays them on its body before exporting.
-const DRESSED_TOOLS = ["open", "measure", "face", "build", "drape", "export"];
+const DRESSED_TOOLS = ["open", "measure", "face", "landmarks", "build", "drape", "export"];
 
 /// Does the brief list anything worn or attached (gear that is built on the character)?
 function wears_gear(brief: ObjectBrief) -> bool {
@@ -267,4 +267,43 @@ test "a character's prompt asks for a measured face; a prop's doesn't mention on
         .to_string();
     assert.is_true(!plain.includes("face.py with that box"));
     assert.is_true(!plain.includes("===== face"))
+}
+
+test "a character's body comes from landmarks, with an anatomy checklist; a prop gets neither" {
+    let troll = lowpoly_test_brief(true, 1200);
+    let asked = BlockOut@spec(troll, "final.glb", "lowpoly.glb", "{}", tools(lowpoly_tools(troll)), lowpoly_budget(troll))
+        .prompt()
+        .to_string();
+    assert.contains(asked, "run landmarks.py with it as");
+    assert.contains(asked, "===== landmarks");
+    assert.contains(asked, "Don't block out the trunk");
+    assert.contains(asked, "three rings at each elbow and knee");
+    // the checklist: guesses, proportions, trunk, limbs, hands and feet, neck
+    assert.contains(asked, `"found" by "usual proportion" is a guess`);
+    assert.contains(asked, "how many heads tall");
+    assert.contains(asked, "between the ribcage and the pelvis");
+    assert.contains(asked, "a thumb forward of it");
+    assert.contains(asked, "a heel, an arch and toes");
+    assert.contains(asked, "The neck meets the head under the jaw");
+    // style and clothes are settings on the piece
+    assert.contains(asked, `"limbs": 0.9`);
+    assert.contains(asked, `"under": {"trunk": 0.012`);
+    // the old advice is gone: no hand-built limbs with "an extra ring"
+    assert.is_true(!asked.includes("an extra ring so they can bend"));
+    // with a base body, the landmarks are read off it
+    let base = base_steps(
+        BaseRefs {
+            body: "base/final.glb",
+            garments: [GarmentRef { name: "ruffled skirt", mesh: "garments/ruffled-skirt.glb" }],
+        },
+    );
+    assert.contains(base, `"object": "Body" in measure.py`);
+    assert.contains(base, "read the body off the base body");
+    assert.contains(base, `needs no "under" for the ruffled skirt`);
+    let kettle = lowpoly_test_brief(false, null);
+    let plain = BlockOut@spec(kettle, "final.glb", "lowpoly.glb", "{}", tools(lowpoly_tools(kettle)), lowpoly_budget(kettle))
+        .prompt()
+        .to_string();
+    assert.is_true(!plain.includes("run landmarks.py with it as"));
+    assert.is_true(!plain.includes("===== landmarks"))
 }

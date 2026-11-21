@@ -28,8 +28,13 @@ import kit  # noqa: E402
 import stage  # noqa: E402
 
 LEAN_IN_DEG = 28.0  # "left" and "right" are turned this much toward the reader, so a profile still shows a face
-LENS = {"wide": 35.0, "two-shot": 50.0, "single": 62.0, "close-up": 80.0}
-ABOVE_DEG = {"wide": 9.0, "two-shot": 4.0, "single": 2.0, "close-up": 0.0}
+LENS = {"wide": 35.0, "two-shot": 50.0, "single": 62.0, "close-up": 80.0, "pov": 21.0}
+ABOVE_DEG = {"wide": 9.0, "two-shot": 4.0, "single": 2.0, "close-up": 0.0, "pov": 0.0}
+POV = "pov"            # through the first cast member's eyes
+POV_MASK = "comic pov"  # the modifier that takes the viewer's own head out of the picture
+POV_HIDES = ("head", "neck")  # what follows these bones is what the viewer cannot see of itself
+POV_DOWN_DEG = 52.0    # "look": "down" tips the eyes this far below where the head faces
+POV_OTHERS_M = 1.7     # anyone else in a pov panel stands about this far in front of the viewer
 MARGIN = {"wide": 1.3, "two-shot": 1.2, "single": 1.3, "close-up": 1.55}
 HEADROOM = {"wide": 0.16, "two-shot": 0.24, "single": 0.26, "close-up": 0.22}  # of the picture's height, kept clear for balloons
 UPPER_BODY = ["spine", "chest", "neck", "head", "upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r", "hand_l", "hand_r"]
@@ -187,22 +192,23 @@ class Cast:
             character["shadow"].hide_render = True
 
     def pose(self, who, ref):
-        """The character for this panel, frozen as `ref` asks. Returns (character, what it is, the place a moment belongs to)."""
+        """The character for this panel, frozen as `ref` asks. Returns (character, what it is, the places a shot's moment belongs to)."""
         moments = self.moments_of(who)
         if ref in self.poses:
             character = self.character(who, "walk")
             stage.strike(character, self.poses[ref])
-            return character, {"pose": ref}, None
+            return character, {"pose": ref}, []
         if ref in moments:
             moment = moments[ref]
             character = self.character(who, moment["clip"])
             held = stage.freeze(character, moment["second"])
-            return character, dict(held, moment=ref), kit.STAND_IN_OF_SHOT.get(moment["shot"])
+            return character, dict(held, moment=ref), kit.STAND_INS_OF_SHOT.get(moment["shot"], [])
         at = kit.CLIP_AT.match(ref or "")
         if not at:
             raise ValueError("%s has no pose \"%s\"" % (who, ref))
         character = self.character(who, at.group(1))
-        return character, stage.freeze(character, float(at.group(2))), None
+        shot = ((self.entries[who].get("clips") or {}).get(at.group(1)) or {}).get("shot")
+        return character, stage.freeze(character, float(at.group(2))), kit.STAND_INS_OF_SHOT.get(shot, [])
 
     def face(self, who, character, expression):
         """Put the drawn expression on, if this character has one; says what it used."""
@@ -249,6 +255,92 @@ def frame_points(framing, characters):
     return points
 
 
+def hide_own_head(character, hidden):
+    """In a pov panel the viewer's own head and neck (hood, mask, hair, hat: whatever rides those bones) are taken
+    out of the picture; the rest of the body stays, so hands, feet and what it holds are there when it looks at them."""
+    count = 0
+    # With the head gone the camera can see into the neck: draw the body from outside only, so it sees past the
+    # inside of its own chest to its hands and the ground. (Put back for the next panel that shows it from outside.)
+    was = character.setdefault("two_sided", {})
+    for o in character["meshes"]:
+        for mat in o.data.materials:
+            if mat is None:
+                continue
+            was.setdefault(mat.name, mat.use_backface_culling)
+            mat.use_backface_culling = True if hidden else was[mat.name]
+    for o in character["meshes"]:
+        bones = [o.vertex_groups.get(name) for name in POV_HIDES]
+        bones = [g.index for g in bones if g is not None]
+        if not bones:
+            continue
+        mask = o.modifiers.get(POV_MASK)
+        if mask is None:
+            if not hidden:
+                continue
+            group = o.vertex_groups.new(name=POV_MASK)
+            mine = [v.index for v in o.data.vertices if sum(g.weight for g in v.groups if g.group in bones) > 0.5]
+            if mine:
+                group.add(mine, 1.0, "REPLACE")
+            mask = o.modifiers.new(POV_MASK, "MASK")
+            mask.vertex_group = POV_MASK
+            mask.invert_vertex_group = True
+            mask.threshold = 0.5
+        # Before the ink line, so the line is drawn round what is left, not round the missing head.
+        names = [m.name for m in o.modifiers]
+        if "comic ink" in names and names.index(POV_MASK) > names.index("comic ink"):
+            o.modifiers.move(names.index(POV_MASK), names.index("comic ink"))
+        mask.show_render = mask.show_viewport = hidden
+        count += 1
+    return count
+
+
+def pov_camera(cam, character, look):
+    """Put the camera at the character's eyes, looking where its head looks (or down, or at its hands)."""
+    head = stage.head_of(character)
+    front, up = head["front"], head["up"]
+    eye = head["center"] + front * head["radius"] * 0.95 + up * head["radius"] * 0.12
+    aim = front.copy()
+    if look == "down":
+        flat = Vector((front.x, front.y, 0.0))
+        flat = flat.normalized() if flat.length > 1e-4 else Vector((0.0, -1.0, 0.0))
+        tip = math.radians(POV_DOWN_DEG)
+        aim = flat * math.cos(tip) + Vector((0.0, 0.0, -1.0)) * math.sin(tip)
+    if look == "down":  # at its own feet when they are out in front, so a landing or a careful step shows them
+        feet = [stage.bone_point(character, b, tail=True) for b in ("toe_l", "toe_r") if b in character["rig"].pose.bones]
+        ahead = [f for f in feet if (f - eye).dot(Vector((aim.x, aim.y, 0.0))) > 0.1]
+        if ahead:
+            target = sum(ahead, Vector()) / len(ahead)
+            aim = ((target - eye).normalized() * 0.6 + aim * 0.4).normalized()
+    elif look == "hands":  # at whichever hands are in front of the face; one behind the head (a sword drawn over the shoulder) is not looked at
+        hands = [stage.bone_point(character, b, tail=True) for b in ("hand_l", "hand_r")]
+        level = Vector((front.x, front.y, 0.0)).normalized() if abs(front.z) < 0.98 else front
+        ahead = [h for h in hands if (h - eye).dot(level) > 0.08]
+        if ahead:
+            target = sum(ahead, Vector()) / len(ahead)
+            aim = ((target - eye).normalized() * 0.75 + front * 0.25).normalized()
+        else:
+            look = "ahead"
+    cam.data.type = "PERSP"
+    cam.data.lens = LENS[POV]
+    stage.aim(cam, eye, eye + aim)
+    cam.data.clip_start, cam.data.clip_end = 0.02, 400.0
+    bpy.context.view_layer.update()
+    return {"eye": [round(c, 3) for c in eye], "look": look, "head_center": [round(c, 3) for c in head["center"]],
+            "head_radius": round(head["radius"], 3), "lens": LENS[POV]}
+
+
+def seen_of_self(scene, cam, character, size):
+    """How much of the viewer's own body is in its own picture: the share of its points (head left out) that land in frame."""
+    inside = total = 0
+    for p in stage.points_of(character, ["upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r", "hand_l", "hand_r", "thigh_l", "thigh_r",
+                                         "shin_l", "shin_r", "foot_l", "foot_r", "toe_l", "toe_r", "prop"]):
+        spot, depth = stage.in_picture(scene, cam, p, size)
+        total += 1
+        if depth > 0.02 and 0 <= spot[0] <= size[0] and 0 <= spot[1] <= size[1]:
+            inside += 1
+    return round(inside / max(total, 1), 3)
+
+
 def draw_panel(scene, cam, panel, number, out, places, cast, width, toon):
     started = time.time()
     place = places.get(panel["place"])
@@ -268,11 +360,15 @@ def draw_panel(scene, cam, panel, number, out, places, cast, width, toon):
         character, what, home = cast.pose(member["who"], member["pose"])
         stage.show(character, True)
         at = member.get("at", "center")
-        there = at == kit.THERE and home == panel["place"]
+        there = at == kit.THERE and panel["place"] in home
         posed.append((member, character, what, there, at))
     # A moment kept where its shot has it decides where the camera stands; otherwise the place does.
     anchor = next((p for p in posed if p[3]), None)
-    if anchor:
+    pov = framing == POV
+    if anchor and pov:  # anyone else is staged in front of the viewer, facing words meant as the viewer sees them
+        ahead = stage.head_of(anchor[1])["front"]
+        front_deg = math.degrees(math.atan2(-ahead.x, ahead.y))
+    elif anchor:
         front_deg = math.degrees(stage.facing_now(anchor[1])) + THERE_VIEW_DEG
     front_deg += panel.get("around", 0.0)
     toward = toward_of(front_deg, panel.get("above", ABOVE_DEG[framing]))
@@ -281,6 +377,8 @@ def draw_panel(scene, cam, panel, number, out, places, cast, width, toon):
     if anchor:
         hips = stage.bone_point(anchor[1], "hips")
         base = Vector((hips.x, hips.y, 0.0))
+        if pov:
+            base = base - Vector((toward.x, toward.y, 0.0)).normalized() * POV_OTHERS_M
     characters, notes = [], []
     for member, character, what, there, at in posed:
         floor = place["floor"]
@@ -308,11 +406,17 @@ def draw_panel(scene, cam, panel, number, out, places, cast, width, toon):
         notes.append(dict(what, who=member["who"], at=at))
     styled = [o.name for c in characters for o in c["meshes"]] + [o.name for o in place["objects"]]
     stage.run_script("toon.py", dict(toon, objects=styled))  # the paint first: a drawn face goes into it
-    for member, character, note in zip(members, characters, notes):
-        note["expression"] = cast.face(member["who"], character, member.get("expression") or "neutral")
+    for n, (member, character, note) in enumerate(zip(members, characters, notes)):
+        own_eyes = pov and n == 0
+        hide_own_head(character, own_eyes)
+        note["expression"] = None if own_eyes else cast.face(member["who"], character, member.get("expression") or "neutral")
     cam.data.type = "PERSP"
     named = (place.get("cameras") or {}).get(panel.get("camera") or "")
-    if named:  # a set's own camera
+    eyes = None
+    if pov:
+        eyes = pov_camera(cam, characters[0], panel.get("look") or "ahead")
+        distance = 0.0
+    elif named:  # a set's own camera
         cam.data.lens = named["lens"]
         stage.aim(cam, Vector(named["at"]), Vector(named["look_at"]))
         distance = (Vector(named["at"]) - Vector(named["look_at"])).length
@@ -330,12 +434,28 @@ def draw_panel(scene, cam, panel, number, out, places, cast, width, toon):
     path = os.path.join(out, "%02d.png" % number)
     look = dict({"line_px": round(size[0] * LINE_SHARE, 2)}, **toon)  # the line is a share of the panel, so it prints the same at any size
     stage.run_script("toon.py", dict(look, objects=styled, size=list(size), path=path, background=None))
+    # Where the horizon falls in the picture (0 = top, 1 = bottom; outside that when it is out of frame),
+    # so the page can hang a painted backdrop at the right height behind a camera that looks up or down.
+    view = cam.matrix_world.to_3x3() @ Vector((0.0, 0.0, -1.0))
+    level = Vector((view.x, view.y, 0.0))
+    if level.length > 0.05:
+        spot, depth = stage.in_picture(scene, cam, cam.matrix_world.translation + level.normalized() * 1000.0, size)
+        horizon = round(spot[1] / size[1], 4) if depth > 0 else (-9.0 if view.z < 0 else 9.0)
+    else:
+        horizon = -9.0 if view.z < 0 else 9.0
     heads, bodies = {}, {}
-    for member, character in zip(members, characters):
-        heads[member["who"]] = stage.head_in_picture(scene, cam, character, size)
+    if eyes:
+        eyes["seen_of_self"] = seen_of_self(scene, cam, characters[0], size)
+    for n, (member, character) in enumerate(zip(members, characters)):
+        if eyes and n == 0:
+            continue  # the viewer's own head is not in the picture: its thoughts are lettered as a voice, with no tail
+        seen = stage.head_in_picture(scene, cam, character, size)
+        if seen["depth"] <= 0.05:
+            continue  # behind the camera: not in the picture at all
+        heads[member["who"]] = seen
         spots = [stage.in_picture(scene, cam, p, size)[0] for p in stage.shape_points(character, every=9)]
         bodies[member["who"]] = [min(s[0] for s in spots), min(s[1] for s in spots), max(s[0] for s in spots), max(s[1] for s in spots)]
-    return {"file": "panels/%02d.png" % number, "size": list(size), "heads": heads, "bodies": bodies, "sky": place.get("sky"), "sky_image": place.get("sky_image"),
+    return {"file": "panels/%02d.png" % number, "size": list(size), "heads": heads, "bodies": bodies, "pov": eyes, "horizon": horizon, "sky_horizon": place.get("sky_horizon"), "sky": place.get("sky"), "sky_image": place.get("sky_image"),
             "place": panel["place"], "framing": framing, "cast": notes, "seconds": round(time.time() - started, 2)}
 
 

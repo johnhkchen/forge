@@ -45,7 +45,16 @@ class KitPose {
 class KitMoment {
     name: string,
     about: string,
-    place: string,
+    second: float,
+}
+
+/// A clip that was made from a shot: how long it runs, what happens when,
+/// and the places it belongs to, where a moment of it can stay "there".
+class KitShotClip {
+    clip: string,
+    seconds: float,
+    beats: string[],
+    places: string[],
 }
 
 class KitMember {
@@ -56,6 +65,8 @@ class KitMember {
     moments: KitMoment[],
     clips: string[],
     expressions: string[],
+    shot_clips: KitShotClip[],
+    silent: bool,
 
     /// Whether `pose` names something this cast member can do: a pose, a
     /// moment, or clip@seconds for one of its clips.
@@ -79,14 +90,14 @@ class KitMember {
         parts.length() == 2 && self.clips.includes(clip) && is_time >= 0.0
     }
 
-    /// The place a named moment belongs to, or "" for a pose that fits anywhere.
-    function home_of(self, pose: string) -> string {
-        self.moments
-            .find((m) -> {
-                m.name == pose
+    /// Whether `pose` is a moment of a shot's clip ("hero:draw", "hero@4.2")
+    /// that belongs to `place`, so it can stand "there".
+    function at_home(self, pose: string, place: string) -> bool {
+        let clip = pose.split(":").at(0)?.split("@").at(0) ?? "";
+        (pose.includes(":") || pose.includes("@"))
+            && self.shot_clips.some((s) -> {
+                s.clip == clip && s.places.includes(place)
             })
-            ?.place
-            ?? ""
     }
 }
 
@@ -127,8 +138,16 @@ class ComicKit {
                 `    ${p.name}: ${p.about}`
             });
             let moments = m.moments.map((k) -> {
-                `    ${k.name}: ${k.about} (only in ${k.place}, at "there")`
+                `    ${k.name}: ${k.about} (${k.second} s into its clip)`
             });
+            let shots = m.shot_clips.map((s) -> {
+                `  the clip "${s.clip}" is one continuous ${s.seconds} s action that belongs to ${s.places.join(" or ")}; there, at "there", any moment of it stays where it happened. ${s.beats.join("; ")}`
+            });
+            let voice = if (m.silent) {
+                ["  NEVER SPEAKS ALOUD: every line of theirs is \"think\""]
+            } else {
+                []
+            };
             let clips = if (m.clips) {
                 `  clips, as clip@seconds: ${m.clips.join(", ")}`
             } else {
@@ -139,10 +158,12 @@ class ComicKit {
             } else {
                 `${NEUTRAL} only`
             };
-            [`- ${m.id} (${m.name}): ${m.about}`, `  expressions: ${faces}`, "  poses:"]
+            [`- ${m.id} (${m.name}): ${m.about}`].concat(voice)
+                .concat([`  expressions: ${faces}`, "  poses:"])
                 .concat(poses)
                 .concat(moments)
                 .concat([clips])
+                .concat(shots)
                 .join("\n")
         });
         let places = self.places.map((p) -> {
@@ -207,8 +228,9 @@ function format_rules(layout: "strip" | "scroll") -> string {
 }
 
 /// How many characters of dialogue a framing has room for.
-function panel_room(framing: "wide" | "two-shot" | "single" | "close-up") -> int {
+function panel_room(framing: "wide" | "two-shot" | "single" | "close-up" | "pov") -> int {
     match (framing) {
+        "pov" => SINGLE_CHARS,
         "wide" => WIDE_CHARS,
         "two-shot" => TWO_SHOT_CHARS,
         "single" => SINGLE_CHARS,
@@ -304,10 +326,9 @@ function staging_problems(tag: string, panel: ComicPanel, kit: ComicKit) -> stri
                     `${tag}: ${m.id} has no expression "${placed.expression}" (it has: ${faces.join(", ")})`,
                 );
             }
-            let home = m.home_of(placed.pose);
-            if (placed.at == SPOT_THERE && home != panel.place) {
+            if (placed.at == SPOT_THERE && !m.at_home(placed.pose, panel.place)) {
                 problems.push(
-                    `${tag}: ${m.id} stands at "there", which needs a moment that belongs to ${panel.place}`,
+                    `${tag}: ${m.id} stands at "there", which needs a moment of a clip that belongs to ${panel.place}`,
                 );
             }
         } else {
@@ -325,6 +346,14 @@ function staging_problems(tag: string, panel: ComicPanel, kit: ComicKit) -> stri
     for (let line in panel.lines) {
         if (!here.includes(line.who)) {
             problems.push(`${tag}: ${line.who} has a line but is not in the panel`);
+        }
+        let speaker = kit.cast.find((m) -> {
+            m.id == line.who
+        });
+        if ((speaker?.silent ?? false) && line.how != "think") {
+            problems.push(
+                `${tag}: ${line.who} never speaks aloud; make the line a thought ("think") or a caption`,
+            );
         }
     }
     problems
@@ -464,6 +493,7 @@ class ComicFile {
     title: string,
     premise: string,
     layout: "strip" | "scroll",
+    canon: bool,
     panels: ComicPanel[],
 }
 
@@ -537,6 +567,8 @@ function draw_comic(name: string, runs: string = RUNS_DIR) -> string {
     folder
 }
 
+/// `canon` "no" marks a comic kept outside the main story (the page and the
+/// gallery label it "Side story").
 /// Makes a comic from a premise; returns its folder. `cast` and `place`
 /// narrow the kit ("lincoln, roosevelt", "ring"); empty means anything goes.
 ///
@@ -548,6 +580,7 @@ function comic(
     cast: string = "",
     place: string = "",
     runs: string = RUNS_DIR,
+    canon: string = "yes",
 ) -> string {
     let format = as_layout(layout);
     //# 1. What there is to make a comic from
@@ -571,6 +604,7 @@ function comic(
             title: written.script.title,
             premise: premise,
             layout: format,
+            canon: canon != "no",
             panels: written.script.panels,
         },
     );

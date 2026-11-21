@@ -49,6 +49,7 @@ html, body { overflow-x: hidden; }
 @font-face { font-family: "Bangers"; font-weight: 400; font-display: swap; src: url(vendor/fonts/Bangers-Regular.woff2) format("woff2"); }
 .shelf-heading { margin: 28px 0 -8px; font-size: 1.3rem; }
 .comic-card .cover { padding: 10px 10px 0; }
+.comic-card .side-story { margin: 4px 0 0; }
 .comic-card .cover .panel { aspect-ratio: 1 !important; border-width: 2px; }
 .comic-card .cover img { aspect-ratio: auto; object-fit: cover; background: none; }
 .comic-reader .kicker { margin-top: 6px; }

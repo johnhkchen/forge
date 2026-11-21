@@ -125,6 +125,9 @@ Blender with Claude: it is made from what Claude already built.
   lands outside 3,000-8,000 triangles it tries a lighter or heavier mix.
   Square posts stay square, belts keep their four rings, boxes stay boxes.
   A head loses its sunk eye sockets: here the texture carries the eyes.
+  A character's body, when it came from a `"body"` piece, is not made
+  denser this way: it is built again in mid detail, with more loops where
+  it bends and its rings laid on the detailed mesh (see "Anatomy").
 - **Then it bakes** the detailed mesh's color, normal map, metal and
   roughness at 1024 px (`bake.py` "onto"), WebP and Draco.
 - **A block-out sits off the detailed mesh in places** (a hat brim built
@@ -152,6 +155,171 @@ where Claude put them, and rounding between them doesn't move them. What
 changes is the outline (no corners on a limb), the shading, and the
 texture. A run from before recipes were kept has none: `just recipe
 <run>` plays its transcript again in a background Blender to get one.
+
+## Anatomy: landmarks, and a body built from them
+
+Blocked out by hand, bodies came out as stacked tubes. Measured on eight
+characters before this (`scripts/anatomy_check.py`, the same landmark finder
+run on the detailed mesh and on each version): hands were the worst region
+by far (rings 52% of their own size off the detailed mesh's, a mitten with
+no thumb), then necks (34%) and feet (33%), then shoulders (25%), shins,
+forearms and thighs (20-21% each); the trunk was closest (ribcage 11%,
+pelvis 14%). Of the landmarks, the chest line sat furthest off (5.8% of the
+height on average), then ankles, knees and the waist (3.5-4.2%). Elbows had
+2 to 4 rings near them on most, and on four characters the skeleton had to
+fall back on "the nearest ring" or "the narrowest ring" for an elbow or a
+knee. Mid poly was the same body,
+rounder: its numbers matched low poly's to within a point.
+
+So the body is a tool's job now, in two halves.
+
+**`landmarks.py` finds where things are.** Pointed at a T-pose mesh facing
+-y (the detailed reference, a base body, or a block-out) it returns:
+
+- `landmarks`: one point each for top, chin, neck, neck_base, shoulder,
+  armpit, chest, waist, hips, crotch, elbow, wrist, fingertip, knee, ankle,
+  heel, toe (the +x side).
+- `found`: how each was found. `"shape"` means it shows on the mesh (the
+  armpit is where the arm's underside drops away; the crotch where the gap
+  between the legs closes; wrist, waist, ankle and neck are narrowest
+  rings; hips the widest; the chest the deepest). `"usual proportion"`
+  means nothing showed, and the landmark sits where a body with these
+  shoulders and this crotch usually has it. Elbows and knees are that more
+  often than not: a straight sleeve has no elbow.
+- `proportions`: heads tall, leg and arm share of the height, shoulders
+  against hips, hand and foot length. They tell the eight apart (the
+  villager is 5.5 heads tall, Lincoln 7.9; the troll's arms are 54% of its
+  height).
+- `girth` (half-width and half-depth at each named ring) and `joints`
+  (where shoulder, elbow, wrist, hip, knee and ankle turn).
+- and it keeps the body's surface in the scene: 152 rings of 24 distances,
+  up the trunk and neck, out one arm and hand, down one leg, along one
+  foot. Both sides are read and averaged. Rings are read looking in from
+  outside, with walls where a neighbor would get in the way (the arms cut
+  off at the armpits, the other leg at the center line), and where
+  something else stands three times farther out than the limb's own
+  surface (a tail behind a leg) the nearer one is taken.
+
+Give it `"head"`, the box face.py took: the chin is then the box's floor.
+A character whose clothes hide its body is read off its base body
+(`"object": "Body"`); read off a long skirt it says the crotch can't be
+found. About half a second.
+
+**build.py's `"body"` piece builds from them.** `{"name": "body", "body":
+"body"}` becomes seven pieces: `body trunk` (a ring between the legs, the
+pelvis at its widest, the waist, the ribcage, the upper chest and shoulder
+blades, the shoulder line, the slope up to the neck), `body neck`, and
+mirrored `body arm` (inside the trunk, shoulder cap, upper arm, three
+rings at the elbow, the forearm's belly, its taper, the wrist), `body
+hand` (heel of the hand, knuckles, finger mass, tip) with `body thumb`,
+`body leg` (ankle, calf, three rings at the knee, thigh, and up inside the
+pelvis) and `body foot` (toes, ball, arch, under the ankle, heel). 870 to
+890 triangles. They are ordinary lofts in the recipe, so rig.py, drape.py
+and the bake read them as before; each ring spells out its own corner
+points, laid on the kept surface and pushed out to its true width and
+depth, so a six-sided thigh is as wide from the front as the round one.
+Settings on the piece: `"landmarks"` and `"girth"` to put one right,
+`"follow"` (1 = this character's own surface, 0 = what a body usually
+has), `"style"` (`chunky`, `limbs`, `head`), `"under"` (draw it in under
+clothes), `"detail"`, `"sides"`.
+
+- **The skeleton lands on the landmarks without being told.** rig.py takes
+  rings set closer than the rest for a joint, and the three at each elbow
+  and knee are that. On all eight it now finds both by "close rings": the
+  elbow on the landmark, the knee on it or within 1.7% of the height
+  (rig.py keeps a knee near the middle of the leg). Its wrist is still its
+  own (the narrowest ring, or a usual proportion) and sits up to 6% of the
+  height from the landmark. The recipe carries `landmarks` and `joints`
+  outright, for a rig that reads them instead: rig.py was not changed here.
+- **Mid poly asks for the body again** with `"detail": "mid"`
+  (`blockout_recipe.mid_parts`): twice the sides, five rings at each elbow
+  and knee, one more on the shoulder, and about twice as many along every
+  stretch, each laid on the kept surface. That is where pecs, shoulder
+  blades, kneecaps and ankle bones come from: the detailed mesh, at the
+  density that can show them. The other pieces are made denser as before.
+- **`scripts/auto_body.py`** (`just auto-body <run> <out>`) does the whole
+  body for a finished run without Claude: landmarks (off the base body
+  when there is one), the body, the run's own head, hair and gear back on
+  it, drape, export, recipe. It draws the body in where what stays covers
+  it. Pieces are told apart by name (torso, arm, leg, hand, foot go);
+  `--keep` and `--drop` correct that.
+- **`scripts/anatomy_check.py`** (`just anatomy-check`) is the measure:
+  landmark distance in % of the height, proportions side by side, shared
+  outline front and side, ring-by-ring distance per region, triangles, and
+  edge loops at the elbow and knee, with a sheet of overlays and pictures.
+
+Measured on the eight characters, old block-out against a new body with
+the old head and gear kept (`scripts/auto_body.py`, then the real
+`lowpoly`, `midpoly` and `walk` profiles; sheets in `docs/anatomy/`,
+every number in `docs/anatomy/numbers.json`). "Rings off" is the
+ring-by-ring distance from the detailed mesh, in % of each ring's size,
+averaged over ten regions; "outline" is the share of the two outlines
+that overlaps, front / side; "landmarks" is how far the finder's
+landmarks on the version sit from those on the detailed mesh, in % of the
+height:
+
+| | Low poly, before | Low poly, after | Mid poly, before | Mid poly, after |
+|---|---|---|---|---|
+| Rings off, mean of 8 | 24.8% | 21.9% | 24.5% (7) | 19.3% |
+| ...hands | 52% | 35% | 58% | 33% |
+| ...upper arm / forearm | 17% / 20% | 15% / 20% | 18% / 22% | 12% / 19% |
+| ...thigh / shin | 20% / 21% | 20% / 19% | 18% / 22% | 16% / 16% |
+| ...shoulders / ribcage / pelvis | 25% / 11% / 14% | 21% / 9% / 16% | 23% / 11% / 13% | 16% / 7% / 11% |
+| ...neck / foot | 34% / 33% | 37% / 28% | 27% / 33% | 39% / 24% |
+| Outline, front / side | 0.879 / 0.869 | 0.875 / 0.862 | 0.878 / 0.871 | 0.888 / 0.872 |
+| Landmarks | 2.31% | 2.47% | 2.26% | 2.65% |
+| Elbow and knee both found by their rings | 4 of 8 | 8 of 8 | | |
+| Triangles, least to most | 976 - 3,119 | 1,256 - 2,568 | 3,640 - 6,732 | 4,670 - 6,908 |
+
+Per character, rings off, low poly before -> after (mid poly after):
+troll 20.6 -> 19.2 (17.6), pirate 22.4 -> 16.2 (12.2), ninja 23.2 -> 20.3
+(15.5), lizardkin 31.1 -> 27.6 (24.5), Lincoln 19.2 -> 22.8 (21.6),
+Roosevelt 18.3 -> 13.5 (12.0), dancer 35.1 -> 31.0 (31.5), villager 28.5
+-> 24.4 (19.4). The dancer's body alone, against her base body: landmarks
+1.14% of her height off before, 0.75% after (mid poly 1.12% -> 0.61%).
+build.py's own shape check on the new block-outs: 1.1% to 3.2% typical,
+2.7% to 5.7% worst (a block-out is asked for 2.5% and 8%).
+
+What that says, plainly: the body's own shape is closer, most in the
+hands, the limbs and the shoulders, and mid poly now gains from its
+triangles where before it only got rounder. The outline and the
+landmarks are no better, and on Lincoln they are worse. Reasons:
+
+- **Clothes count as body.** Read off a dressed mesh, the trunk follows
+  the cloth: Lincoln's baggy seat becomes a wide pelvis over thin legs,
+  which is what the mesh shows and not what a body is. A base body cures
+  it (the dancer's hips and legs are her own); `"follow"` under 1 and
+  `"girth"` soften it. This is the largest weakness.
+- **Old gear on a new body.** The kept gear was built around the old body.
+  drape.py lays it on the new one and it comes out a little fuller
+  (Roosevelt's singlet stands off his belly; side outlines dropped 0.01).
+  Gear Claude builds around the new body in the first place won't.
+- **Half the landmarks are guesses on a dressed character.** Elbow, knee
+  and often the waist come from "usual proportion". The landmark numbers
+  above compare one reading with another, so two guesses that agree look
+  good and a real elbow that disagrees with a guess looks bad. Treat that
+  row as a smoke alarm, not a score.
+- **Necks.** The neck stops inside the head at the narrowest ring; on a
+  bearded or hooded head (the pirate, the ninja) that is the beard or the
+  hood, and it comes out thick. Necks are the worst region now.
+- **Hands and feet are better, not good.** A hand is one mass and a thumb
+  block set where thumbs usually are, not where this one is; splayed
+  fingers (Lincoln, the lizardkin's claws) make a wide fan. A foot inside
+  a shoe is drawn in 2% of the height and its hidden faces are left out,
+  so with shoes off it is a small foot.
+- **What isn't body is still yours to build.** The troll's back crust, a
+  tail, spines, a kilt: the body piece knows nothing of them. A tail
+  between the legs or a skirt of armor (the lizardkin) hides the crotch,
+  which is then placed by proportion.
+- **The "head" style knob only moves points.** The head's texture is still
+  baked from the detailed mesh at its real size, so a head grown past
+  about 1.15 bakes with gaps.
+- **Not tried in the live Blender.** All of this ran in a background
+  Blender through `auto_body.py`. The prompt (`CHARACTER_STEPS` in
+  `baml_src/4_polish/lowpoly_prompt.baml`) now tells Claude to run
+  landmarks.py and paste the body, with a six-point anatomy checklist; no
+  run has been made with it yet. Run `just forge-addon` and restart
+  Blender first, or the prompt falls back to pasting whole scripts.
 
 ## Gear comes off: separate gear, a whole body, sockets
 
@@ -1690,7 +1858,37 @@ put the face on, fit the camera to the framing with room at the top for
 balloons, draw. It writes where every head and body landed in the picture
 (`panels.json`), which is all the lettering needs.
 
-**Lettering** (`scripts/comic/lettering.py`, no Blender). For each balloon
+**Through a character's eyes** (`"framing": "pov"`). The camera goes to
+the first cast member's eyes: just in front of the middle of its head, as
+the head bone has it at that pose or clip moment, with a 21 mm lens, which
+is about what one eye takes in. `"look"` aims it: `ahead` is where the head
+faces; `down` tips it 52 degrees and leans toward the feet when they are
+out in front; `hands` leans toward whichever hands are in front of the face
+(one behind the head, as when a sword is drawn over the shoulder, is not
+looked at, and the look falls back to ahead). The viewer's own head and
+neck are taken out with a Mask modifier on the points those two bones hold,
+placed before the ink line so no outline is drawn round the missing head,
+and the body is drawn from outside only for that panel, so the camera does
+not see the inside of its own chest. Both are undone for the next outside
+view; a test checks the two pictures match. `panels.json` notes the eye,
+the head's middle and how much of the body is in frame (`pov`). Anyone
+else in the panel is stood about 1.7 m in front of the viewer, and left,
+right and facing are as the viewer sees them.
+
+A clip made from a shot (`"clips": {"hero": {"shot": "hero-rooftop"}}` in
+`comics/cast.json`) belongs to the places built from that shot. There, at
+`"at": "there"`, any moment of it (`hero:vault_over`, `hero@3.4`) stays
+where the shot had it, so a run of pov panels follows the action across
+the place. Opus is shown the clip's length and what happens when.
+
+`"silent": true` on a cast member means no speech: the checks turn down
+any line of theirs that is not `"think"`. `"canon": false` in a
+`comic.json` marks a side story for the page and the gallery.
+
+**Lettering** (`scripts/comic/lettering.py`, no Blender). A thought from
+someone whose head is not in the picture (a pov panel) is a voice: a dark
+bar along the bottom with light type and no tail, stacked upward in reading
+order. For everything else: For each balloon
 it tries spots on a grid and keeps the cheapest one that breaks no rule: no
 balloon over any face or another balloon; a tail that ends on the rim of
 its speaker's head, leaning toward the mouth, and crosses nobody else's
@@ -1718,6 +1916,14 @@ more. A script is one Opus call of about 6,500 characters in and 1,600 to
 2,200 tokens out.
 
 What is weak, worst first:
+
+- **Pov shows what the clip gives it.** Looking down, a third of the
+  picture can be the viewer's own chest and shoulders, because the eye is
+  in a head that sits low on a stocky body. Looking ahead in the sprint
+  nothing of the body is in frame: the arms swing below the view. The head
+  bone, not the eyes, decides the direction, and the clip's head hardly
+  turns. The painted backdrop only follows the camera up and down, not
+  round, so the same skyline is behind every direction he faces.
 
 - **The face is a flat picture.** Past about 60 degrees the far eye slides
   round the cheek. It is painted over real glasses and a real mustache
@@ -1781,6 +1987,7 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `measure.py` | size a part without its neighbors, and slice it into rows of middle and half-width | parts, low poly |
 | `split.py` | paint or cut the parts from boxes: several boxes per part, tilted boxes, parts that wrap around | parts |
 | `face.py` | find the brow, eyes, nose, mouth and chin on a character's head and print it as a `"head"` piece for `build.py` | low poly (characters) |
+| `landmarks.py` | find a character's landmarks (chin to ankles), its proportions and its body's shape all along, and print it as a `"body"` piece for `build.py` | low poly (characters) |
 | `face_paint.py` | lay a picture of the face (the head sheet's front view, or the first picture) over the front of the detailed head, as shader nodes a bake picks up | profiles (characters) |
 | `rig.py` | give a T-pose character bones placed from its own build, bind every mesh, set each joint's limits, hang the sockets on bones | walk |
 | `walk.py` | work out a walk from the measured build and four traits; leaves it on the rig as a motion | walk |

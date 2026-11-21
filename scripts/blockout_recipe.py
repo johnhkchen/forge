@@ -159,6 +159,24 @@ def denser(part, sides, rings, size):
     return new
 
 
+def mid_parts(pieces, sides, rings, size):
+    """The whole recipe for the mid-poly version: (parts for build.py, kept body surfaces {name: data}).
+    Ordinary pieces are made denser. A body is not: its trunk, arms and legs were written out by a "body"
+    piece, so they are dropped and that piece is asked for again with "detail": "mid", which builds it
+    with more loops where it bends and its rings laid on the surface landmarks.py kept (the chest, the
+    shoulder blades, the kneecaps and ankle bones of the detailed mesh), not only rounder."""
+    parts, kept = [], {}
+    for piece in pieces:
+        if not piece.get("of"):
+            parts.append(denser(piece, sides, rings, size))
+        elif isinstance(piece.get("body"), dict) and piece["body"].get("spec"):
+            parts.append(dict(piece["body"]["spec"], detail="mid"))
+            held = piece["body"].get("kept")
+            if held:
+                kept[held["name"]] = held["data"]
+    return parts, kept
+
+
 # How much denser to try, lightest first: (sides, rings).
 DENSER = [(2, 1), (2, 2), (3, 2), (3, 3), (4, 3), (4, 4)]
 

@@ -8,18 +8,20 @@ function test_kit() -> ComicKit {
               "cast": [
                 {"id": "lincoln", "name": "Lincoln", "about": "tall and patient",
                  "poses": [{"name": "stand", "about": "standing easy"}, {"name": "point", "about": "pointing"}],
-                 "moments": [], "clips": ["run", "walk"], "expressions": ["neutral", "happy", "smug", "talking"]},
+                 "moments": [], "clips": ["run", "walk"], "expressions": ["neutral", "happy", "smug", "talking"], "shot_clips": [], "silent": false},
                 {"id": "roosevelt", "name": "Roosevelt", "about": "stocky and loud",
                  "poses": [{"name": "stand", "about": "standing easy"}, {"name": "flex", "about": "a flex"}],
-                 "moments": [], "clips": ["walk"], "expressions": ["neutral", "happy", "shouting"]},
+                 "moments": [], "clips": ["walk"], "expressions": ["neutral", "happy", "shouting"], "shot_clips": [], "silent": false},
                 {"id": "ninja", "name": "Ninja", "about": "serious",
                  "poses": [{"name": "stand", "about": "standing easy"}],
-                 "moments": [{"name": "hero:draw", "about": "hand at the sword grip", "place": "rooftop"}],
+                 "moments": [{"name": "hero:draw", "about": "hand at the sword grip", "second": 11.3}], "silent": true,
+                 "shot_clips": [{"clip": "hero", "seconds": 12.0, "beats": ["0.0 to 2.1 s: crouch and look", "7.0 to 8.5 s: vault the wall"], "places": ["rooftop", "rooftop-dawn"]}],
                  "clips": ["hero", "walk"], "expressions": []}
               ],
               "places": [
                 {"name": "ring", "about": "a wrestling ring", "marks": [], "cameras": []},
                 {"name": "rooftop", "about": "a roof at night", "marks": [], "cameras": []},
+                {"name": "rooftop-dawn", "about": "the same roof at sunrise", "marks": [], "cameras": []},
                 {"name": "studio", "about": "a talk-show set", "marks": ["host", "guest"], "cameras": ["desk"]}
               ],
               "framings": [{"name": "wide", "about": "everyone head to toe"}, {"name": "close-up", "about": "a face"}]
@@ -74,7 +76,12 @@ test "the kit is shown to Opus by name: poses, faces, clips, places, marks and c
     assert.is_true(shown.includes("expressions: neutral, happy, smug, talking"));
     assert.is_true(shown.includes("flex: a flex"));
     assert.is_true(
-        shown.includes("hero:draw: hand at the sword grip (only in rooftop, at \"there\")"),
+        shown.includes("hero:draw: hand at the sword grip (11.3 s into its clip)")
+            && shown.includes(
+                "the clip \"hero\" is one continuous 12.0 s action that belongs to rooftop or rooftop-dawn",
+            )
+            && shown.includes("7.0 to 8.5 s: vault the wall")
+            && shown.includes("NEVER SPEAKS ALOUD"),
     );
     assert.is_true(shown.includes("clips, as clip@seconds: run, walk"));
     assert.is_true(shown.includes("expressions: neutral only"));
@@ -93,8 +100,11 @@ test "a pose is a name, a moment, or clip@seconds for a clip the character has" 
     assert.is_true(!ninja.can_pose("run@0.3"));
     assert.is_true(!ninja.can_pose("hero@soon"));
     assert.is_true(!ninja.can_pose("moonwalk"));
-    assert.equal(ninja.home_of("hero:draw"), "rooftop");
-    assert.equal(ninja.home_of("stand"), "")
+    assert.is_true(ninja.at_home("hero:draw", "rooftop"));
+    assert.is_true(ninja.at_home("hero@4.2", "rooftop-dawn"));
+    assert.is_true(!ninja.at_home("hero:draw", "ring"));
+    assert.is_true(!ninja.at_home("walk@0.3", "rooftop"));
+    assert.is_true(!ninja.at_home("stand", "rooftop"))
 }
 
 test "a script that names what the kit does not have is told so, panel by panel" {
@@ -105,7 +115,11 @@ test "a script that names what the kit does not have is told so, panel by panel"
     first.cast.at(1)?.expression = "furious";
     first.lines.push(ComicLine { who: "ninja", says: "Hello.", how: "say" });
     let problems = script_problems(script, test_kit(), "strip");
-    assert.is_true(problems.includes(`panel 1: no place "moon" (there is: ring, rooftop, studio)`));
+    assert.is_true(
+        problems.includes(
+            `panel 1: no place "moon" (there is: ring, rooftop, rooftop-dawn, studio)`,
+        ),
+    );
     assert.is_true(problems.includes(`panel 1: roosevelt has no pose "backflip"`));
     assert.is_true(
         problems.includes(
@@ -170,13 +184,14 @@ test "a set's marks and cameras are accepted, and 'there' needs a moment that be
     assert.is_true(problems.includes(`panel 1: studio has no camera "crane"; leave camera null`));
     assert.is_true(
         problems.includes(
-            `panel 1: lincoln stands at "there", which needs a moment that belongs to studio`,
+            `panel 1: lincoln stands at "there", which needs a moment of a clip that belongs to studio`,
         ),
     )
 }
 
 test "the comic file keeps the script and the premise, and reads back" {
     let file = ComicFile {
+        canon: false,
         title: "Long Reach",
         premise: "a bout",
         layout: "strip",
@@ -187,4 +202,39 @@ test "the comic file keeps the script and the premise, and reads back" {
     assert.equal(back.layout, "strip");
     assert.equal(listed(" lincoln, roosevelt ,"), ["lincoln", "roosevelt"]);
     assert.equal(listed(""), [])
+}
+
+const POV_REPLY = `
+    {
+      "title": "First Light",
+      "panels": [
+        {"framing": "pov", "look": "hands", "place": "rooftop", "camera": null, "shape": "wide",
+         "cast": [{"who": "ninja", "at": "there", "facing": "camera", "pose": "hero@7.9", "expression": "neutral"}],
+         "lines": [{"who": "ninja", "says": "Every good film has one wall.", "how": "think"}],
+         "caption": "Take one.", "sfx": null},
+        {"framing": "wide", "look": null, "place": "rooftop-dawn", "camera": null, "shape": "tall",
+         "cast": [{"who": "ninja", "at": "there", "facing": "camera", "pose": "hero:draw", "expression": "neutral"}],
+         "lines": [], "caption": null, "sfx": null}
+      ]
+    }
+`;
+
+test "a pov panel parses with its look, and a silent character may only think" {
+    let script = WriteComic@spec("a premise", format_rules("scroll"), test_kit().to_prompt()).parse(POV_REPLY);
+    let first = script.panels.at(0) ?? throw "no panel";
+    assert.equal(first.framing, "pov");
+    assert.equal(first.look, "hands");
+    assert.equal(script.panels.at(1)?.look, null);
+    let sound = script_problems(script, test_kit(), "scroll").filter((p) -> {
+        !p.includes("6 to 10 panels")
+    });
+    assert.equal(sound, []);
+    first.lines = [ComicLine { who: "ninja", says: "Action!", how: "shout" }];
+    let problems = script_problems(script, test_kit(), "scroll");
+    assert.is_true(
+        problems.includes(
+            `panel 1: ninja never speaks aloud; make the line a thought ("think") or a caption`,
+        ),
+    );
+    assert.equal(panel_room("pov"), 110)
 }

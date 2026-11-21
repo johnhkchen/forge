@@ -9,32 +9,35 @@
    "heads": {
     "ninja": {
      "center": [
-      515.0,
-      211.8
+      515.7,
+      204.8
      ],
-     "radius": 47.1,
+     "radius": 41.9,
      "mouth": [
-      547.9,
-      223.2
+      545.1,
+      215.1
      ],
      "top": [
-      519.6,
-      178.8
+      519.8,
+      175.4
      ],
-     "depth": 2.787
+     "depth": 2.761
     }
    },
    "bodies": {
     "ninja": [
-     356.6,
-     165.6,
-     587.1,
-     504.8
+     356.4,
+     166.9,
+     589.6,
+     504.7
     ]
    },
+   "pov": null,
+   "horizon": 0.2516,
+   "sky_horizon": 0.7,
    "sky": [
-    "#1b2a52",
-    "#6a5a8c"
+    "#221c6e",
+    "#1c1a58"
    ],
    "sky_image": "backdrops/rooftop.png",
    "place": "rooftop",
@@ -50,7 +53,7 @@
      "expression": "neutral"
     }
    ],
-   "seconds": 0.74
+   "seconds": 0.5
   },
   {
    "file": "panels/02.png",
@@ -58,51 +61,45 @@
     900,
     900
    ],
-   "heads": {
-    "ninja": {
-     "center": [
-      489.5,
-      321.0
-     ],
-     "radius": 58.0,
-     "mouth": [
-      504.9,
-      356.6
-     ],
-     "top": [
-      497.2,
-      268.8
-     ],
-     "depth": 2.266
-    }
+   "heads": {},
+   "bodies": {},
+   "pov": {
+    "eye": [
+     -0.043,
+     -0.417,
+     1.026
+    ],
+    "look": "ahead",
+    "head_center": [
+     0.059,
+     -0.345,
+     1.001
+    ],
+    "head_radius": 0.132,
+    "lens": 21.0,
+    "seen_of_self": 0.0
    },
-   "bodies": {
-    "ninja": [
-     271.4,
-     266.2,
-     579.8,
-     824.8
-    ]
-   },
+   "horizon": 0.5573,
+   "sky_horizon": 0.7,
    "sky": [
-    "#1b2a52",
-    "#6a5a8c"
+    "#221c6e",
+    "#1c1a58"
    ],
    "sky_image": "backdrops/rooftop.png",
    "place": "rooftop",
-   "framing": "wide",
+   "framing": "pov",
    "cast": [
     {
      "clip": "hero",
-     "second": 2.767,
+     "second": 2.067,
      "of_seconds": 12.0,
-     "moment": "hero:sneak_right",
+     "moment": "hero:crouch_look_right",
      "who": "ninja",
      "at": "there",
-     "expression": "surprised"
+     "expression": null
     }
    ],
-   "seconds": 0.28
+   "seconds": 0.27
   },
   {
    "file": "panels/03.png",
@@ -110,51 +107,94 @@
     900,
     900
    ],
-   "heads": {
-    "ninja": {
-     "center": [
-      450.0,
-      477.0
-     ],
-     "radius": 272.9,
-     "mouth": [
-      450.0,
-      527.3
-     ],
-     "top": [
-      450.0,
-      256.1
-     ],
-     "depth": 1.1
-    }
+   "heads": {},
+   "bodies": {},
+   "pov": {
+    "eye": [
+     0.171,
+     -1.158,
+     1.291
+    ],
+    "look": "down",
+    "head_center": [
+     0.132,
+     -1.037,
+     1.298
+    ],
+    "head_radius": 0.132,
+    "lens": 21.0,
+    "seen_of_self": 0.367
    },
-   "bodies": {
-    "ninja": [
-     -767.1,
-     233.8,
-     1678.6,
-     4836.9
-    ]
-   },
+   "horizon": -1.0047,
+   "sky_horizon": 0.7,
    "sky": [
-    "#2a3a66",
-    "#7a6a96"
+    "#221c6e",
+    "#1c1a58"
    ],
-   "sky_image": null,
-   "place": "dusk",
-   "framing": "close-up",
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "pov",
    "cast": [
     {
-     "pose": "startled",
+     "clip": "hero",
+     "second": 3.333,
+     "of_seconds": 12.0,
+     "moment": "hero:sneak_left",
      "who": "ninja",
-     "at": "center",
-     "expression": "surprised"
+     "at": "there",
+     "expression": null
     }
    ],
-   "seconds": 0.22
+   "seconds": 0.31
   },
   {
    "file": "panels/04.png",
+   "size": [
+    900,
+    558
+   ],
+   "heads": {},
+   "bodies": {},
+   "pov": {
+    "eye": [
+     2.012,
+     -3.164,
+     1.583
+    ],
+    "look": "ahead",
+    "head_center": [
+     1.908,
+     -3.093,
+     1.587
+    ],
+    "head_radius": 0.132,
+    "lens": 21.0,
+    "seen_of_self": 0.0
+   },
+   "horizon": 0.3477,
+   "sky_horizon": 0.7,
+   "sky": [
+    "#221c6e",
+    "#1c1a58"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "pov",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 6.0,
+     "of_seconds": 12.0,
+     "moment": "hero:sprint_left",
+     "who": "ninja",
+     "at": "there",
+     "expression": null
+    }
+   ],
+   "seconds": 0.26
+  },
+  {
+   "file": "panels/05.png",
    "size": [
     900,
     900
@@ -163,84 +203,38 @@
     "ninja": {
      "center": [
       450.0,
-      442.7
+      549.0
      ],
-     "radius": 146.6,
+     "radius": 226.5,
      "mouth": [
-      450.0,
-      517.8
+      486.5,
+      713.7
      ],
      "top": [
-      450.0,
-      311.5
+      473.6,
+      351.7
      ],
-     "depth": 1.588
+     "depth": 1.168
     }
    },
    "bodies": {
     "ninja": [
-     47.7,
-     315.2,
-     855.6,
-     2230.5
+     -315.9,
+     334.8,
+     1020.3,
+     4675.4
     ]
    },
+   "pov": null,
+   "horizon": 0.5,
+   "sky_horizon": 0.7,
    "sky": [
-    "#2a3a66",
-    "#7a6a96"
-   ],
-   "sky_image": null,
-   "place": "dusk",
-   "framing": "single",
-   "cast": [
-    {
-     "pose": "hands_on_hips",
-     "who": "ninja",
-     "at": "center",
-     "expression": "smug"
-    }
-   ],
-   "seconds": 0.14
-  },
-  {
-   "file": "panels/05.png",
-   "size": [
-    900,
-    558
-   ],
-   "heads": {
-    "ninja": {
-     "center": [
-      494.0,
-      204.5
-     ],
-     "radius": 28.9,
-     "mouth": [
-      499.2,
-      224.8
-     ],
-     "top": [
-      497.5,
-      179.7
-     ],
-     "depth": 4.547
-    }
-   },
-   "bodies": {
-    "ninja": [
-     378.4,
-     176.5,
-     561.5,
-     506.8
-    ]
-   },
-   "sky": [
-    "#1b2a52",
-    "#6a5a8c"
+    "#221c6e",
+    "#1c1a58"
    ],
    "sky_image": "backdrops/rooftop.png",
    "place": "rooftop",
-   "framing": "wide",
+   "framing": "close-up",
    "cast": [
     {
      "clip": "hero",
@@ -249,10 +243,10 @@
      "moment": "hero:sprint_right",
      "who": "ninja",
      "at": "there",
-     "expression": "angry"
+     "expression": "happy"
     }
    ],
-   "seconds": 0.17
+   "seconds": 0.31
   },
   {
    "file": "panels/06.png",
@@ -260,39 +254,33 @@
     900,
     1170
    ],
-   "heads": {
-    "ninja": {
-     "center": [
-      245.3,
-      552.5
-     ],
-     "radius": 85.7,
-     "mouth": [
-      299.1,
-      596.4
-     ],
-     "top": [
-      212.3,
-      487.9
-     ],
-     "depth": 1.994
-    }
+   "heads": {},
+   "bodies": {},
+   "pov": {
+    "eye": [
+     5.788,
+     -6.557,
+     1.641
+    ],
+    "look": "hands",
+    "head_center": [
+     5.666,
+     -6.524,
+     1.636
+    ],
+    "head_radius": 0.132,
+    "lens": 21.0,
+    "seen_of_self": 0.267
    },
-   "bodies": {
-    "ninja": [
-     103.8,
-     464.5,
-     794.6,
-     903.2
-    ]
-   },
+   "horizon": 0.5421,
+   "sky_horizon": 0.7,
    "sky": [
-    "#1b2a52",
-    "#6a5a8c"
+    "#221c6e",
+    "#1c1a58"
    ],
    "sky_image": "backdrops/rooftop.png",
    "place": "rooftop",
-   "framing": "wide",
+   "framing": "pov",
    "cast": [
     {
      "clip": "hero",
@@ -301,10 +289,10 @@
      "moment": "hero:vault_over",
      "who": "ninja",
      "at": "there",
-     "expression": "neutral"
+     "expression": null
     }
    ],
-   "seconds": 0.22
+   "seconds": 0.3
   },
   {
    "file": "panels/07.png",
@@ -315,32 +303,35 @@
    "heads": {
     "ninja": {
      "center": [
-      527.6,
-      218.2
+      540.9,
+      221.3
      ],
-     "radius": 49.2,
+     "radius": 47.8,
      "mouth": [
-      540.1,
-      259.4
+      553.2,
+      261.4
      ],
      "top": [
-      543.1,
-      180.7
+      556.3,
+      185.0
      ],
-     "depth": 2.671
+     "depth": 2.419
     }
    },
    "bodies": {
     "ninja": [
-     253.0,
-     168.7,
-     602.3,
-     510.2
+     240.1,
+     172.2,
+     617.2,
+     510.8
     ]
    },
+   "pov": null,
+   "horizon": 0.2516,
+   "sky_horizon": 0.7,
    "sky": [
-    "#1b2a52",
-    "#6a5a8c"
+    "#221c6e",
+    "#1c1a58"
    ],
    "sky_image": "backdrops/rooftop.png",
    "place": "rooftop",
@@ -356,46 +347,141 @@
      "expression": "smug"
     }
    ],
-   "seconds": 0.18
+   "seconds": 0.32
   },
   {
    "file": "panels/08.png",
    "size": [
     900,
+    900
+   ],
+   "heads": {},
+   "bodies": {},
+   "pov": {
+    "eye": [
+     6.901,
+     -7.199,
+     1.343
+    ],
+    "look": "ahead",
+    "head_center": [
+     6.804,
+     -7.117,
+     1.345
+    ],
+    "head_radius": 0.132,
+    "lens": 21.0,
+    "seen_of_self": 0.0
+   },
+   "horizon": 0.418,
+   "sky_horizon": 0.7,
+   "sky": [
+    "#221c6e",
+    "#1c1a58"
+   ],
+   "sky_image": "backdrops/rooftop.png",
+   "place": "rooftop",
+   "framing": "pov",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 10.6,
+     "of_seconds": 12.0,
+     "moment": "hero:rise",
+     "who": "ninja",
+     "at": "there",
+     "expression": null
+    }
+   ],
+   "seconds": 0.28
+  },
+  {
+   "file": "panels/09.png",
+   "size": [
+    900,
     1170
+   ],
+   "heads": {},
+   "bodies": {},
+   "pov": {
+    "eye": [
+     6.659,
+     -7.028,
+     1.558
+    ],
+    "look": "hands",
+    "head_center": [
+     6.65,
+     -6.91,
+     1.512
+    ],
+    "head_radius": 0.132,
+    "lens": 21.0,
+    "seen_of_self": 0.8
+   },
+   "horizon": -0.4509,
+   "sky_horizon": 0.69,
+   "sky": [
+    "#3f52ad",
+    "#575a9c"
+   ],
+   "sky_image": "backdrops/rooftop-dawn.png",
+   "place": "rooftop-dawn",
+   "framing": "pov",
+   "cast": [
+    {
+     "clip": "hero",
+     "second": 12.0,
+     "of_seconds": 12.0,
+     "moment": "hero:hero_stance",
+     "who": "ninja",
+     "at": "there",
+     "expression": null
+    }
+   ],
+   "seconds": 0.32
+  },
+  {
+   "file": "panels/10.png",
+   "size": [
+    900,
+    558
    ],
    "heads": {
     "ninja": {
      "center": [
-      411.2,
-      358.5
+      432.5,
+      168.4
      ],
-     "radius": 66.0,
+     "radius": 27.8,
      "mouth": [
-      432.7,
-      373.5
+      441.7,
+      176.2
      ],
      "top": [
-      404.9,
-      301.0
+      429.8,
+      144.0
      ],
-     "depth": 2.589
+     "depth": 4.155
     }
    },
    "bodies": {
     "ninja": [
-     198.9,
-     298.2,
-     673.6,
-     1035.2
+     331.7,
+     143.6,
+     559.5,
+     494.8
     ]
    },
+   "pov": null,
+   "horizon": 0.2516,
+   "sky_horizon": 0.69,
    "sky": [
-    "#1b2a52",
-    "#6a5a8c"
+    "#3f52ad",
+    "#575a9c"
    ],
-   "sky_image": "backdrops/rooftop.png",
-   "place": "rooftop",
+   "sky_image": "backdrops/rooftop-dawn.png",
+   "place": "rooftop-dawn",
    "framing": "wide",
    "cast": [
     {
@@ -408,10 +494,10 @@
      "expression": "happy"
     }
    ],
-   "seconds": 0.2
+   "seconds": 0.27
   }
  ],
- "seconds": 2.18,
+ "seconds": 3.15,
  "width": 900,
  "runs": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs"
 }

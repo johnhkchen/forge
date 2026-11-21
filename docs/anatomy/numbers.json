@@ -1,0 +1,2299 @@
+{
+ "troll": {
+  "height_m": 2.6,
+  "detailed": {
+   "height_m": 2.6,
+   "heads_tall": 12.5,
+   "leg_share": 0.333,
+   "arm_share": 0.542,
+   "forearm_to_upper_arm": 0.88,
+   "shin_to_thigh": 0.96,
+   "shoulders_to_hips": 0.9,
+   "waist_to_hips": 0.95,
+   "hand_share": 0.13,
+   "foot_share": 0.266,
+   "trunk_share": 0.587,
+   "neck_share": 0.0
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 1254,
+    "landmark_off_mean_pct": 1.21,
+    "landmark_off_worst": "wrist",
+    "landmark_off_pct": {
+     "chin": 2.42,
+     "neck_base": 0.9,
+     "shoulder": 2.57,
+     "armpit": 2.12,
+     "chest": 1.67,
+     "waist": 0.44,
+     "hips": 1.01,
+     "crotch": 0.8,
+     "elbow": 0.86,
+     "wrist": 3.0,
+     "fingertip": 0.66,
+     "knee": 1.23,
+     "ankle": 0.27,
+     "heel": 0.08,
+     "toe": 0.11
+    },
+    "silhouette_shared": {
+     "front": 0.929,
+     "side": 0.869
+    },
+    "cross_section_off_mean_pct": 20.6,
+    "cross_section_off_pct": {
+     "pelvis": 12.9,
+     "ribcage": 6.4,
+     "shoulders": 13.2,
+     "neck": 28.5,
+     "upper arm": 10.3,
+     "forearm": 12.1,
+     "hand": 49.0,
+     "thigh": 33.0,
+     "shin": 9.5,
+     "foot": 31.3
+    },
+    "loops": {
+     "elbow": 3,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 2.6209,
+     "heads_tall": 12.5,
+     "leg_share": 0.339,
+     "arm_share": 0.53,
+     "forearm_to_upper_arm": 0.84,
+     "shin_to_thigh": 0.97,
+     "shoulders_to_hips": 0.88,
+     "waist_to_hips": 0.98,
+     "hand_share": 0.158,
+     "foot_share": 0.263,
+     "trunk_share": 0.581,
+     "neck_share": 0.0
+    }
+   },
+   "low-after": {
+    "triangles": 1256,
+    "landmark_off_mean_pct": 3.7,
+    "landmark_off_worst": "chin",
+    "landmark_off_pct": {
+     "chin": 19.21,
+     "neck_base": 5.1,
+     "shoulder": 4.26,
+     "armpit": 4.06,
+     "chest": 3.22,
+     "waist": 2.81,
+     "hips": 2.79,
+     "crotch": 2.73,
+     "elbow": 0.92,
+     "wrist": 0.19,
+     "fingertip": 0.28,
+     "knee": 8.6,
+     "ankle": 0.7,
+     "heel": 0.28,
+     "toe": 0.28
+    },
+    "silhouette_shared": {
+     "front": 0.941,
+     "side": 0.889
+    },
+    "cross_section_off_mean_pct": 19.2,
+    "cross_section_off_pct": {
+     "pelvis": 5.3,
+     "ribcage": 5.1,
+     "shoulders": 15.3,
+     "neck": 60.9,
+     "upper arm": 11.8,
+     "forearm": 13.8,
+     "hand": 41.7,
+     "thigh": 14.1,
+     "shin": 6.5,
+     "foot": 17.2
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 2.5568,
+     "heads_tall": 12.5,
+     "leg_share": 0.367,
+     "arm_share": 0.55,
+     "forearm_to_upper_arm": 0.82,
+     "shin_to_thigh": 1.75,
+     "shoulders_to_hips": 0.89,
+     "waist_to_hips": 0.98,
+     "hand_share": 0.132,
+     "foot_share": 0.265,
+     "trunk_share": 0.553,
+     "neck_share": 0.0
+    }
+   },
+   "mid-after": {
+    "triangles": 4816,
+    "landmark_off_mean_pct": 3.1,
+    "landmark_off_worst": "chin",
+    "landmark_off_pct": {
+     "chin": 19.16,
+     "neck_base": 3.81,
+     "shoulder": 6.45,
+     "armpit": 3.58,
+     "chest": 1.29,
+     "waist": 1.49,
+     "hips": 1.74,
+     "crotch": 1.83,
+     "elbow": 1.75,
+     "wrist": 2.36,
+     "fingertip": 0.49,
+     "knee": 1.22,
+     "ankle": 0.7,
+     "heel": 0.28,
+     "toe": 0.28
+    },
+    "silhouette_shared": {
+     "front": 0.933,
+     "side": 0.895
+    },
+    "cross_section_off_mean_pct": 17.6,
+    "cross_section_off_pct": {
+     "pelvis": 4.9,
+     "ribcage": 4.1,
+     "shoulders": 11.6,
+     "neck": 69.8,
+     "upper arm": 6.9,
+     "forearm": 12.6,
+     "hand": 35.5,
+     "thigh": 10.1,
+     "shin": 2.5,
+     "foot": 18.2
+    },
+    "loops": {
+     "elbow": 8,
+     "knee": 9
+    },
+    "proportions": {
+     "height_m": 2.5848,
+     "heads_tall": 12.5,
+     "leg_share": 0.353,
+     "arm_share": 0.544,
+     "forearm_to_upper_arm": 0.91,
+     "shin_to_thigh": 0.98,
+     "shoulders_to_hips": 0.89,
+     "waist_to_hips": 0.98,
+     "hand_share": 0.153,
+     "foot_share": 0.262,
+     "trunk_share": 0.567,
+     "neck_share": 0.0
+    }
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.505,
+    "elbow_x": 0.97,
+    "wrist_x": 1.46,
+    "foot_slide_cm": 0.041
+   },
+   "after": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.531,
+    "elbow_x": 1.091,
+    "wrist_x": 1.442,
+    "foot_slide_cm": 0.021,
+    "joint_off_landmark_pct": {
+     "knee": 0.0,
+     "elbow": 0.0,
+     "wrist": 5.8
+    }
+   }
+  }
+ },
+ "pirate": {
+  "height_m": 1.8,
+  "detailed": {
+   "height_m": 1.8,
+   "heads_tall": 7.41,
+   "leg_share": 0.353,
+   "arm_share": 0.384,
+   "forearm_to_upper_arm": 0.95,
+   "shin_to_thigh": 1.24,
+   "shoulders_to_hips": 0.91,
+   "waist_to_hips": 0.95,
+   "hand_share": 0.092,
+   "foot_share": 0.221,
+   "trunk_share": 0.43,
+   "neck_share": 0.082
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 976,
+    "landmark_off_mean_pct": 1.73,
+    "landmark_off_worst": "chin",
+    "landmark_off_pct": {
+     "chin": 6.17,
+     "neck_base": 0.95,
+     "shoulder": 1.62,
+     "armpit": 1.51,
+     "chest": 0.14,
+     "waist": 0.64,
+     "hips": 1.35,
+     "crotch": 1.34,
+     "elbow": 2.11,
+     "wrist": 0.52,
+     "fingertip": 0.32,
+     "knee": 4.32,
+     "ankle": 4.47,
+     "heel": 0.48,
+     "toe": 0.05
+    },
+    "silhouette_shared": {
+     "front": 0.912,
+     "side": 0.872
+    },
+    "cross_section_off_mean_pct": 22.4,
+    "cross_section_off_pct": {
+     "pelvis": 7.3,
+     "ribcage": 8.3,
+     "shoulders": 18.7,
+     "neck": 19.7,
+     "upper arm": 22.6,
+     "forearm": 16.9,
+     "hand": 77.6,
+     "thigh": 14.6,
+     "shin": 22.6,
+     "foot": 15.7
+    },
+    "loops": {
+     "elbow": 2,
+     "knee": 2
+    },
+    "proportions": {
+     "height_m": 1.7999,
+     "heads_tall": 10.0,
+     "leg_share": 0.34,
+     "arm_share": 0.374,
+     "forearm_to_upper_arm": 1.38,
+     "shin_to_thigh": 0.97,
+     "shoulders_to_hips": 0.95,
+     "waist_to_hips": 0.94,
+     "hand_share": 0.092,
+     "foot_share": 0.227,
+     "trunk_share": 0.45,
+     "neck_share": 0.11
+    }
+   },
+   "low-after": {
+    "triangles": 1282,
+    "landmark_off_mean_pct": 3.21,
+    "landmark_off_worst": "neck_base",
+    "landmark_off_pct": {
+     "chin": 6.72,
+     "neck_base": 11.28,
+     "shoulder": 11.02,
+     "armpit": 2.02,
+     "chest": 1.32,
+     "waist": 0.45,
+     "hips": 1.06,
+     "crotch": 1.73,
+     "elbow": 1.66,
+     "wrist": 0.53,
+     "fingertip": 0.65,
+     "knee": 4.21,
+     "ankle": 4.24,
+     "heel": 0.63,
+     "toe": 0.63
+    },
+    "silhouette_shared": {
+     "front": 0.877,
+     "side": 0.89
+    },
+    "cross_section_off_mean_pct": 16.2,
+    "cross_section_off_pct": {
+     "pelvis": 6.3,
+     "ribcage": 6.9,
+     "shoulders": 11.1,
+     "neck": 41.0,
+     "upper arm": 14.4,
+     "forearm": 13.8,
+     "hand": 25.0,
+     "thigh": 10.6,
+     "shin": 20.2,
+     "foot": 12.9
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 3
+    },
+    "proportions": {
+     "height_m": 1.8106,
+     "heads_tall": 10.34,
+     "leg_share": 0.34,
+     "arm_share": 0.365,
+     "forearm_to_upper_arm": 0.88,
+     "shin_to_thigh": 0.96,
+     "shoulders_to_hips": 0.96,
+     "waist_to_hips": 0.88,
+     "hand_share": 0.086,
+     "foot_share": 0.216,
+     "trunk_share": 0.557,
+     "neck_share": 0.007
+    }
+   },
+   "mid-before": {
+    "triangles": 3640,
+    "landmark_off_mean_pct": 2.03,
+    "landmark_off_worst": "chin",
+    "landmark_off_pct": {
+     "chin": 6.3,
+     "neck_base": 1.17,
+     "shoulder": 1.28,
+     "armpit": 3.01,
+     "chest": 2.82,
+     "waist": 2.07,
+     "hips": 0.7,
+     "crotch": 1.4,
+     "elbow": 1.59,
+     "wrist": 0.51,
+     "fingertip": 0.32,
+     "knee": 4.34,
+     "ankle": 4.48,
+     "heel": 0.48,
+     "toe": 0.04
+    },
+    "silhouette_shared": {
+     "front": 0.913,
+     "side": 0.871
+    },
+    "cross_section_off_mean_pct": 23.0,
+    "cross_section_off_pct": {
+     "pelvis": 8.7,
+     "ribcage": 7.6,
+     "shoulders": 18.6,
+     "neck": 21.3,
+     "upper arm": 18.1,
+     "forearm": 18.1,
+     "hand": 91.5,
+     "thigh": 13.2,
+     "shin": 22.5,
+     "foot": 10.7
+    },
+    "loops": {
+     "elbow": 5,
+     "knee": 3
+    },
+    "proportions": {
+     "height_m": 1.8,
+     "heads_tall": 10.0,
+     "leg_share": 0.34,
+     "arm_share": 0.379,
+     "forearm_to_upper_arm": 1.22,
+     "shin_to_thigh": 0.97,
+     "shoulders_to_hips": 0.9,
+     "waist_to_hips": 0.93,
+     "hand_share": 0.092,
+     "foot_share": 0.227,
+     "trunk_share": 0.45,
+     "neck_share": 0.11
+    }
+   },
+   "mid-after": {
+    "triangles": 4670,
+    "landmark_off_mean_pct": 3.29,
+    "landmark_off_worst": "neck_base",
+    "landmark_off_pct": {
+     "chin": 7.69,
+     "neck_base": 12.44,
+     "shoulder": 11.79,
+     "armpit": 1.27,
+     "chest": 1.2,
+     "waist": 0.66,
+     "hips": 1.07,
+     "crotch": 1.72,
+     "elbow": 1.18,
+     "wrist": 0.14,
+     "fingertip": 0.55,
+     "knee": 4.21,
+     "ankle": 4.19,
+     "heel": 0.63,
+     "toe": 0.63
+    },
+    "silhouette_shared": {
+     "front": 0.903,
+     "side": 0.896
+    },
+    "cross_section_off_mean_pct": 12.2,
+    "cross_section_off_pct": {
+     "pelvis": 3.4,
+     "ribcage": 5.9,
+     "shoulders": 6.5,
+     "neck": 38.1,
+     "upper arm": 5.7,
+     "forearm": 8.5,
+     "hand": 20.8,
+     "thigh": 6.9,
+     "shin": 19.3,
+     "foot": 6.7
+    },
+    "loops": {
+     "elbow": 6,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.8105,
+     "heads_tall": 10.9,
+     "leg_share": 0.34,
+     "arm_share": 0.376,
+     "forearm_to_upper_arm": 0.85,
+     "shin_to_thigh": 0.96,
+     "shoulders_to_hips": 0.9,
+     "waist_to_hips": 0.87,
+     "hand_share": 0.091,
+     "foot_share": 0.216,
+     "trunk_share": 0.568,
+     "neck_share": 0.0
+    }
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "nearest ring",
+     "head": "a head piece"
+    },
+    "knee_z": 0.43,
+    "elbow_x": 0.5,
+    "wrist_x": 0.68,
+    "foot_slide_cm": 0.009
+   },
+   "after": {
+    "found_by": {
+     "wrist": "usual proportion",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.435,
+    "elbow_x": 0.525,
+    "wrist_x": 0.8,
+    "foot_slide_cm": 0.006,
+    "joint_off_landmark_pct": {
+     "knee": 0.7,
+     "elbow": 0.0,
+     "wrist": 1.0
+    }
+   }
+  }
+ },
+ "ninja": {
+  "height_m": 1.75,
+  "detailed": {
+   "height_m": 1.75,
+   "heads_tall": 5.22,
+   "leg_share": 0.353,
+   "arm_share": 0.411,
+   "forearm_to_upper_arm": 0.84,
+   "shin_to_thigh": 0.95,
+   "shoulders_to_hips": 0.85,
+   "waist_to_hips": 0.83,
+   "hand_share": 0.134,
+   "foot_share": 0.188,
+   "trunk_share": 0.45,
+   "neck_share": 0.008
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 1352,
+    "landmark_off_mean_pct": 3.04,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 1.99,
+     "neck_base": 0.86,
+     "shoulder": 2.13,
+     "armpit": 2.82,
+     "chest": 14.22,
+     "waist": 4.99,
+     "hips": 0.38,
+     "crotch": 1.26,
+     "elbow": 3.23,
+     "wrist": 4.64,
+     "fingertip": 0.07,
+     "knee": 2.02,
+     "ankle": 6.3,
+     "heel": 0.41,
+     "toe": 0.35
+    },
+    "silhouette_shared": {
+     "front": 0.878,
+     "side": 0.875
+    },
+    "cross_section_off_mean_pct": 23.2,
+    "cross_section_off_pct": {
+     "pelvis": 13.0,
+     "ribcage": 14.7,
+     "shoulders": 15.2,
+     "neck": 46.8,
+     "upper arm": 15.9,
+     "forearm": 18.5,
+     "hand": 42.5,
+     "thigh": 11.9,
+     "shin": 25.1,
+     "foot": 28.0
+    },
+    "loops": {
+     "elbow": 8,
+     "knee": 4
+    },
+    "proportions": {
+     "height_m": 1.7496,
+     "heads_tall": 5.22,
+     "leg_share": 0.357,
+     "arm_share": 0.39,
+     "forearm_to_upper_arm": 0.85,
+     "shin_to_thigh": 0.98,
+     "shoulders_to_hips": 1.0,
+     "waist_to_hips": 0.84,
+     "hand_share": 0.092,
+     "foot_share": 0.196,
+     "trunk_share": 0.454,
+     "neck_share": 0.0
+    }
+   },
+   "low-after": {
+    "triangles": 1624,
+    "landmark_off_mean_pct": 1.88,
+    "landmark_off_worst": "waist",
+    "landmark_off_pct": {
+     "chin": 2.51,
+     "neck_base": 1.34,
+     "shoulder": 3.07,
+     "armpit": 1.8,
+     "chest": 2.04,
+     "waist": 5.62,
+     "hips": 2.03,
+     "crotch": 1.34,
+     "elbow": 1.0,
+     "wrist": 4.35,
+     "fingertip": 0.17,
+     "knee": 0.33,
+     "ankle": 1.6,
+     "heel": 0.62,
+     "toe": 0.35
+    },
+    "silhouette_shared": {
+     "front": 0.88,
+     "side": 0.871
+    },
+    "cross_section_off_mean_pct": 20.3,
+    "cross_section_off_pct": {
+     "pelvis": 22.6,
+     "ribcage": 9.9,
+     "shoulders": 16.3,
+     "neck": 52.4,
+     "upper arm": 15.1,
+     "forearm": 16.5,
+     "hand": 21.7,
+     "thigh": 11.0,
+     "shin": 6.4,
+     "foot": 30.9
+    },
+    "loops": {
+     "elbow": 6,
+     "knee": 6
+    },
+    "proportions": {
+     "height_m": 1.7498,
+     "heads_tall": 5.22,
+     "leg_share": 0.34,
+     "arm_share": 0.394,
+     "forearm_to_upper_arm": 1.09,
+     "shin_to_thigh": 0.93,
+     "shoulders_to_hips": 0.91,
+     "waist_to_hips": 0.76,
+     "hand_share": 0.092,
+     "foot_share": 0.198,
+     "trunk_share": 0.472,
+     "neck_share": 0.0
+    }
+   },
+   "mid-before": {
+    "triangles": 4430,
+    "landmark_off_mean_pct": 3.14,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 1.27,
+     "neck_base": 0.22,
+     "shoulder": 1.24,
+     "armpit": 2.27,
+     "chest": 7.74,
+     "waist": 5.78,
+     "hips": 6.69,
+     "crotch": 6.79,
+     "elbow": 1.09,
+     "wrist": 3.98,
+     "fingertip": 0.13,
+     "knee": 3.19,
+     "ankle": 5.92,
+     "heel": 0.41,
+     "toe": 0.35
+    },
+    "silhouette_shared": {
+     "front": 0.885,
+     "side": 0.888
+    },
+    "cross_section_off_mean_pct": 20.4,
+    "cross_section_off_pct": {
+     "pelvis": 11.8,
+     "ribcage": 13.6,
+     "shoulders": 11.3,
+     "neck": 25.5,
+     "upper arm": 16.6,
+     "forearm": 20.2,
+     "hand": 48.0,
+     "thigh": 10.6,
+     "shin": 20.3,
+     "foot": 26.3
+    },
+    "loops": {
+     "elbow": 8,
+     "knee": 6
+    },
+    "proportions": {
+     "height_m": 1.7509,
+     "heads_tall": 5.23,
+     "leg_share": 0.42,
+     "arm_share": 0.405,
+     "forearm_to_upper_arm": 0.98,
+     "shin_to_thigh": 1.02,
+     "shoulders_to_hips": 0.93,
+     "waist_to_hips": 0.85,
+     "hand_share": 0.097,
+     "foot_share": 0.196,
+     "trunk_share": 0.383,
+     "neck_share": 0.008
+    }
+   },
+   "mid-after": {
+    "triangles": 4803,
+    "landmark_off_mean_pct": 1.66,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 1.45,
+     "neck_base": 0.9,
+     "shoulder": 2.07,
+     "armpit": 1.34,
+     "chest": 6.85,
+     "waist": 1.28,
+     "hips": 1.43,
+     "crotch": 1.32,
+     "elbow": 1.0,
+     "wrist": 3.77,
+     "fingertip": 0.16,
+     "knee": 0.25,
+     "ankle": 2.14,
+     "heel": 0.63,
+     "toe": 0.35
+    },
+    "silhouette_shared": {
+     "front": 0.918,
+     "side": 0.887
+    },
+    "cross_section_off_mean_pct": 15.5,
+    "cross_section_off_pct": {
+     "pelvis": 13.0,
+     "ribcage": 6.2,
+     "shoulders": 13.2,
+     "neck": 42.9,
+     "upper arm": 10.5,
+     "forearm": 12.9,
+     "hand": 17.3,
+     "thigh": 8.5,
+     "shin": 4.2,
+     "foot": 25.9
+    },
+    "loops": {
+     "elbow": 8,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 1.7509,
+     "heads_tall": 5.23,
+     "leg_share": 0.34,
+     "arm_share": 0.415,
+     "forearm_to_upper_arm": 0.92,
+     "shin_to_thigh": 0.92,
+     "shoulders_to_hips": 0.8,
+     "waist_to_hips": 0.87,
+     "hand_share": 0.097,
+     "foot_share": 0.198,
+     "trunk_share": 0.471,
+     "neck_share": 0.0
+    }
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.48,
+    "elbow_x": 0.455,
+    "wrist_x": 0.72,
+    "foot_slide_cm": 0.004
+   },
+   "after": {
+    "found_by": {
+     "wrist": "usual proportion",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.403,
+    "elbow_x": 0.466,
+    "wrist_x": 0.768,
+    "foot_slide_cm": 0.004,
+    "joint_off_landmark_pct": {
+     "knee": 0.0,
+     "elbow": 0.0,
+     "wrist": 4.6
+    }
+   }
+  }
+ },
+ "lizardkin": {
+  "height_m": 1.95,
+  "detailed": {
+   "height_m": 1.95,
+   "heads_tall": 8.47,
+   "leg_share": 0.383,
+   "arm_share": 0.38,
+   "forearm_to_upper_arm": 0.86,
+   "shin_to_thigh": 1.0,
+   "shoulders_to_hips": 0.85,
+   "waist_to_hips": 0.9,
+   "hand_share": 0.071,
+   "foot_share": 0.205,
+   "trunk_share": 0.499,
+   "neck_share": 0.0
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 1032,
+    "landmark_off_mean_pct": 3.33,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 1.12,
+     "neck_base": 3.27,
+     "shoulder": 1.26,
+     "armpit": 0.65,
+     "chest": 11.32,
+     "waist": 1.7,
+     "hips": 0.23,
+     "crotch": 0.8,
+     "elbow": 4.38,
+     "wrist": 6.2,
+     "fingertip": 1.08,
+     "knee": 9.53,
+     "ankle": 7.09,
+     "heel": 1.06,
+     "toe": 0.22
+    },
+    "silhouette_shared": {
+     "front": 0.903,
+     "side": 0.837
+    },
+    "cross_section_off_mean_pct": 31.1,
+    "cross_section_off_pct": {
+     "pelvis": 19.0,
+     "ribcage": 17.5,
+     "shoulders": 16.3,
+     "neck": 23.1,
+     "upper arm": 23.2,
+     "forearm": 48.1,
+     "hand": 49.5,
+     "thigh": 29.9,
+     "shin": 15.7,
+     "foot": 68.4
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 3
+    },
+    "proportions": {
+     "height_m": 1.948,
+     "heads_tall": 9.32,
+     "leg_share": 0.383,
+     "arm_share": 0.381,
+     "forearm_to_upper_arm": 1.06,
+     "shin_to_thigh": 0.97,
+     "shoulders_to_hips": 0.8,
+     "waist_to_hips": 0.89,
+     "hand_share": 0.124,
+     "foot_share": 0.218,
+     "trunk_share": 0.51,
+     "neck_share": 0.0
+    }
+   },
+   "low-after": {
+    "triangles": 1362,
+    "landmark_off_mean_pct": 3.0,
+    "landmark_off_worst": "knee",
+    "landmark_off_pct": {
+     "chin": 1.13,
+     "neck_base": 3.26,
+     "shoulder": 1.28,
+     "armpit": 0.74,
+     "chest": 11.35,
+     "waist": 1.7,
+     "hips": 0.23,
+     "crotch": 5.43,
+     "elbow": 3.83,
+     "wrist": 2.18,
+     "fingertip": 0.22,
+     "knee": 12.92,
+     "ankle": 0.31,
+     "heel": 0.21,
+     "toe": 0.21
+    },
+    "silhouette_shared": {
+     "front": 0.879,
+     "side": 0.822
+    },
+    "cross_section_off_mean_pct": 27.6,
+    "cross_section_off_pct": {
+     "pelvis": 19.1,
+     "ribcage": 17.5,
+     "shoulders": 17.2,
+     "neck": 21.7,
+     "upper arm": 20.1,
+     "forearm": 31.8,
+     "hand": 41.2,
+     "thigh": 48.7,
+     "shin": 26.0,
+     "foot": 33.1
+    },
+    "loops": {
+     "elbow": 3,
+     "knee": 4
+    },
+    "proportions": {
+     "height_m": 1.9498,
+     "heads_tall": 9.33,
+     "leg_share": 0.381,
+     "arm_share": 0.38,
+     "forearm_to_upper_arm": 1.22,
+     "shin_to_thigh": 0.91,
+     "shoulders_to_hips": 0.81,
+     "waist_to_hips": 0.89,
+     "hand_share": 0.092,
+     "foot_share": 0.201,
+     "trunk_share": 0.511,
+     "neck_share": 0.0
+    }
+   },
+   "mid-before": {
+    "triangles": 3906,
+    "landmark_off_mean_pct": 2.53,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 2.16,
+     "neck_base": 3.3,
+     "shoulder": 1.35,
+     "armpit": 0.59,
+     "chest": 11.34,
+     "waist": 1.73,
+     "hips": 0.23,
+     "crotch": 0.99,
+     "elbow": 1.1,
+     "wrist": 2.93,
+     "fingertip": 1.01,
+     "knee": 9.89,
+     "ankle": 0.23,
+     "heel": 0.86,
+     "toe": 0.21
+    },
+    "silhouette_shared": {
+     "front": 0.906,
+     "side": 0.833
+    },
+    "cross_section_off_mean_pct": 31.2,
+    "cross_section_off_pct": {
+     "pelvis": 18.0,
+     "ribcage": 16.1,
+     "shoulders": 15.1,
+     "neck": 20.3,
+     "upper arm": 22.3,
+     "forearm": 47.6,
+     "hand": 52.4,
+     "thigh": 29.2,
+     "shin": 17.9,
+     "foot": 72.8
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 6
+    },
+    "proportions": {
+     "height_m": 1.948,
+     "heads_tall": 10.34,
+     "leg_share": 0.383,
+     "arm_share": 0.381,
+     "forearm_to_upper_arm": 0.85,
+     "shin_to_thigh": 1.0,
+     "shoulders_to_hips": 0.79,
+     "waist_to_hips": 0.88,
+     "hand_share": 0.093,
+     "foot_share": 0.216,
+     "trunk_share": 0.507,
+     "neck_share": 0.013
+    }
+   },
+   "mid-after": {
+    "triangles": 4960,
+    "landmark_off_mean_pct": 2.96,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 2.15,
+     "neck_base": 3.15,
+     "shoulder": 1.36,
+     "armpit": 0.64,
+     "chest": 11.38,
+     "waist": 1.73,
+     "hips": 0.22,
+     "crotch": 4.84,
+     "elbow": 4.55,
+     "wrist": 2.79,
+     "fingertip": 0.41,
+     "knee": 10.51,
+     "ankle": 0.33,
+     "heel": 0.18,
+     "toe": 0.23
+    },
+    "silhouette_shared": {
+     "front": 0.898,
+     "side": 0.824
+    },
+    "cross_section_off_mean_pct": 24.5,
+    "cross_section_off_pct": {
+     "pelvis": 17.8,
+     "ribcage": 16.1,
+     "shoulders": 15.7,
+     "neck": 19.0,
+     "upper arm": 18.5,
+     "forearm": 32.9,
+     "hand": 44.9,
+     "thigh": 35.7,
+     "shin": 20.8,
+     "foot": 23.2
+    },
+    "loops": {
+     "elbow": 5,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.9498,
+     "heads_tall": 10.34,
+     "leg_share": 0.382,
+     "arm_share": 0.38,
+     "forearm_to_upper_arm": 1.32,
+     "shin_to_thigh": 0.97,
+     "shoulders_to_hips": 0.79,
+     "waist_to_hips": 0.88,
+     "hand_share": 0.092,
+     "foot_share": 0.202,
+     "trunk_share": 0.508,
+     "neck_share": 0.013
+    }
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "narrowest ring",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.465,
+    "elbow_x": 0.48,
+    "wrist_x": 0.72,
+    "foot_slide_cm": 0.009
+   },
+   "after": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.453,
+    "elbow_x": 0.613,
+    "wrist_x": 0.944,
+    "foot_slide_cm": 0.01,
+    "joint_off_landmark_pct": {
+     "knee": 0.0,
+     "elbow": 0.0,
+     "wrist": 2.7
+    }
+   }
+  }
+ },
+ "lincoln": {
+  "height_m": 1.93,
+  "detailed": {
+   "height_m": 1.93,
+   "heads_tall": 7.88,
+   "leg_share": 0.393,
+   "arm_share": 0.401,
+   "forearm_to_upper_arm": 0.83,
+   "shin_to_thigh": 1.01,
+   "shoulders_to_hips": 1.07,
+   "waist_to_hips": 0.73,
+   "hand_share": 0.095,
+   "foot_share": 0.193,
+   "trunk_share": 0.463,
+   "neck_share": 0.019
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 3119,
+    "landmark_off_mean_pct": 2.54,
+    "landmark_off_worst": "waist",
+    "landmark_off_pct": {
+     "chin": 0.06,
+     "neck_base": 0.56,
+     "shoulder": 1.76,
+     "armpit": 1.77,
+     "chest": 7.09,
+     "waist": 8.46,
+     "hips": 1.91,
+     "crotch": 1.86,
+     "elbow": 2.19,
+     "wrist": 3.02,
+     "fingertip": 3.06,
+     "knee": 1.83,
+     "ankle": 1.26,
+     "heel": 1.63,
+     "toe": 1.62
+    },
+    "silhouette_shared": {
+     "front": 0.804,
+     "side": 0.888
+    },
+    "cross_section_off_mean_pct": 19.2,
+    "cross_section_off_pct": {
+     "pelvis": 17.2,
+     "ribcage": 8.2,
+     "shoulders": 26.5,
+     "neck": 20.4,
+     "upper arm": 14.2,
+     "forearm": 10.6,
+     "hand": 23.0,
+     "thigh": 11.4,
+     "shin": 21.6,
+     "foot": 38.5
+    },
+    "loops": {
+     "elbow": 2,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 1.9399,
+     "heads_tall": 7.92,
+     "leg_share": 0.373,
+     "arm_share": 0.388,
+     "forearm_to_upper_arm": 0.83,
+     "shin_to_thigh": 0.99,
+     "shoulders_to_hips": 1.31,
+     "waist_to_hips": 0.91,
+     "hand_share": 0.094,
+     "foot_share": 0.191,
+     "trunk_share": 0.483,
+     "neck_share": 0.015
+    }
+   },
+   "low-after": {
+    "triangles": 2568,
+    "landmark_off_mean_pct": 1.73,
+    "landmark_off_worst": "wrist",
+    "landmark_off_pct": {
+     "chin": 0.06,
+     "neck_base": 0.85,
+     "shoulder": 2.06,
+     "armpit": 2.34,
+     "chest": 0.33,
+     "waist": 1.72,
+     "hips": 0.98,
+     "crotch": 2.59,
+     "elbow": 2.87,
+     "wrist": 5.47,
+     "fingertip": 0.21,
+     "knee": 1.99,
+     "ankle": 1.26,
+     "heel": 1.63,
+     "toe": 1.62
+    },
+    "silhouette_shared": {
+     "front": 0.782,
+     "side": 0.841
+    },
+    "cross_section_off_mean_pct": 22.8,
+    "cross_section_off_pct": {
+     "pelvis": 23.0,
+     "ribcage": 5.4,
+     "shoulders": 25.4,
+     "neck": 16.3,
+     "upper arm": 15.9,
+     "forearm": 27.8,
+     "hand": 28.8,
+     "thigh": 14.9,
+     "shin": 20.4,
+     "foot": 50.0
+    },
+    "loops": {
+     "elbow": 3,
+     "knee": 4
+    },
+    "proportions": {
+     "height_m": 1.9399,
+     "heads_tall": 7.92,
+     "leg_share": 0.367,
+     "arm_share": 0.378,
+     "forearm_to_upper_arm": 0.86,
+     "shin_to_thigh": 0.99,
+     "shoulders_to_hips": 1.14,
+     "waist_to_hips": 0.67,
+     "hand_share": 0.145,
+     "foot_share": 0.191,
+     "trunk_share": 0.49,
+     "neck_share": 0.015
+    }
+   },
+   "mid-before": {
+    "triangles": 6732,
+    "landmark_off_mean_pct": 2.6,
+    "landmark_off_worst": "waist",
+    "landmark_off_pct": {
+     "chin": 0.11,
+     "neck_base": 0.63,
+     "shoulder": 2.46,
+     "armpit": 2.48,
+     "chest": 6.45,
+     "waist": 8.48,
+     "hips": 1.92,
+     "crotch": 1.88,
+     "elbow": 2.17,
+     "wrist": 3.0,
+     "fingertip": 3.02,
+     "knee": 1.84,
+     "ankle": 1.26,
+     "heel": 1.63,
+     "toe": 1.62
+    },
+    "silhouette_shared": {
+     "front": 0.805,
+     "side": 0.882
+    },
+    "cross_section_off_mean_pct": 18.8,
+    "cross_section_off_pct": {
+     "pelvis": 16.8,
+     "ribcage": 7.4,
+     "shoulders": 25.8,
+     "neck": 19.9,
+     "upper arm": 14.5,
+     "forearm": 10.0,
+     "hand": 22.0,
+     "thigh": 12.3,
+     "shin": 21.4,
+     "foot": 37.5
+    },
+    "loops": {
+     "elbow": 2,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 1.939,
+     "heads_tall": 7.91,
+     "leg_share": 0.373,
+     "arm_share": 0.388,
+     "forearm_to_upper_arm": 0.83,
+     "shin_to_thigh": 0.99,
+     "shoulders_to_hips": 1.31,
+     "waist_to_hips": 0.91,
+     "hand_share": 0.094,
+     "foot_share": 0.191,
+     "trunk_share": 0.483,
+     "neck_share": 0.015
+    }
+   },
+   "mid-after": {
+    "triangles": 6908,
+    "landmark_off_mean_pct": 3.9,
+    "landmark_off_worst": "hips",
+    "landmark_off_pct": {
+     "chin": 0.11,
+     "neck_base": 1.2,
+     "shoulder": 2.08,
+     "armpit": 2.3,
+     "chest": 0.33,
+     "waist": 8.45,
+     "hips": 12.19,
+     "crotch": 4.83,
+     "elbow": 4.53,
+     "wrist": 4.96,
+     "fingertip": 0.18,
+     "knee": 5.66,
+     "ankle": 8.48,
+     "heel": 1.63,
+     "toe": 1.62
+    },
+    "silhouette_shared": {
+     "front": 0.779,
+     "side": 0.871
+    },
+    "cross_section_off_mean_pct": 21.6,
+    "cross_section_off_pct": {
+     "pelvis": 16.4,
+     "ribcage": 4.9,
+     "shoulders": 20.3,
+     "neck": 13.3,
+     "upper arm": 15.4,
+     "forearm": 38.3,
+     "hand": 44.7,
+     "thigh": 11.0,
+     "shin": 16.6,
+     "foot": 35.2
+    },
+    "loops": {
+     "elbow": 6,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.939,
+     "heads_tall": 7.91,
+     "leg_share": 0.44,
+     "arm_share": 0.378,
+     "forearm_to_upper_arm": 1.27,
+     "shin_to_thigh": 1.0,
+     "shoulders_to_hips": 1.13,
+     "waist_to_hips": 0.71,
+     "hand_share": 0.14,
+     "foot_share": 0.191,
+     "trunk_share": 0.423,
+     "neck_share": 0.009
+    }
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.49,
+    "elbow_x": 0.45,
+    "wrist_x": 0.8,
+    "foot_slide_cm": 0.011
+   },
+   "after": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.46,
+    "elbow_x": 0.54,
+    "wrist_x": 0.878,
+    "foot_slide_cm": 0.009,
+    "joint_off_landmark_pct": {
+     "knee": 0.0,
+     "elbow": 0.0,
+     "wrist": 3.6
+    }
+   }
+  }
+ },
+ "roosevelt": {
+  "height_m": 1.78,
+  "detailed": {
+   "height_m": 1.78,
+   "heads_tall": 7.21,
+   "leg_share": 0.4,
+   "arm_share": 0.359,
+   "forearm_to_upper_arm": 0.87,
+   "shin_to_thigh": 0.98,
+   "shoulders_to_hips": 0.92,
+   "waist_to_hips": 0.88,
+   "hand_share": 0.116,
+   "foot_share": 0.176,
+   "trunk_share": 0.457,
+   "neck_share": 0.006
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 1698,
+    "landmark_off_mean_pct": 2.87,
+    "landmark_off_worst": "ankle",
+    "landmark_off_pct": {
+     "chin": 0.24,
+     "neck_base": 0.73,
+     "shoulder": 2.5,
+     "armpit": 2.5,
+     "chest": 4.45,
+     "waist": 4.76,
+     "hips": 3.26,
+     "crotch": 3.21,
+     "elbow": 2.95,
+     "wrist": 3.62,
+     "fingertip": 0.13,
+     "knee": 4.62,
+     "ankle": 7.67,
+     "heel": 1.43,
+     "toe": 0.91
+    },
+    "silhouette_shared": {
+     "front": 0.894,
+     "side": 0.906
+    },
+    "cross_section_off_mean_pct": 18.3,
+    "cross_section_off_pct": {
+     "pelvis": 9.7,
+     "ribcage": 6.2,
+     "shoulders": 10.5,
+     "neck": 24.4,
+     "upper arm": 17.8,
+     "forearm": 8.6,
+     "hand": 39.0,
+     "thigh": 21.6,
+     "shin": 15.9,
+     "foot": 29.2
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 1.786,
+     "heads_tall": 7.23,
+     "leg_share": 0.367,
+     "arm_share": 0.334,
+     "forearm_to_upper_arm": 0.87,
+     "shin_to_thigh": 0.98,
+     "shoulders_to_hips": 1.06,
+     "waist_to_hips": 0.81,
+     "hand_share": 0.081,
+     "foot_share": 0.188,
+     "trunk_share": 0.493,
+     "neck_share": 0.0
+    }
+   },
+   "low-after": {
+    "triangles": 1727,
+    "landmark_off_mean_pct": 2.19,
+    "landmark_off_worst": "ankle",
+    "landmark_off_pct": {
+     "chin": 0.24,
+     "neck_base": 0.51,
+     "shoulder": 2.06,
+     "armpit": 2.51,
+     "chest": 1.11,
+     "waist": 7.42,
+     "hips": 0.14,
+     "crotch": 3.89,
+     "elbow": 0.93,
+     "wrist": 0.12,
+     "fingertip": 0.53,
+     "knee": 3.31,
+     "ankle": 7.68,
+     "heel": 1.43,
+     "toe": 0.91
+    },
+    "silhouette_shared": {
+     "front": 0.906,
+     "side": 0.884
+    },
+    "cross_section_off_mean_pct": 13.5,
+    "cross_section_off_pct": {
+     "pelvis": 17.7,
+     "ribcage": 4.8,
+     "shoulders": 9.0,
+     "neck": 9.6,
+     "upper arm": 10.3,
+     "forearm": 6.6,
+     "hand": 20.3,
+     "thigh": 11.8,
+     "shin": 15.8,
+     "foot": 29.2
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 1.786,
+     "heads_tall": 7.23,
+     "leg_share": 0.36,
+     "arm_share": 0.338,
+     "forearm_to_upper_arm": 0.86,
+     "shin_to_thigh": 1.17,
+     "shoulders_to_hips": 1.0,
+     "waist_to_hips": 0.77,
+     "hand_share": 0.115,
+     "foot_share": 0.188,
+     "trunk_share": 0.497,
+     "neck_share": 0.003
+    }
+   },
+   "mid-before": {
+    "triangles": 5404,
+    "landmark_off_mean_pct": 1.8,
+    "landmark_off_worst": "ankle",
+    "landmark_off_pct": {
+     "chin": 0.05,
+     "neck_base": 0.36,
+     "shoulder": 0.52,
+     "armpit": 0.71,
+     "chest": 0.41,
+     "waist": 1.18,
+     "hips": 1.89,
+     "crotch": 1.93,
+     "elbow": 1.97,
+     "wrist": 3.12,
+     "fingertip": 0.21,
+     "knee": 4.63,
+     "ankle": 7.7,
+     "heel": 1.42,
+     "toe": 0.9
+    },
+    "silhouette_shared": {
+     "front": 0.907,
+     "side": 0.915
+    },
+    "cross_section_off_mean_pct": 17.8,
+    "cross_section_off_pct": {
+     "pelvis": 8.2,
+     "ribcage": 3.7,
+     "shoulders": 10.3,
+     "neck": 14.7,
+     "upper arm": 18.0,
+     "forearm": 7.1,
+     "hand": 47.8,
+     "thigh": 21.0,
+     "shin": 15.4,
+     "foot": 31.6
+    },
+    "loops": {
+     "elbow": 7,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.7881,
+     "heads_tall": 7.24,
+     "leg_share": 0.38,
+     "arm_share": 0.353,
+     "forearm_to_upper_arm": 0.85,
+     "shin_to_thigh": 0.91,
+     "shoulders_to_hips": 0.94,
+     "waist_to_hips": 0.9,
+     "hand_share": 0.086,
+     "foot_share": 0.187,
+     "trunk_share": 0.47,
+     "neck_share": 0.009
+    }
+   },
+   "mid-after": {
+    "triangles": 5454,
+    "landmark_off_mean_pct": 1.93,
+    "landmark_off_worst": "ankle",
+    "landmark_off_pct": {
+     "chin": 0.05,
+     "neck_base": 0.58,
+     "shoulder": 1.28,
+     "armpit": 1.26,
+     "chest": 0.28,
+     "waist": 1.94,
+     "hips": 3.87,
+     "crotch": 3.88,
+     "elbow": 0.43,
+     "wrist": 0.11,
+     "fingertip": 0.29,
+     "knee": 4.92,
+     "ankle": 7.7,
+     "heel": 1.42,
+     "toe": 0.9
+    },
+    "silhouette_shared": {
+     "front": 0.913,
+     "side": 0.899
+    },
+    "cross_section_off_mean_pct": 12.0,
+    "cross_section_off_pct": {
+     "pelvis": 8.7,
+     "ribcage": 2.2,
+     "shoulders": 7.2,
+     "neck": 18.4,
+     "upper arm": 6.1,
+     "forearm": 1.8,
+     "hand": 15.1,
+     "thigh": 14.8,
+     "shin": 13.8,
+     "foot": 31.6
+    },
+    "loops": {
+     "elbow": 8,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.7881,
+     "heads_tall": 7.24,
+     "leg_share": 0.36,
+     "arm_share": 0.347,
+     "forearm_to_upper_arm": 0.86,
+     "shin_to_thigh": 0.98,
+     "shoulders_to_hips": 1.0,
+     "waist_to_hips": 0.88,
+     "hand_share": 0.115,
+     "foot_share": 0.187,
+     "trunk_share": 0.499,
+     "neck_share": 0.0
+    }
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "nearest ring",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.45,
+    "elbow_x": 0.42,
+    "wrist_x": 0.67,
+    "foot_slide_cm": 0.003
+   },
+   "after": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.478,
+    "elbow_x": 0.469,
+    "wrist_x": 0.67,
+    "foot_slide_cm": 0.006,
+    "joint_off_landmark_pct": {
+     "knee": 0.0,
+     "elbow": 0.0,
+     "wrist": 0.0
+    }
+   }
+  }
+ },
+ "dancer": {
+  "height_m": 1.65,
+  "detailed": {
+   "height_m": 1.65,
+   "heads_tall": 7.27,
+   "leg_share": 0.443,
+   "arm_share": 0.371,
+   "forearm_to_upper_arm": 0.85,
+   "shin_to_thigh": 1.0,
+   "shoulders_to_hips": 0.77,
+   "waist_to_hips": 0.54,
+   "hand_share": 0.109,
+   "foot_share": 0.15,
+   "trunk_share": 0.407,
+   "neck_share": 0.014
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 1221,
+    "landmark_off_mean_pct": 1.4,
+    "landmark_off_worst": "knee",
+    "landmark_off_pct": {
+     "chin": 0.56,
+     "neck_base": 0.58,
+     "shoulder": 2.32,
+     "armpit": 2.88,
+     "chest": 0.45,
+     "waist": 0.53,
+     "hips": 1.5,
+     "crotch": 2.66,
+     "elbow": 1.15,
+     "wrist": 1.65,
+     "fingertip": 2.12,
+     "knee": 3.24,
+     "ankle": 0.79,
+     "heel": 0.46,
+     "toe": 0.1
+    },
+    "silhouette_shared": {
+     "front": 0.879,
+     "side": 0.869
+    },
+    "cross_section_off_mean_pct": 35.1,
+    "cross_section_off_pct": {
+     "pelvis": 16.1,
+     "ribcage": 18.9,
+     "shoulders": 60.7,
+     "neck": 9.0,
+     "upper arm": 22.6,
+     "forearm": 34.9,
+     "hand": 88.9,
+     "thigh": 29.9,
+     "shin": 33.3,
+     "foot": 37.1
+    },
+    "loops": {
+     "elbow": 3,
+     "knee": 4
+    },
+    "proportions": {
+     "height_m": 1.6443,
+     "heads_tall": 7.24,
+     "leg_share": 0.42,
+     "arm_share": 0.361,
+     "forearm_to_upper_arm": 0.87,
+     "shin_to_thigh": 0.85,
+     "shoulders_to_hips": 0.82,
+     "waist_to_hips": 0.54,
+     "hand_share": 0.116,
+     "foot_share": 0.155,
+     "trunk_share": 0.437,
+     "neck_share": 0.01
+    },
+    "body_vs_base_body_mean_pct": 1.14
+   },
+   "low-after": {
+    "triangles": 1474,
+    "landmark_off_mean_pct": 1.73,
+    "landmark_off_worst": "knee",
+    "landmark_off_pct": {
+     "chin": 0.56,
+     "neck_base": 0.37,
+     "shoulder": 2.66,
+     "armpit": 2.59,
+     "chest": 0.4,
+     "waist": 0.6,
+     "hips": 2.53,
+     "crotch": 2.61,
+     "elbow": 1.41,
+     "wrist": 1.88,
+     "fingertip": 1.59,
+     "knee": 6.93,
+     "ankle": 1.09,
+     "heel": 0.49,
+     "toe": 0.2
+    },
+    "silhouette_shared": {
+     "front": 0.893,
+     "side": 0.879
+    },
+    "cross_section_off_mean_pct": 31.0,
+    "cross_section_off_pct": {
+     "pelvis": 12.3,
+     "ribcage": 11.2,
+     "shoulders": 42.6,
+     "neck": 6.8,
+     "upper arm": 19.5,
+     "forearm": 42.5,
+     "hand": 77.8,
+     "thigh": 31.2,
+     "shin": 32.6,
+     "foot": 33.4
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 1.6443,
+     "heads_tall": 7.24,
+     "leg_share": 0.467,
+     "arm_share": 0.353,
+     "forearm_to_upper_arm": 0.87,
+     "shin_to_thigh": 1.82,
+     "shoulders_to_hips": 0.93,
+     "waist_to_hips": 0.56,
+     "hand_share": 0.11,
+     "foot_share": 0.155,
+     "trunk_share": 0.39,
+     "neck_share": 0.01
+    },
+    "body_vs_base_body_mean_pct": 0.75
+   },
+   "mid-before": {
+    "triangles": 4400,
+    "landmark_off_mean_pct": 1.37,
+    "landmark_off_worst": "knee",
+    "landmark_off_pct": {
+     "chin": 0.45,
+     "neck_base": 0.63,
+     "shoulder": 1.93,
+     "armpit": 2.24,
+     "chest": 0.65,
+     "waist": 0.69,
+     "hips": 2.05,
+     "crotch": 2.63,
+     "elbow": 0.8,
+     "wrist": 1.89,
+     "fingertip": 2.09,
+     "knee": 3.27,
+     "ankle": 0.73,
+     "heel": 0.46,
+     "toe": 0.1
+    },
+    "silhouette_shared": {
+     "front": 0.885,
+     "side": 0.872
+    },
+    "cross_section_off_mean_pct": 33.9,
+    "cross_section_off_pct": {
+     "pelvis": 11.8,
+     "ribcage": 15.5,
+     "shoulders": 47.3,
+     "neck": 13.2,
+     "upper arm": 25.5,
+     "forearm": 37.3,
+     "hand": 88.8,
+     "thigh": 29.2,
+     "shin": 32.0,
+     "foot": 38.7
+    },
+    "loops": {
+     "elbow": 5,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.6483,
+     "heads_tall": 7.26,
+     "leg_share": 0.42,
+     "arm_share": 0.364,
+     "forearm_to_upper_arm": 0.84,
+     "shin_to_thigh": 0.85,
+     "shoulders_to_hips": 0.79,
+     "waist_to_hips": 0.54,
+     "hand_share": 0.125,
+     "foot_share": 0.155,
+     "trunk_share": 0.437,
+     "neck_share": 0.008
+    },
+    "body_vs_base_body_mean_pct": 1.12
+   },
+   "mid-after": {
+    "triangles": 5228,
+    "landmark_off_mean_pct": 1.49,
+    "landmark_off_worst": "armpit",
+    "landmark_off_pct": {
+     "chin": 0.41,
+     "neck_base": 1.37,
+     "shoulder": 3.87,
+     "armpit": 3.98,
+     "chest": 1.4,
+     "waist": 0.77,
+     "hips": 1.3,
+     "crotch": 1.57,
+     "elbow": 2.21,
+     "wrist": 1.94,
+     "fingertip": 1.7,
+     "knee": 0.41,
+     "ankle": 0.79,
+     "heel": 0.48,
+     "toe": 0.18
+    },
+    "silhouette_shared": {
+     "front": 0.899,
+     "side": 0.88
+    },
+    "cross_section_off_mean_pct": 31.5,
+    "cross_section_off_pct": {
+     "pelvis": 6.8,
+     "ribcage": 10.9,
+     "shoulders": 29.8,
+     "neck": 36.6,
+     "upper arm": 17.0,
+     "forearm": 42.0,
+     "hand": 74.2,
+     "thigh": 31.4,
+     "shin": 31.8,
+     "foot": 34.5
+    },
+    "loops": {
+     "elbow": 7,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.6483,
+     "heads_tall": 7.26,
+     "leg_share": 0.453,
+     "arm_share": 0.338,
+     "forearm_to_upper_arm": 0.83,
+     "shin_to_thigh": 1.01,
+     "shoulders_to_hips": 1.07,
+     "waist_to_hips": 0.56,
+     "hand_share": 0.11,
+     "foot_share": 0.155,
+     "trunk_share": 0.411,
+     "neck_share": 0.0
+    },
+    "body_vs_base_body_mean_pct": 0.61
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "nearest ring",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.52,
+    "elbow_x": 0.41,
+    "wrist_x": 0.59,
+    "foot_slide_cm": 0.002
+   },
+   "after": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.502,
+    "elbow_x": 0.376,
+    "wrist_x": 0.652,
+    "foot_slide_cm": 0.001,
+    "joint_off_landmark_pct": {
+     "knee": 0.7,
+     "elbow": 0.0,
+     "wrist": 4.5
+    }
+   }
+  }
+ },
+ "villager": {
+  "height_m": 1.7,
+  "detailed": {
+   "height_m": 1.7,
+   "heads_tall": 5.48,
+   "leg_share": 0.38,
+   "arm_share": 0.374,
+   "forearm_to_upper_arm": 0.83,
+   "shin_to_thigh": 1.33,
+   "shoulders_to_hips": 1.09,
+   "waist_to_hips": 0.7,
+   "hand_share": 0.091,
+   "foot_share": 0.175,
+   "trunk_share": 0.41,
+   "neck_share": 0.034
+  },
+  "versions": {
+   "low-before": {
+    "triangles": 1528,
+    "landmark_off_mean_pct": 2.39,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 0.09,
+     "neck_base": 3.66,
+     "shoulder": 1.79,
+     "armpit": 1.2,
+     "chest": 6.76,
+     "waist": 6.11,
+     "hips": 0.76,
+     "crotch": 1.94,
+     "elbow": 0.58,
+     "wrist": 0.66,
+     "fingertip": 0.43,
+     "knee": 5.57,
+     "ankle": 6.12,
+     "heel": 0.13,
+     "toe": 0.03
+    },
+    "silhouette_shared": {
+     "front": 0.836,
+     "side": 0.836
+    },
+    "cross_section_off_mean_pct": 28.5,
+    "cross_section_off_pct": {
+     "pelvis": 15.8,
+     "ribcage": 10.8,
+     "shoulders": 38.3,
+     "neck": 101.1,
+     "upper arm": 11.8,
+     "forearm": 13.2,
+     "hand": 45.2,
+     "thigh": 9.7,
+     "shin": 24.2,
+     "foot": 14.8
+    },
+    "loops": {
+     "elbow": 2,
+     "knee": 4
+    },
+    "proportions": {
+     "height_m": 1.735,
+     "heads_tall": 5.6,
+     "leg_share": 0.353,
+     "arm_share": 0.358,
+     "forearm_to_upper_arm": 0.85,
+     "shin_to_thigh": 0.98,
+     "shoulders_to_hips": 1.11,
+     "waist_to_hips": 1.08,
+     "hand_share": 0.085,
+     "foot_share": 0.171,
+     "trunk_share": 0.45,
+     "neck_share": 0.004
+    }
+   },
+   "low-after": {
+    "triangles": 1778,
+    "landmark_off_mean_pct": 2.32,
+    "landmark_off_worst": "waist",
+    "landmark_off_pct": {
+     "chin": 0.09,
+     "neck_base": 2.89,
+     "shoulder": 0.39,
+     "armpit": 0.4,
+     "chest": 6.4,
+     "waist": 6.96,
+     "hips": 1.34,
+     "crotch": 3.3,
+     "elbow": 0.06,
+     "wrist": 0.24,
+     "fingertip": 0.11,
+     "knee": 6.39,
+     "ankle": 6.12,
+     "heel": 0.13,
+     "toe": 0.04
+    },
+    "silhouette_shared": {
+     "front": 0.843,
+     "side": 0.817
+    },
+    "cross_section_off_mean_pct": 24.4,
+    "cross_section_off_pct": {
+     "pelvis": 18.6,
+     "ribcage": 10.2,
+     "shoulders": 31.0,
+     "neck": 86.7,
+     "upper arm": 11.8,
+     "forearm": 6.8,
+     "hand": 24.1,
+     "thigh": 13.5,
+     "shin": 26.3,
+     "foot": 14.8
+    },
+    "loops": {
+     "elbow": 3,
+     "knee": 3
+    },
+    "proportions": {
+     "height_m": 1.735,
+     "heads_tall": 5.6,
+     "leg_share": 0.34,
+     "arm_share": 0.366,
+     "forearm_to_upper_arm": 0.83,
+     "shin_to_thigh": 0.97,
+     "shoulders_to_hips": 1.02,
+     "waist_to_hips": 1.1,
+     "hand_share": 0.089,
+     "foot_share": 0.171,
+     "trunk_share": 0.457,
+     "neck_share": 0.01
+    }
+   },
+   "mid-before": {
+    "triangles": 5274,
+    "landmark_off_mean_pct": 2.35,
+    "landmark_off_worst": "chest",
+    "landmark_off_pct": {
+     "chin": 0.09,
+     "neck_base": 2.21,
+     "shoulder": 2.5,
+     "armpit": 2.08,
+     "chest": 6.65,
+     "waist": 5.81,
+     "hips": 0.94,
+     "crotch": 1.26,
+     "elbow": 1.08,
+     "wrist": 0.64,
+     "fingertip": 0.47,
+     "knee": 5.19,
+     "ankle": 6.13,
+     "heel": 0.14,
+     "toe": 0.07
+    },
+    "silhouette_shared": {
+     "front": 0.842,
+     "side": 0.838
+    },
+    "cross_section_off_mean_pct": 26.1,
+    "cross_section_off_pct": {
+     "pelvis": 15.9,
+     "ribcage": 11.2,
+     "shoulders": 30.5,
+     "neck": 75.4,
+     "upper arm": 12.4,
+     "forearm": 14.8,
+     "hand": 55.8,
+     "thigh": 8.5,
+     "shin": 22.1,
+     "foot": 14.2
+    },
+    "loops": {
+     "elbow": 4,
+     "knee": 5
+    },
+    "proportions": {
+     "height_m": 1.735,
+     "heads_tall": 5.6,
+     "leg_share": 0.36,
+     "arm_share": 0.349,
+     "forearm_to_upper_arm": 0.85,
+     "shin_to_thigh": 0.98,
+     "shoulders_to_hips": 1.23,
+     "waist_to_hips": 1.12,
+     "hand_share": 0.085,
+     "foot_share": 0.171,
+     "trunk_share": 0.43,
+     "neck_share": 0.017
+    }
+   },
+   "mid-after": {
+    "triangles": 5858,
+    "landmark_off_mean_pct": 2.86,
+    "landmark_off_worst": "waist",
+    "landmark_off_pct": {
+     "chin": 0.09,
+     "neck_base": 2.04,
+     "shoulder": 4.47,
+     "armpit": 4.4,
+     "chest": 6.33,
+     "waist": 6.65,
+     "hips": 0.4,
+     "crotch": 2.62,
+     "elbow": 2.42,
+     "wrist": 0.93,
+     "fingertip": 0.13,
+     "knee": 6.02,
+     "ankle": 6.13,
+     "heel": 0.14,
+     "toe": 0.07
+    },
+    "silhouette_shared": {
+     "front": 0.857,
+     "side": 0.823
+    },
+    "cross_section_off_mean_pct": 19.4,
+    "cross_section_off_pct": {
+     "pelvis": 17.7,
+     "ribcage": 8.4,
+     "shoulders": 21.8,
+     "neck": 76.0,
+     "upper arm": 11.7,
+     "forearm": 3.0,
+     "hand": 13.8,
+     "thigh": 8.8,
+     "shin": 18.6,
+     "foot": 14.2
+    },
+    "loops": {
+     "elbow": 6,
+     "knee": 7
+    },
+    "proportions": {
+     "height_m": 1.735,
+     "heads_tall": 5.6,
+     "leg_share": 0.347,
+     "arm_share": 0.323,
+     "forearm_to_upper_arm": 0.84,
+     "shin_to_thigh": 0.97,
+     "shoulders_to_hips": 1.5,
+     "waist_to_hips": 1.17,
+     "hand_share": 0.079,
+     "foot_share": 0.171,
+     "trunk_share": 0.443,
+     "neck_share": 0.017
+    }
+   }
+  },
+  "walk": {
+   "before": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.54,
+    "elbow_x": 0.42,
+    "wrist_x": 0.62,
+    "foot_slide_cm": 0.008
+   },
+   "after": {
+    "found_by": {
+     "wrist": "narrowest ring",
+     "elbow": "close rings",
+     "knee": "close rings",
+     "head": "a head piece"
+    },
+    "knee_z": 0.439,
+    "elbow_x": 0.465,
+    "wrist_x": 0.617,
+    "foot_slide_cm": 0.004,
+    "joint_off_landmark_pct": {
+     "knee": 1.7,
+     "elbow": 0.0,
+     "wrist": 3.8
+    }
+   }
+  }
+ },
+ "_ranked": {
+  "low-before": {
+   "cross_section_off_pct_by_region": {
+    "hand": 51.8,
+    "neck": 34.1,
+    "foot": 32.9,
+    "shoulders": 24.9,
+    "shin": 21.0,
+    "forearm": 20.4,
+    "thigh": 20.2,
+    "upper arm": 17.3,
+    "pelvis": 13.9,
+    "ribcage": 11.4
+   },
+   "landmark_off_pct_by_landmark": {
+    "chest": 5.8,
+    "ankle": 4.2,
+    "knee": 4.0,
+    "waist": 3.5,
+    "wrist": 2.9,
+    "elbow": 2.2,
+    "shoulder": 2.0,
+    "armpit": 1.9,
+    "crotch": 1.7,
+    "chin": 1.6,
+    "neck_base": 1.4,
+    "hips": 1.3,
+    "fingertip": 1.0,
+    "heel": 0.7,
+    "toe": 0.4
+   }
+  },
+  "low-after": {
+   "cross_section_off_pct_by_region": {
+    "neck": 36.9,
+    "hand": 35.1,
+    "foot": 27.7,
+    "shoulders": 21.0,
+    "forearm": 20.0,
+    "thigh": 19.5,
+    "shin": 19.3,
+    "pelvis": 15.6,
+    "upper arm": 14.9,
+    "ribcage": 8.9
+   },
+   "landmark_off_pct_by_landmark": {
+    "knee": 5.6,
+    "chin": 3.8,
+    "waist": 3.4,
+    "shoulder": 3.3,
+    "chest": 3.3,
+    "neck_base": 3.2,
+    "crotch": 3.0,
+    "ankle": 2.9,
+    "armpit": 2.1,
+    "wrist": 1.9,
+    "elbow": 1.6,
+    "hips": 1.4,
+    "heel": 0.7,
+    "fingertip": 0.5,
+    "toe": 0.5
+   }
+  },
+  "mid-after": {
+   "cross_section_off_pct_by_region": {
+    "neck": 39.3,
+    "hand": 33.3,
+    "foot": 23.7,
+    "forearm": 19.0,
+    "thigh": 15.9,
+    "shin": 15.9,
+    "shoulders": 15.8,
+    "upper arm": 11.5,
+    "pelvis": 11.1,
+    "ribcage": 7.3
+   },
+   "landmark_off_pct_by_landmark": {
+    "shoulder": 4.2,
+    "knee": 4.1,
+    "chin": 3.9,
+    "ankle": 3.8,
+    "chest": 3.6,
+    "neck_base": 3.2,
+    "waist": 2.9,
+    "hips": 2.8,
+    "crotch": 2.8,
+    "armpit": 2.3,
+    "elbow": 2.3,
+    "wrist": 2.1,
+    "heel": 0.7,
+    "fingertip": 0.5,
+    "toe": 0.5
+   }
+  },
+  "mid-before": {
+   "cross_section_off_pct_by_region": {
+    "hand": 58.0,
+    "foot": 33.1,
+    "neck": 27.2,
+    "shoulders": 22.7,
+    "forearm": 22.2,
+    "shin": 21.7,
+    "upper arm": 18.2,
+    "thigh": 17.7,
+    "pelvis": 13.0,
+    "ribcage": 10.7
+   },
+   "landmark_off_pct_by_landmark": {
+    "chest": 5.2,
+    "knee": 4.6,
+    "ankle": 3.8,
+    "waist": 3.7,
+    "crotch": 2.4,
+    "wrist": 2.3,
+    "hips": 2.1,
+    "armpit": 1.9,
+    "shoulder": 1.6,
+    "chin": 1.5,
+    "elbow": 1.4,
+    "neck_base": 1.2,
+    "fingertip": 1.0,
+    "heel": 0.8,
+    "toe": 0.5
+   }
+  }
+ }
+}
