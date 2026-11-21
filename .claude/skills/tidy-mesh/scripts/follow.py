@@ -27,6 +27,7 @@ PARAMS = {
     "raw": None,     # the raw mesh it was made from, .glb (required): the move is checked on it
     "follow": [],    # [{"from": "/abs/base/body.glb", "to": "/abs/base/final.glb"}, ...]
     "placed": None,  # the move, as 16 numbers; None = read it from the object, else fit it
+    "image_format": "AUTO",  # "AUTO" keeps each file's pictures as they came; "WEBP" makes them smaller
     "limit": 0.5,    # stop if the moved raw mesh is typically farther than this from the finished one (% of height)
 }
 
@@ -185,7 +186,8 @@ if ok:
         low, high = box_of([v.co for v in obj.data.vertices])
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
-        bpy.ops.export_scene.gltf(filepath=job["to"], export_format="GLB", use_selection=True, use_active_scene=True, export_extras=True)
+        bpy.ops.export_scene.gltf(filepath=job["to"], export_format="GLB", use_selection=True, use_active_scene=True, export_extras=True,
+                                  export_image_format=PARAMS["image_format"])
         written.append({"from": job["from"], "to": job["to"], "min": [round(c, 4) for c in low], "max": [round(c, 4) for c in high]})
         bpy.data.objects.remove(obj, do_unlink=True)
 

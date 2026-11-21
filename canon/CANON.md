@@ -48,6 +48,33 @@ pop who is quietly trying to work out what life as a toon is about.
   He develops his prints in the dark storeroom behind the boxing-house bar.
   **His prints are the strips.**
 
+## One world
+
+Everything happens in this one world, the way toys only ever live in one
+child's room. There is nowhere else: every set is a place in it, and every
+backdrop anyone stands in front of is somewhere you could walk to.
+
+## The ninja's stage and his portraits
+
+The ninja set up a little photo stage of his own, a simple studio with a soft
+backdrop and lights, and invited each resident in for a portrait. Each of them
+chose their favourite place in the world to stand in front of. Those portraits
+are how we know everyone's faces.
+
+| Sitter | Their favourite place |
+|---|---|
+| Lincoln | The boxing house, by the ring |
+| Roosevelt | Theodore's grass |
+| The pirate | The beer garden at dusk, under the string lights |
+| The troll | His stall at the settlement, the kettle steaming |
+| The lizardkin | The doorstep of the cottage he shares with the troll |
+| The dancer | The ninja's stage, at her microphone (her house wasn't finished yet) |
+| The villager | Beside the gachapon, where newcomers arrive |
+| The ninja himself | His own stage, on a timer, holding his pinhole camera |
+
+**Meet the cast** is the series that comes out of those sessions: one resident
+at a time, on his stage, in front of the place they love.
+
 ## Wondrous artifacts
 
 Some things in this world just *work*, and nobody quite knows how. Toons call
@@ -112,6 +139,7 @@ placed in the world like the other places.)
 |---|---|---|
 | Theodore's grass | Walks, races, outdoor boxing, the beer garden | to build |
 | The boxing house | Bouts, a crowd, the bar | the 1890s wrestling ring, inside the painted hall |
+| The ninja's stage | Portraits; Meet the cast | the studio set |
 | The settlement | The troll and lizardkin's home and first business | to build |
 
 ## Cast

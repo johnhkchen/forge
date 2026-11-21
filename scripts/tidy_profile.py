@@ -1111,11 +1111,23 @@ if unknown:
     sys.exit("unknown profile(s) %s; choose from %s" % (unknown, sorted(profiles)))
 os.makedirs(out_dir, exist_ok=True)
 # The raw mesh as the scene placed it (real size, Claude's orientation), so a
-# before/after view lines up. Same TRELLIS.2 geometry as mesh.glb.
+# before/after view lines up. It is TRELLIS.2's own file (mesh.glb), moved the
+# way the finish moved it (follow.py), with its own materials: exporting the
+# finished scene's object instead carried Claude's retouched material nodes,
+# which the glTF exporter packs wrongly (metal 1.0, roughness read from the
+# color picture), so every raw view looked like polished metal.
 raw = os.path.join(out_dir, "raw.glb")
 if not os.path.exists(raw) and any(not profiles[p].get("of") for p in wanted):
     load(source)
-    run_script("export.py", {"path": raw, "image_format": "WEBP", "draco": False})
+    trellis = os.path.join(os.path.dirname(source), "mesh.glb")
+    moved = None
+    if os.path.exists(trellis):
+        try:
+            moved = run_script("follow.py", {"raw": trellis, "follow": [{"from": trellis, "to": raw}], "image_format": "WEBP"})
+        except Exception as why:  # an old scene the move can't be found for: fall back below
+            print("raw.glb: follow.py failed (%s); exporting the scene's object instead" % why)
+    if not (moved and moved.get("ok") and os.path.exists(raw)):
+        run_script("export.py", {"path": raw, "image_format": "WEBP", "draco": False})
 def worst_off(record):
     return ((record or {}).get("shape") or {}).get("shape_lost", {}).get("max_%", 0.0)
 
