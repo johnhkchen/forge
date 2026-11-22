@@ -37,6 +37,17 @@
 # piece (a buckle, a tusk, a hand) follows one bone rigidly, a long one blends
 # from bone to bone across each joint. "skin" in the result says which was used.
 #
+# A body that is the wardrobe template (wrap.py; its faces have a material
+# marked "template") is one clean skin from the collar down, and it brings its
+# own weights: made once on the template itself, with these same bone names.
+# Neither way above suits it: automatic weights fail on the character as a
+# whole, and by piece the whole one-piece body went to one limb (the feet sank
+# 10 cm through the floor in the walk). So its points take the template's own
+# weights, read from the template's file ("template": its .glb) by where each
+# point sits in the texture layout, which is the same on every character. The
+# head, joined on above the collar, and all the gear are bound by piece as
+# before. "weights" in the result then says "template".
+#
 # Limits: each bone gets a Limit Rotation constraint (its own axes, XYZ order)
 # with human ranges: knees and elbows are one-way hinges; hips, shoulders,
 # spine, neck, wrists, ankles and toes have their usual reach. x is the bend
@@ -62,6 +73,7 @@ PARAMS = {
     "recipe": None,       # the block-out's pieces (lowpoly_build.json "pieces"); None = the meshes' own "forge_build", else read the mesh
     "name": "rig",        # the armature's name
     "weights": "auto",    # "auto" = Blender's automatic weights if they hold up, else by piece; "pieces" = by piece straight away
+    "template": None,     # absolute path of the wardrobe template .glb (the skill's wardrobe/headless-1.0.glb): needed only when the body is the template
     "flexibility": None,  # scales every joint's reach; None = from the build (bulky is stiffer)
     "tail": True,         # give a tail its own bones when the model has one
 }
@@ -686,17 +698,27 @@ def nearest_bone(p, allowed):
                 best, best_d = name, d
     return best
 
-def piece_weights(obj):
+def piece_weights(obj, leave=()):
     """Weights by piece: each connected piece goes to the limb most of its points are nearest, a small
-    piece rigidly to one bone, a larger one blended across the joints of that limb and the trunk."""
+    piece rigidly to one bone, a larger one blended across the joints of that limb and the trunk.
+    Points in `leave` (the template's) are not touched: they get their weights elsewhere."""
     world, done = worlds[obj.name], {}
     for piece in [p for p in pieces if p["obj"] == obj]:
+        whole = piece
+        if leave:
+            mine = [i for i in piece["verts"] if i not in leave]
+            if len(mine) < len(piece["verts"]):
+                whole["template"] = True
+                if not mine:
+                    continue
+                piece = dict(piece, verts=mine, lo=Vector([min(world[i][k] for i in mine) for k in range(3)]),
+                             hi=Vector([max(world[i][k] for i in mine) for k in range(3)]))
         votes = {}
         for i in piece["verts"][::max(1, len(piece["verts"]) // 60)]:
             chain = chain_of(nearest_bone(world[i], None))
             votes[chain] = votes.get(chain, 0) + 1
         home = sorted(votes.items(), key=second)[-1][0]
-        piece["limb"] = home
+        piece["limb"] = whole["limb"] = home
         allowed = None
         if home != "trunk":
             allowed = {home, "trunk"}
@@ -744,6 +766,48 @@ def piece_weights(obj):
 def second(pair):
     return pair[1]
 
+def template_points(obj):
+    """The points of a mesh that are the wardrobe template's (their faces have a material marked "template"),
+    each with where it sits in the texture layout: {point: (u, v)}. Empty for any other mesh."""
+    marked = [k for k, m in enumerate(obj.data.materials) if m is not None and m.get("template")]
+    layout = obj.data.uv_layers.active
+    if not marked or layout is None:
+        return {}
+    out = {}
+    for poly in obj.data.polygons:
+        if poly.material_index in marked:
+            for i, corner in zip(poly.vertices, poly.loop_indices):
+                if i not in out:
+                    out[i] = layout.data[corner].uv.copy()
+    return out
+
+def template_weights(path):
+    """The template's own weights, read from its .glb: a tree of its points by where they sit in the texture
+    layout, and each one's [(bone, weight)]. The file is brought in, read and taken out again."""
+    before = [set(kind) for kind in (bpy.data.objects, bpy.data.meshes, bpy.data.armatures, bpy.data.materials, bpy.data.images, bpy.data.collections)]
+    bpy.ops.import_scene.gltf(filepath=path)
+    found = [o for o in bpy.data.objects if o not in before[0] and o.type == "MESH" and o.get("template")]
+    if not found:
+        raise ValueError("%s is not a wardrobe template: no mesh in it says \"template\"" % path)
+    source = found[0]
+    names = {g.index: g.name for g in source.vertex_groups}
+    layout = source.data.uv_layers.active.data
+    spot = {}
+    for poly in source.data.polygons:
+        for i, corner in zip(poly.vertices, poly.loop_indices):
+            spot[i] = layout[corner].uv
+    tree = KDTree(len(spot))
+    carried = {}
+    for i, at in spot.items():
+        tree.insert((at.x, at.y, 0.0), i)
+        carried[i] = [(names[g.group], g.weight) for g in source.data.vertices[i].groups if g.weight > 1e-4]
+    tree.balance()
+    said = source["template"]
+    for kind, old in zip((bpy.data.objects, bpy.data.meshes, bpy.data.armatures, bpy.data.materials, bpy.data.images, bpy.data.collections), before):
+        for item in [x for x in kind if x not in old]:
+            kind.remove(item)
+    return tree, carried, said
+
 def auto_weights(obj):
     """Blender's automatic weights, kept only if they hold up. Returns why not, or None."""
     for o in bpy.context.selected_objects:
@@ -773,7 +837,20 @@ def auto_weights(obj):
 
 # One way of binding for the whole character: a shirt bound one way over a chest bound another lets the chest poke through.
 skin, why = {}, "asked for by-piece weights"
-if PARAMS["weights"] == "auto":
+of_template = {obj.name: template_points(obj) for obj in meshes}
+carried = None
+if any(of_template.values()):
+    # A template body: its points take the template's own weights; the head above the collar and the gear go by piece.
+    if not PARAMS["template"]:
+        raise ValueError("this body is the wardrobe template (wrap.py made it): set PARAMS['template'] to the template's .glb, "
+                         "the skill's wardrobe/headless-1.0.glb, so its points can take the template's own weights")
+    carried = template_weights(PARAMS["template"])
+    why = "the body is the wardrobe template %s: its points take the template's own weights, the head and the gear go by piece" % carried[2]
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+elif PARAMS["weights"] == "auto":
     failed = [(obj.name, auto_weights(obj)) for obj in meshes]
     failed = [(name, said) for name, said in failed if said]
     why = "automatic weights did not hold on %s: %s" % failed[0] if failed else None
@@ -785,8 +862,20 @@ for obj in meshes:
         for piece in [p for p in pieces if p["obj"] == obj]:
             piece["limb"] = chain_of(nearest_bone((piece["lo"] + piece["hi"]) / 2, None))
     else:
-        piece_weights(obj)
+        piece_weights(obj, of_template[obj.name])
         skin[obj.name] = {"used": "pieces"}
+        if of_template[obj.name]:
+            # each of the template's points, found in the template's file by where it sits in the layout
+            bone_names = {name for name, a, b, chain in bones}
+            off = 0.0
+            for i, at in of_template[obj.name].items():
+                found = carried[0].find((at.x, at.y, 0.0))
+                off = max(off, found[2])
+                for name, w in carried[1][found[1]]:
+                    if name in bone_names:
+                        obj.vertex_groups[name].add([i], w, "REPLACE")
+            skin[obj.name] = {"used": "template", "template": carried[2], "template_points": len(of_template[obj.name]),
+                              "by_piece_points": len(obj.data.vertices) - len(of_template[obj.name]), "furthest_off_the_layout": round(off, 6)}
     world_was = obj.matrix_world.copy()
     obj.parent = rig
     obj.matrix_parent_inverse = rig.matrix_world.inverted()
@@ -891,11 +980,22 @@ for name, start, end, chain in bones:
             outside.append({"bone": name, "at": label, "off_cm": round(100 * tree.find_nearest(p)[3], 1)})
 
 # ---- the build, measured: what walk.py makes a gait from ----
-others = [p for p in pieces if not str(p.get("limb", "")).startswith("arm")]
+others = [p for p in pieces if not str(p.get("limb", "")).startswith("arm") and not p.get("template")]
+# A template body is one piece, arms and all, so its box says nothing: its points that follow the trunk and the legs do.
+bands = [0.0] * 24
+for obj in meshes:
+    if of_template[obj.name]:
+        names = [g.name for g in obj.vertex_groups]
+        for i in of_template[obj.name]:
+            most = max([(g.weight, names[g.group]) for g in obj.data.vertices[i].groups] or [(0.0, "")])
+            if most[1] and not chain_of(most[1]).startswith("arm"):
+                at = worlds[obj.name][i]
+                row = int(clamp((at.z - floor) / tall * 24, 0, 23))
+                bands[row] = max(bands[row], abs(at.x))
 widths = []
 for i in range(24):
     z0, z1 = floor + tall * i / 24, floor + tall * (i + 1) / 24
-    widths.append(round(max([max(abs(p["lo"].x), abs(p["hi"].x)) for p in others if p["lo"].z < z1 and p["hi"].z > z0 and p["hi"].z - p["lo"].z < 0.9 * tall] or [0.0]), 3))
+    widths.append(round(max([max(abs(p["lo"].x), abs(p["hi"].x)) for p in others if p["lo"].z < z1 and p["hi"].z > z0 and p["hi"].z - p["lo"].z < 0.9 * tall] + [bands[i]]), 3))
 measure = {
     "height": round(tall, 3), "floor": round(floor, 4),
     "hip_height": round(hip.z - floor, 3), "thigh": round((knee - hip).length, 3), "shin": round((ankle - knee).length, 3),
@@ -913,7 +1013,7 @@ result = {
     "rig": rig.name, "bones": [b[0] for b in bones], "placed_from": placed_from, "found_by": notes,
     "joints": {name: [round(c, 3) for c in start] for name, start, end, chain in bones},
     "skin": skin, "meshes": [o.name for o in meshes], "sockets": hung,
-    "weights": "automatic" if why is None else "pieces", "why_not_automatic": why,
+    "weights": "automatic" if why is None else "template" if carried else "pieces", "why_not_automatic": why,
     "limits": limits, "built_bent_deg": built_bent, "capsules": capsules, "measure": measure, "bones_outside": outside,
 }
 print("RESULT " + json.dumps(result))
