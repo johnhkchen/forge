@@ -27,7 +27,11 @@
 #      was cut. Faces left spanning a hollow (across an armpit) are sunk in;
 #   4. the character's own head is every piece of its body that stands above
 #      the collar (the neck piece comes whole, so it reaches down inside the
-#      collar and no gap shows when the head turns). It is joined on.
+#      collar and no gap shows when the head turns). It is joined on. Below
+#      the collar the neck is tucked a little inside the template: the
+#      template was drawn onto that very surface, and two skins in one place
+#      flicker through each other (Lincoln's showed as a black slit down the
+#      front of his throat).
 #
 # What is left: "body" is the template from the collar down plus the
 # character's own head. The template's faces have a material of their own,
@@ -437,6 +441,18 @@ if not head_points:
     raise ValueError("no piece of the body stands above the collar (at %.0f%% of the height): is there a head?" % (100 * (ring_high - floor) / tall))
 bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.index not in head_points], context="VERTS")
 head_low = min(v.co.z for v in bm.verts)
+# Below the collar the neck piece and the template are the same surface (the template was drawn onto it), and two
+# skins in one place flicker through each other. The neck is tucked inside: not at all just under the collar, so no gap
+# opens there when the head bends away, and by `tuck` from a little way further down.
+wrapped = tree_of(template)
+tuck, tucked = 0.004 * tall, 0
+for v in bm.verts:
+    if v.co.z < ring_low:
+        hit = wrapped.find_nearest(v.co)
+        deep = tuck * min(1.0, max(0.0, (ring_low - v.co.z) / (0.01 * tall) - 0.5))
+        if hit[0] is not None and (v.co - hit[0]).dot(hit[1]) > -deep and hit[3] < 3 * tuck:
+            v.co = hit[0] - hit[1] * deep
+            tucked += 1
 bm.to_mesh(head.data)
 bm.free()
 head_tree = tree_of(head)
@@ -445,10 +461,10 @@ collar = {"ring_points": len(ring), "ring_at": [round((ring_low - floor) / tall,
           "head_reaches_down_to": round((head_low - floor) / tall, 3), "head_below_ring_cm": round(100 * (ring_low - head_low), 1),
           "ring_to_head_cm": {"median": round(100 * ring_to_head[len(ring_to_head) // 2], 2), "worst": round(100 * ring_to_head[-1], 2)},
           "ring_to_body_cm_worst": round(100 * max(target.find_nearest(P[i])[3] for i in ring), 2),
-          "head_pieces": len(kept), "head_triangles": sum(len(p.vertices) - 2 for p in head.data.polygons)}
+          "head_pieces": len(kept), "head_triangles": sum(len(p.vertices) - 2 for p in head.data.polygons),
+          "neck_points_tucked_inside": tucked}
 
 # ---- how close is it? ----
-wrapped = tree_of(template)
 to_body = [base_tree.find_nearest(P[i])[3] for i in range(count) if hold[i] < 0.5]
 back = []
 for v in base.data.vertices:  # the base body's own points that show from outside, below the head
