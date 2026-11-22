@@ -1302,6 +1302,8 @@ def dressed_run(ctx, label, pattern):
     """A copy of a character's run with low-poly, mid-poly and walking versions made by the real runner.
     Lincoln, the ninja and Roosevelt have block-outs with gear and recipes of their own; the troll and the
     pirate predate gear, so theirs are the recorded block-outs with gear named. Returns (the copy, its run)."""
+    if label in ctx.setdefault("dressed", {}):  # made once: the painted cases start from the copies the clothes cases made
+        return ctx["dressed"][label]
     runs = sorted(glob.glob(os.path.join(os.path.dirname(ctx["troll"]), pattern)))
     if not runs:
         return None, None
@@ -1330,6 +1332,7 @@ def dressed_run(ctx, label, pattern):
     for version in ("lowpoly", "midpoly"):
         if not os.path.exists(os.path.join(copy, "profiles", version + "-walk.json")):
             raise AssertionError("no %s-walk for %s:\n%s" % (version, label, (out.stdout + out.stderr)[-1500:]))
+    ctx["dressed"][label] = (copy, run)
     return copy, run
 
 
@@ -1420,6 +1423,144 @@ def test_cloth(ctx):
                       c["loop_seam"] < 1e-5 and swing["eased_at_the_seam_deg"] < 3)
             else:
                 check("%s: nothing hangs, so no cloth bones" % who, cloth["cloth_bones"] == [] and walked["animation"]["then"] == [])
+
+
+# ---- painted clothes: the wardrobe's shared body, skin-tight clothes in its texture ----
+
+PAINT_LIMITS = {"collar_walk_cm": 1.5, "collar_rom_cm": 2.0, "floor_cm": 1.5, "hem_apart": 0.04}
+# The collar: the head reaches 2 cm and more down inside it. Standing, its edge is up to 0.9 cm off the neck
+# (Roosevelt's, where his neck piece is narrower than his shoulders); the walk adds a millimeter or two, and the
+# routine's bend forward opens it to 1.1 to 1.3 cm on the two wrestlers. Much past these the inside would show.
+# The floor: with the body bound whole to one limb the feet went 10 cm under it. Hems: where a garment ends
+# along a limb, as a share of the limb, may differ this much between two bodies (4 points of a thigh).
+
+
+def paint_numbers(paths):
+    """scripts/paint_check.py on some .glb files, in one background Blender: one dict a file."""
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "paint_check.py"), "--"] + list(paths), capture_output=True, text=True)
+    rows = [json.loads(line[6:]) for line in out.stdout.splitlines() if line.startswith("PAINT ")]
+    if len(rows) != len(paths):
+        raise AssertionError("paint_check.py measured %d of %d files:\n%s" % (len(rows), len(paths), (out.stdout + out.stderr)[-1500:]))
+    return rows
+
+
+def painted_run(ctx, label, pattern, wardrobe):
+    """A character's copy (dressed_run) made again on the template body by the real runner, with what `wardrobe`
+    says painted on, then walking and going through the routine. Returns (the copy, what the painted profile recorded)."""
+    copy, run = dressed_run(ctx, label, pattern)
+    if not copy:
+        return None, None
+    with open(os.path.join(copy, "wardrobe.json"), "w") as f:
+        json.dump(wardrobe, f)
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "tidy_profile.py"), "--",
+                          os.path.join(copy, "scene.blend"), os.path.join(copy, "profiles"), "painted", "walk", "rom"], capture_output=True, text=True)
+    for name in ("painted", "painted-walk", "painted-rom"):
+        if not os.path.exists(os.path.join(copy, "profiles", name + ".json")):
+            raise AssertionError("no %s for %s:\n%s" % (name, label, (out.stdout + out.stderr)[-1500:]))
+    with open(os.path.join(copy, "profiles", "painted.json")) as f:
+        return copy, json.load(f)
+
+
+def test_paint(ctx):
+    """Skin-tight clothes painted on instead of worn (wrap.py, paint.py, rig.py's template weights): Roosevelt's singlet and tights painted into the template body's texture by the real runner, and the same outfit worn by Lincoln; both walk and go through the routine."""
+    tight = ["wool singlet", "wool tights"]
+    made, his = painted_run(ctx, "roosevelt", "*roosevelt-wrestler-1890s", {"paint": tight})
+    if not made:
+        print("    skipped: no roosevelt run")
+        return
+    outfit = os.path.join(made, "profiles", "painted-outfit")
+    theirs = {"take_off": ["linen work shirt", "wool trousers", "leather belt"],
+              "wear": [{"name": g, "image": os.path.join(outfit, g + ".png")} for g in tight]}
+    other, lincolns = painted_run(ctx, "lincoln", "*young-lincoln-frontier-wrestler", theirs)
+    cast = [("roosevelt", made, his, ["round spectacles", "wrestling boots"])]
+    if other:
+        cast.append(("lincoln", other, lincolns, ["leather brogans"]))
+    else:
+        print("    skipped: no lincoln run to wear the outfit")
+    for who, copy, record, kept in cast:
+        wrap, paint = record["wrap"], record["paint"]
+        # the body: the template, the same on everyone, lying on this character's own
+        check("%s: the template body (%s) has the same %d points and %d faces on everyone, and lies on his own body: 95 in 100 of its points within %.2f%% of his height, the worst %.1f%%" % (
+              who, wrap["template"], wrap["points"], wrap["faces"], wrap["to_body_pct"]["p95"], wrap["to_body_pct"]["worst"]),
+              wrap["points"] == 3722 and wrap["faces"] == 3742 and wrap["to_body_pct"]["p95"] < 0.2 and wrap["to_body_pct"]["worst"] < 3.0, wrap["to_body_pct"])
+        check("%s: his own head is kept (%d triangles in %d pieces) and reaches %.1f cm down inside the collar" % (
+              who, wrap["collar"]["head_triangles"], wrap["collar"]["head_pieces"], wrap["collar"]["head_below_ring_cm"]),
+              wrap["collar"]["head_triangles"] > 300 and wrap["collar"]["head_below_ring_cm"] >= 1.0 and wrap["collar"]["ring_points"] == 40, wrap["collar"])
+        check("%s: %s painted on, %s kept as meshes" % (who, ", ".join(paint["painted"]), ", ".join(paint["kept_as_meshes"])),
+              paint["painted"] == tight and paint["kept_as_meshes"] == kept and paint["texture"] == [1024, 1024], (paint["painted"], paint["kept_as_meshes"]))
+        files = [os.path.join(copy, "profiles", "painted-%s.glb" % clip) for clip in ("walk", "rom")]
+        cloth, moved = cloth_numbers(files), paint_numbers(files)
+        for clip, path, now, seen in zip(("walk", "rom"), files, cloth, moved):
+            with open(os.path.join(copy, "profiles", "painted-%s.json" % clip)) as f:
+                walked = json.load(f)
+            rig = walked["rig"]
+            if clip == "walk":
+                skin = rig["skin"]["body"]
+                check("%s: the template's %d points take the template's own weights (each found in its file within %.5f of where it sits in the layout); the head's %d points and the gear go by piece; none left without a weight" % (
+                      who, skin["template_points"], skin["furthest_off_the_layout"], skin["by_piece_points"]),
+                      rig["weights"] == "template" and skin["used"] == "template" and skin["furthest_off_the_layout"] < 1e-3 and skin["by_piece_points"] > 100
+                      and all(x["unweighted"] == 0 for x in rig["skin"].values()) and all(x["used"] == "pieces" for name, x in rig["skin"].items() if name != "body"), rig["skin"])
+                check("%s: the body follows %d bones, %d of its %d points more than one: not bound whole to one limb" % (
+                      who, seen["weights"]["bones_followed"], seen["weights"]["following_more_than_one_bone"], seen["weights"]["template_points"]),
+                      seen["weights"]["bones_followed"] >= 19 and seen["weights"]["following_more_than_one_bone"] > 0.3 * seen["weights"]["template_points"], seen["weights"])
+                walk_file_checks("%s painted" % who, path, rig["bones"], 0)
+                check("%s: the walk itself holds: feet slide %.3f cm a step, no limit broken" % (who, walked["animation"]["check"]["foot_slide_cm_per_step"]),
+                      walked["animation"]["check"]["foot_slide_cm_per_step"] < 0.3 and walked["animation"]["check"]["limit_violations"] == 0)
+            what = "its walk" if clip == "walk" else "arms overhead, twists, bends, a squat and punches"
+            poke = now["poke_through"]
+            check("%s: over %d frames of %s, no skin comes through: painted cloth has no skin under it, and the gear that stays (%s) lets none through (%d point-frames of %d covered points)" % (
+                  who, now["frames"], what, ", ".join(sorted(g[6:] for g in now["gear_meshes"])), poke["point_frames"], now["covered_points"]),
+                  now["frames"] >= 13 and poke["point_frames"] == 0 and not any(g[6:] in tight for g in now["gear_meshes"]), poke)
+            gap, limit = seen["collar"]["gap_cm"], PAINT_LIMITS["collar_%s_cm" % clip]
+            check("%s: the collar's %d edges stay closed on the neck over %s: %.2f cm off the head standing, %.2f cm at the worst (frame %s), under %.1f" % (
+                  who, seen["collar"]["edges"], what, gap["standing"], gap["worst"], gap["worst_frame"], limit),
+                  seen["collar"]["edges"] == 40 and gap["worst"] < limit, seen["collar"])
+            check("%s: the feet stay on the floor over %s: %.2f cm under it at the lowest" % (who, what, seen["floor"]["deepest_cm"]),
+                  seen["floor"]["deepest_cm"] < PAINT_LIMITS["floor_cm"], seen["floor"])
+        check("%s: %d triangles in the walking file, %d drawn with everything on (the template %d, his head %d, the gear that stays %d)" % (
+              who, cloth[0]["triangles"]["in_the_file"], cloth[0]["triangles"]["drawn_dressed"], moved[0]["triangles"]["template"],
+              moved[0]["triangles"]["body"] - moved[0]["triangles"]["template"], moved[0]["triangles"]["gear"]),
+              moved[0]["triangles"]["template"] == 7402 and cloth[0]["triangles"]["in_the_file"] <= 12000 and cloth[0]["triangles"]["drawn_dressed"] <= 10000, cloth[0]["triangles"])
+
+    # the trim, on the man the outfit was painted from
+    paint = his["paint"]
+    for g in tight:
+        note = paint["garments"][g]
+        check("%s: of %d texels where its mesh lies, its own texture shows skin on %d, gear that stays on %d and the other garment on %d (the block-out is cut rougher than the cloth); %d more are cloth the body's own texture shows" % (
+              g, note["texels_where_its_mesh_lies"], note["skin_in_its_texture"], note["other_gear_in_its_texture"], note["another_painted_garment_in_its_texture"], note["cloth_in_the_body's_texture"]),
+              note["trimmed"] and note["texels_kept"] > 0.5 * note["texels_where_its_mesh_lies"] - note["another_painted_garment_in_its_texture"] and "warning" not in note, note)
+        edge = note["edge"]
+        check("%s: its edge evened out: %d texels of slivers off, %d filled in, %d of scraps dropped, %d of small holes shut; nothing narrower than %.1f cm left" % (
+              g, edge["taken_off_as_slivers"], edge["filled_in"], edge["dropped_as_scraps"] + edge["loose_from_the_garment"], edge["small_holes_shut"], edge["narrowest_kept_cm"]),
+              edge["taken_off_as_slivers"] + edge["filled_in"] > 0 and edge["taken_off_as_slivers"] < 0.05 * note["texels"], edge)
+    check("roosevelt: the tights' own texture shows his skin and his boot tops (they were built down into the boots): neither is taken for tights",
+          paint["garments"]["wool tights"]["skin_in_its_texture"] > 1000 and paint["garments"]["wool tights"]["other_gear_in_its_texture"] > 1000, paint["garments"]["wool tights"])
+    check("roosevelt: the real strap, drawn on his chest in the body's own texture, is part of the singlet (%d texels)" % paint["garments"]["wool singlet"]["cloth_in_the_body's_texture"],
+          paint["garments"]["wool singlet"]["cloth_in_the_body's_texture"] > 2000)
+    # the wearer's skin does not ride along: nothing skin-colored in the saved outfit
+    tone = paint["skin"]["average_color"]
+    for g in tight:
+        wide, tall, rows = read_png(os.path.join(outfit, g + ".png"))
+        cloth_px = skin_px = 0
+        for row in rows[::2]:
+            for r, gr, b, a in row[::2]:
+                if a >= 128:
+                    cloth_px += 1
+                    skin_px += abs(r / 255 - tone[0]) + abs(gr / 255 - tone[1]) + abs(b / 255 - tone[2]) < 0.25
+        check("%s.png, the garment as a picture for anyone to wear: %d by %d, and %.2f%% of it is the color of Roosevelt's skin" % (g, wide, tall, 100.0 * skin_px / max(cloth_px, 1)),
+              (wide, tall) == (1024, 1024) and cloth_px > 5000 and skin_px < 0.005 * cloth_px, (cloth_px, skin_px))
+
+    # hems land in the same place on a second body
+    if other:
+        for g, limb, end, words in (("wool singlet", "thigh_l", 1, "the singlet's leg ends"), ("wool singlet", "thigh_r", 1, "and on the right"),
+                                    ("wool tights", "shin_l", 1, "the tights end"), ("wool tights", "thigh_l", 0, "the tights start"),
+                                    ("wool singlet", "trunk", 1, "the straps top out")):
+            a, b = his["paint"]["garments"][g]["ends"][limb][end], lincolns["paint"]["garments"][g]["ends"][limb][end]
+            check("%s %.1f%% of the way along the %s on Roosevelt, %.1f%% on Lincoln" % (words, 100 * a, limb.replace("_l", "").replace("_r", ""), 100 * b),
+                  abs(a - b) <= PAINT_LIMITS["hem_apart"], (a, b))
+        check("lincoln: his skin under the outfit is his own (%d texels copied from his old body, the rest filled in from them), with none of Roosevelt's" % lincolns["paint"]["skin"]["copied_from_the_old_body"],
+              lincolns["paint"]["skin"]["copied_from_the_old_body"] > 20000 and sum(abs(x - y) for x, y in zip(lincolns["paint"]["skin"]["average_color"], tone)) > 0.05,
+              (lincolns["paint"]["skin"]["average_color"], tone))
 
 
 # ---- the base body: a real body under clothes that hide it ------------------
@@ -2331,7 +2472,7 @@ def test_auto_body(ctx):
 
 
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
-         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_true_size, test_contact, test_drape, test_cloth,
+         test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_true_size, test_contact, test_drape, test_cloth, test_paint,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body,
          test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build,
          test_world_places, test_world_house, test_world_toons, test_world_walk, test_world_house_build,

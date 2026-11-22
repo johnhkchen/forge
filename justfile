@@ -222,6 +222,10 @@ walk-strip file out view="side":
 cloth-check +files:
     "{{blender_bin}}" -b --factory-startup -P scripts/cloth_check.py -- {{files}} 2>&1 | grep -E '^CLOTH|Error|Traceback'
 
+# Measure a painted character's walking .glb (profiles/painted-walk.glb): how far the collar opens on the neck over the clip, the feet against the floor, the body's weights
+paint-check +files:
+    "{{blender_bin}}" -b --factory-startup -P scripts/paint_check.py -- {{files}} 2>&1 | grep -E '^PAINT|Error|Traceback'
+
 # Measure a walking or running character's .glb: where each joint sits in the body around it, how much volume each part keeps over the clip, how much each part shakes
 rig-check +files:
     "{{blender_bin}}" -b --factory-startup -P scripts/rig_check.py -- {{files}} 2>&1 | grep -E '^RIG|Error|Traceback'
