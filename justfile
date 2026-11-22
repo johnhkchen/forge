@@ -195,7 +195,7 @@ poses:
 
 blender_bin := env_var_or_default("BLENDER", "/Applications/Blender.app/Contents/MacOS/Blender")
 
-# Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile midpoly lowpoly; walk adds a skeleton and a walk to the last two; run adds a run, once `just runs` has made its clip)
+# Make tidy-mesh profiles of a finished run, in a background Blender (hero quads web game mobile midpoly lowpoly; walk adds a skeleton and a walk to the last two; run adds a run, once `just runs` has made its clip; painted makes the mid-poly one again on the wardrobe's shared body with the skin-tight gear its wardrobe.json names painted on)
 tidy run +profiles:
     #!/usr/bin/env bash
     set -euo pipefail

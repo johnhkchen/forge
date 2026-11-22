@@ -1,6 +1,6 @@
 ---
 name: tidy-mesh
-description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and a run (the run profile), and for clothes that sit on the body, move with it and swing (drape, cloth, swing), and for a real body under clothes that hide it (a base body from a second picture, garments cut out of the clothed mesh: garment, follow) Also for drawing a scene in the comic style (toon shading, ink outlines) and swapping a character's drawn expression (toon, face_swap).
+description: Clean up, optimize, retopologize or resize a generated 3D mesh (TRELLIS.2 output or any messy GLB) in Blender. Use when asked to tidy a mesh, fix its topology, make it lighter or game/web/AR-ready, make LODs or quad topology, bake its materials or textures, or produce a named profile (hero, quads, web, game, mobile, midpoly, lowpoly) of a finished object in runs/. Also for a character's gear that comes off (separate gear meshes, sockets for props), and for giving a low-poly or mid-poly character a skeleton, joint limits and a walk (rig, skin, animate), and a run (the run profile), and for clothes that sit on the body, move with it and swing (drape, cloth, swing), and for skin-tight clothes painted onto a shared body instead of worn as meshes (the painted profile: wrap, paint), and for a real body under clothes that hide it (a base body from a second picture, garments cut out of the clothed mesh: garment, follow) Also for drawing a scene in the comic style (toon shading, ink outlines) and swapping a character's drawn expression (toon, face_swap).
 ---
 
 # tidy-mesh
@@ -1391,6 +1391,95 @@ What is weak, most visible first:
 - **Old block-outs are guessed.** Without `"fit"` on the pieces, a coat
   called "torso" is taken for tight cloth. Check `"pieces"`.
 
+## Skin-tight clothes, painted on: the wardrobe's shared body
+
+A singlet, tights or an undershirt lies flat on the skin. As a mesh it is a
+second surface a few millimeters off the first, and the two have to bend
+exactly alike or skin comes through: on Roosevelt's mid-poly routine it did
+on 209 point-frames, 4 cm at the deepest, after every fix above. Painted
+into the body's own texture the cloth is the skin's surface. Nothing can
+come through it, it costs no triangles, and it can be handed on.
+
+This is an option beside draping, not instead of it. **Loose clothes, boots,
+hats, belts and anything whose outline matters keep their meshes** and are
+draped as before. Only what a run's `wardrobe.json` names is painted.
+
+    wrap.py     the wardrobe's template body laid on the character's own; its own head kept
+    paint.py    the named gear painted into the template's texture and taken off
+    rig.py      the template's points take the template's own weights ("template": its .glb)
+
+**The template** (`wardrobe/headless-1.0.glb`, and a .blend to keep
+modeling; `wardrobe/README.md` has where it comes from and its license: the
+MakeHuman base mesh, CC0, mesh data only) is one body from the collar down:
+3,722 points, quads in clean loops, one texture layout, weights for rig.py's
+bones. Laid on every character, a spot of its texture is the same spot of
+the body on everyone. That is what lets one painted outfit fit them all.
+
+**`wrap.py`** needs rig.py's `"joints"` for the character (run rig.py
+first). It carries each template bone to that joint, as long and as thick
+as the body is there, then draws the template onto a fine shell of the
+character's own body. The character's head is every piece of its body above
+the collar; the neck piece comes whole, so it reaches down inside the
+collar and no gap shows when the head turns. The template's faces get a
+material marked `"template"`: that mark, not a name, is how `rig.py` and
+`paint.py` know them, and it travels in a .glb.
+
+**`paint.py`** goes texel by texel. What a texel is goes by its color, not
+by which mesh it came from, because a block-out garment is cut rougher than
+the real one: its texture shows skin round the neck, the garment under it
+where it was built too long, boot tops where it was built down into the
+boots; and the body's own texture shows the real strap where the mesh fell
+short. Then each edge is evened out. Skin that had gear over it is filled
+in from skin that had none. `"garments"` in the result says, for each, what
+the source gave and what the evening-out did, and `"ends"`: how far along
+each limb it reaches.
+
+With `"save"` each garment is also written as a picture of its own
+(`painted-outfit/wool singlet.png`), and another character wears it with
+`"wear"`. A run's `wardrobe.json` says which:
+
+    {"paint": ["wool singlet", "wool tights"]}
+
+    {"take_off": ["linen work shirt", "wool trousers", "leather belt"],
+     "wear": [{"name": "wool singlet", "image": "../<roosevelt>/profiles/painted-outfit/wool singlet.png"}]}
+
+**The runner**: `just tidy <run> painted walk rom` makes `painted.glb` from
+`midpoly.glb` (skipped with no `wardrobe.json`), then `painted-walk.glb`
+and `painted-rom.glb` like the others. `just paint-check <file>` measures a
+walking file (`scripts/paint_check.py`).
+
+**Measured** (the real runner on copies of both runs; `just test-tools`):
+
+| | Roosevelt, his own outfit | Lincoln, wearing Roosevelt's |
+|---|---|---|
+| Skin through, walk / routine (point-frames) | 0 / 0 (as meshes: 2 / 209) | 0 / 0 |
+| Collar off the neck: standing, worst in the walk, worst in the routine | 0.83, 0.99, 1.13 cm | 0.20, 0.20, 1.25 cm |
+| Feet under the floor, at the lowest | 0.44 cm | 0.32 cm |
+| The singlet's leg ends, along the thigh | 40.2% | 40.8% |
+| The tights end, along the shin | 12.6% | 12.3% |
+| Triangles in the walking file, drawn dressed | 9,910, 7,836 (as meshes: 6,600, 5,520) | 10,334, 8,718 |
+
+What is weak:
+
+- **It is heavier, not lighter.** The template is 7,402 triangles where the
+  mid-poly body was about 4,000, and its fingers and toes are most of the
+  difference. The gear's triangles are saved; the body's are not.
+- **Edges are as good as the source.** Roosevelt's straps are ragged in his
+  own textures (patches the bake missed, skin and cloth blended). Evening
+  out takes off what is narrower than 2 cm; a wobble wider than that stays.
+- **Color tells cloth from skin.** A flesh-colored garment cannot be
+  trimmed this way; the result warns when most of a garment looks like skin.
+- **One garment over another is one layer.** Where a singlet covers tights,
+  the tights' picture has nothing: worn alone they would have a hole there.
+- **Skin under clothes is made up.** It is the body's average skin color,
+  shaded only near real skin. A character dressed head to toe has little
+  to go by.
+- **The collar is a step, not a seam.** The head sits inside the collar
+  rather than being joined to it; from above, or with a thin neck piece,
+  the edge can show.
+- **Not in the gallery yet**, and nothing asks for it by itself: no prompt
+  writes `wardrobe.json`.
+
 ## A real body under clothes that hide it
 
 A long skirt, a robe or a cloak hides the body. TRELLIS.2 sees only the
@@ -2301,7 +2390,11 @@ wall and post: the leg must clear the wall and the hand land on the post); and t
 drape.py on the troll, then Lincoln, the ninja, Roosevelt, the troll and
 the pirate made low poly, mid poly and walking by the real runner and
 measured with `scripts/cloth_check.py` over every frame (skin through
-cloth, the gap, the cloth bones' limits and seam, triangles). And the base
+cloth, the gap, the cloth bones' limits and seam, triangles). And painted
+clothes: Roosevelt's singlet and tights painted on by the real runner and
+the same outfit worn by Lincoln, both walking and going through the routine
+(no skin through, the collar's gap in motion, feet on the floor, the trim,
+each hem in the same place on both). And the base
 body: `garment.py` on a made-up figure whose every face is known
 (`scripts/base_fixture.py`: the skirt must come out exactly, a shrunk body
 be laid back on, a moved picture and a different pose be turned down) and
