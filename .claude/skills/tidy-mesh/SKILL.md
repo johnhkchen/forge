@@ -1491,7 +1491,7 @@ walking file (`scripts/paint_check.py`).
 | Feet under the floor, at the lowest | 0.44 cm | 0.32 cm |
 | The singlet's leg ends, along the thigh | 37.8% | 37.7% |
 | The tights end, along the shin | 11.2% | 10.2% |
-| Edge against itself evened out, singlet / tights | 1.013 / 1.003 | the same pictures |
+| Edge against itself evened out, singlet / tights | 1.005 / 1.003 | the same pictures |
 | Triangles in the walking file, drawn dressed | 9,910, 7,836 (as meshes: 6,600, 5,520) | 10,334, 8,718 |
 
 What is weak:
