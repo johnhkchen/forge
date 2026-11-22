@@ -71,6 +71,7 @@ import json
 import math
 from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 
 ACROSS = {"x": (0, 1, 2), "y": (1, 0, 2), "z": (2, 0, 1)}
 SOCKET_BONES = {"hand_right": "hand_r", "hand_left": "hand_l", "head": "head", "back": "chest", "hip": "hips"}
@@ -108,17 +109,33 @@ def volume_of(points, faces):
             total += a.dot((points[f[k]] - mid).cross(points[f[k + 1]] - mid))
     return abs(total) / 6.0
 
+def same_place(points, within=1e-4):
+    """Which place each point is, and how many places: points closer than `within` (m) are one place. A .glb
+    splits a point wherever the texture layout has a seam, and the copies can come back a few hundredths of a
+    millimetre apart. Rounded to a grid, a pair either side of a grid line would be two places, and a garment
+    could come apart into scraps along a seam (Roosevelt's singlet did: two of them were then taken for stiff
+    little pieces, and tore away from the rest in motion)."""
+    tree = KDTree(len(points))
+    for i, p in enumerate(points):
+        tree.insert(p, i)
+    tree.balance()
+    place, count = [-1] * len(points), 0
+    for i, p in enumerate(points):
+        if place[i] >= 0:
+            continue
+        for co, j, d in tree.find_range(p, within):
+            if place[j] < 0:
+                place[j] = count
+        place[i] = count
+        count += 1
+    return place, count
+
 def islands_of(obj):
     """The connected pieces of a mesh, with texture-seam and flat-shading splits welded by position."""
     me = obj.data
     world = [obj.matrix_world @ v.co for v in me.vertices]
-    weld, slot = {}, []
-    for p in world:
-        key = (round(p.x, 4), round(p.y, 4), round(p.z, 4))
-        if key not in weld:
-            weld[key] = len(weld)
-        slot.append(weld[key])
-    root = list(range(len(weld)))
+    slot, count = same_place(world)
+    root = list(range(count))
     for poly in me.polygons:
         a = slot[poly.vertices[0]]
         while root[a] != a:

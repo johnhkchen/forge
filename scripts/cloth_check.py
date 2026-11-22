@@ -37,20 +37,64 @@ import sys
 import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
+
+
+WELDS = {}  # object name -> (which spot each point is, how many spots)
+
+
+def spots_of(obj):
+    """A .glb splits a point wherever the texture layout has a seam (or the shading is flat), and the copies
+    move together. They are one spot of the surface: each copy is mapped to the first point at its place, so a
+    spot counts once and its normal comes from the faces on both sides of the seam. Otherwise the same mesh
+    measured differently once it had been baked (Roosevelt's routine: 444 point-frames before the bake, 501
+    after, with every point moving exactly the same)."""
+    if obj.name not in WELDS:
+        places = [obj.matrix_world @ v.co for v in obj.data.vertices]
+        tree = KDTree(len(places))
+        for i, p in enumerate(places):
+            tree.insert(p, i)
+        tree.balance()
+        spot, count = [-1] * len(places), 0
+        for i, p in enumerate(places):  # within 0.1 mm is one spot: the copies can come back a few hundredths of a mm apart
+            if spot[i] >= 0:
+                continue
+            for co, j, d in tree.find_range(p, 1e-4):
+                if spot[j] < 0:
+                    spot[j] = count
+            spot[i] = count
+            count += 1
+        WELDS[obj.name] = (spot, count)
+    return WELDS[obj.name]
 
 
 def posed(objects, deps):
-    """Every point and face of the objects as shown on this frame: (points, normals, faces, which object each point is of)."""
+    """Every spot and face of the objects as shown on this frame, split copies of a point taken as one spot
+    (spots_of): (points, normals, faces, which object each point is of)."""
     points, normals, faces, owner = [], [], [], []
     for index, obj in enumerate(objects):
+        spot, count = spots_of(obj)
         shown = obj.evaluated_get(deps)
         me = shown.to_mesh()
         start = len(points)
-        turn = shown.matrix_world.to_3x3()
-        points += [shown.matrix_world @ v.co for v in me.vertices]
-        normals += [(turn @ v.normal).normalized() for v in me.vertices]
-        faces += [tuple(start + i for i in p.vertices) for p in me.polygons]
-        owner += [index] * len(me.vertices)
+        world = shown.matrix_world
+        here = [None] * count
+        for i, v in enumerate(me.vertices):
+            if here[spot[i]] is None:
+                here[spot[i]] = world @ v.co
+        lean = [Vector() for _ in range(count)]
+        for p in me.polygons:
+            corners = [spot[i] for i in p.vertices]
+            a = here[corners[0]]
+            n = Vector()
+            for k in range(1, len(corners) - 1):  # the face's normal, as long as twice its area
+                n += (here[corners[k]] - a).cross(here[corners[k + 1]] - a)
+            for c in set(corners):
+                lean[c] += n
+            faces.append(tuple(start + c for c in corners))
+        points += here
+        normals += [n.normalized() if n.length > 1e-12 else Vector((0, 0, 1)) for n in lean]
+        owner += [index] * count
         shown.to_mesh_clear()
     return points, normals, faces, owner
 
@@ -60,6 +104,7 @@ def poke_over(body, gear, rig, frames, every=1):
     tagged "under" (hidden while dressed) count only toward "all". Standing still (the rig at rest) decides which
     body points the gear covers. Returns {"drawn": [point-frames, deepest m], "all": [...], "covered", "covered_drawn",
     "worst_frame", "through": {gear: point-frames}, "tall", "frames"}."""
+    WELDS.clear()  # a new scene may reuse the names
     scene = bpy.context.scene
     if rig:
         rig.data.pose_position = "REST"
@@ -108,6 +153,7 @@ def poke_over(body, gear, rig, frames, every=1):
 
 def check(path):
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    WELDS.clear()
     bpy.context.scene.render.fps = 30  # what every motion here is baked at; the importer lays keys out by the scene's rate
     bpy.ops.import_scene.gltf(filepath=path)
     scene = bpy.context.scene

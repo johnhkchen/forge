@@ -72,6 +72,7 @@ import json
 import math
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 
 LOOSE = ("kilt", "skirt", "coat", "cape", "cloak", "robe", "hood", "gown", "dress", "tabard", "loincloth", "poncho", "tunic", "apron", "shawl")
 STIFF = ("boot", "shoe", "brogan", "sandal", "clog", "hat", "helmet", "crown", "spectacle", "glasses", "goggle", "buckle", "plate", "pauldron",
@@ -195,6 +196,27 @@ def gather(light):
             layers.append({"obj": o, "faces": list(range(len(o.data.polygons))), "tag": tag})
     return [l for l in layers if l["tag"].get("forge") == "body"] + [l for l in layers if l["tag"].get("forge") != "body"]
 
+def same_place(points, within=1e-4):
+    """Which place each point is, and how many places: points closer than `within` (m) are one place. A .glb
+    splits a point wherever the texture layout has a seam, and the copies can come back a few hundredths of a
+    millimetre apart. Rounded to a grid, a pair either side of a grid line would be two places, and a garment
+    could come apart into scraps along a seam (Roosevelt's singlet did: two of them were then taken for stiff
+    little pieces, and tore away from the rest in motion)."""
+    tree = KDTree(len(points))
+    for i, p in enumerate(points):
+        tree.insert(p, i)
+    tree.balance()
+    place, count = [-1] * len(points), 0
+    for i, p in enumerate(points):
+        if place[i] >= 0:
+            continue
+        for co, j, d in tree.find_range(p, within):
+            if place[j] < 0:
+                place[j] = count
+        place[i] = count
+        count += 1
+    return place, count
+
 def survey(layers):
     """The meshes as they are now, with points that share a place within a layer counted once."""
     pos, members, normal, of_layer, faces, links = [], [], [], [], [], []
@@ -204,13 +226,15 @@ def survey(layers):
         turn = obj.matrix_world.to_3x3()
         world = [obj.matrix_world @ v.co for v in me.vertices]
         at, seen = {}, {}
+        used = sorted({vi for fi in layer["faces"] for vi in me.polygons[fi].vertices})
+        place = dict(zip(used, same_place([world[vi] for vi in used])[0]))
         for fi in layer["faces"]:
             poly = me.polygons[fi]
             ring = []
             for vi in poly.vertices:
                 if vi not in seen:
                     p = world[vi]
-                    spot = (round(p.x, 5), round(p.y, 5), round(p.z, 5))
+                    spot = place[vi]
                     if spot not in at:
                         at[spot] = len(pos)
                         pos.append(p.copy())

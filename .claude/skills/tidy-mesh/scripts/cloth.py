@@ -44,6 +44,7 @@ import json
 import math
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 from mathutils.interpolate import poly_3d_calc
 
 
@@ -120,6 +121,27 @@ for obj in bodies:
             facing.append(turn @ poly.normal)
 body_tree = BVHTree.FromPolygons(points, triangles)
 
+def same_place(points, within=1e-4):
+    """Which place each point is, and how many places: points closer than `within` (m) are one place. A .glb
+    splits a point wherever the texture layout has a seam, and the copies can come back a few hundredths of a
+    millimetre apart. Rounded to a grid, a pair either side of a grid line would be two places, and a garment
+    could come apart into scraps along a seam (Roosevelt's singlet did: two of them were then taken for stiff
+    little pieces, and tore away from the rest in motion)."""
+    tree = KDTree(len(points))
+    for i, p in enumerate(points):
+        tree.insert(p, i)
+    tree.balance()
+    place, count = [-1] * len(points), 0
+    for i, p in enumerate(points):
+        if place[i] >= 0:
+            continue
+        for co, j, d in tree.find_range(p, within):
+            if place[j] < 0:
+                place[j] = count
+        place[i] = count
+        count += 1
+    return place, count
+
 def body_weights(p):
     """The body's weights at the spot nearest `p`: (weights, how far, which way that spot faces)."""
     hit = body_tree.find_nearest(p)
@@ -136,8 +158,9 @@ for obj in gear:
     world = [obj.matrix_world @ v.co for v in obj.data.vertices]
     fit, hang, island = note(obj, "forge_fit"), note(obj, "forge_hang"), note(obj, "forge_island")
     at, spot_of, spots = {}, [], []
+    place = same_place(world)[0]
     for vi, p in enumerate(world):
-        key = (round(p.x, 5), round(p.y, 5), round(p.z, 5))
+        key = place[vi]
         if key not in at:
             at[key] = len(spots)
             spots.append({"p": p, "verts": [], "n": Vector(), "links": set(), "fit": fit[vi], "hang": hang[vi], "island": island[vi]})

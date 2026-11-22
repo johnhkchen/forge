@@ -1275,7 +1275,9 @@ def test_drape(ctx):
 
 CLOTH_LIMITS = {  # the most skin that may come through over a walk: (share of covered point-frames %, deepest cm)
     "lincoln": (6, 4), "ninja": (4, 3), "roosevelt": (2, 1.5), "pirate": (5, 6),
-    "troll": (12, 9),  # low poly: eight cloth chains around thighs 43 cm thick; see SKILL.md, "What is weak"
+    "troll": (15, 9),  # low poly: eight cloth chains around thighs 43 cm thick; see SKILL.md, "What is weak".
+    # (A spot of skin counts once since cloth_check stopped counting each flat-shaded copy of a point: the same
+    # walk went from 222 point-frames of 2,450 covered, 9.1%, to 133 of 970, 13.7%.)
 }
 ROM_LIMITS = {  # the same over the range-of-motion routine (rom.py), as it stands: a ceiling to keep it from getting worse
     "lincoln": (4, 6), "ninja": (4, 6), "roosevelt": (4, 6), "pirate": (5, 7), "troll": (7, 10),
