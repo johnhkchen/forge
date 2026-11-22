@@ -1429,10 +1429,44 @@ by which mesh it came from, because a block-out garment is cut rougher than
 the real one: its texture shows skin round the neck, the garment under it
 where it was built too long, boot tops where it was built down into the
 boots; and the body's own texture shows the real strap where the mesh fell
-short. Then each edge is evened out. Skin that had gear over it is filled
-in from skin that had none. `"garments"` in the result says, for each, what
-the source gave and what the evening-out did, and `"ends"`: how far along
-each limb it reaches.
+short. Skin that had gear over it is filled in from skin that had none.
+
+**That is only the evidence: each garment is then drawn fresh**, the way a
+game paints armor onto a body, because the source's texels are speckled,
+lit from one side and ragged at every edge, and copying them (the first
+version did) can only be as clean as they are. A garment is a clean region
+of the template in its own color:
+
+- on a limb it covers one stretch of the bone, and a hem is a cut straight
+  across the limb (`"cuts"`: the singlet's leg at 0.385 of the thigh);
+- on the trunk its edge (neckline, armholes, straps) is how much of the
+  garment is round each of the template's points, evened out over the mesh,
+  made the same left and right unless the source is clearly lopsided, a
+  pinched strap let out, corners rounded;
+- its color is the middle of its own texels, with the faintest of the old
+  bake's broad light and dark (within 4%) and none of its speckle. A
+  garment with a second color on much of it (stripes, a band at the hem)
+  says so in `"pattern"`, and is drawn plain all the same for now;
+- it is its whole shape, also under another painted garment: where its
+  mesh lies under the other's it is taken to carry on. They are painted in
+  the order they go on (`"painted"`: tights, then singlet), so the tights
+  worn alone have no hole.
+
+`"garments"` in the result says, for each, what the source gave, what was
+drawn (`"drawn"`) and `"ends"`: how far along each limb it reaches.
+`just paint-check --edges <template.glb> <garment.png>` measures how clean
+an edge is: its length against the same edge evened out over 2 cm
+(`"ragged"`: 1.00 to 1.02 drawn fresh; 1.10 for the singlet copied from
+Roosevelt's texels with its edge evened; 1.38 with 9 loose scraps copied as
+the meshes had it).
+
+The head keeps its own texture and shape, with two repairs: where gear
+that comes off was over it or close by and the texture is not skin (a
+collar's shadow down the throat), it is filled in from the skin around;
+and below the collar the neck is tucked 7 mm inside the template, because
+the template was drawn onto that very surface and two skins in one place
+flicker through each other (Lincoln's showed as a black slit down his
+throat).
 
 With `"save"` each garment is also written as a picture of its own
 (`painted-outfit/wool singlet.png`), and another character wears it with
@@ -1453,10 +1487,11 @@ walking file (`scripts/paint_check.py`).
 | | Roosevelt, his own outfit | Lincoln, wearing Roosevelt's |
 |---|---|---|
 | Skin through, walk / routine (point-frames) | 0 / 0 (as meshes: 2 / 209) | 0 / 0 |
-| Collar off the neck: standing, worst in the walk, worst in the routine | 0.83, 0.99, 1.13 cm | 0.20, 0.20, 1.25 cm |
+| Collar off the neck: standing, worst in the walk, worst in the routine | 0.83, 0.99, 1.48 cm | 0.20, 0.20, 1.26 cm |
 | Feet under the floor, at the lowest | 0.44 cm | 0.32 cm |
-| The singlet's leg ends, along the thigh | 40.2% | 40.8% |
-| The tights end, along the shin | 12.6% | 12.3% |
+| The singlet's leg ends, along the thigh | 37.8% | 37.7% |
+| The tights end, along the shin | 11.2% | 10.2% |
+| Edge against itself evened out, singlet / tights | 1.013 / 1.003 | the same pictures |
 | Triangles in the walking file, drawn dressed | 9,910, 7,836 (as meshes: 6,600, 5,520) | 10,334, 8,718 |
 
 What is weak:
@@ -1464,13 +1499,18 @@ What is weak:
 - **It is heavier, not lighter.** The template is 7,402 triangles where the
   mid-poly body was about 4,000, and its fingers and toes are most of the
   difference. The gear's triangles are saved; the body's are not.
-- **Edges are as good as the source.** Roosevelt's straps are ragged in his
-  own textures (patches the bake missed, skin and cloth blended). Evening
-  out takes off what is narrower than 2 cm; a wobble wider than that stays.
+- **The shape is fitted, not known.** Where the source is thin (the top of
+  a shoulder, where the block-out strap stood off), the strap is a guess
+  between its two ends. Edges on the trunk follow the template's mesh,
+  about 2.5 cm between points: a neckline comes out a little squarer than
+  a tailor would cut it.
+- **Plain color only.** Stripes, a band at a hem, a badge: noticed
+  (`"pattern"`) but not drawn.
 - **Color tells cloth from skin.** A flesh-colored garment cannot be
   trimmed this way; the result warns when most of a garment looks like skin.
-- **One garment over another is one layer.** Where a singlet covers tights,
-  the tights' picture has nothing: worn alone they would have a hole there.
+- **Under another garment, a garment is where its mesh is.** Roosevelt's
+  tights start a quarter of the way down the thigh because his block-out
+  tights do; nothing says whether the real ones reach the waist.
 - **Skin under clothes is made up.** It is the body's average skin color,
   shaded only near real skin. A character dressed head to toe has little
   to go by.

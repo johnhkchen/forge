@@ -1427,10 +1427,12 @@ def test_cloth(ctx):
 
 # ---- painted clothes: the wardrobe's shared body, skin-tight clothes in its texture ----
 
-PAINT_LIMITS = {"collar_walk_cm": 1.5, "collar_rom_cm": 2.0, "floor_cm": 1.5, "hem_apart": 0.04}
+PAINT_LIMITS = {"collar_walk_cm": 1.5, "collar_rom_cm": 2.0, "floor_cm": 1.5, "hem_apart": 0.04, "ragged": 1.04}
 # The collar: the head reaches 2 cm and more down inside it. Standing, its edge is up to 0.9 cm off the neck
 # (Roosevelt's, where his neck piece is narrower than his shoulders); the walk adds a millimeter or two, and the
 # routine's bend forward opens it to 1.1 to 1.3 cm on the two wrestlers. Much past these the inside would show.
+# Ragged: a garment's edge against the same edge evened out over 2 cm. Drawn fresh they read 1.00 to 1.02; the
+# singlet copied texel by texel from Roosevelt's textures read 1.10 after its edge was evened, 1.38 before.
 # The floor: with the body bound whole to one limb the feet went 10 cm under it. Hems: where a garment ends
 # along a limb, as a share of the limb, may differ this much between two bodies (4 points of a thigh).
 
@@ -1441,6 +1443,16 @@ def paint_numbers(paths):
     rows = [json.loads(line[6:]) for line in out.stdout.splitlines() if line.startswith("PAINT ")]
     if len(rows) != len(paths):
         raise AssertionError("paint_check.py measured %d of %d files:\n%s" % (len(rows), len(paths), (out.stdout + out.stderr)[-1500:]))
+    return rows
+
+
+def edge_numbers(pictures):
+    """scripts/paint_check.py --edges on some garment pictures, in one background Blender: one dict a picture."""
+    template = os.path.join(TOOLS, "..", "wardrobe", "headless-1.0.glb")
+    out = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "paint_check.py"), "--", "--edges", template] + list(pictures), capture_output=True, text=True)
+    rows = [json.loads(line[5:]) for line in out.stdout.splitlines() if line.startswith("EDGE ")]
+    if len(rows) != len(pictures):
+        raise AssertionError("paint_check.py measured %d of %d pictures:\n%s" % (len(rows), len(pictures), (out.stdout + out.stderr)[-1500:]))
     return rows
 
 
@@ -1470,7 +1482,7 @@ def test_paint(ctx):
         return
     outfit = os.path.join(made, "profiles", "painted-outfit")
     theirs = {"take_off": ["linen work shirt", "wool trousers", "leather belt"],
-              "wear": [{"name": g, "image": os.path.join(outfit, g + ".png")} for g in tight]}
+              "wear": [{"name": g, "image": os.path.join(outfit, g + ".png")} for g in his["paint"]["painted"]]}  # in the order they go on: tights under singlet
     other, lincolns = painted_run(ctx, "lincoln", "*young-lincoln-frontier-wrestler", theirs)
     cast = [("roosevelt", made, his, ["round spectacles", "wrestling boots"])]
     if other:
@@ -1487,7 +1499,7 @@ def test_paint(ctx):
               who, wrap["collar"]["head_triangles"], wrap["collar"]["head_pieces"], wrap["collar"]["head_below_ring_cm"]),
               wrap["collar"]["head_triangles"] > 300 and wrap["collar"]["head_below_ring_cm"] >= 1.0 and wrap["collar"]["ring_points"] == 40, wrap["collar"])
         check("%s: %s painted on, %s kept as meshes" % (who, ", ".join(paint["painted"]), ", ".join(paint["kept_as_meshes"])),
-              paint["painted"] == tight and paint["kept_as_meshes"] == kept and paint["texture"] == [1024, 1024], (paint["painted"], paint["kept_as_meshes"]))
+              paint["painted"] == ["wool tights", "wool singlet"] and paint["kept_as_meshes"] == kept and paint["texture"] == [1024, 1024], (paint["painted"], paint["kept_as_meshes"]))
         files = [os.path.join(copy, "profiles", "painted-%s.glb" % clip) for clip in ("walk", "rom")]
         cloth, moved = cloth_numbers(files), paint_numbers(files)
         for clip, path, now, seen in zip(("walk", "rom"), files, cloth, moved):
@@ -1549,6 +1561,32 @@ def test_paint(ctx):
                     skin_px += abs(r / 255 - tone[0]) + abs(gr / 255 - tone[1]) + abs(b / 255 - tone[2]) < 0.25
         check("%s.png, the garment as a picture for anyone to wear: %d by %d, and %.2f%% of it is the color of Roosevelt's skin" % (g, wide, tall, 100.0 * skin_px / max(cloth_px, 1)),
               (wide, tall) == (1024, 1024) and cloth_px > 5000 and skin_px < 0.005 * cloth_px, (cloth_px, skin_px))
+
+    # drawn fresh: one clean shape each, in the garment's own color, whole even where another covers it
+    for g in tight:
+        drawn = paint["garments"][g]["drawn"]
+        check("%s: drawn fresh in its own color %s (the old bake's light and dark kept between %.2f and %.2f of it; %.1f%% of its texels were some other color), the same left and right" % (
+              g, drawn["color"], drawn["shading"][0], drawn["shading"][1], 100 * drawn["texels_off_its_color"]),
+              drawn["same_left_and_right"] and 0.9 <= drawn["shading"][0] <= 1.0 <= drawn["shading"][1] <= 1.1 and drawn["pattern"] is None, drawn)
+    under, over = paint["garments"]["wool tights"], paint["garments"]["wool singlet"]
+    check("the tights go on first and are whole under the singlet (%d texels of them hidden by it): they start %.0f%% of the way along the thigh, the singlet ends at %.0f%%, so worn alone they have no hole" % (
+          under["drawn"]["hidden_under_another_garment"], 100 * under["ends"]["thigh_l"][0], 100 * over["ends"]["thigh_l"][1]),
+          paint["painted"] == ["wool tights", "wool singlet"] and under["drawn"]["hidden_under_another_garment"] > 5000
+          and under["ends"]["thigh_l"][0] < over["ends"]["thigh_l"][1] - 0.05, (under["ends"], over["ends"]))
+    check("hems are cuts straight across the limb: the singlet's at %s of the thigh, the tights' at %s of the shin, left and right alike" % (
+          over["drawn"]["cuts"]["thigh_l"][1], under["drawn"]["cuts"]["shin_l"][1]),
+          over["drawn"]["cuts"]["thigh_l"] == over["drawn"]["cuts"]["thigh_r"] and under["drawn"]["cuts"]["shin_l"] == under["drawn"]["cuts"]["shin_r"], (over["drawn"]["cuts"], under["drawn"]["cuts"]))
+    # a sewn edge is nearly its own evened-out self; the garments copied from the source's texels were not
+    before = sorted(glob.glob(os.path.join(HERE, "test_wardrobe", "*.png")))
+    rows = edge_numbers([os.path.join(outfit, g + ".png") for g in tight] + before)
+    for g, row in zip(tight, rows):
+        check("%s: its edge is %.0f cm long and %.0f cm evened out over 2 cm: %.3f times as long, under %.2f; no scraps off on their own" % (
+              g, row["edge_cm"], row["evened_edge_cm"], row["ragged"], PAINT_LIMITS["ragged"]), row["ragged"] <= PAINT_LIMITS["ragged"] and row["scraps"] == 0, row)
+    old = {os.path.basename(row["file"])[:-4]: row for row in rows[len(tight):]}
+    first, copied = old["first try, both garments"], old["copied wool singlet"]
+    check("the same measure turns down what was there before: the first try (texels copied as the meshes had them) reads %.2f with %d scraps, the singlet copied with its edge evened %.2f (its tights %.2f)" % (
+          first["ragged"], first["scraps"], copied["ragged"], old["copied wool tights"]["ragged"]),
+          first["ragged"] > PAINT_LIMITS["ragged"] and first["scraps"] > 0 and copied["ragged"] > PAINT_LIMITS["ragged"], old)
 
     # hems land in the same place on a second body
     if other:
