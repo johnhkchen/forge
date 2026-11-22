@@ -37,6 +37,13 @@ twists, side bends, a bend forward, a squat and punches, standing in place.
 It is for checking, not showing: what the skin, clothes and joints do when
 the body is pushed further than a walk pushes it.
 
+The "painted" profile is the mid-poly version again on the wardrobe's shared
+body (wrap.py), with the skin-tight clothes the run's wardrobe.json names
+painted into its texture instead of worn as meshes (paint.py): painted.glb,
+painted.json and painted-outfit/ (each painted garment as a picture another
+character can wear). "walk", "rom" and "run" are added to it as to the others
+(painted-walk.glb...). Without a wardrobe.json it is skipped.
+
 The "run" profile is the same again with a looping run, <version>-run.glb and
 <version>-run.json. The run is not worked out here: it is a clip made from a
 sentence by Kimodo on the motion worker and cut into a loop
@@ -1080,7 +1087,8 @@ def walk(source, out_dir, profile, spec):
         if dressed:  # clothes onto the body (a version draped when it was made is only read), and the faces they hide
             record["drape"] = run_script("drape.py", {"pieces": recipe["pieces"] if recipe else None, "rings": False})
         try:
-            record["rig"] = run_script("rig.py", dict(spec.get("rig", {}), recipe=recipe["pieces"] if recipe else None))
+            record["rig"] = run_script("rig.py", dict(spec.get("rig", {}), recipe=recipe["pieces"] if recipe else None,
+                                                      template=blockout_recipe.wardrobe_template(bpy.data.materials)))  # a painted version's body takes the template's own weights
         except ValueError as why:  # not a T-pose character: nothing to fit a skeleton to
             raise Skip(str(why))
         if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
@@ -1168,11 +1176,111 @@ def running(source, out_dir, profile, spec):
             moved["frames"], check["foot_slide_cm_per_step"], check["limit_violations"], check["loop_seam"], record["bytes"] / 1e6, record["seconds"], glb))
 
 
+def painted(source, out_dir, profile, spec):
+    """A version already in OUT_DIR again on the wardrobe's shared body, with its skin-tight clothes painted on.
+
+    The run's wardrobe.json says what: {"paint": ["wool singlet", "wool tights"]} names the gear to paint and
+    take off (the skin-tight pieces; everything else keeps its mesh); {"wear": [{"name": "wool singlet", "image":
+    ".../painted-outfit/wool singlet.png"}], "take_off": ["linen work shirt"]} lays an outfit painted for someone
+    else over this character's skin instead of the clothes it takes off. Without the file, nothing is painted
+    and the profile is skipped: painting is asked for, never assumed."""
+    run_dir = os.path.dirname(source)
+    said = {}
+    if os.path.exists(os.path.join(run_dir, "wardrobe.json")):
+        with open(os.path.join(run_dir, "wardrobe.json")) as f:
+            said = json.load(f)
+    if not said.get("paint") and not said.get("wear"):
+        raise Skip("nothing to paint: wardrobe.json in the run names the skin-tight gear to paint ({\"paint\": [\"wool singlet\"]}) or an outfit to wear")
+    version = spec["on"]
+    made_from = os.path.join(out_dir, version + ".glb")
+    if not os.path.exists(made_from):
+        raise Skip("no %s.glb in %s yet: the painted version is made from it" % (version, out_dir))
+    made = {}
+    if os.path.exists(os.path.join(out_dir, version + ".json")):
+        with open(os.path.join(out_dir, version + ".json")) as f:
+            made = json.load(f)
+    if made.get("flat_colors"):
+        raise Skip("%s has flat colors and no texture: there is nothing to paint from" % version)
+    started = time.time()
+    recipe = read_recipe(run_dir)
+    template = os.path.abspath(os.path.join(SKILL, spec["template"]))
+    record = {"profile": profile, "about": spec["about"], "source": made_from, "on": version, "template": spec["template"], "wardrobe": said, "steps": []}
+    # where this character's joints are: a skeleton fitted to the version as it is, only to be read
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=made_from)
+    try:
+        joints = run_script("rig.py", {"recipe": recipe["pieces"] if recipe else None, "weights": "pieces"})["joints"]
+    except ValueError as why:  # not a T-pose character
+        raise Skip(str(why))
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    bpy.ops.import_scene.gltf(filepath=made_from)
+    record["wrap"] = run_script("wrap.py", dict(spec.get("wrap", {}), template=template, joints=joints))
+    outfit = os.path.join(out_dir, profile + "-outfit")
+    os.makedirs(outfit, exist_ok=True)
+    wear = [dict(w, image=os.path.normpath(os.path.join(run_dir, w["image"]))) for w in said.get("wear") or []]
+    record["paint"] = run_script("paint.py", dict(spec.get("paint", {}), garments=said.get("paint") or [], take_off=said.get("take_off") or [], wear=wear, save=outfit))
+    for name in ("wrap", "paint"):
+        record["steps"].append({"script": name + ".py", "result": record[name]})
+
+    # One object again, as a block-out is: each face remembers its group, and export.py writes them apart.
+    scene = bpy.context.scene
+    meshes = [o for o in scene.objects if o.type == "MESH" and not o.hide_get()]
+    meshes.sort(key=lambda o: o.get("forge") != "body")
+    sockets = [o for o in scene.objects if o.type == "EMPTY" and o.get("forge") == "socket"]
+    tags = []
+    for o in meshes:
+        name = "body" if o.get("forge") == "body" else blockout_recipe.tag_name(o)
+        if name not in [t["name"] for t in tags]:
+            tags.append({k: o[k] for k in ("forge", "gear", "kind", "slot") if k in o} | {"name": name})
+        mark = o.data.attributes.new("forge_group", "INT", "FACE")
+        mark.data.foreach_set("value", [[t["name"] for t in tags].index(name)] * len(o.data.polygons))
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    for o in meshes:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
+    if len(meshes) > 1:
+        bpy.ops.object.join()
+    whole = bpy.context.view_layer.objects.active
+    bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+    whole.name = "%s (painted)" % os.path.basename(run_dir)
+    for key in [k for k in GROUP_KEYS + ("draped", "drape", "forge_masks") if k in whole]:
+        del whole[key]
+    whole["forge_groups"] = json.dumps(tags)
+    for o in sockets:
+        o.matrix_world = o.matrix_world.copy()
+        o["socket_of"] = whole.name
+    if len(tags) > 1:  # the gear that stays is laid on the new body where it is worn tight, and the skin it hides is marked; the template keeps its own edge loops
+        draped = run_script("drape.py", {"object": whole.name, "pieces": recipe["pieces"] if recipe else None, "rings": False})
+        record["steps"].append({"script": "drape.py", "result": draped})
+        record["drape"] = {k: draped[k] for k in ("gap_where_it_touches_cm", "points_inside_the_body", "rings_added", "triangles", "masks")}
+    record["gear"] = [{k: g.get(k) for k in ("gear", "kind", "slot")} for g in tags if g.get("gear")]
+    record["sockets"] = sorted(o["socket"] for o in sockets)
+    glb = os.path.join(out_dir, profile + ".glb")
+    record["export"] = run_script("export.py", dict(spec["export"], object=whole.name, path=glb))
+    doc, rest = blockout_recipe.read(glb)
+    if blockout_recipe.tidy_names(doc):
+        blockout_recipe.write(glb, doc, rest)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out_dir, profile + ".blend"), copy=True, compress=True)
+    run_script("preview.py", {"path": os.path.join(out_dir, profile + ".png")})
+    run_script("preview.py", {"path": os.path.join(out_dir, profile + "-wire.png"), "wireframe": True})
+    record["bytes"] = os.path.getsize(glb)
+    record["seconds"] = round(time.time() - started, 1)
+    with open(os.path.join(out_dir, profile + ".json"), "w") as f:
+        json.dump(record, f, indent=2)
+    print("PROFILE %s: the %s body on %s, %s painted on, %s kept as meshes, %d triangles, %.1f MB, %.0fs -> %s" % (
+        profile, record["wrap"]["template"], version, ", ".join(record["paint"]["painted"]) or "nothing",
+        ", ".join(record["paint"]["kept_as_meshes"]) or "nothing", record["export"]["triangles"], record["bytes"] / 1e6, record["seconds"], glb))
+    return record
+
+
 def make(source, out_dir, profile, spec):
     if spec.get("clip"):
         return running(source, out_dir, profile, spec)
     if spec.get("of"):
         return walk(source, out_dir, profile, spec)
+    if spec.get("on"):
+        return painted(source, out_dir, profile, spec)
     started = time.time()
     load(source)
     record = {"profile": profile, "about": spec["about"], "source": source, "steps": []}
@@ -1279,7 +1387,7 @@ os.makedirs(out_dir, exist_ok=True)
 # which the glTF exporter packs wrongly (metal 1.0, roughness read from the
 # color picture), so every raw view looked like polished metal.
 raw = os.path.join(out_dir, "raw.glb")
-if not os.path.exists(raw) and any(not profiles[p].get("of") for p in wanted):
+if not os.path.exists(raw) and any(not profiles[p].get("of") and not profiles[p].get("on") for p in wanted):
     load(source)
     trellis = os.path.join(os.path.dirname(source), "mesh.glb")
     moved = None

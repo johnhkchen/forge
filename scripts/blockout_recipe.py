@@ -32,6 +32,19 @@ import sys
 JSON_CHUNK, GLB_MAGIC = 0x4E4F534A, 0x46546C67
 
 
+WARDROBE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude", "skills", "tidy-mesh", "wardrobe")
+
+
+def wardrobe_template(materials):
+    """The wardrobe template a character's body is (wrap.py marks the material of the template's faces with its
+    name), as the path of that template's .glb, which rig.py reads the body's weights from. None for a
+    character with a body of its own. `materials` is bpy.data.materials."""
+    for material in materials:
+        if material is not None and material.get("template"):
+            return os.path.abspath(os.path.join(WARDROBE, material["template"] + ".glb"))
+    return None
+
+
 def read(path):
     """A .glb's JSON document, and the bytes that follow it (the binary chunk)."""
     with open(path, "rb") as f:

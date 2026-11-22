@@ -231,11 +231,25 @@
       }
     }
   },
+  "painted": {
+    "about": "The mid-poly character on the wardrobe's shared body, its own head kept, with its skin-tight clothes (the gear its wardrobe.json names: a singlet, tights, an undershirt) painted into the body's texture instead of worn as meshes. Painted cloth cannot be poked through by the skin and costs no triangles, and an outfit painted for one character fits any other. Loose clothes, boots and anything whose outline matters keep their meshes.",
+    "on": "midpoly",
+    "template": "wardrobe/headless-1.0.glb",
+    "wrap": {},
+    "paint": {
+      "texture_size": 1024
+    },
+    "export": {
+      "image_format": "WEBP",
+      "draco": false
+    }
+  },
   "walk": {
     "about": "The same character with a skeleton and a walk of its own: bones placed from its build, joints that stop where a body's do, and a looping walk worked out from its leg length, bulk and manner. Gear and prop points follow the bones.",
     "of": [
       "lowpoly",
-      "midpoly"
+      "midpoly",
+      "painted"
     ],
     "rig": {
       "weights": "auto"
@@ -253,7 +267,8 @@
     "clip": "run",
     "of": [
       "lowpoly",
-      "midpoly"
+      "midpoly",
+      "painted"
     ],
     "rig": {
       "weights": "auto"
@@ -268,7 +283,8 @@
     "source": "rom.py",
     "of": [
       "lowpoly",
-      "midpoly"
+      "midpoly",
+      "painted"
     ],
     "rig": {
       "weights": "auto"

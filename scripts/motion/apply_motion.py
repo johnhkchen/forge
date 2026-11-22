@@ -154,7 +154,8 @@ def fit(source, plain, name, recipe=None, spec=None, tail=False, echo=None, true
     dressed = any(o.type == "MESH" and o.get("forge") == "gear" for o in bpy.context.scene.objects)
     if dressed:  # clothes onto the body, and the body faces they hide (a version draped when it was made is only read)
         record["drape"] = run_script("drape.py", {"pieces": recipe["pieces"] if recipe else None, "rings": False}, echo)
-    record["rig"] = run_script("rig.py", dict(spec.get("rig", {}), recipe=recipe["pieces"] if recipe else None), echo)
+    record["rig"] = run_script("rig.py", dict(spec.get("rig", {}), recipe=recipe["pieces"] if recipe else None,
+                                              template=blockout_recipe.wardrobe_template(bpy.data.materials)), echo)
     if dressed:  # clothes take the body's weights; loose cloth gets bones to hang from
         record["cloth"] = run_script("cloth.py", spec.get("cloth", {}), echo)
     if true_size:
