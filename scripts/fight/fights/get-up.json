@@ -11,7 +11,9 @@
  "beats": [
   {"both": "guard", "seconds": 0.8},
   {"by": "right", "move": "haymaker", "wait": 0.3},
-  {"both": "guard", "seconds": 1.2},
+  {"both": "guard", "seconds": 0.4},
+  {"both": "shuffle", "apart_m": 1.6},
+  {"both": "guard", "seconds": 0.6},
   {"by": "left", "move": "get_up"},
   {"both": "guard", "seconds": 0.4},
   {"by": "left", "move": "left_hook", "wait": 0.3},
