@@ -55,7 +55,8 @@ from soma import Skeleton  # noqa: E402
 # Where each version of a character is read from, inside its run folder. The
 # low-poly one is the block-out itself: that file has the gear as separate
 # meshes and the sockets.
-VERSION_FILES = {"lowpoly": "lowpoly.glb", "midpoly": os.path.join("profiles", "midpoly.glb")}
+VERSION_FILES = {"lowpoly": "lowpoly.glb", "midpoly": os.path.join("profiles", "midpoly.glb"), "painted": os.path.join("profiles", "painted.glb")}
+DEFAULT_VERSIONS = ["lowpoly", "midpoly"]  # the painted one only when asked for (--versions painted)
 # Which of a prop's versions goes with which version of the character.
 PROP_FILES = {"lowpoly": os.path.join("profiles", "lowpoly.glb"), "midpoly": os.path.join("profiles", "game.glb")}
 
@@ -270,7 +271,7 @@ def main():
     args = sys.argv[sys.argv.index("--") + 1:]
     shot, character = os.path.abspath(args[0]), os.path.abspath(args[1])
     prop_run = os.path.abspath(args[args.index("--prop") + 1]) if "--prop" in args else None
-    versions = args[args.index("--versions") + 1].split(",") if "--versions" in args else list(VERSION_FILES)
+    versions = args[args.index("--versions") + 1].split(",") if "--versions" in args else DEFAULT_VERSIONS
     name = args[args.index("--name") + 1] if "--name" in args else "hero"
     spec = {"animate": {"contact": False}} if "--no-contact" in args else {}  # the motion as it was before the contact step, to compare against
 

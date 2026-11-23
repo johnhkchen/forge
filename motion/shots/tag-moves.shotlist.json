@@ -1,0 +1,189 @@
+{
+ "title": "Tag moves on the grass",
+ "start_pose": "stand",
+ "start_mark": "stride",
+ "path": [],
+ "props": [],
+ "camera": [],
+ "beats": [
+  {
+   "name": "Stands on the stride mark",
+   "seconds": 0.97,
+   "source": "poses",
+   "moves": [
+    {
+     "pose": "stand",
+     "at_m": 0.0,
+     "side_m": 0.0,
+     "facing_deg": 0.0,
+     "speed_mps": 0.0,
+     "tokens": 9,
+     "early_frames": 0,
+     "pins": [],
+     "hold_pins_frames": 0
+    }
+   ],
+   "at": "stride"
+  },
+  {
+   "name": "Runs to the east gate",
+   "seconds": 6.0,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person runs at a quick, steady pace across open grass, arms pumping, then slows and comes to a stop standing upright.",
+   "from_m": 0.0,
+   "to_m": 0.0,
+   "speed_in_mps": 0.0,
+   "speed_out_mps": 0.0,
+   "keys": [
+    {
+     "pose": "stand",
+     "at_seconds": 0.0,
+     "at_m": 0.0,
+     "side_m": 0.0,
+     "facing_deg": 0.0,
+     "only": [],
+     "where": "start"
+    },
+    {
+     "pose": "stand",
+     "at_seconds": 6.0,
+     "at_m": 0.0,
+     "side_m": 0.0,
+     "facing_deg": 0.0,
+     "only": [],
+     "where": "end"
+    }
+   ],
+   "from": "stride",
+   "to": "east_gate"
+  },
+  {
+   "name": "Dodges",
+   "seconds": 2.0,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person playing tag fakes one way and then darts sharply to the side to dodge someone grabbing at them, then settles.",
+   "from_m": 0.0,
+   "to_m": 0.0,
+   "speed_in_mps": 0.0,
+   "speed_out_mps": 0.0,
+   "keys": [
+    {
+     "pose": "stand",
+     "at_seconds": 0.0,
+     "at_m": 0.0,
+     "side_m": 0.0,
+     "facing_deg": 0.0,
+     "only": [],
+     "where": null
+    }
+   ],
+   "at": "east_gate"
+  },
+  {
+   "name": "Tags someone",
+   "seconds": 2.0,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person lunges forward and slaps someone on the shoulder with one outstretched hand, then straightens up.",
+   "from_m": 0.0,
+   "to_m": 0.0,
+   "speed_in_mps": 0.0,
+   "speed_out_mps": 0.0,
+   "keys": null,
+   "at": "east_gate"
+  },
+  {
+   "name": "Gets tagged",
+   "seconds": 2.5,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person is tapped on the back, jumps in surprise, and spins around to look behind them.",
+   "from_m": 0.0,
+   "to_m": 0.0,
+   "speed_in_mps": 0.0,
+   "speed_out_mps": 0.0,
+   "keys": null,
+   "at": "east_gate"
+  },
+  {
+   "name": "Catches breath",
+   "seconds": 3.5,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person bends over with both hands on their knees, panting hard, then straightens up.",
+   "from_m": 0.0,
+   "to_m": 0.0,
+   "speed_in_mps": 0.0,
+   "speed_out_mps": 0.0,
+   "keys": null,
+   "at": "east_gate"
+  },
+  {
+   "name": "Laughs and points",
+   "seconds": 2.0,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person laughs heartily and points at someone in front of them.",
+   "from_m": 0.0,
+   "to_m": 0.0,
+   "speed_in_mps": 0.0,
+   "speed_out_mps": 0.0,
+   "keys": null,
+   "at": "east_gate"
+  },
+  {
+   "name": "Sprints back",
+   "seconds": 6.0,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person sprints flat out with one arm reaching forward as if about to catch someone, then slows and comes to a stop standing upright.",
+   "from_m": 0.0,
+   "to_m": 0.0,
+   "speed_in_mps": 0.0,
+   "speed_out_mps": 0.0,
+   "keys": [
+    {
+     "pose": "stand",
+     "at_seconds": 0.0,
+     "at_m": 0.0,
+     "side_m": 0.0,
+     "facing_deg": 0.0,
+     "only": [],
+     "where": "start"
+    },
+    {
+     "pose": "stand",
+     "at_seconds": 6.0,
+     "at_m": 0.0,
+     "side_m": 0.0,
+     "facing_deg": 0.0,
+     "only": [],
+     "where": "end"
+    }
+   ],
+   "from": "east_gate",
+   "to": "stride"
+  },
+  {
+   "name": "Stands on the stride mark again",
+   "seconds": 0.97,
+   "source": "poses",
+   "moves": [
+    {
+     "pose": "stand",
+     "at_m": 0.0,
+     "side_m": 0.0,
+     "facing_deg": 0.0,
+     "speed_mps": 0.0,
+     "tokens": 9,
+     "early_frames": 0,
+     "pins": [],
+     "hold_pins_frames": 0
+    }
+   ],
+   "at": "stride"
+  }
+ ]
+}

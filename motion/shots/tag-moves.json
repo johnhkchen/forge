@@ -1,0 +1,52 @@
+{
+ "name": "tag-moves",
+ "brief": "A test reel of playground-tag moves made from sentences (not a story shot): one person on Theodore's grass runs, dodges, tags someone, gets tagged, catches their breath, laughs, and sprints back, about 30 seconds, filmed from the set's own cameras. The moves are cut apart afterwards and played on a crowd of Roosevelts chasing each other across the field.",
+ "beats": [
+  {
+   "time": "0-1 s",
+   "action": "stands easy on the stride mark",
+   "driven_by": "stand, at the stride mark"
+  },
+  {
+   "time": "1-7 s",
+   "action": "runs to the east gate",
+   "driven_by": "text, stride to east_gate"
+  },
+  {
+   "time": "7-9 s",
+   "action": "dodges to one side",
+   "driven_by": "text, at the east gate"
+  },
+  {
+   "time": "9-11 s",
+   "action": "lunges and tags someone",
+   "driven_by": "text, at the east gate"
+  },
+  {
+   "time": "11-13.5 s",
+   "action": "is tagged, jumps and spins round",
+   "driven_by": "text, at the east gate"
+  },
+  {
+   "time": "13.5-17 s",
+   "action": "catches breath, hands on knees",
+   "driven_by": "text, at the east gate"
+  },
+  {
+   "time": "17-19 s",
+   "action": "laughs and points",
+   "driven_by": "text, at the east gate"
+  },
+  {
+   "time": "19-25 s",
+   "action": "sprints back to the stride mark, reaching ahead",
+   "driven_by": "text, east_gate to stride"
+  },
+  {
+   "time": "25-26 s",
+   "action": "stands easy on the stride mark",
+   "driven_by": "stand, at the stride mark"
+  }
+ ],
+ "set": "grass"
+}

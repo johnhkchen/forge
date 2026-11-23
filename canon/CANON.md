@@ -159,6 +159,22 @@ placed in the world like the other places.)
 | The settlement | Two homes joined by a porch, a shared fire, and their stall | built (Epoch 0) |
 | The spawn spot | New toons land here; the gachapon; the BUY HOUSE pedestal | built (Epoch 0) |
 | The dancer's house | Rehearsals, small shows for friends | Casa de la Rosa (Epoch 0) |
+| The Niantic | The pirate's other home base: a saloon below decks in a beached ship | planned: past the "TODO: more world" corner; the saloon from a Marble world, the cove and hull to come |
+
+## The Niantic (planned)
+
+Past the far corner of the map, where the developer's note says "TODO: more
+world", there will be a quiet cove, and on its sand a beached ship with a
+saloon built into her hold. She is an homage to the real Niantic, the
+whaleship that was hauled ashore in Gold Rush San Francisco and turned into a
+saloon and hotel. The pirate believes he is a captain and wants a ship; this is
+the nearest thing to one in the world, and his other home base besides the
+boxing house. Inside: curved ribs overhead, lanterns, a long bar with brass
+rails, coils of rope, round tables. Outside: the hull on the beach.
+
+The Niantic is where we practise places with an inside and an outside: the
+cove and hull seen from the world, the saloon you step down into. (For us: the
+saloon is a Marble world, `world/marble/niantic-saloon/`, kept out of git.)
 
 ## Cast
 
