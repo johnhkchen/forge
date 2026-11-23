@@ -2,6 +2,7 @@
 
     Blender -b --factory-startup -P scripts/impostor/judge_impostor.py -- <impostor folder> --out <folder>
         --clip walk=<walk.glb> [--clip fight=<fight.glb> ...] [--views 26,62] [--eyes front,quarter,side,high]
+        [--clip-eyes fight=quarter,high]
         [--step 1] [--stills walk:0,7,13] [--film walk:quarter,fight:quarter] [--loops 4] [--no-depth] [--tag NAME]
 
 For every clip, eye and view set it draws each frame twice: the cards, by impostor.py (the page's own
@@ -21,7 +22,7 @@ It writes <out>/judge[-tag].json, and when asked:
 
     <clip>-<eye>-<views>-stills.png     rows of: cards, real model, where they differ (--stills)
     <clip>-<eye>-<views>.mp4            cards beside the real model, playing (--film)
-    turn-<views>.mp4                    the eye going once round a figure that stands still (--film turn)
+    turn-<clip>-<views>.mp4                 the eye going once round a figure that stands still (--turn <clip>)
 
 Never touches an open Blender.
 """
@@ -267,6 +268,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     clips = dict(pair.split("=", 1) for pair in [args[i + 1] for i, a in enumerate(args) if a == "--clip"])
     eyes = flag("--eyes", "front,quarter,side,high").split(",")
+    clip_eyes = dict((pair.split("=")[0], pair.split("=")[1].split(",")) for pair in [args[i + 1] for i, a in enumerate(args) if a == "--clip-eyes"])
     step = int(flag("--step", "1"))
     loops = int(flag("--loops", "4"))
     relief = "--no-depth" not in args
@@ -287,7 +289,7 @@ def main():
         hips = {f: poses[f]["hips"][:3, 3] for f in poses}
         heads = [p["bone"] for p in character.parts]
         entry = report["clips"][clip] = {"glb": glb, "frames": frames, "seconds": round(motion.seconds, 2), "triangles": motion.triangles(), "eyes": {}}
-        for eye_name in eyes:
+        for eye_name in clip_eyes.get(clip, eyes):
             reals = {}
             for set_name in sets:
                 character.use(set_name)

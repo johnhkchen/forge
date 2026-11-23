@@ -41,6 +41,7 @@ check:
     python3 scripts/world/world.py check | tail -1
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
+    python3 scripts/impostor/test_impostor.py | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -189,6 +190,18 @@ fight fight left right out="":
         "{{blender_bin}}" -b --factory-startup -P scripts/fight/film_fight.py -- "$out" --cameras "$camera" 2>&1 | grep -E '^FILM|Error|Traceback' &
     done
     wait
+
+# A character as flat cards, one a bone: cut a rigged version (one with a walk) into rigid parts and picture each from all around, into <run>/profiles/<version>-impostor/. views: how many pictures a part, any of 26, 62, 114. The gallery then shows it at #/cards/<run>. A few seconds a view set; never touches the open Blender
+impostor run version="painted" views="26,62,114" px="192":
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" "{{version}}" --views "{{views}}" --px "{{px}}" 2>&1 | grep -E '^IMPOSTOR|^RESULT \{"folder|Error|Traceback'
+
+# Judge a character's flat cards against the real model, with no browser: the same frames drawn both ways from the same eye, and how far apart they are (outline, colour, gaps at the joints, how often a picture is swapped). Writes judge.json, stills and films into out. clips: name=file.glb pairs; more: any of judge_impostor.py's flags
+impostor-judge run version="painted" out="evidence/impostor" *more:
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_impostor.py -- "{{run}}/profiles/{{version}}-impostor" --out "{{out}}" --clip "walk={{run}}/profiles/{{version}}-walk.glb" {{more}} 2>&1 | grep -E '^JUDGE|^RESULT|Error|Traceback'
+
+# The flat cards' own tests: the arithmetic, a ball drawn from between its pictures, the page's arithmetic against Python's (in node), and a baked character if runs has one
+impostor-test runs="runs":
+    python3 scripts/impostor/test_impostor.py "{{runs}}"
 
 # The fight kit's own tests, without Blender: frame data, reactions on the active frame, hitstop, reach, the mat, joint limits, footwork
 fight-test:
