@@ -431,7 +431,20 @@ def detector():
         from gem.common.detectors import YOLOXONNX
 
         options = {k: v for k, v in S.config["detector"].items() if k not in ("checkpoint", "device")}
-        S.detector = YOLOXONNX(DETECTOR, device=S.detector_on, **options)
+        try:
+            S.detector = YOLOXONNX(DETECTOR, device=S.detector_on, **options)
+        except RuntimeError as error:
+            if S.detector_on == "cpu":
+                raise
+            # ONNX Runtime lists CUDA but could not start it (its CUDA or cuDNN build does not match the
+            # libraries it found). The person detector is one pass over the clip, so the CPU will do; say why.
+            import onnxruntime
+
+            BOOT["detector_gpu_refused"] = {"error": str(error), "onnxruntime": onnxruntime.__version__, "torch_cuda": S.torch.version.cuda}
+            log.warning("person detector falls back to the CPU: %s", json.dumps(BOOT["detector_gpu_refused"]))
+            S.detector_on = "cpu"
+            BOOT["detector_runs_on"] = "cpu"
+            S.detector = YOLOXONNX(DETECTOR, device="cpu", **options)
     return S.detector
 
 
