@@ -2,7 +2,7 @@
 
     Blender -b --factory-startup -P scripts/impostor/judge_impostor.py -- <impostor folder> --out <folder>
         --clip walk=<walk.glb> [--clip fight=<fight.glb> ...] [--views 26,62] [--eyes front,quarter,side,high]
-        [--step 1] [--stills walk:0,7,13] [--film walk:quarter,fight:quarter] [--loops 4] [--no-stretch] [--tag NAME]
+        [--step 1] [--stills walk:0,7,13] [--film walk:quarter,fight:quarter] [--loops 4] [--no-depth] [--tag NAME]
 
 For every clip, eye and view set it draws each frame twice: the cards, by impostor.py (the page's own
 arithmetic, a pixel at a time), and the real model, by Blender, drawn by toon.py from the same eye in
@@ -49,7 +49,7 @@ FOV = 30.0
 AWAY = 4.4            # how far the eye stands from the character (m)
 AIM_UP = 0.95         # the height it looks at
 # name: (degrees round from the front, degrees above level)
-EYES = {"front": (0.0, 5.0), "quarter": (35.0, 12.0), "side": (90.0, 5.0), "back": (160.0, 10.0), "high": (35.0, 45.0), "low": (-30.0, -12.0)}
+EYES = {"front": (0.0, 5.0), "quarter": (35.0, 12.0), "side": (90.0, 5.0), "back": (160.0, 10.0), "over": (35.0, 25.0), "high": (35.0, 45.0), "low": (-30.0, -12.0)}
 SEAM_M = 0.12         # a gap this close to a joint is a seam
 PAPER = (250, 248, 245)
 FFMPEG = os.environ.get("FFMPEG", "ffmpeg")
@@ -244,15 +244,15 @@ class Film:
         self.pipe.wait()
 
 
-def pop_sizes(character, pose, eye, before, after, stretch):
+def pop_sizes(character, pose, eye, before, after, relief):
     """For the parts whose view changed between two frames: how many pixels of the picture change if only the
     view is swapped (the pose and the eye held at the later frame)."""
     changed = 0
     for name in after:
         if name not in before or before[name]["view"] == after[name]["view"]:
             continue
-        old, _, _ = impostor.draw(character, pose, eye, stretch=stretch, only=[name], forced={name: before[name]["view"]})
-        new, _, _ = impostor.draw(character, pose, eye, stretch=stretch, only=[name], forced={name: after[name]["view"]})
+        old, _, _ = impostor.draw(character, pose, eye, relief=relief, only=[name], forced={name: before[name]["view"]})
+        new, _, _ = impostor.draw(character, pose, eye, relief=relief, only=[name], forced={name: after[name]["view"]})
         a, b = old[..., 3] > 127, new[..., 3] > 127
         apart = np.abs(old[..., :3].astype(np.int32) - new[..., :3].astype(np.int32)).max(axis=-1)
         changed += int((a ^ b).sum() + (a & b & (apart > 40)).sum())
@@ -269,13 +269,13 @@ def main():
     eyes = flag("--eyes", "front,quarter,side,high").split(",")
     step = int(flag("--step", "1"))
     loops = int(flag("--loops", "4"))
-    stretch = "--no-stretch" not in args
+    relief = "--no-depth" not in args
     tag = flag("--tag", "")
     stills = dict((pair.split(":")[0], [int(v) for v in pair.split(":")[1].split(",")]) for pair in flag("--stills", "").split(";") if pair)
     films = [pair.split(":") for pair in flag("--film", "").split(",") if pair]
     character = impostor.Character(folder)
     sets = flag("--views", ",".join(character.card["sets"])).split(",")
-    report = {"folder": folder, "size": list(SIZE), "eye_away_m": AWAY, "stretch": stretch, "clips": {}}
+    report = {"folder": folder, "size": list(SIZE), "eye_away_m": AWAY, "relief": relief, "clips": {}}
     began = time.time()
 
     for clip, glb in clips.items():
@@ -297,7 +297,7 @@ def main():
                     if f in measured:
                         if f not in reals:
                             reals[f] = real.draw(eye, f)
-                        cards, _, said = impostor.draw(character, poses[f], eye, stretch=stretch)
+                        cards, _, said = impostor.draw(character, poses[f], eye, relief=relief)
                         joints, _ = eye.to_pixels(np.array([poses[f][b][:3, 3] for b in heads]))
                         rows.append(compare(reals[f], cards, joints, eye.m_per_px(eye.aim)))
                         body = int((cards[..., 3] > 127).sum())
@@ -307,7 +307,7 @@ def main():
                         changed = sum(1 for n in said if said[n]["view"] != last[n]["view"])
                         swaps += changed
                         if changed and f in measured:
-                            jumps.append(100.0 * pop_sizes(character, poses[f], eye, last, said, stretch) / max(1, body))
+                            jumps.append(100.0 * pop_sizes(character, poses[f], eye, last, said, relief) / max(1, body))
                     last = said
                 col = lambda key: [r[key] for r in rows]
                 entry["eyes"].setdefault(eye_name, {})[set_name] = {
@@ -334,7 +334,7 @@ def main():
                         shot = reals.get(f)
                         if shot is None:
                             shot = real.draw(eye, f)
-                        cards, _, _ = impostor.draw(character, poses[f], eye, stretch=stretch)
+                        cards, _, _ = impostor.draw(character, poses[f], eye, relief=relief)
                         y = tall * (len(picked) - 1 - row)
                         sheet[y:y + tall, :wide] = over_paper(cards)
                         sheet[y:y + tall, wide:2 * wide] = over_paper(shot)
@@ -357,7 +357,7 @@ def main():
                         eye = eye_for(eye_name, hips[f])
                         if f not in reals:
                             reals[f] = real.draw(eye, f)
-                        cards, _, _ = impostor.draw(character, poses[f], eye, stretch=stretch)
+                        cards, _, _ = impostor.draw(character, poses[f], eye, relief=relief)
                         frame = np.concatenate([strip, np.concatenate([over_paper(cards), over_paper(reals[f])], axis=1)], axis=0)
                         made.append(frame)
                     for _ in range(loops if frames < 120 else 1):
@@ -379,14 +379,14 @@ def main():
                 for deg in range(0, 360, 2):
                     eye = eye_for("quarter", hips[f0], turn_deg=float(deg))
                     shot = real.draw(eye, f0)
-                    cards, _, said = impostor.draw(character, poses[f0], eye, stretch=stretch)
+                    cards, _, said = impostor.draw(character, poses[f0], eye, relief=relief)
                     joints, _ = eye.to_pixels(np.array([poses[f0][b][:3, 3] for b in heads]))
                     rows.append(compare(shot, cards, joints, eye.m_per_px(eye.aim)))
                     if last is not None:
                         changed = sum(1 for n in said if said[n]["view"] != last[n]["view"])
                         swaps += changed
                         if changed:
-                            jumps.append(100.0 * pop_sizes(character, poses[f0], eye, last, said, stretch) / max(1, int((cards[..., 3] > 127).sum())))
+                            jumps.append(100.0 * pop_sizes(character, poses[f0], eye, last, said, relief) / max(1, int((cards[..., 3] > 127).sum())))
                     last = said
                     film.add(np.concatenate([strip, np.concatenate([over_paper(cards), over_paper(shot)], axis=1)], axis=0))
                 film.close()

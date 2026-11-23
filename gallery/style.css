@@ -197,3 +197,11 @@ html, body { overflow-x: hidden; }
   .stills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) { .diorama-stage .pane { aspect-ratio: 5 / 4; max-height: 64vh; } .state .words h1 { font-size: 1.6rem; } }
+
+/* ---- a toon as flat cards, beside the real model ---- */
+.cards-stage .cards-pane { aspect-ratio: 16 / 9; max-height: 76vh; }
+.cards-stage .cards-pane.stacked { aspect-ratio: 3 / 5; max-height: none; }
+.cards-pane .tag-right { left: calc(50% + 10px); }
+.cards-pane.stacked .tag-right { left: 10px; top: calc(50% + 10px); }
+.cards-page .versions { align-items: center; padding-bottom: 6px; }
+.cards-page .row-label { flex: none; min-width: 7.5em; font-size: 0.88rem; font-weight: 600; color: var(--clay-ink-soft); }

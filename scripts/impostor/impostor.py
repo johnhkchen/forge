@@ -4,9 +4,10 @@ The idea (Aubel, Boulic and Thalmann's cut-up impostors; Beacco and others at UP
 cut a rigged character into rigid parts, one per bone. Ahead of time, picture each part alone from a
 fixed set of directions around it (bake_impostor.py: colour, which way the surface faces, how far it
 stands toward the eye). To draw the character, each bone gets one flat card facing the eye, showing
-the picture taken from nearest to where the eye now is *as that bone sees it*, turned on the screen
-so the bone points where it really points. The stored depth lets the cards hide each other, and the
-set hide them, pixel by pixel. Any motion plays: no new pictures are ever needed.
+the picture taken from nearest to where the eye now is *as that bone sees it*, turned and foreshortened
+to how the bone now shows, each pixel slid by its stored depth to where the real surface would be. The
+same depth lets the cards hide each other, and the set hide them, pixel by pixel. Any motion plays: no
+new pictures are ever needed.
 
 This file is the one place that arithmetic is written down in Python. gallery/impostor-math.js is the
 same arithmetic for the page (test_impostor.py holds the two against each other), and draw() here is
@@ -35,8 +36,10 @@ VIEW_SETS = {
     "62": (12, [-60.0, -30.0, 0.0, 30.0, 60.0]),
     "114": (16, [-67.5, -45.0, -22.5, 0.0, 22.5, 45.0, 67.5]),
 }
-STEEP = 0.8          # a view this far along the bone (the cosine) is turned by a sideways axis instead of the bone
-STRETCH = (0.6, 1.6)  # how far a card may be squeezed or drawn out along its bone
+MARCH_PX = 1.0       # sliding a pixel by its depth: the picture is searched in steps this many of its pixels long
+MARCH_MAX = 32       # ... and never more steps than this (a longer search takes longer steps)
+REFINE = 5           # ... then the place found is halved in on this many times
+WALL_M = 0.04        # a pixel found this far below the surface it landed on is looking at nothing the picture saw
 BLEND_DEG = 7.0      # two views are mixed when the eye is within this of the line between them
 HOLD_DEG = 2.5       # a view is kept until another is nearer by this much (stops flicker on the line)
 BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], dtype=np.float32) / 16.0 + 1.0 / 32.0
@@ -53,13 +56,11 @@ def unit(v):
 
 
 def views_of(name):
-    """The directions of a view set, each with the picture's own right and up, and the axis it is turned by.
+    """The directions of a view set, each with its picture's own right and up.
 
     A direction d points from the part to the eye, in the bone's frame. The picture's up is the bone
     itself as seen from there (so a limb stands upright in its picture); looking straight along the
-    bone, up is the bone's z. `axis` is the bone-frame axis the card is turned by when drawn: the bone
-    (y) unless the view looks too far along it, then x or z, whichever lies flatter in the picture.
-    `axis_px` is that axis in the picture (right, up), unit length; `axis_len` how long it shows."""
+    bone, up is the bone's z. right x up = d."""
     around, heights = VIEW_SETS[name]
     dirs = []
     for el in heights:
@@ -76,16 +77,7 @@ def views_of(name):
         else:
             u = unit(np.array([0.0, 1.0, 0.0]) - d[1] * d)
         r = np.cross(u, d)
-        if abs(d[1]) < STEEP:
-            axis = np.array([0.0, 1.0, 0.0])
-        elif abs(d[0]) <= abs(d[2]):
-            axis = np.array([1.0, 0.0, 0.0])
-        else:
-            axis = np.array([0.0, 0.0, 1.0])
-        flat = np.array([axis @ r, axis @ u])
-        length = float(np.linalg.norm(flat))
-        out.append({"d": d.tolist(), "r": r.tolist(), "u": u.tolist(), "axis": axis.tolist(),
-                    "axis_px": (flat / length).tolist(), "axis_len": length})
+        out.append({"d": [round(float(c), 6) for c in d], "r": [round(float(c), 6) for c in r], "u": [round(float(c), 6) for c in u]})
     return out
 
 
@@ -115,18 +107,29 @@ def choose(dirs, v, held=None, hold_deg=HOLD_DEG):
 
 # ---------- where a card goes ----------
 
-def place(view, bone, center, eye, stretch=True):
-    """Where one part's card stands for one view.
+def place(view, bone, center, eye):
+    """Where one part's card stands, and how its picture is read, for one view.
 
     bone    the bone's 4x4 matrix in the world (its joint, as the .glb has it)
     center  the middle of the part, in the bone's frame: the eye's direction is measured from there
     eye     where the eye is, in the world
 
-    The card is a flat sheet through the bone's head, square on to the eye. A point of the picture
-    X metres right and Y metres up of the bone's head stands at  head + X * right + Y * up  (the
-    `right` and `up` returned: world vectors, a metre of picture each). The picture is turned so its
-    axis lies along where that axis of the bone now shows, and (stretch) drawn out or squeezed along
-    it to the length the axis now shows, so both ends of a limb land where the real joints are."""
+    The card is a flat sheet through the bone's head, square on to the eye. A place on it is two numbers
+    P (metres at the bone's own size): across, along `e2`, and up, along `e1`, both world directions on
+    the sheet; e1 is the bone itself as it shows from here.
+
+    The picture was taken from the view's direction d, not from where the eye now is. A point of it X
+    right, Y up and h toward its own eye is the bone-frame point  X r + Y u + h d,  and seen from here
+    that point shows on the sheet at
+
+        P = turn_xy . (X, Y) + h * lean
+
+    which is exact while the eye is far off compared with the part. `turn_xy` is the turn and the
+    foreshortening; `lean` slides a point by how far it stands out, so a picture taken from a little to
+    one side still lands where the real surface is. Read backwards, a pixel at P is looking along the
+    line  (X, Y) = back . (P - h * lean)  for every h, and shows the first place on it where the
+    picture's surface is at least h high: the page walks down that line (card_pixels). `deep` gives how
+    far toward the eye a point stands: X, Y, h times its three numbers."""
     bone = np.asarray(bone, dtype=np.float64)
     turn = bone[:3, :3]
     size = float(np.cbrt(abs(np.linalg.det(turn))))
@@ -134,21 +137,18 @@ def place(view, bone, center, eye, stretch=True):
     head = bone[:3, 3]
     middle = head + bone[:3, :3] @ np.asarray(center, dtype=np.float64)
     toward = unit(np.asarray(eye, dtype=np.float64) - middle)
-    axis = turn @ np.asarray(view["axis"])
+    axis = turn[:, 1]
     flat = axis - (axis @ toward) * toward
-    shown = float(np.linalg.norm(flat))
-    if shown < 1e-5:  # the axis points straight at the eye: any turn will do
-        flat = np.cross(toward, [0.0, 1.0, 0.0] if abs(toward[1]) < 0.9 else [1.0, 0.0, 0.0])
-        shown = float(np.linalg.norm(flat))
-        pull = 1.0
-    else:
-        pull = min(STRETCH[1], max(STRETCH[0], shown / view["axis_len"])) if stretch else 1.0
-    e1 = flat / shown
+    if np.linalg.norm(flat) < 1e-4:  # the bone points straight at the eye: its x will do
+        axis = turn[:, 0]
+        flat = axis - (axis @ toward) * toward
+    e1 = unit(flat)
     e2 = np.cross(e1, toward)
-    gx, gy = view["axis_px"]
-    return {"head": head, "toward": toward, "size": size, "pull": pull,
-            "right": size * (pull * gx * e1 + gy * e2), "up": size * (pull * gy * e1 - gx * e2),
-            "e1": e1, "e2": e2, "turn": turn}
+    a1, a2, v = turn.T @ e1, turn.T @ e2, turn.T @ toward
+    r, u, d = np.asarray(view["r"]), np.asarray(view["u"]), np.asarray(view["d"])
+    turn_xy = np.array([[r @ a2, u @ a2], [r @ a1, u @ a1]])
+    return {"head": head, "toward": toward, "size": size, "e1": e1, "e2": e2, "turn": turn,
+            "back": np.linalg.inv(turn_xy), "turn_xy": turn_xy, "lean": np.array([d @ a2, d @ a1]), "deep": np.array([r @ v, u @ v, d @ v])}
 
 
 def eye_in_bone(bone, center, eye):
@@ -158,13 +158,26 @@ def eye_in_bone(bone, center, eye):
     return unit(bone[:3, :3].T @ (np.asarray(eye, dtype=np.float64) - middle))
 
 
-def corners(card, cell, px_per_m):
+def box(card, cell, px_per_m, relief=True):
+    """The part of the sheet a card must cover: (left, bottom, right, top) in the sheet's own metres. The
+    picture's four corners as they now show, and (relief) room for its pixels to lean, by how low and
+    high the picture's surface goes."""
+    _, _, w, h, ax, ay, low, high = cell
+    spots = np.array([[(cx - ax) / px_per_m, (cy - ay) / px_per_m] for cx, cy in ((0, 0), (w, 0), (w, h), (0, h))]) @ card["turn_xy"].T
+    lean = card["lean"] if relief else np.zeros(2)
+    return np.concatenate([spots.min(axis=0) + np.minimum(lean * low, lean * high), spots.max(axis=0) + np.maximum(lean * low, lean * high)])
+
+
+def corners(card, cell, px_per_m, relief=True):
     """The four corners of a card in the world: left-bottom, right-bottom, right-top, left-top."""
-    _, _, w, h, ax, ay = cell
-    out = []
-    for cx, cy in ((0, 0), (w, 0), (w, h), (0, h)):
-        out.append(card["head"] + (cx - ax) / px_per_m * card["right"] + (cy - ay) / px_per_m * card["up"])
-    return np.array(out)
+    x0, y0, x1, y1 = box(card, cell, px_per_m, relief)
+    return np.array([card["head"] + card["size"] * (x * card["e2"] + y * card["e1"]) for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1))])
+
+
+def march_steps(card, cell, px_per_m):
+    """How many steps the search down a pixel's line takes: enough that none is longer than MARCH_PX of the picture."""
+    reach = float(np.linalg.norm(card["back"] @ card["lean"])) * (cell[7] - cell[6]) * px_per_m
+    return int(min(MARCH_MAX, max(1, math.ceil(reach / MARCH_PX))))
 
 
 # ---------- colours, and the two ways a picture's numbers are packed ----------
@@ -207,15 +220,26 @@ def write_png(path, pixels):
     """pixels: rows from the bottom up (as a texture has them), uint8, 3 or 4 numbers a pixel."""
     pixels = np.ascontiguousarray(pixels[::-1])
     tall, wide, deep = pixels.shape
-    rows = np.zeros((tall, wide * deep + 1), dtype=np.uint8)
-    rows[:, 1:] = pixels.reshape(tall, wide * deep)
+    # Each row as it is, as its change from the pixel to the left, or from the row above: whichever packs smallest.
+    best = None
+    for kind in (0, 1, 2):
+        rows = np.full((tall, wide * deep + 1), kind, dtype=np.uint8)
+        if kind == 0:
+            rows[:, 1:] = pixels.reshape(tall, wide * deep)
+        elif kind == 1:
+            rows[:, 1:] = (pixels - np.concatenate([np.zeros((tall, 1, deep), dtype=np.uint8), pixels[:, :-1]], axis=1)).reshape(tall, wide * deep)
+        else:
+            rows[:, 1:] = (pixels - np.concatenate([np.zeros((1, wide, deep), dtype=np.uint8), pixels[:-1]], axis=0)).reshape(tall, wide * deep)
+        packed = zlib.compress(rows.tobytes(), 9)
+        if best is None or len(packed) < len(best):
+            best = packed
 
     def chunk(kind, body):
         return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body) & 0xFFFFFFFF)
 
     with open(path, "wb") as f:
         f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", wide, tall, 8, 6 if deep == 4 else 2, 0, 0, 0))
-                + chunk(b"IDAT", zlib.compress(rows.tobytes(), 9)) + chunk(b"IEND", b""))
+                + chunk(b"IDAT", best) + chunk(b"IEND", b""))
 
 
 def read_png(path):
@@ -402,15 +426,16 @@ class Character:
         self.cells = sheet["cells"]
 
 
-def card_pixels(character, part, view_index, card, eye):
+def card_pixels(character, part, view_index, card, eye, relief=True):
     """One card as the eye sees it: (x0, y0, colour HxWx3 as stored, cover HxW 0..1, normal HxWx3 in the bone's
-    frame, distance in front HxW), or None when it is off the picture. The page's fragment shader, slowly."""
+    frame, distance in front HxW), or None when it is off the picture. The page's fragment shader, slowly.
+    relief: slide each pixel by the picture's depth (False: the picture is laid flat on the card)."""
     cell = character.cells[part["name"]][view_index]
-    x0, y0, w, h, ax, ay = cell
+    x0, y0, w, h, ax, ay, low, high = cell
     if w <= 0 or h <= 0:
         return None
     ppm = character.px_per_m
-    quad = corners(card, cell, ppm)
+    quad = corners(card, cell, ppm, relief)
     spots, ahead = eye.to_pixels(quad)
     if (ahead <= eye.near).any():
         return None
@@ -425,17 +450,47 @@ def card_pixels(character, part, view_index, card, eye):
     toward, head = card["toward"], card["head"]
     along_ray = (toward @ (head - eye.at)) / (ray @ toward)
     world = eye.at + ray * along_ray[..., None]
-    rel = world - head
-    along = (rel @ card["e1"]) / (card["size"] * card["pull"])
-    across = (rel @ card["e2"]) / card["size"]
-    gx, gy = character.views[view_index]["axis_px"]
-    cx = (along * gx + across * gy) * ppm + ax
-    cy = (along * gy - across * gx) * ppm + ay
-    inside = (cx >= 0) & (cx < w) & (cy >= 0) & (cy < h)
+    rel = (world - head) / card["size"]
+    sheet = np.stack([rel @ card["e2"], rel @ card["e1"]], axis=-1)  # P: across and up on the card
+    sheet_tall, sheet_wide = character.colour.shape[:2]
+    back, lean = card["back"], card["lean"]
+
+    def read(xy):
+        """The data sheet at a place of the picture: (is there surface here, how high, the pixel's numbers)."""
+        cx, cy = xy[..., 0] * ppm + ax, xy[..., 1] * ppm + ay
+        inside = (cx >= 0) & (cx < w) & (cy >= 0) & (cy < h)
+        data = character.data[np.clip(np.floor(y0 + cy).astype(int), 0, sheet_tall - 1), np.clip(np.floor(x0 + cx).astype(int), 0, sheet_wide - 1)]
+        return inside & (data[..., 2] > 0.5 / 255.0), (data[..., 2] * 2.0 - 1.0) * part["depth_m"], data
+
+    if relief:
+        # Down each pixel's line from above the picture's highest point to below its lowest: the first step
+        # that is under the surface, then halved in on.
+        steps = march_steps(card, cell, ppm)
+        top, bottom = high + 0.002, low - 0.002
+        above, below = np.full(xs.shape, top), np.full(xs.shape, bottom)
+        found = np.zeros(xs.shape, dtype=bool)
+        for i in range(1, steps + 1):
+            at = top + (bottom - top) * i / steps
+            there, height, _ = read((sheet - at * lean) @ back.T)
+            hit = ~found & there & (height >= at)
+            below[hit] = at
+            found |= hit
+            above[~found] = at
+        for _ in range(REFINE):
+            mid = (above + below) / 2.0
+            there, height, _ = read((sheet - mid[..., None] * lean) @ back.T)
+            under = there & (height >= mid)
+            below, above = np.where(under, mid, below), np.where(under, above, mid)
+        xy = (sheet - below[..., None] * lean) @ back.T
+        there, height, data = read(xy)
+        inside = found & there & (height - below < WALL_M + (top - bottom) / steps / 2 ** REFINE)
+    else:
+        xy = sheet @ back.T
+        inside, height, data = read(xy)
     if not inside.any():
         return None
+    cx, cy = xy[..., 0] * ppm + ax, xy[..., 1] * ppm + ay
     u, v = x0 + cx, y0 + cy
-    sheet_tall, sheet_wide = character.colour.shape[:2]
     # colour: smoothed between the four pixels around, as a texture is
     fu, fv = u - 0.5, v - 0.5
     iu, iv = np.floor(fu).astype(int), np.floor(fv).astype(int)
@@ -443,12 +498,11 @@ def card_pixels(character, part, view_index, card, eye):
     grab = lambda a, b: character.colour[np.clip(b, 0, sheet_tall - 1), np.clip(a, 0, sheet_wide - 1)]
     rgba = (grab(iu, iv) * (1 - tu) + grab(iu + 1, iv) * tu) * (1 - tv) + (grab(iu, iv + 1) * (1 - tu) + grab(iu + 1, iv + 1) * tu) * tv
     # facing and depth: the one pixel it falls in
-    data = character.data[np.clip(np.floor(v).astype(int), 0, sheet_tall - 1), np.clip(np.floor(u).astype(int), 0, sheet_wide - 1)]
     normal = unpack_normal(data[..., :2])
-    height = (data[..., 2] * 2.0 - 1.0) * part["depth_m"] * card["size"]
+    out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"]
     to_eye = eye.at - world
     reach = np.linalg.norm(to_eye, axis=-1)
-    point = world + to_eye / reach[..., None] * height[..., None]
+    point = world + to_eye / reach[..., None] * out[..., None]
     ahead = -((point - eye.at) @ eye.turn[:, 2])
     cover = np.where(inside, rgba[..., 3], 0.0)
     return int(lo[0]), int(lo[1]), rgba[..., :3], cover, normal, ahead
@@ -463,17 +517,18 @@ def tones(normal_bone, turn, eye, light=LIGHT, shade=SHADE, edges=EDGES):
     return out
 
 
-def draw(character, pose, eye, stretch=True, blend=False, held=None, only=None, forced=None):
+def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, forced=None):
     """The character as cards, in one pose, through one eye.
 
     pose    {bone name: 4x4 matrix in the world}
+    relief  slide each card's pixels by the picture's depth (False: every picture laid flat on its card)
     held    {part name: the view shown last time}: give the same dict back every frame and a view is
             kept until another is clearly nearer; None picks the nearest every time
     blend   mix each part's two nearest views near the line between them, by a fixed pattern of pixels
     only    part names to draw (None: all);  forced  {part name: view} to show whatever is nearest
 
     Returns (picture: rows from the bottom up, HxWx4 uint8; distance in front HxW, inf where empty;
-    {part name: {"view", "next", "share", "pull", "off_deg"}})."""
+    {part name: {"view", "next", "share", "off_deg"}})."""
     wide, tall = eye.size
     colour = np.zeros((tall, wide, 3), dtype=np.float32)
     depth = np.full((tall, wide), np.inf, dtype=np.float32)
@@ -491,12 +546,11 @@ def draw(character, pose, eye, stretch=True, blend=False, held=None, only=None, 
         if held is not None:
             held[name] = first
         off = math.degrees(math.acos(max(-1.0, min(1.0, float(character.dirs[first] @ v)))))
+        said[name] = {"view": first, "next": second, "share": share, "off_deg": off}
         showing = [(first, None)] if not blend or share >= 1.0 else [(first, share), (second, share)]
         for n, (index, portion) in enumerate(showing):
-            card = place(character.views[index], bone, part["center"], eye.at, stretch)
-            if n == 0:
-                said[name] = {"view": first, "next": second, "share": share, "pull": card["pull"], "off_deg": off}
-            got = card_pixels(character, part, index, card, eye)
+            card = place(character.views[index], bone, part["center"], eye.at)
+            got = card_pixels(character, part, index, card, eye, relief)
             if got is None:
                 continue
             x0, y0, rgb, cover, normal, ahead = got

@@ -1,20 +1,25 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--views 26,62] [--px 192] [--overlap 0.25] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
+        [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor/:
 
     impostor.json            the parts, their bones, the view sets, where each picture is on its sheet
+                             ("cells": x, y, wide, tall on the sheet from its bottom left; where the bone's
+                             head is in the picture; the lowest and highest its surface stands, in metres)
     views<N>-color.png       every part from every direction of set N: flat comic colour and the ink line
     views<N>-data.png        the same pictures as numbers: which way the surface faces (red, green) and
-                             how far it stands toward the eye (blue)
+                             how far it stands toward the eye (blue; 0 means nothing is there)
 
 How a part is cut. Every face goes to the part whose bones pull on it most (fingers fold into the hand,
 toes into the foot, shoulders and neck into the chest; a bone the list does not know folds into the
 nearest one above it that it does). Then each part also takes the faces next door that its bones pull
 on by at least --overlap, so two parts lap over each other at a joint and a bent elbow stays closed.
+The trunk's parts (hips, spine, chest, head) lap much further (--trunk-overlap): they are thick, so a card
+drawn a little off its true direction slides its front surface sideways by centimetres, and they hardly
+bend against each other, so a long lap never pokes out.
 
 How a part is pictured. The part is laid in its bone's own frame and drawn with no perspective from
 each direction of the set (impostor.py: views_of), by toon.py with the tones of light switched off:
@@ -52,6 +57,7 @@ TO_GLB = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))  # Bl
 EYE_AWAY = 10.0   # how far off the eye stands while picturing (m); nothing depends on it
 GUTTER = 2        # empty pixels between pictures on a sheet
 ROW_PX = 1400     # how wide one render of all the parts may be
+TRUNK = ("hips", "spine", "chest", "head")  # thick parts that hardly bend against each other: they lap over each other much further
 HANG = ("shoulder", "upper_arm", "forearm", "hand")  # the bones that are pictured as they hang in the clip, not as they rest
 
 
@@ -104,7 +110,7 @@ def part_of_bone(rig):
     return out
 
 
-def cut(objects, rig, overlap):
+def cut(objects, rig, overlap, trunk_overlap):
     """{part name: [(object, [face indices], lapped over from next door?)]} and how many triangles each part owns outright."""
     folds = part_of_bone(rig)
     names = [name for name, _ in PARTS]
@@ -127,7 +133,7 @@ def cut(objects, rig, overlap):
             own[names[best]] += len(poly.vertices) - 2
             chosen[names[best]].append(poly.index)
             for i, name in enumerate(names):
-                if i != best and share[i] >= overlap:
+                if i != best and share[i] >= (trunk_overlap if name in TRUNK else overlap):
                     lapped[name].append(poly.index)
         for name in names:
             if chosen[name]:
@@ -155,14 +161,20 @@ def piece(obj, posed, faces, into):
     return new
 
 
-def data_material(name, cull):
+def data_material(name, ink):
     """Paints which way a surface faces, as the eye sees it (red: right, green: up), and how far it stands
-    toward the eye from the bone's head (blue), all as plain numbers around a half."""
+    toward the eye from the bone's head (blue), all as plain numbers around a half. The ink line's own
+    version paints nothing (black): that is how its pixels are told from the surface's afterwards."""
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
-    mat.use_backface_culling = cull
+    mat.use_backface_culling = ink
     tree = mat.node_tree
     tree.nodes.clear()
+    if ink:
+        glow, out = tree.nodes.new("ShaderNodeEmission"), tree.nodes.new("ShaderNodeOutputMaterial")
+        glow.inputs["Color"].default_value = (0.0, 0.0, 0.0, 1.0)
+        tree.links.new(glow.outputs[0], out.inputs["Surface"])
+        return mat
     shape = tree.nodes.new("ShaderNodeNewGeometry")
     seen = tree.nodes.new("ShaderNodeVectorTransform")
     seen.vector_type, seen.convert_from, seen.convert_to = "NORMAL", "WORLD", "CAMERA"
@@ -250,6 +262,7 @@ def main():
     sets = flag("--views", "26,62").split(",")
     ppm = float(flag("--px", "192"))
     overlap = float(flag("--overlap", "0.25"))
+    trunk_overlap = float(flag("--trunk-overlap", "0.04"))
     ink_m = float(flag("--ink-cm", "1.4")) / 100.0
     source = flag("--source", os.path.join(run, "profiles", profile + "-walk.glb"))
     out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor")))))
@@ -268,7 +281,7 @@ def main():
     whole_triangles = sum(len(p.vertices) - 2 for o in bodies for p in o.data.polygons)
 
     # The parts, each in its bone's own frame.
-    chosen, own = cut(bodies, rig, overlap)
+    chosen, own = cut(bodies, rig, overlap, trunk_overlap)
     parts, made = [], {}
     for name, bones in PARTS:
         if not chosen[name] or bones[0] not in rest:
@@ -324,9 +337,9 @@ def main():
     painted = {o.name: list(o.data.materials) for o in part_objects}
     tmp_colour, tmp_data = os.path.join(out, ".bake-colour.png"), os.path.join(out, ".bake-data.exr")
 
-    card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "arms_lowered_deg": lowered,
+    card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
-            "stretch": list(impostor.STRETCH), "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
+            "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}
     for set_name in sets:
         views = impostor.views_of(set_name)
@@ -378,33 +391,42 @@ def main():
                 col[..., :3] = spread(col[..., :3], col[..., 3] > 0.5, 3)
                 col[..., 3] = there
                 if not there.any():
-                    pictures.append((p, vi, None, None, (0, 0)))
+                    pictures.append((p, vi, None, None, (0, 0), (0.0, 0.0)))
                     continue
                 ys, xs = np.where(there)
                 x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
                 # the facing as the bone has it, and the depth as a share of the part's reach
                 known = dat[..., 3] > 0.5
+                # The ink line is a shell behind the part, centimetres further back than the surface it outlines.
+                # Left there it would be slid apart from its own outline when the card is drawn from a little to one
+                # side. So the line takes the depth of the surface next to it, and faces the eye.
+                line = known & (dat[..., 0] < 0.02) & (dat[..., 1] < 0.02) & (dat[..., 2] < 0.02)
+                dat = dat.copy()
+                dat[..., :3] = np.where(line[..., None], (0.5, 0.5, 0.5), dat[..., :3])
+                dat[..., 2] = spread(dat[..., 2], known & ~line, 8)
                 nx, ny = dat[..., 0] * 2.0 - 1.0, dat[..., 1] * 2.0 - 1.0
                 nz = np.sqrt(np.clip(1.0 - nx * nx - ny * ny, 0.0, 1.0))
                 normal = nx[..., None] * np.array(view["r"]) + ny[..., None] * np.array(view["u"]) + nz[..., None] * np.array(view["d"])
                 height = (dat[..., 2] * 2.0 - 1.0) / p["depth_m"]
-                packed = np.concatenate([impostor.pack_normal(normal), (np.clip(height, -1.0, 1.0) * 0.5 + 0.5)[..., None]], axis=-1)
-                packed = spread(packed, known, 4)
-                pictures.append((p, vi, col[y0:y1, x0:x1], packed[y0:y1, x0:x1], (hs - x0, hs - y0)))
+                # blue 0 is kept to mean "nothing here": the page's search down a pixel's line must know air from surface
+                packed = np.concatenate([impostor.pack_normal(normal), np.clip(height * 0.5 + 0.5, 1.0 / 255.0, 1.0)[..., None]], axis=-1)
+                packed[~known] = (0.5, 0.5, 0.0)
+                metres = (np.round(packed[..., 2][known] * 255.0) / 255.0 * 2.0 - 1.0) * p["depth_m"]
+                pictures.append((p, vi, col[y0:y1, x0:x1], packed[y0:y1, x0:x1], (hs - x0, hs - y0), (float(metres.min()), float(metres.max()))))
             if vi % 8 == 0:
                 print("IMPOSTOR views %s: %d of %d pictured" % (set_name, vi + 1, len(views)), flush=True)
         sizes = [(pic[2].shape[1], pic[2].shape[0]) if pic[2] is not None else (1, 1) for pic in pictures]
         where, sheet_w, sheet_h, used = pack(sizes)
         colour_sheet = np.zeros((sheet_h, sheet_w, 4), dtype=np.uint8)
-        data_sheet = np.full((sheet_h, sheet_w, 3), 128, dtype=np.uint8)
+        data_sheet = np.zeros((sheet_h, sheet_w, 3), dtype=np.uint8)
         cells = {p["name"]: [None] * len(views) for p in parts}
-        for (p, vi, col, dat, anchor), (x, y), (w, h) in zip(pictures, where, sizes):
+        for (p, vi, col, dat, anchor, heights), (x, y), (w, h) in zip(pictures, where, sizes):
             if col is None:
-                cells[p["name"]][vi] = [0, 0, 0, 0, 0, 0]
+                cells[p["name"]][vi] = [0, 0, 0, 0, 0, 0, 0.0, 0.0]
                 continue
             colour_sheet[y:y + h, x:x + w] = np.round(np.clip(col, 0.0, 1.0) * 255.0)
             data_sheet[y:y + h, x:x + w] = np.round(np.clip(dat, 0.0, 1.0) * 255.0)
-            cells[p["name"]][vi] = [int(x), int(y), int(w), int(h), int(anchor[0]), int(anchor[1])]
+            cells[p["name"]][vi] = [int(x), int(y), int(w), int(h), int(anchor[0]), int(anchor[1]), round(heights[0], 4), round(heights[1], 4)]
         names = ("views%s-color.png" % set_name, "views%s-data.png" % set_name)
         impostor.write_png(os.path.join(out, names[0]), colour_sheet)
         impostor.write_png(os.path.join(out, names[1]), data_sheet)

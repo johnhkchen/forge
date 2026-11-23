@@ -145,6 +145,34 @@ def base_summary(run_dir):
     }
 
 
+def cards_summary(run_id, run_dir):
+    """A character baked as flat cards (scripts/impostor/bake_impostor.py: profiles/<version>-impostor/): the view
+    sets it has, and every clip it can play: the version's own walk, routine and run, and any shot on a set that
+    cast this same version (a fight)."""
+    out = []
+    profiles = os.path.join(run_dir, "profiles")
+    for name in sorted(os.listdir(profiles)) if os.path.isdir(profiles) else []:
+        card = read_json(os.path.join(profiles, name, "impostor.json")) if name.endswith("-impostor") else None
+        if not card:
+            continue
+        version = card.get("profile") or name[:-len("-impostor")]
+        motions = [{"id": clip, "name": label, "glb": "runs/%s/profiles/%s-%s.glb" % (run_id, version, clip)}
+                   for clip, label in (("walk", "Walk"), ("rom", "Warm-up"), ("run", "Run"))
+                   if os.path.isfile(os.path.join(profiles, "%s-%s.glb" % (version, clip)))]
+        for shot in sorted(os.listdir(SHOTS)) if os.path.isdir(SHOTS) else []:
+            for file in sorted(os.listdir(os.path.join(SHOTS, shot))) if os.path.isdir(os.path.join(SHOTS, shot)) else []:
+                cast = read_json(os.path.join(SHOTS, shot, file)) if file.startswith("cast-") and file.endswith(".json") else None
+                for role, part in ((cast or {}).get("roles") or {}).items():
+                    if part.get("character", "").endswith("%s/profiles/%s.glb" % (run_id, version)) and os.path.isfile(os.path.join(SHOTS, shot, part.get("glb", ""))):
+                        take = read_json(os.path.join(SHOTS, shot, "take.json")) or {}
+                        mark = ((read_json(os.path.join(SHOTS, shot, "fight.json")) or {}).get("marks") or {}).get(role) or {}
+                        motions.append({"id": shot, "name": take.get("title") or shot.replace("-", " ").capitalize(), "glb": "shots/%s/%s" % (shot, part["glb"]),
+                                        "at": mark.get("at"), "facing_deg": mark.get("facing_deg", 0.0)})
+        if motions:
+            out.append({"profile": version, "folder": "profiles/" + name, "parts": len(card.get("parts") or []), "views": list(card.get("sets") or {}), "motions": motions})
+    return out
+
+
 def run_summary(folder):
     run_dir = os.path.join(RUNS, folder)
     brief = read_json(os.path.join(run_dir, "brief.json")) or {}
@@ -173,6 +201,7 @@ def run_summary(folder):
         "problems": polish.get("problems") or [],
         "profiles": [profile_summary(run_dir, p) for p in names],
         "base": base_summary(run_dir),
+        "cards": cards_summary(folder, run_dir),
         "props": [dict(p, run=os.path.basename(p.get("run", "").rstrip("/")))
                   for p in (read_json(os.path.join(run_dir, "props.json")) or {}).get("props", [])],
         "prop_of": os.path.basename(((read_json(os.path.join(run_dir, "prop_of.json")) or {}).get("character") or "").rstrip("/")) or None,
