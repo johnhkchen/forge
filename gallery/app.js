@@ -1,4 +1,4 @@
-// Forge gallery: the newest diorama out front, the world seen whole, the shelf of runs, a before/after viewer for each, and the sets they are filmed on.
+// Forge gallery: the newest diorama out front, the world seen whole, the shelf of runs, a before/after viewer for each, the sets they are filmed on, and the clips you bring.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
@@ -24,6 +24,7 @@ let sets = [];
 let takes = [];
 let comics = [];
 let dioramas = [];
+let videos = [];
 let world = null;
 let viewer = null;
 
@@ -1712,6 +1713,154 @@ function comicPage(comic) {
   );
 }
 
+// ---------- a clip of yours: pick who to follow ----------
+
+const clipFile = (video, rel) => `videos/${encodeURIComponent(video.id)}/${rel}`;
+const clipWhere = (video) => (video.film ? "Ready to watch" : video.choice ? "Chosen · waiting for the Mac" : video.people ? "Pick who to follow" : "Not looked at yet");
+
+function videoShelf() {
+  if (!videos.length) return null;
+  return h("section", { class: "sets" },
+    h("h2", {}, "Clips"),
+    h("p", { class: "lede" }, "Videos you brought. Pick the dancer, and their moves go onto the toons."),
+    h("div", { class: "shelf" }, videos.map((video) => {
+      const first = video.people?.[0]?.keyframes?.[0]?.picture;
+      return h("a", { class: "card wide clay-surface", href: `#/video/${encodeURIComponent(video.id)}` },
+        first ? h("img", { src: clipFile(video, first), alt: "", loading: "lazy" }) : null,
+        h("div", { class: "label" },
+          h("h2", {}, video.title),
+          h("p", {}, `${clipWhere(video)}${video.seconds ? ` · ${Math.round(video.seconds)} s` : ""}`),
+        ),
+      );
+    })),
+  );
+}
+
+function videoPage(video) {
+  const shots = video.people || [];
+  // What you have said so far: per shot, a person's number or "skip". A saved choice comes back as it was.
+  const state = { picks: { ...(video.choice?.shots || {}) }, camera: video.choice?.camera || "still", moment: {}, saved: Boolean(video.choice) };
+  const row = h("div", { class: "clip-shots" });
+  const bar = h("div", { class: "clip-save clay-surface" });
+  const cameraRow = h("div", { class: "toggles" });
+
+  // Who you seem to be following: the look (clothing colours) most of your picks share.
+  const followed = () => {
+    const votes = {};
+    for (const shot of shots) {
+      const person = shot.people.find((p) => p.id === state.picks[shot.index]);
+      if (person) votes[person.person] = (votes[person.person] || 0) + 1;
+    }
+    const best = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+    return best ? Number(best[0]) : null;
+  };
+  // In a shot you have not decided, the same-looking person is offered (a reflection only if nobody else fits).
+  const offered = (shot) => {
+    if (state.picks[shot.index] !== undefined) return null;
+    const look = followed();
+    const fits = shot.people.filter((p) => p.person === look);
+    return (fits.find((p) => !p.reflection_of) || fits[0] || null)?.id ?? null;
+  };
+  const pick = (shot, who) => {
+    state.picks[shot.index] = state.picks[shot.index] === who ? undefined : who;
+    if (state.picks[shot.index] === undefined) delete state.picks[shot.index];
+    state.saved = false;
+    draw();
+  };
+
+  const shotCard = (shot) => {
+    const chosen = state.picks[shot.index];
+    const offer = offered(shot);
+    const key = shot.keyframes[Math.min(state.moment[shot.index] || 0, shot.keyframes.length - 1)];
+    const says = chosen === "skip" ? "Left out" : chosen !== undefined ? `Following ${chosen}` : offer !== null ? `Is it ${offer}? Tap to say yes` : shot.people.length ? "Tap who to follow" : "Nobody found here";
+    return h("section", { class: `clip-shot clay-surface${chosen === "skip" ? " skipped" : ""}` },
+      h("header", {}, h("h3", {}, `Shot ${shot.index + 1}`), h("span", {}, `${shot.seconds} s`)),
+      key ? h("div", { class: "clip-frame" },
+        h("img", { src: clipFile(video, key.picture), alt: `A moment from shot ${shot.index + 1}`, loading: "lazy" }),
+        shot.people.map((person) => {
+          const box = person.boxes[key.frame];
+          if (!box) return null;
+          const style = `left:${(100 * box[0]) / shot.width}%;top:${(100 * box[1]) / shot.height}%;width:${(100 * (box[2] - box[0])) / shot.width}%;height:${(100 * (box[3] - box[1])) / shot.height}%`;
+          return h("button", { class: `clip-box${chosen === person.id ? " chosen" : ""}${offer === person.id ? " offered" : ""}${person.reflection_of ? " reflection" : ""}`, style, type: "button",
+            "aria-label": `Person ${person.id}`, "aria-pressed": String(chosen === person.id), onclick: () => pick(shot, person.id) }, h("b", {}, String(person.id)));
+        }),
+      ) : null,
+      shot.keyframes.length > 1 ? h("div", { class: "clip-moments" }, shot.keyframes.map((k, n) =>
+        h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String((state.moment[shot.index] || 0) === n), onclick: () => { state.moment[shot.index] = n; draw(); } }, n === 0 ? "Early" : n === shot.keyframes.length - 1 ? "Late" : "Middle"))) : null,
+      h("p", { class: "clip-says" }, says),
+      h("div", { class: "clip-people" },
+        shot.people.map((person) =>
+          h("button", { class: `clip-person clay-chip${chosen === person.id ? " chosen" : ""}${offer === person.id ? " offered" : ""}`, type: "button", "aria-pressed": String(chosen === person.id), onclick: () => pick(shot, person.id) },
+            person.thumbs[0] ? h("img", { src: clipFile(video, person.thumbs[0]), alt: "" }) : null,
+            h("span", {}, h("b", {}, String(person.id)), person.reflection_of ? h("small", {}, `might be a reflection of ${person.reflection_of}`) : person.seen_share < 0.6 ? h("small", {}, "in and out of view") : null),
+          )),
+        h("button", { class: `clip-person clay-chip skip${chosen === "skip" ? " chosen" : ""}`, type: "button", "aria-pressed": String(chosen === "skip"), onclick: () => pick(shot, "skip") }, h("span", {}, h("b", {}, "Skip this shot"))),
+      ),
+    );
+  };
+
+  const save = async () => {
+    bar.querySelector("button.save").disabled = true;
+    try {
+      const response = await fetch(`api/videos/${encodeURIComponent(video.id)}/choice`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shots: state.picks, camera: state.camera }) });
+      const answer = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(answer.error || `the Mac said ${response.status}`);
+      state.saved = true;
+      state.problem = null;
+    } catch (error) {
+      state.problem = `Not saved: ${error.message}`;
+    }
+    draw();
+  };
+
+  function draw() {
+    row.replaceChildren(...shots.map(shotCard));
+    cameraRow.replaceChildren(
+      h("span", { class: "hint" }, "In these shots"),
+      ...[["still", "the camera stays put"], ["moving", "the camera moves"]].map(([value, words]) =>
+        h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(state.camera === value), onclick: () => { state.camera = value; state.saved = false; draw(); } }, words)),
+    );
+    const decided = shots.filter((shot) => state.picks[shot.index] !== undefined).length;
+    const offers = shots.filter((shot) => offered(shot) !== null);
+    const everySkipped = decided === shots.length && shots.every((shot) => state.picks[shot.index] === "skip");
+    bar.replaceChildren(...[
+      h("p", {}, state.problem ? state.problem : state.saved ? h("span", {}, "Saved. On the Mac, run ", h("code", {}, `just video ${video.id}`), " and the moves get made.")
+        : everySkipped ? "Every shot is left out. Follow someone in at least one." : `${decided} of ${shots.length} shots decided`),
+      offers.length && !state.saved ? h("button", { class: "clay-button clay-button--soft", type: "button", onclick: () => { for (const shot of offers) state.picks[shot.index] = offered(shot); state.saved = false; draw(); } },
+        offers.length === 1 ? "Yes, same person" : `Yes, same person in ${offers.length} shots`) : null,
+      h("button", { class: "clay-button save", type: "button", disabled: decided < shots.length || everySkipped || state.saved, onclick: save }, state.saved ? "Saved" : "Save"),
+    ].filter(Boolean));
+  }
+
+  const result = video.film ? h("section", { class: "clip-result" },
+    h("h2", {}, "How it came out"),
+    h("p", { class: "lede" }, video.height > video.width ? "The clip, and beside it a plain figure doing the same moves, in step." : "The clip, and under it a plain figure doing the same moves, in step."),
+    h("div", { class: "clip-film clay-surface" }, h("video", { src: clipFile(video, video.film), controls: true, loop: true, playsinline: true, preload: "metadata" })),
+    video.cast_films.map((film) => h("div", { class: "clip-film clay-surface" }, h("video", { src: clipFile(video, film), controls: true, loop: true, playsinline: true, preload: "none" }))),
+    video.shot ? h("div", { class: "facts" },
+      h("div", { class: "fact clay-well" }, h("div", { class: "k" }, "Length"), h("div", { class: "v" }, `${(video.shot.frames / 30).toFixed(1)} `, h("small", {}, "s"))),
+      h("div", { class: "fact clay-well" }, h("div", { class: "k" }, "Shots used"), h("div", { class: "v" }, `${video.shot.pieces.length} `, h("small", {}, `of ${video.shots.length}`))),
+      video.shot.feet ? h("div", { class: "fact clay-well" }, h("div", { class: "k" }, "Feet slide"),
+        h("div", { class: "v" }, `${Math.max(...Object.values(video.shot.feet).map((f) => f.slide_speed_cm_per_s || 0)).toFixed(1)} `, h("small", {}, "cm a second, at worst"))) : null,
+    ) : null,
+    h("p", { class: "about" }, "Put a toon in it: ", h("code", {}, `just cast ${video.shot?.id || `video-${video.id}`} runs/<character>`)),
+  ) : null;
+
+  const chooser = shots.length ? h("section", { class: "clip-choose" },
+    h("h2", {}, video.film && video.choice ? "Who was followed" : "Who should we follow?"),
+    h("p", { class: "lede" }, "Each cut of the camera is a shot. Tap the person in each one, on the picture or below it. Leave out any shot you don't want."),
+    cameraRow, row, bar,
+  ) : h("div", { class: "notes clay-surface" }, h("h3", {}, "Not looked at yet"), h("p", {}, "On the Mac, run ", h("code", {}, `just video ${video.id}`), ". It finds the cuts and the people, then this page asks you who to follow."));
+  draw();
+  return h("article", { class: "object clip" },
+    h("a", { class: "back", href: "#/" }, "← Everything"),
+    h("p", { class: "kicker" }, "A clip of yours"),
+    h("h1", {}, video.title),
+    h("p", { class: "lede" }, `${video.seconds ? `${Math.round(video.seconds)} seconds` : "A video"}${video.shots.length ? `, ${video.shots.length} ${video.shots.length === 1 ? "shot" : "shots"}` : ""}. It stays on this Mac.`),
+    result, chooser,
+  );
+}
+
 // ---------- routing ----------
 
 async function route() {
@@ -1719,7 +1868,17 @@ async function route() {
     [runs, sets, takes] = await Promise.all(["api/runs", "api/sets", "api/takes"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
   }
   if (!world) world = await fetch("api/world").then((r) => r.json()).catch(() => null);
-  [comics, dioramas] = await Promise.all(["api/comics", "api/dioramas"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
+  [comics, dioramas, videos] = await Promise.all(["api/comics", "api/dioramas", "api/videos"].map((url) => fetch(url).then((r) => r.json()).catch(() => [])));
+  // #/video/<name>: a clip you brought, to pick who to follow in and to watch the result of.
+  const watching = location.hash.match(/^#\/video\/([^/]+)$/);
+  const video = watching && videos.find((v) => v.id === decodeURIComponent(watching[1]));
+  if (video) {
+    viewer?.dispose();
+    viewer = null;
+    app.replaceChildren(videoPage(video));
+    window.scrollTo(0, 0);
+    return;
+  }
   const reading = location.hash.match(/^#\/comic\/([^/]+)$/);
   const comic = reading && comics.find((c) => c.name === decodeURIComponent(reading[1]));
   if (comic) {
@@ -1776,7 +1935,7 @@ async function route() {
   viewer = null;
   const run = match && runs.find((r) => r.id === decodeURIComponent(match[1]));
   const set = onSet && sets.find((x) => x.id === decodeURIComponent(onSet[1]));
-  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [stateOfTheWorld(), comicShelf(), shelfHeading(), shelf()];
+  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [stateOfTheWorld(), comicShelf(), shelfHeading(), shelf(), videoShelf()];
   app.replaceChildren(...page.filter(Boolean));
   window.scrollTo(0, 0);
 }

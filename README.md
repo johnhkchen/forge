@@ -57,6 +57,8 @@ You need the `baml`, `claude`, `codex`, `uv`, `gh` and `just` CLIs, and Blender.
 5. **Only for shots** (see "Shots" below): the same push builds `motionbricks_worker/` into `ghcr.io/<you>/motionbricks-worker`. Run `just motion-endpoint`, put the new endpoint's ID in `.env` as `MOTIONBRICKS_ENDPOINT_ID`, then `just motion-selftest`. The first job waits a few minutes while the worker fetches NVIDIA's model onto your volume and gets it ready for the GPU; after that a job takes a couple of seconds.
 6. **Only for runs, and for shots with a beat made from a sentence**: the model that reads the sentence is built on Meta's Llama 3, and Meta asks each person to accept its license. Open [the model's page](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) with the Hugging Face account your `hf_token` secret belongs to, read the license, and ask for access. Once Meta says yes, run `just text-info`: the worker fetches about 17.5 GB onto your volume (once) and says what it loaded. Until then a text beat stops with a message saying exactly this, a run is skipped with "run skipped: Kimodo not available", and everything else works as before. Once it has loaded, `just runs` gives every character its run.
 
+7. **Only for motion from a video** (see "From a video"): the same push builds `gemx_worker/` into `ghcr.io/<you>/gemx-worker`. Add `GEMX_IMAGE` to `.env` (it is in `.env.example`), run `just gemx-endpoint`, and put the new endpoint's ID in `.env` as `GEMX_ENDPOINT_ID`. It uses the same network volume and the same `hf_token` secret as the others, and adds about 7.5 GB to the volume the first time it boots.
+
 The first job on a fresh endpoint downloads whichever weights the volume doesn't already have, about 17 GB at most. After that, a job takes about a minute on an RTX 4090.
 
 ## Commands
@@ -88,6 +90,11 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just cloth-check <file.glb>…` | measure a dressed character: how much skin comes through its clothes over the walk, how far they sit off the body |
 | `just shoot [shot]` | make a shot from its plan in `motion/shots/`: Opus lays it out, our poses are placed, MotionBricks fills in the movement (and Kimodo makes any beat that is a sentence), it is measured and filmed |
 | `just cast <shot> <character run> [prop run] [clip]` | put a character (and what it carries) in a finished shot; `clip` names the cut (`hero`, or `hero-mixed` for a second one) |
+| `just video-add <file> [name] [start] [end]` | bring a video of yours (a dance, say): it is copied to `videos/<name>/`, which stays out of git. `start` and `end`, in seconds, keep only that stretch |
+| `just video <name>` | turn that clip into motion for the characters: does whatever comes next, and stops where it needs you to choose who to follow (see "From a video") |
+| `just video-film <name> [clip]` | after `just cast video-<name> ...`: the character beside the clip, in step |
+| `just video-test [runs folder]` | try all of that with no GPU: a drawn clip, a stand-in for the model, then the film and a character in a background Blender |
+| `just gemx-endpoint`, `just gemx-health` | create the video worker's endpoint on RunPod (one time); is it up |
 | `just set-check [set]` | is a standing set sound? Marks on the floor and clear of the furniture, seats the right height, every camera holding its marks (see "Sets") |
 | `just set-build <set>`, `just set-backdrop <set>`, `just set-card <set>` | build a set's block-out from its data, have Codex paint its backdrop, take its picture for the gallery |
 | `just set-from-run <set> <run folder>` | use an object you already made as a set's geometry |
@@ -115,7 +122,7 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just recipe <run folder>` | for a run from before recipes were kept: get its block-out's recipe back from the transcript, so `midpoly` can be made |
 | `just auto-body <run folder> <out folder>` | give a finished character a body with anatomy, without Claude: its landmarks are found, a body is built from them, and its own head and gear go back on. Writes into the out folder, never the run |
 | `just anatomy-check <run folder> <out.png> low=<file.glb>…` | measure low-poly and mid-poly bodies against the detailed mesh: landmarks, proportions, outlines, cross-sections, and a sheet to look at |
-| `just gallery` | the newest diorama out front, then the world, every object raw vs cleaned-up, and the comics, on this Mac or a phone on the same Wi-Fi |
+| `just gallery` | the newest diorama out front, then the world, every object raw vs cleaned-up, the comics, and the clips you brought, on this Mac or a phone on the same Wi-Fi |
 | `just impostor <run folder> [version]` | cut a rigged character into flat cards, one a bone, and picture each part from all around (`profiles/<version>-impostor/`); the gallery shows it at `#/cards/<run>` |
 | `just impostor <run folder> painted --look pixel` (or `joe`) | the cards' sheet for another look: pixel art (small, few colours) or bold ink (`profiles/<version>-impostor-<look>/`) |
 | `just impostor-judge <run folder> [version] [out]` | the same frames drawn as cards and as the real model, and how far apart they are; stills and films into `evidence/impostor/` |
@@ -258,6 +265,53 @@ Everything a shot makes lands in `shots/<name>/`. A step whose file is already t
 **Room for more.** The worker sorts jobs by kind (`inbetween` for MotionBricks, `text` for Kimodo), and each model gets its own Python setup inside the image. Kimodo starts only when a job asks for it, so a shot made only from poses never waits for it. A third model is one more setup, one more file and two lines. In a shot list each beat says where its motion comes from (`poses` or `text`; `walk`, our own walk, is named for later).
 
 **What is weak.** Neither motion model can see the set, so in the raw motion a shin clips the wall and a foot dips under the roof; the checks say by how much. Casting a character cures what moving a leg, an arm or the hips can cure, and pins the feet, which drift while planted. It cannot turn a run through the wall into a vault: in the mixed cut the shins still cut 7.5 cm into the wall and the hand ends 25 cm from the wall top. And in the landing the ninja's hand hangs about 20 cm over the roof, because its knee is kept out of it. The numbers are in the skill's "Contact" section. Our hand-written poses are not what the model learned from, so the motion between them is stiffer than motion capture. A "sprint" that has to fit the roof is closer to a run. A sentence gives you a motion, not the motion: Kimodo knows walking, running, sneaking, fighting and everyday moves well and has seen little parkour, and each sentence is at most ten seconds.
+
+## From a video
+
+A sentence gives you a motion, not the motion. When you want *that* dance, bring the video.
+
+```
+just video-add ~/Downloads/dance.mp4 summer-dance
+just video summer-dance
+```
+
+`just video` does whatever comes next, and you run it again to carry on:
+
+1. **The clip is made ready** on this Mac: the stretch you asked for, at 30 pictures a second. (`just video-add <file> <name> 12 40` keeps seconds 12 to 40.) You bring the file yourself; nothing here downloads a video.
+2. **The cuts are found**, also here, with ffmpeg. An edited video jumps between cameras, and each stretch between two jumps is a shot.
+3. **Everyone in each shot is found and followed.** This is the first step on your RunPod GPU: the clip is sent to your own endpoint once, and comes back as boxes, one per person per frame.
+4. **You choose who to follow.** `just gallery`, then open the clip (`#/video/summer-dance`), on the Mac or your phone. Every shot shows a moment from it with a numbered box on each person. Tap the dancer, on the picture or on their small picture under it; "Skip this shot" leaves a shot out. Once you have tapped them in one shot, whoever wears the same colours in the other shots is offered ("Is it 1? Tap to say yes", or one button for all of them). Someone who looks like a mirror image of someone else is marked "might be a reflection". Say whether the camera stays put or moves, and Save.
+5. **Their motion is made**, shot by shot, on the GPU: NVIDIA's GEM-X reads the body's movement off the picture, following the person you chose.
+6. **The shots are joined into one motion** and written as a shot, `shots/video-summer-dance/`, like the ones `just shoot` makes. `checks.py` measures it.
+7. **It is filmed**: a plain box figure doing the moves, next to the clip, in step, with the clip's sound (`videos/summer-dance/side-by-side.mp4`, and on the clip's page in the gallery).
+
+Then it is a shot like any other:
+
+```
+just cast video-summer-dance runs/<character>
+just video-film summer-dance
+```
+
+The first puts a character in it, through its own skeleton, joint limits and planted feet. The second films that character beside the clip.
+
+Everything a clip makes is in `videos/<name>/` (`clip.mp4`, `shots.json`, `people.json`, `choice.json`, `motion/`), and a step whose file is there is skipped. Choose someone else in one shot and only that shot's motion is made again. `just video <name> cuts` (or `people`, `choice`, `motion`, `shot`, `film`) starts again from that step. If a cut was missed or found twice, fix `cuts` in `shots.json`, set `"by_hand": true`, and run `just video <name> people`.
+
+**Joining across a cut.** A cut is the camera jumping, not the dancer. But each shot's motion comes back in a world of its own: where the dancer stands and which way they face start from nothing every time. So each shot is picked up whole and set down where the last one ended, facing the same way and still moving as it was, and the small jump in pose that is left is eased out over the next 8 frames. Inside a shot nothing is changed. Every frame of the film you kept is one frame of the motion, which is why the two can be watched side by side. `checks.json` lists each cut as a seam, with how big the jump was.
+
+**What is ours and what is NVIDIA's.** The cut finding, the following of people from frame to frame, the choosing and the joining are ours. Reading a body off video is [GEM-X](https://github.com/NVlabs/gem-x) (code Apache-2.0; weights under the NVIDIA Open Model License). It writes the same SOMA skeleton Kimodo does, so its motion goes in where a sentence's does. People are found with the YOLOX person detector GEM-X's own guide points to (an OpenMMLab file, trained on the Human-Art pictures; look at its terms before selling anything made with it). As with the other workers, the image holds none of it: on its first boot the worker fetches GEM-X's code, its three models, the detector and the SOMA body onto your network volume at pinned revisions, checked by hash, and deletes GEM-X's sample films from its copy without reading them. The clips are other people's work: they stay in `videos/` on this Mac (not in git) and on your own volume, where one not used for two weeks is deleted.
+
+**Trying it with no GPU.** `python3 scripts/video/test_video.py` (part of `just check`) draws a clip with cuts at known frames and runs every step on it, with a stand-in for GEM-X behind the worker's real front door: made-up boxes for people, and a made-up dance written the way GEM-X writes motion. `just video-test` also films it and puts a character in it in a background Blender.
+
+**What is weak.**
+
+- *Not yet run on the real model.* The worker has been written from GEM-X's code and guide and tested around a stand-in. The first real job will show whether its answer is read right. Each shot's conversion says how far our figure's hands, toes and head end up from GEM-X's own (`ours_vs_gemx_cm` in `shots/video-<name>/source.json`); a few centimetres is two bodies of different build, a lot means the two skeletons are being read differently.
+- *Fast spins.* One camera sees one side of a body. In a spin the model has to guess the far side, and the person detector can lose the dancer for a few frames (their box is then carried through the gap). Expect the facing to wobble or lag in turns.
+- *Mirrors.* A reflection is found as a person, which is why you choose. The "might be a reflection" mark is a guess from size, clothes and movement; it will miss some and will mark a second dancer at the back in the same outfit. If the dancer is hidden and only the reflection shows, following the reflection gives you the dance mirrored.
+- *Cuts.* A fade or a dissolve can be missed or found twice. A cut that also skips ahead in time joins two unlike poses, and 8 frames of easing will not hide a big one. The dancer's place on the floor is only known inside a shot; across cuts it is carried, not measured, so a long edit drifts from where they really were.
+- *A camera that moves.* "The camera stays put" is taken at its word: a pan or a zoom then shows up as the dancer sliding. "The camera moves" has GEM-X guess the camera's turning from the background; it cannot tell a camera that travels. (GEM-X's better answer, ViPE, is not installed.)
+- *Several people.* The follower is simple. Two people who cross, in the same clothes, can swap boxes, and then the motion follows the wrong one from there to the end of the shot. Look at the "Early" and "Late" moments of a shot before you save.
+- *Feet and floor.* Feet slide more than in motion made from a sentence. Casting a character pins them where they stay still. Floor work (lying, rolling) will sit at the wrong height, because the floor is taken to be where the toes are lowest.
+- *Hands and face.* Not read. Fingers stay as they rest.
 
 ## World
 

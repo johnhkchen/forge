@@ -6,6 +6,8 @@ tools/
 .claude/worktrees/
 __pycache__/
 /shots/
+# Clips you bring for `just video` (other people's videos) and everything worked out from them stay on this Mac
+/videos/
 
 # The picture Codex paints for a backdrop, full size; the smaller backdrop.png is what is kept
 sets/*/backdrop-full.png

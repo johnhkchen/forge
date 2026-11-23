@@ -1,6 +1,6 @@
 """Renders a shot in a background Blender: a short film and a strip of stills.
 
-    Blender -b --factory-startup -P scripts/motion/render_shot.py -- <shot folder> [--strip-only] [--size 960x540]
+    Blender -b --factory-startup -P scripts/motion/render_shot.py -- <shot folder> [--strip-only] [--size 960x540] [--closer 0.7]
         [--character <version>-<name>.glb --scale <size against SOMA> --out <version>-<name>]
 
 Opens <shot>/motion.glb (the box mannequin and the set, from to_gltf.py),
@@ -95,6 +95,9 @@ def main() -> None:
     if os.path.exists(os.path.join(shot, "shotlist.json")):
         with open(os.path.join(shot, "shotlist.json")) as f:
             cues = json.load(f).get("camera") or []
+    if "--closer" in args:
+        # An upright picture shows more above and below at the same distance; the camera steps in by this much to fill it.
+        cues = [dict(cue, distance_m=float(cue["distance_m"]) * float(args[args.index("--closer") + 1])) for cue in cues]
     character = args[args.index("--character") + 1] if "--character" in args else None
     size = float(args[args.index("--scale") + 1]) if "--scale" in args else 1.0
     out_name = args[args.index("--out") + 1] if "--out" in args else "motion"
@@ -127,6 +130,9 @@ def main() -> None:
     # The camera looks back along the overall direction of travel.
     route = plan["path"]
     direction = math.atan2(route[-1][0] - route[0][0], route[-1][1] - route[0][1])
+    if "film_direction_deg" in plan:
+        # A shot that goes nowhere (a dance on the spot, from a video) has no direction of travel to read; its plan says which way is "ahead".
+        direction = math.radians(plan["film_direction_deg"])
     cam_data = bpy.data.cameras.new("shot camera")
     cam_data.lens = 35
     cam = bpy.data.objects.new("shot camera", cam_data)

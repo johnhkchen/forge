@@ -42,6 +42,7 @@ check:
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
     python3 scripts/impostor/test_impostor.py | tail -1
+    python3 scripts/video/test_video.py 2>/dev/null | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -206,6 +207,30 @@ impostor-test runs="runs":
 # The fight kit's own tests, without Blender: frame data, reactions on the active frame, hitstop, reach, the mat, joint limits, footwork
 fight-test:
     python3 scripts/fight/test_fight.py
+
+# Bring a video of yours (a dance, anything with a person moving): copies it to videos/<name>/source.mp4. start and end, in seconds, keep only that stretch. Nothing is downloaded; videos/ stays out of git
+video-add file name="" start="" end="":
+    python3 scripts/video/clip.py add "{{file}}" "{{name}}" --start "{{start}}" --end "{{end}}"
+
+# Turn a clip into motion for our characters: does whatever comes next (the cuts, the people in each shot, then your choice in the gallery at #/video/<name>, the motion, the shot, a film beside the clip). Run it again to carry on. again=<step> redoes from ready, cuts, people, choice, motion, shot or film. Finding people and making motion use your GEM-X endpoint on RunPod
+video name again="":
+    python3 scripts/video/video.py "{{name}}" {{ if again != "" { "--again " + again } else { "" } }}
+
+# Film a character you cast in a clip's shot (`just cast video-<name> runs/<character>`) beside the clip, in step: videos/<name>/side-by-side-lowpoly-<clip>.mp4
+video-film name clip="hero":
+    python3 scripts/video/film.py "videos/{{name}}" "shots/video-{{name}}" --cast "lowpoly-{{clip}}"
+
+# Try everything around the video model with no GPU: a drawn clip, a stand-in for GEM-X, then the film and a character from RUNS in a background Blender (a few minutes)
+video-test runs="runs":
+    python3 scripts/video/test_video.py --cast "{{runs}}"
+
+# Create the GEM-X serverless endpoint on RunPod, for `just video` (one time)
+gemx-endpoint:
+    scripts/create-gemx-endpoint.sh
+
+# Is the GEM-X endpoint up? (workers, queue)
+gemx-health:
+    curl -sS "https://api.runpod.ai/v2/$GEMX_ENDPOINT_ID/health" -H "Authorization: Bearer $RUNPOD_API_KEY"; echo
 
 # What Kimodo (text to motion) has fetched onto the volume and loaded, with revisions and timings; the first call on a fresh volume is the one that fetches
 text-info:
@@ -373,8 +398,8 @@ sync-kit:
     echo "vendored gallery/vendor/b28-clay.css"
 
 # Serve the gallery to this Mac and phones on the same Wi-Fi
-gallery port="8028" runs="runs" shots="shots":
-    python3 scripts/gallery.py --port {{port}} --runs "{{runs}}" --shots "{{shots}}"
+gallery port="8028" runs="runs" shots="shots" videos="videos":
+    python3 scripts/gallery.py --port {{port}} --runs "{{runs}}" --shots "{{shots}}" --videos "{{videos}}"
 
 # Only brief, picture and mesh (leaves Blender alone); finish with `just resume`
 mesh idea undress="auto":
