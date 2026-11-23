@@ -376,9 +376,6 @@ def main():
             scene.render.filepath = tmp_data
             bpy.ops.render.render(write_still=True)
             data = pixels_of(tmp_data, plain=True)
-            if os.environ.get("IMPOSTOR_DEBUG") and vi == 9:
-                impostor.write_png(os.path.join(out, "debug-colour.png"), np.round(np.clip(colour, 0, 1) * 255).astype(np.uint8))
-                impostor.write_png(os.path.join(out, "debug-data.png"), np.round(np.clip(data, 0, 1) * 255).astype(np.uint8))
             for p in parts:
                 sx, sy = spots[p["name"]]
                 hs = half[p["name"]]

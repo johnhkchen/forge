@@ -290,7 +290,8 @@ def main():
         heads = [p["bone"] for p in character.parts]
         entry = report["clips"][clip] = {"glb": glb, "frames": frames, "seconds": round(motion.seconds, 2), "triangles": motion.triangles(), "eyes": {}}
         for eye_name in clip_eyes.get(clip, eyes):
-            reals = {}
+            reals, drawn = {}, {}
+            filming = [clip, eye_name] in films
             for set_name in sets:
                 character.use(set_name)
                 rows, last, swaps, jumps = [], None, 0, []
@@ -300,6 +301,8 @@ def main():
                         if f not in reals:
                             reals[f] = real.draw(eye, f)
                         cards, _, said = impostor.draw(character, poses[f], eye, relief=relief)
+                        if filming:
+                            drawn[(set_name, f)] = over_paper(cards)
                         joints, _ = eye.to_pixels(np.array([poses[f][b][:3, 3] for b in heads]))
                         rows.append(compare(reals[f], cards, joints, eye.m_per_px(eye.aim)))
                         body = int((cards[..., 3] > 127).sum())
@@ -359,8 +362,9 @@ def main():
                         eye = eye_for(eye_name, hips[f])
                         if f not in reals:
                             reals[f] = real.draw(eye, f)
-                        cards, _, _ = impostor.draw(character, poses[f], eye, relief=relief)
-                        frame = np.concatenate([strip, np.concatenate([over_paper(cards), over_paper(reals[f])], axis=1)], axis=0)
+                        if (set_name, f) not in drawn:
+                            drawn[(set_name, f)] = over_paper(impostor.draw(character, poses[f], eye, relief=relief)[0])
+                        frame = np.concatenate([strip, np.concatenate([drawn[(set_name, f)], over_paper(reals[f])], axis=1)], axis=0)
                         made.append(frame)
                     for _ in range(loops if frames < 120 else 1):
                         for frame in made:
