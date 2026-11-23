@@ -146,13 +146,14 @@ def base_summary(run_dir):
 
 
 def cards_summary(run_id, run_dir):
-    """A character baked as flat cards (scripts/impostor/bake_impostor.py: profiles/<version>-impostor/): the view
+    """A character baked as flat cards (scripts/impostor/bake_impostor.py: profiles/<version>-impostor/, and
+    <version>-impostor-<look>/ for a look with a sheet of its own: pixel art, bold ink): the view
     sets it has, and every clip it can play: the version's own walk, routine and run, and any shot on a set that
     cast this same version (a fight)."""
     out = []
     profiles = os.path.join(run_dir, "profiles")
     for name in sorted(os.listdir(profiles)) if os.path.isdir(profiles) else []:
-        card = read_json(os.path.join(profiles, name, "impostor.json")) if name.endswith("-impostor") else None
+        card = read_json(os.path.join(profiles, name, "impostor.json")) if name.endswith("-impostor") or "-impostor-" in name else None
         if not card:
             continue
         version = card.get("profile") or name[:-len("-impostor")]

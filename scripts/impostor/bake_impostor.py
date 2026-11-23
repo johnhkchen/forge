@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
+        [--look comic|pixel|joe] [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor/:
@@ -27,6 +27,12 @@ the flat colours and the ink line, nothing else. Light and shade are not baked i
 out from the stored facing, so a forearm is lit from the same side whichever way it is turned.
 Every part of one direction is drawn in one render, each in its own square; the squares are then
 trimmed to what is in them and packed onto one sheet.
+
+--look bakes a sheet for one of the page's other looks, into <version>-impostor-<look>/:
+    pixel   pixel art: 48 pixels a metre, no smoothing, every colour snapped to the 32 this character is most
+            made of, the ink line one pixel wide; the page reads it without smoothing either
+    joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
+            screen however small the figure), and the lines inside a part drawn into its picture
 
 Prints IMPOSTOR lines and one RESULT {json}. Never touches an open Blender.
 """
@@ -235,6 +241,22 @@ def spread(values, known, rounds):
     return values
 
 
+def few_colours(pixels, count):
+    """The `count` colours a set of pixels is most made of (boxes of colour split at their middles, widest first)."""
+    boxes = [pixels]
+    while len(boxes) < count:
+        widest = max(range(len(boxes)), key=lambda i: (boxes[i].max(axis=0) - boxes[i].min(axis=0)).max() * math.log(len(boxes[i]) + 1.0) if len(boxes[i]) > 1 else -1.0)
+        box = boxes.pop(widest)
+        channel = int((box.max(axis=0) - box.min(axis=0)).argmax())
+        middle = np.median(box[:, channel])
+        low, high = box[box[:, channel] <= middle], box[box[:, channel] > middle]
+        if not len(low) or not len(high):
+            boxes.append(box)
+            break
+        boxes += [low, high]
+    return np.array([box.mean(axis=0) for box in boxes], dtype=np.float32)
+
+
 def pack(sizes):
     """Shelves: [(w, h)] to ([(x, y)], sheet width, sheet height). The width is picked to leave the sheet near square."""
     area = sum((w + GUTTER) * (h + GUTTER) for w, h in sizes)
@@ -259,13 +281,16 @@ def main():
     args = sys.argv[sys.argv.index("--") + 1:]
     flag = lambda name, default: args[args.index(name) + 1] if name in args else default
     run, profile = os.path.abspath(args[0]), args[1]
-    sets = flag("--views", "26,62").split(",")
-    ppm = float(flag("--px", "192"))
+    look = flag("--look", "comic")
+    sets = flag("--views", "26,62" if look == "comic" else "26").split(",")
+    ppm = float(flag("--px", "48" if look == "pixel" else "192"))
     overlap = float(flag("--overlap", "0.25"))
     trunk_overlap = float(flag("--trunk-overlap", "0.04"))
-    ink_m = float(flag("--ink-cm", "1.4")) / 100.0
+    # pixel art: the line is one pixel of the sheet. bold ink: no line round the part at all (the page draws it)
+    ink_m = float(flag("--ink-cm", str(100.0 / ppm) if look == "pixel" else "0" if look == "joe" else "1.4")) / 100.0
+    colours = int(flag("--colours", "32" if look == "pixel" else "0"))
     source = flag("--source", os.path.join(run, "profiles", profile + "-walk.glb"))
-    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor")))))
+    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor" if look == "comic" else "impostor-" + look)))))
     os.makedirs(out, exist_ok=True)
     began = time.time()
 
@@ -322,7 +347,7 @@ def main():
     scene.collection.objects.link(cam)
     scene.camera = cam
     scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = wide, tall, 100
-    run_toon(shade=[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], line_px=ink_m * ppm, background=None, samples=16)
+    run_toon(shade=[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], line_px=ink_m * ppm, background=None, samples=16, **({"levels": 6, "soften": 64} if look == "pixel" else {}))
     # The faces a part borrows from next door get no ink line of their own: the line there is the neighbour's
     # to draw. Left on, a limb's line ran on up into the shoulder and showed as scratches over the chest.
     for objects in made.values():
@@ -337,7 +362,7 @@ def main():
     painted = {o.name: list(o.data.materials) for o in part_objects}
     tmp_colour, tmp_data = os.path.join(out, ".bake-colour.png"), os.path.join(out, ".bake-data.exr")
 
-    card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
+    card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}
@@ -356,9 +381,11 @@ def main():
             for obj in part_objects:
                 for i, mat in enumerate(painted[obj.name]):
                     obj.data.materials[i] = mat
-            ink_group.nodes["Ink"].inputs["Material"].default_value = ink_mat
-            retag(ink_group, part_objects)
-            scene.eevee.taa_render_samples, scene.render.filter_size = 16, 0.8
+            if ink_group:
+                ink_group.nodes["Ink"].inputs["Material"].default_value = ink_mat
+                retag(ink_group, part_objects)
+            # pixel art is not smoothed: a pixel is one colour of the surface under its middle
+            scene.eevee.taa_render_samples, scene.render.filter_size = (1, 0.01) if look == "pixel" else (16, 0.8)
             scene.render.image_settings.file_format, scene.render.image_settings.color_mode = "PNG", "RGBA"
             scene.render.image_settings.color_depth = "8"
             scene.render.filepath = tmp_colour
@@ -368,8 +395,9 @@ def main():
             for obj in part_objects:
                 for i in range(len(obj.data.materials)):
                     obj.data.materials[i] = data_mat
-            ink_group.nodes["Ink"].inputs["Material"].default_value = data_ink
-            retag(ink_group, part_objects)
+            if ink_group:
+                ink_group.nodes["Ink"].inputs["Material"].default_value = data_ink
+                retag(ink_group, part_objects)
             scene.eevee.taa_render_samples, scene.render.filter_size = 1, 0.01
             scene.render.image_settings.file_format, scene.render.image_settings.color_mode = "OPEN_EXR", "RGBA"
             scene.render.image_settings.color_depth = "32"
@@ -408,10 +436,31 @@ def main():
                 # blue 0 is kept to mean "nothing here": the page's search down a pixel's line must know air from surface
                 packed = np.concatenate([impostor.pack_normal(normal), np.clip(height * 0.5 + 0.5, 1.0 / 255.0, 1.0)[..., None]], axis=-1)
                 packed[~known] = (0.5, 0.5, 0.0)
+                if look == "joe":
+                    # Bold ink: the lines inside a part are drawn here, into its picture: where the surface steps
+                    # back by more than 2 cm from one pixel to the next (one fold of the body in front of another)
+                    # or turns by more than about 70 degrees (a crease). The line goes on the further pixel.
+                    metres_all = (dat[..., 2] * 2.0 - 1.0)
+                    inked = np.zeros_like(known)
+                    for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+                        near_h, near_n, near_k = np.roll(metres_all, (dy, dx), axis=(0, 1)), np.roll(normal, (dy, dx), axis=(0, 1)), np.roll(known, (dy, dx), axis=(0, 1))
+                        inked |= known & near_k & ((near_h - metres_all > 0.02) | (((normal * near_n).sum(axis=-1) < 0.3) & (near_h >= metres_all)))
+                    inked |= np.roll(inked, 1, axis=0) & known  # two pixels wide: about a centimetre
+                    col[..., :3] = np.where(inked[..., None], (0.07, 0.055, 0.086), col[..., :3])
                 metres = (np.round(packed[..., 2][known] * 255.0) / 255.0 * 2.0 - 1.0) * p["depth_m"]
                 pictures.append((p, vi, col[y0:y1, x0:x1], packed[y0:y1, x0:x1], (hs - x0, hs - y0), (float(metres.min()), float(metres.max()))))
             if vi % 8 == 0:
                 print("IMPOSTOR views %s: %d of %d pictured" % (set_name, vi + 1, len(views)), flush=True)
+        palette = None
+        if colours:
+            # Pixel art keeps to a few colours: the ones this character is most made of. Every pixel takes the nearest.
+            seen = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None])
+            palette = few_colours(seen[:: max(1, len(seen) // 200000)], colours)
+            for pic in pictures:
+                if pic[2] is not None:
+                    flat = pic[2][..., :3].reshape(-1, 3)
+                    pic[2][..., :3] = palette[((flat[:, None, :] - palette[None]) ** 2).sum(axis=-1).argmin(axis=1)].reshape(pic[2].shape[0], pic[2].shape[1], 3)
+            card["palette"] = [[int(round(c * 255)) for c in colour] for colour in palette]
         sizes = [(pic[2].shape[1], pic[2].shape[0]) if pic[2] is not None else (1, 1) for pic in pictures]
         where, sheet_w, sheet_h, used = pack(sizes)
         colour_sheet = np.zeros((sheet_h, sheet_w, 4), dtype=np.uint8)

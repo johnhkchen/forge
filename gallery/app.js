@@ -1757,6 +1757,18 @@ async function route() {
     window.scrollTo(0, 0);
     return;
   }
+  // #/tag/<run id>: a field of that toon playing tag, drawn as meshes or as cards, to see what each costs.
+  const atTag = location.hash.match(/^#\/tag\/([^/]+)$/);
+  const tagged = atTag && runs.find((r) => r.id === decodeURIComponent(atTag[1]) && r.cards?.length);
+  if (tagged) {
+    viewer?.dispose();
+    const { tagPage } = await import("./tag.js");
+    const page = tagPage({ run: tagged, sets, h, loader });
+    viewer = { dispose: () => page.dispose() };
+    app.replaceChildren(page);
+    window.scrollTo(0, 0);
+    return;
+  }
   // #/run/<run id>[/<version>]: a link can open a given version. #/set/<set name>[/<shot>[/<camera>]]: a standing set.
   const match = location.hash.match(/^#\/run\/([^/]+)(?:\/([a-z]+))?$/);
   const onSet = location.hash.match(/^#\/set\/([^/]+)(?:\/([^/]+))?(?:\/([a-z_]+))?$/);

@@ -15,10 +15,11 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps } from "./impostor-math.js";
+import { LOOKS, lookOf, bakedFor, paintOf, setPaint, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
 
-const CARD_VERTEX = `
+export const CARD_VERTEX = `
 varying vec2 vSheet;
 varying vec3 vView;
 void main() {
@@ -32,7 +33,7 @@ void main() {
 // (impostor-math.js: place) and shows the first place where the picture's surface is as high as the line: a
 // search in short steps, then halved in on. Mixing two views is done by a fixed pattern of pixels, each pixel
 // one view or the other, so every pixel still has one true depth.
-const CARD_FRAGMENT = `
+export const CARD_FRAGMENT = `
 uniform mat4 projectionMatrix;
 uniform sampler2D colourMap;
 uniform sampler2D dataMap;
@@ -55,6 +56,8 @@ uniform vec3 light;
 uniform vec3 shadeMid;
 uniform vec3 shadeDark;
 uniform vec2 edges;
+uniform float punch;
+uniform float rim;
 varying vec2 vSheet;
 varying vec3 vView;
 float pattern(vec2 at) {
@@ -112,13 +115,15 @@ void main() {
   if (colour.a < 0.5) discard;
   if (mix_ == 1 && pattern(gl_FragCoord.xy) >= share) discard;
   if (mix_ == 2 && pattern(gl_FragCoord.xy) < share) discard;
-  float facing = dot(facingToEye * unfold(data.xy), light);
+  vec3 seen = facingToEye * unfold(data.xy);
+  float facing = dot(seen, light);
   vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
   float out_ = (xy.x * deep.x + xy.y * deep.y + height * deep.z) * size;
   vec3 point = vView + normalize(-vView) * out_;
   vec4 clip = projectionMatrix * vec4(point, 1.0);
   gl_FragDepth = clip.z / clip.w * 0.5 + 0.5;
-  gl_FragColor = vec4(colour.rgb * tone, 1.0);
+  vec3 paint = mix(vec3(dot(colour.rgb, vec3(0.2126, 0.7152, 0.0722))), colour.rgb, punch);
+  gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), 1.0);
   #include <colorspace_fragment>
 }`;
 
@@ -142,13 +147,15 @@ void main() {
   #include <skinning_vertex>
   #include <project_vertex>
 }`;
-const TOON_FRAGMENT = `
+export const TOON_FRAGMENT = `
 uniform sampler2D map;
 uniform float soften;
 uniform vec3 light;
 uniform vec3 shadeMid;
 uniform vec3 shadeDark;
 uniform vec2 edges;
+uniform float punch;
+uniform float rim;
 varying vec2 vUv;
 varying vec3 vFacing;
 vec3 toHsv(vec3 c) {
@@ -167,36 +174,39 @@ void main() {
   float seen = pow(clamp(hsv.z * 1.5, 0.0, 1.0), 1.0 / 2.2) * 0.86 + 0.14;
   float snapped = max(floor((seen + 0.0625) * 8.0) / 8.0, 0.06875);
   vec3 paint = fromHsv(vec3(hsv.x, min(hsv.y * 0.96, 1.0), pow(snapped, 2.2)));
-  float facing = dot(normalize(vFacing) * (gl_FrontFacing ? 1.0 : -1.0), light);
+  vec3 toEye = normalize(vFacing) * (gl_FrontFacing ? 1.0 : -1.0);
+  float facing = dot(toEye, light);
   vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
-  gl_FragColor = vec4(paint * tone, 1.0);
+  paint = mix(vec3(dot(paint, vec3(0.2126, 0.7152, 0.0722))), paint, punch);
+  gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(toEye.z, 0.0, 1.0), 3.0) * step(edges.x, facing), 1.0);
   #include <colorspace_fragment>
 }`;
-const INK_FRAGMENT = `
+export const INK_FRAGMENT = `
 uniform vec3 ink;
 void main() {
   gl_FragColor = vec4(ink, 1.0);
   #include <colorspace_fragment>
 }`;
 
-async function picture(url, colour) {
+export async function picture(url, colour, blocky = false) {
   const map = await new THREE.TextureLoader().loadAsync(url);
   map.colorSpace = colour ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   map.generateMipmaps = false;
-  map.minFilter = map.magFilter = colour ? THREE.LinearFilter : THREE.NearestFilter;
+  map.minFilter = map.magFilter = colour && !blocky ? THREE.LinearFilter : THREE.NearestFilter;
   return map;
 }
 
 class CardViewer {
   constructor(stage, { run, baked, set, state, onFacts, loader }) {
     Object.assign(this, { run, baked, set, state, onFacts, loader }); // the gallery's own loader: it can read the set's packed mesh
-    this.folder = `runs/${encodeURIComponent(run.id)}/${baked.folder}`;
+    this.look = lookOf(state.look);
+    this.folder = `runs/${encodeURIComponent(run.id)}/${bakedFor(run, this.look).folder}`;
     this.el = stage;
     this.status = stage.querySelector(".status");
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(PAPER);
-    this.renderer.autoClear = false;
+    this.screen = new Screen(this.renderer);
     stage.prepend(this.renderer.domElement);
     this.scene = new THREE.Scene();
     this.scene.environment = new THREE.PMREMGenerator(this.renderer).fromScene(new RoomEnvironment(), 0.04).texture;
@@ -244,8 +254,7 @@ class CardViewer {
         this.scene.add(lamp, lamp.target);
       }
     }
-    this.card = await fetch(`${this.folder}/impostor.json`).then((r) => r.json());
-    await this.useViews(this.state.views || this.card.default_views);
+    await this.useLook(this.state.look);
     await this.play(this.state.motion);
     this.status.remove();
   }
@@ -254,7 +263,7 @@ class CardViewer {
   async useViews(name) {
     if (!this.sheets[name]) {
       const sheet = this.card.sets[name];
-      const [colour, data] = await Promise.all([picture(`${this.folder}/${sheet.color}`, true), picture(`${this.folder}/${sheet.data}`, false)]);
+      const [colour, data] = await Promise.all([picture(`${this.folder}/${sheet.color}`, true, this.card.nearest), picture(`${this.folder}/${sheet.data}`, false)]);
       this.sheets[name] = { ...sheet, colour, data, dirs: sheet.views.map((v) => v.d) };
     }
     this.state.views = name;
@@ -269,7 +278,6 @@ class CardViewer {
     this.cards.clear();
     this.edges.clear();
     const { card, sheet } = this;
-    const light = new THREE.Vector3(...card.light).normalize();
     const line = new THREE.LineBasicMaterial({ color: 0x44679b, depthTest: false });
     this.parts = card.parts.map((part) => {
       const quads = [0, 1].map(() => {
@@ -284,9 +292,7 @@ class CardViewer {
             sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: card.px_per_m }, cell: { value: new THREE.Vector4() },
             anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() }, back: { value: new THREE.Vector4() },
             lean: { value: new THREE.Vector2() }, deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m }, steps: { value: 0 },
-            depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, light: { value: light },
-            shadeMid: { value: new THREE.Vector3(...card.shade[0]) }, shadeDark: { value: new THREE.Vector3(...card.shade[1]) },
-            edges: { value: new THREE.Vector2(...card.edges) },
+            depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.paint,
           },
         });
         const quad = new THREE.Mesh(shape, paint);
@@ -316,8 +322,8 @@ class CardViewer {
     this.scene.add(this.model);
     this.bones = {};
     this.meshes = [];
-    const light = new THREE.Vector3(...this.card.light).normalize();
-    const shade = { light: { value: light }, shadeMid: { value: new THREE.Vector3(...this.card.shade[0]) }, shadeDark: { value: new THREE.Vector3(...this.card.shade[1]) }, edges: { value: new THREE.Vector2(...this.card.edges) } };
+    const shade = this.paint;
+    this.lines = [];
     const ink = new THREE.ShaderMaterial({ vertexShader: TOON_VERTEX, fragmentShader: INK_FRAGMENT, side: THREE.BackSide,
       uniforms: { inkM: { value: this.card.ink_m }, ink: { value: new THREE.Color(0x1c1721) } } });
     gltf.scene.traverse((o) => {
@@ -334,7 +340,7 @@ class CardViewer {
       line.bind(mesh.skeleton, mesh.bindMatrix);
       line.frustumCulled = mesh.frustumCulled = false;
       mesh.parent.add(line);
-      this.meshes.push(line);
+      this.lines.push(line);
     }
     this.mixer = new THREE.AnimationMixer(gltf.scene);
     this.clip = gltf.animations[0];
@@ -418,22 +424,34 @@ class CardViewer {
   draw() {
     const size = this.renderer.getSize(new THREE.Vector2());
     const stacked = this.el.classList.contains("stacked");
-    const w = stacked ? size.x : size.x / 2, h = stacked ? size.y / 2 : size.y;
-    this.camera.aspect = w / h;
+    this.camera.aspect = (stacked ? size.x : size.x / 2) / (stacked ? size.y / 2 : size.y);
     this.camera.updateProjectionMatrix();
-    this.renderer.setScissorTest(false);
-    this.renderer.clear();
-    this.renderer.setScissorTest(true);
-    const half = (x, y, cards) => {
-      this.renderer.setViewport(x, y, w, h);
-      this.renderer.setScissor(x, y, w, h);
+    const show = (cards) => () => {
       this.cards.visible = cards;
       this.edges.visible = cards && this.state.edges;
       for (const mesh of this.meshes || []) mesh.visible = !cards;
-      this.renderer.render(this.scene, this.camera);
+      for (const line of this.lines || []) line.visible = !cards && this.look.hull !== false; // bold ink draws its lines on the finished picture
     };
-    half(0, stacked ? h : 0, true);
-    half(stacked ? 0 : w, 0, false);
+    this.screen.render(this.scene, this.camera, this.look, stacked
+      ? [{ x: 0, y: 0.5, w: 1, h: 0.5, before: show(true) }, { x: 0, y: 0, w: 1, h: 0.5, before: show(false) }]
+      : [{ x: 0, y: 0, w: 0.5, h: 1, before: show(true) }, { x: 0.5, y: 0, w: 0.5, h: 1, before: show(false) }]);
+  }
+
+  // Change the look: the paint's numbers, and (when the look has a sheet of its own) which baked cards are read.
+  async useLook(id) {
+    this.look = lookOf(id);
+    this.state.look = this.look.id;
+    const folder = `runs/${encodeURIComponent(this.run.id)}/${bakedFor(this.run, this.look).folder}`;
+    if (folder !== this.folder || !this.card) {
+      this.folder = folder;
+      this.card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
+      for (const sheet of Object.values(this.sheets)) { sheet.colour.dispose(); sheet.data.dispose(); }
+      this.sheets = {};
+      this.paint ||= paintOf(this.card.light);
+      await this.useViews(this.card.sets[this.state.views] ? this.state.views : this.card.default_views);
+    }
+    setPaint(this.paint, this.look);
+    this.onFacts?.();
   }
 
   layout() {
@@ -445,7 +463,7 @@ class CardViewer {
   // What the page and the tests ask: is it up, what is showing, how busy the swapping is.
   report() {
     return {
-      ready: Boolean(this.parts && this.mixer), motion: this.state.motion?.id, views: this.state.views, cards: this.parts?.length || 0,
+      ready: Boolean(this.parts && this.mixer), look: this.look.id, motion: this.state.motion?.id, views: this.state.views, cards: this.parts?.length || 0,
       showing: Object.fromEntries((this.parts || []).map((p) => [p.name, this.held[p.name]])),
       swaps_last_second: this.swaps.reduce((sum, s) => sum + s[1], 0), time: this.mixer?.time || 0, error: this.error || null,
     };
@@ -456,6 +474,7 @@ class CardViewer {
     this.resize.disconnect();
     this.controls.dispose();
     for (const sheet of Object.values(this.sheets)) { sheet.colour.dispose(); sheet.data.dispose(); }
+    this.screen.dispose();
     this.renderer.dispose();
     delete window.forgeCards;
   }
@@ -464,7 +483,7 @@ class CardViewer {
 // The page: the toon's name, the two halves, what to play, and the plain numbers.
 export function cardsPage({ run, sets, h, loader }) {
   const baked = run.cards[0];
-  const state = { motion: baked.motions[0], views: null, soften: false, relief: true, edges: false, paused: false, slow: false };
+  const state = { motion: baked.motions[0], views: null, look: "comic", soften: false, relief: true, edges: false, paused: false, slow: false };
   const stage = h("div", { class: "stage clay-surface cards-stage" },
     h("div", { class: "pane cards-pane" },
       h("span", { class: "tag" }, "Flat cards"),
@@ -495,6 +514,10 @@ export function cardsPage({ run, sets, h, loader }) {
     viewChips.forEach((c, k) => c.setAttribute("aria-pressed", String(k === i)));
     viewer.useViews(name);
   }));
+  const lookChips = LOOKS.map((look, i) => chip(look.name, i === 0, () => {
+    lookChips.forEach((c, k) => c.setAttribute("aria-pressed", String(k === i)));
+    viewer.useLook(look.id).then(() => viewChips.forEach((c, k) => { c.hidden = !viewer.card.sets[baked.views[k]]; c.setAttribute("aria-pressed", String(baked.views[k] === state.views)); }));
+  }));
   const toggle = (key, label, title) => {
     const btn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", title, "aria-pressed": String(state[key]), onclick: () => {
       state[key] = !state[key];
@@ -508,6 +531,7 @@ export function cardsPage({ run, sets, h, loader }) {
     h("p", { class: "lede" }, `${run.name}, drawn two ways. On the left he is ${baked.parts} flat pictures, one for each bone, that turn to face you. On the right he is the real model. Drag to look around; the closer the two match, the better the trick.`),
     group("Play", motionChips),
     group("Pictures a part", viewChips),
+    group("Drawn as", lookChips),
     h("div", { class: "controls" }, h("div", { class: "toggles" },
       toggle("soften", "Soften the swaps", "When a part changes to its next picture, mix the two for a moment instead of jumping"),
       toggle("relief", "Use the depth", "Slide every pixel of a picture by how far it stands out, so a picture taken from a little to one side still lands where the real surface is. Off: each picture is laid flat on its card"),
@@ -516,12 +540,13 @@ export function cardsPage({ run, sets, h, loader }) {
       toggle("paused", "Pause", "Hold the pose; you can still look around"))),
     stage,
     facts,
+    h("p", { class: "about" }, h("a", { href: `#/tag/${encodeURIComponent(run.id)}` }, "Play tag"), ": a whole field of him, drawn as cards or as meshes, to see what each costs."),
     h("p", { class: "about" }, "How it works: each part was pictured ahead of time from all around. A card shows the picture taken from nearest to where you stand, so any move plays without a new picture ever being drawn. Watch the joints, and watch for a part jumping as its picture is swapped."),
   );
   queueMicrotask(() => {
     viewer = new CardViewer(pane, { run, baked, set: sets.find((s) => s.id === "ring"), state, onFacts: showFacts, loader });
     page.viewer = viewer;
-    window.forgeCards = { state: () => viewer.report(), viewer };
+    window.forgeCards = { state: () => viewer.report(), viewer, look: (id) => viewer.useLook(id) };
   });
   page.dispose = () => viewer?.dispose();
   return page;
