@@ -92,6 +92,7 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just set-build <set>`, `just set-backdrop <set>`, `just set-card <set>` | build a set's block-out from its data, have Codex paint its backdrop, take its picture for the gallery |
 | `just set-from-run <set> <run folder>` | use an object you already made as a set's geometry |
 | `just shoot <take>`, then `just cast <take> runs "" <clip>` | a take on a set with several people in it (`studio-guest-entrance`): every role's motion, then the cast, filmed from every camera of the set |
+| `just fight <fight> <left run> <right run>` | stage a fight from its script in `scripts/fight/fights/`: both fighters on one timeline, each baked through the same skeleton and limits as a walk, filmed from every camera of the set with hitstop, camera shake and flashes (see "Fights"). `just fight-test` tries the kit without Blender |
 | `just world-check` | is the world sound: every place a sound set, no footprints overlapping, every toon on a mark, the newest epoch up to date |
 | `just buy-house <toon>` | Opus designs a house for a toon from their own brief, and it is built as a set (a new folder each time) |
 | `just world-places`, `just world-stock`, `just world-toons` | build the world's places from data, bring in light copies of the runs' objects, stand the toons up in their poses |
@@ -441,6 +442,27 @@ A take can also swap a sentence (`"sentences": {"guest_walks_on": "A person stri
 In the gallery, **Places** has a page per set: the set in 3D with its marks and cameras labelled, a row to look through each fixed camera, its dressing as chips, and a button for each shot filmed there that brings the cast on and plays it.
 
 **What is weak.** Everyone on a set is brought to the same hip height, which is how they all land on the same marks; so short-legged Roosevelt comes out bigger than long-legged Lincoln, who was the taller man. The handshake only puts two wrists near one spot: the hands lie flat the way a hand rests on a wall, nobody grips, nothing pumps, and a short arm comes up short. A seat is a box, solid down to the floor: a body is kept out of it and can float a few centimetres above it, nothing pulls it down onto the cushion, and nothing knows about the chair's back. The floor is flat, so the ring's steps are a mark at mat height and its ropes have a gap where people come in. Where a walk meets a turn (leaving the handshake) the join is the roughest part of the motion. Nothing keeps two people out of each other, only out of the set. The cameras never move and nobody picks the cut: you get three films. Only the template has been shot; Opus has been shown how to block by marks but has not yet laid out a set shot for real. Filming is slow, about four minutes a camera.
+## Fights
+
+A fight is animated the way fighting games and WoW do it: a few held poses and fast snaps between them, readable before it is real. Nothing is simulated and nothing is generated; it is our own poses on the `rig.py` skeleton, played by `animate.py` like a walk.
+
+```
+just fight first runs/<roosevelt> runs/<lincoln>
+```
+
+- **One move set for everyone** (`scripts/fight/moves.py`). Guard with a light bounce, shuffle steps, jab, cross, left hook, uppercut, body shot, haymaker, block. A move is turns of whole body parts, and where a fist has to be somewhere (by the chin, on the other man's jaw) the arm is solved to that spot from this body's own shoulder and arm. So the same jab fits short-armed Roosevelt and long-armed Lincoln. The other stance is the same move in a mirror.
+- **Startup, active, recovery.** Every attack has a quick wind-up, a snap out to a fully stretched pose that is held for its active frames, and a slower way back to guard. A jab is 3, 2 and 6 frames; a haymaker 10, 4 and 14.
+- **A small menu of reactions**, picked by the blow: the head snaps (light, high), the body folds (light, low), a stagger back two steps (heavy), forearms take it and he is pushed back a little (block), a long fall onto the mat with a small bounce, then lying still (knockdown). Each attack names the reaction it causes; whether it is blocked is the fight script's choice.
+- **Fixed spacing.** The ring has two fight marks a metre apart. Before any exchange both men are stepped back onto them, and every blow is built to reach across: stretched as far as the move says, with a step in where the arm is short and a rock back where it is long. The fist only has to arrive at its spot, a few centimetres off the face.
+- **Hitstop.** On the first active frame the defender's reaction starts and both men freeze: 3 frames for a jab, 5 to 8 for a heavy blow, 12 for the knockout. The film adds a jolt of the camera and a small bright star at the fist for three frames.
+- **A fight is a list** (`scripts/fight/fights/first.json`): `{"by": "left", "move": "jab", "result": "blocked"}`, with guard, shuffles and circling between. `schedule.py` lays both men on one timeline and writes one plain motion each, and the list of hits (frame, where, how hard) the film reads.
+
+`apply_fight.py` measures each character (its joints and limits from `rig.py`, and off the mesh how far the face is in front of the head and how thick the body is lying down), lays the fight out for those two bodies, and bakes each through `apply_motion.py`. `film_fight.py` stands the set up as a take does and films it from every camera: `lowpoly-<camera>.mp4` and a strip of twelve stills each. The ring has a fourth camera for this, `fight`, above the top rope, so the ropes cross the legs and not the fists.
+
+**The first fight** (Roosevelt and Lincoln, 23 seconds, 11 blows): they square off and circle, Roosevelt's jab is blocked, Lincoln's lands, they trade, a body shot folds Lincoln, his cross staggers Roosevelt, and an uppercut puts Roosevelt on the mat. Measured on the baked characters: every fist is within 0.7 cm of its spot on its contact frame, nothing goes more than 0.3 mm through the mat (a man on his back included), no joint leaves its limits, and `animate.py` clamps Roosevelt's right arm on three frames of his haymaker and one foot on one frame, and nothing of Lincoln's. A second short script, `get-up`, has a man knocked down get back to his feet.
+
+**What is weak.** Hands are mittens, so a fist is an open hand. The two men stand in opposite stances so both chests face the cameras, which puts their front feet on the same line: at range the boots nearly touch. A man who is hit is pushed, never caught: no clinch, no grabbing. Loose cloth would only swing, not be struck. Nothing checks one body against the other, so a long arm can pass through a guard on the way back.
+
 ## Comics
 
 Webcomics got cheap by a few habits: one drawing "hand" used on everything, the same poses and framings again and again, plain backgrounds, a sheet of faces to swap, and words doing the work. We have 3D characters that can already stand, walk and vault a wall, so a panel is a frozen moment of one of them, drawn in one style. A panel takes about a quarter of a second to draw.
