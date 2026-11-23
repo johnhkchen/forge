@@ -1,0 +1,100 @@
+{
+ "folder": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor",
+ "size": [
+  480,
+  540
+ ],
+ "eye_away_m": 4.4,
+ "relief": true,
+ "clips": {
+  "fight": {
+   "glb": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/shots/fight-first/cast-left.glb",
+   "frames": 722,
+   "seconds": 24.03,
+   "triangles": 9926,
+   "eyes": {
+    "quarter": {
+     "26": {
+      "frames_measured": 722,
+      "outline": 0.9364,
+      "outline_worst": 0.9224,
+      "colour": 8.9,
+      "gap_cm": 2.07,
+      "gap_cm_worst": 4.8,
+      "seam_cm": 1.55,
+      "seam_cm_worst": 3.93,
+      "spill_cm": 9.45,
+      "spill_cm_worst": 13.54,
+      "gap_pct": 2.07,
+      "spill_pct": 4.59,
+      "pops_per_s": 16.56,
+      "pop_pct": 6.27,
+      "pop_pct_worst": 48.48
+     },
+     "62": {
+      "frames_measured": 722,
+      "outline": 0.9424,
+      "outline_worst": 0.927,
+      "colour": 7.8,
+      "gap_cm": 1.45,
+      "gap_cm_worst": 3.93,
+      "seam_cm": 1.36,
+      "seam_cm_worst": 3.06,
+      "spill_cm": 9.38,
+      "spill_cm_worst": 13.54,
+      "gap_pct": 1.46,
+      "spill_pct": 4.57,
+      "pops_per_s": 25.46,
+      "pop_pct": 6.04,
+      "pop_pct_worst": 62.02
+     }
+    }
+   }
+  },
+  "rom": {
+   "glb": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-rom.glb",
+   "frames": 313,
+   "seconds": 10.4,
+   "triangles": 9926,
+   "eyes": {
+    "quarter": {
+     "26": {
+      "frames_measured": 313,
+      "outline": 0.9599,
+      "outline_worst": 0.9363,
+      "colour": 6.9,
+      "gap_cm": 2.23,
+      "gap_cm_worst": 5.68,
+      "seam_cm": 1.8,
+      "seam_cm_worst": 4.8,
+      "spill_cm": 3.17,
+      "spill_cm_worst": 6.55,
+      "gap_pct": 1.96,
+      "spill_pct": 2.14,
+      "pops_per_s": 18.56,
+      "pop_pct": 4.59,
+      "pop_pct_worst": 11.44
+     },
+     "62": {
+      "frames_measured": 313,
+      "outline": 0.9681,
+      "outline_worst": 0.94,
+      "colour": 5.9,
+      "gap_cm": 1.9,
+      "gap_cm_worst": 4.8,
+      "seam_cm": 1.57,
+      "seam_cm_worst": 4.8,
+      "spill_cm": 3.11,
+      "spill_cm_worst": 6.55,
+      "gap_pct": 1.33,
+      "spill_pct": 1.92,
+      "pops_per_s": 26.15,
+      "pop_pct": 3.78,
+      "pop_pct_worst": 13.28
+     }
+    }
+   }
+  }
+ },
+ "seconds": 481.5
+}

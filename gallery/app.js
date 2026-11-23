@@ -1294,6 +1294,7 @@ function objectPage(run, wanted) {
     stage,
     factsBox,
     about,
+    run.cards?.length ? h("p", { class: "about" }, h("a", { href: `#/cards/${encodeURIComponent(run.id)}` }, "See it as flat cards"), ": the same toon as a handful of flat pictures that turn to face you, beside the real model.") : null,
     // How a hiding garment was made is a note for the curious, kept below the fold and phrased with care:
     // the fitting form, not "without clothes".
     run.base ? h("div", { class: "notes clay-surface" }, h("h3", {}, "How the clothes were made"),
@@ -1741,6 +1742,30 @@ async function route() {
   const diorama = shown && dioramas.find((d) => d.name === decodeURIComponent(shown[1]) && d.glb);
   if (diorama) {
     app.replaceChildren(dioramaPage(diorama));
+    window.scrollTo(0, 0);
+    return;
+  }
+  // #/cards/<run id> (or #/impostor/<run id>): a toon drawn as flat cards, beside the real model.
+  const asCards = location.hash.match(/^#\/(?:cards|impostor)\/([^/]+)$/);
+  const carded = asCards && runs.find((r) => r.id === decodeURIComponent(asCards[1]) && r.cards?.length);
+  if (carded) {
+    viewer?.dispose();
+    const { cardsPage } = await import("./impostor.js");
+    const page = cardsPage({ run: carded, sets, h, loader });
+    viewer = { dispose: () => page.dispose() };
+    app.replaceChildren(page);
+    window.scrollTo(0, 0);
+    return;
+  }
+  // #/tag/<run id>: a field of that toon playing tag, drawn as meshes or as cards, to see what each costs.
+  const atTag = location.hash.match(/^#\/tag\/([^/]+)$/);
+  const tagged = atTag && runs.find((r) => r.id === decodeURIComponent(atTag[1]) && r.cards?.length);
+  if (tagged) {
+    viewer?.dispose();
+    const { tagPage } = await import("./tag.js");
+    const page = tagPage({ run: tagged, sets, h, loader });
+    viewer = { dispose: () => page.dispose() };
+    app.replaceChildren(page);
     window.scrollTo(0, 0);
     return;
   }

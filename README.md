@@ -116,6 +116,9 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just auto-body <run folder> <out folder>` | give a finished character a body with anatomy, without Claude: its landmarks are found, a body is built from them, and its own head and gear go back on. Writes into the out folder, never the run |
 | `just anatomy-check <run folder> <out.png> low=<file.glb>…` | measure low-poly and mid-poly bodies against the detailed mesh: landmarks, proportions, outlines, cross-sections, and a sheet to look at |
 | `just gallery` | the newest diorama out front, then the world, every object raw vs cleaned-up, and the comics, on this Mac or a phone on the same Wi-Fi |
+| `just impostor <run folder> [version]` | cut a rigged character into flat cards, one a bone, and picture each part from all around (`profiles/<version>-impostor/`); the gallery shows it at `#/cards/<run>` |
+| `just impostor <run folder> painted --look pixel` (or `joe`) | the cards' sheet for another look: pixel art (small, few colours) or bold ink (`profiles/<version>-impostor-<look>/`) |
+| `just impostor-judge <run folder> [version] [out]` | the same frames drawn as cards and as the real model, and how far apart they are; stills and films into `evidence/impostor/` |
 | `just transcript <run folder> <step>` | read the Blender code Claude ran in a step (`polish`, `parts`, `lowpoly`) |
 | `just test-tools` | try the Blender scripts on real runs in a background Blender (your open Blender is left alone) |
 | `just check-safe` | check that the Blender scripts will get past the add-on's safe mode |
@@ -465,6 +468,124 @@ just fight first runs/<roosevelt> runs/<lincoln>
 **The first fight** (Roosevelt in his painted outfit and Lincoln in his low-poly, 24 seconds, 11 blows): they square off and circle, Roosevelt's jab is blocked, Lincoln's lands, they trade, a body shot folds Lincoln, his cross staggers Roosevelt most of a metre back, and an uppercut puts Roosevelt on the mat. Lincoln steps back, raises both fists, and the film ends on that. Measured on the baked characters: every fist is within 0.7 cm of its spot on its contact frame, nothing goes more than 0.3 mm through the mat (a man on his back included), no joint leaves its limits, and `animate.py` clamps Roosevelt's right arm on three frames of his haymaker and one foot on one frame, and nothing of Lincoln's. A second short script, `get-up`, has a man knocked down get back to his feet.
 
 **What is weak.** A fist is the open hand folded twice: it reads at ring distance, but the thumb goes along with the fingers. A man who is hit is pushed, never caught: no clinch, no grabbing. Loose cloth would only swing, not be struck. Nothing checks one body against the other, so a long arm can pass through a guard on the way back. Roosevelt's arms are short, so he steps a long way in to reach Lincoln's head and punches steeply upward.
+
+## Flat cards
+
+An experiment: can a toon be a handful of flat pictures instead of a mesh, and still play any motion? It is the cut-up impostor of Aubel, Boulic and Thalmann, done one card per joint as Beacco and others at UPC do it, tried on one character (Roosevelt in his painted outfit) to see whether it is good enough for a sprite-like world.
+
+```
+just impostor runs/<roosevelt> painted          # cut him up and picture every part: a minute and a half
+just gallery                                    # then open #/cards/<run>, or "See it as flat cards" on his page
+just impostor-judge runs/<roosevelt> painted    # the same frames as cards and as the real model, measured
+```
+
+- **Cut by bone.** Every face goes to the part whose bones pull on it most: hips, spine, chest (with the shoulders and neck), head, and for each side upper arm, forearm, hand (fingers folded in), thigh, shin, foot (toes folded in). 16 parts. Each part also borrows the faces next door that its bones pull on a little, so two parts lap over each other at a joint and a bent elbow stays closed; the trunk's parts lap much further, because they are thick and hardly bend against each other. He is cut with his arms hanging as they do in his walk, not straight out as the skeleton rests: a part is only exact near the pose it was cut in, and nobody walks in a T.
+- **Pictured from all around, ahead of time** (`scripts/impostor/bake_impostor.py`). Each part is laid in its own bone's frame and drawn without perspective from a fixed set of directions: 8 around at three heights plus straight along the bone both ways (26), or 12 around at five heights (62), or 16 around at seven (114). `toon.py` draws them with the tones of light switched off: flat colour and the ink line. Beside the colour every pixel keeps which way its surface faces and how far it stands toward the eye. All of one view set goes on two sheets, `views<N>-color.png` and `views<N>-data.png`, with `impostor.json` saying where each picture is.
+- **One card a bone** (`gallery/impostor.js`, `impostor-math.js`). The page plays any clip on the skeleton with the mesh hidden. Each bone gets one flat card through its head, square on to you, showing the picture taken from nearest to where you are *as that bone sees you*. 16 cards, 32 triangles, whatever he is doing: a walk, the warm-up routine and the whole fight play from the same 416 pictures.
+- **Each pixel slid by its depth.** A picture taken from 20 degrees to one side is wrong by centimetres on a chest. So a card does not lay its picture flat: every pixel looks down a line through the picture and shows the first place where the stored surface is as high as the line (a short search, then halved in on). That turns the picture, foreshortens it and shifts everything by how far it stands out, exactly, as long as you are far off compared with the part. It is what makes 26 pictures a part enough. The stored depth also goes to the depth buffer, so cards hide each other pixel by pixel and the ring's ropes pass in front of a leg.
+- **Light is worked out, not baked.** The stored facing picks one of the comic's three flat tones from a light fixed to the eye, as `toon.py` does, so a forearm is lit from the same side whichever way it is turned.
+- **Judged without a browser** (`scripts/impostor/impostor.py`, `judge_impostor.py`). `impostor.py` is the page's arithmetic and its shader done slowly in Python, a pixel at a time; `test_impostor.py` runs the page's own file in node against it (the same to 14 decimal places) and is part of `just check`. The judge draws each frame both ways from the same eye in the same light and measures the difference.
+
+**The pixel size.** 192 pixels a metre: a pixel is 5 mm, so the comic's 1.4 cm ink line is nearly three pixels wide and survives, and a figure is sharp up to about 350 pixels tall, which is as big as a townsman gets on a 1080p screen. At 128 a metre the sheets are half the size and the line goes soft.
+
+**What it measures** (Roosevelt, 192 px a metre, the eye 4.4 m off and going along with his hips, a pixel 4.4 mm on him, every frame of each clip; `evidence/impostor/judge.json`, `judge-moves.json`, `judge-flat.json`):
+
+| | pictures a part | outline shared (worst frame) | colour off, of 255 | seam, cm (worst) | widest gap, cm | sticks out, cm (worst) | swaps a second | pixels changed on a frame with a swap |
+|---|---|---|---|---|---|---|---|---|
+| walk, from the front | 26 | 0.979 (0.972) | 4.9 | 1.4 (3.9) | 3.9 | 1.4 (2.2) | 32 | 2.9% |
+| walk, from the front | 114 | 0.978 (0.974) | 4.7 | 1.3 (1.3) | 1.3 | 1.5 (3.1) | 78 | 2.8% |
+| walk, three-quarter | 26 | 0.970 (0.957) | 6.1 | 1.3 (2.2) | 2.2 | 2.2 (3.9) | 28 | 3.5% |
+| walk, three-quarter | 62 | 0.975 (0.966) | 5.6 | 1.4 (2.2) | 2.2 | 2.2 (3.9) | 63 | 3.8% |
+| walk, three-quarter | 114 | 0.975 (0.963) | 5.5 | 1.2 (1.3) | 2.2 | 2.0 (3.9) | 80 | 3.5% |
+| walk, side-on | 26 | 0.966 (0.958) | 5.4 | 1.6 (2.2) | 3.1 | 3.0 (3.9) | 0 | 0.0% |
+| walk, side-on | 114 | 0.968 (0.961) | 4.9 | 1.2 (1.3) | 3.1 | 3.1 (3.9) | 21 | 1.9% |
+| walk, from behind | 26 | 0.961 (0.951) | 6.9 | 2.4 (3.9) | 3.9 | 2.2 (3.9) | 57 | 5.0% |
+| walk, from behind | 114 | 0.978 (0.973) | 4.4 | 1.4 (2.2) | 2.2 | 2.1 (3.9) | 73 | 3.0% |
+| walk, from 25 degrees up | 26 | 0.967 (0.957) | 7.6 | 1.6 (2.2) | 2.2 | 1.7 (3.1) | 39 | 3.9% |
+| walk, from 25 degrees up | 62 | 0.976 (0.968) | 6.0 | 1.4 (2.2) | 2.2 | 2.0 (3.9) | 53 | 3.1% |
+| walk, from 25 degrees up | 114 | 0.976 (0.966) | 5.9 | 1.4 (2.2) | 2.2 | 1.9 (3.1) | 80 | 4.1% |
+| walk, from 45 degrees up | 26 | 0.967 (0.963) | 8.5 | 2.1 (3.1) | 3.1 | 1.9 (3.1) | 32 | 6.5% |
+| walk, from 45 degrees up | 62 | 0.974 (0.969) | 7.5 | 1.4 (3.1) | 3.1 | 1.8 (3.1) | 65 | 5.5% |
+| walk, from 45 degrees up | 114 | 0.977 (0.970) | 6.8 | 1.4 (2.2) | 2.2 | 1.7 (3.1) | 84 | 4.5% |
+| walk, three-quarter, pictures laid flat (no depth) | 26 | 0.942 (0.896) | 12.9 | 3.4 (7.4) | 8.3 | 4.1 (8.3) | 28 | 9.7% |
+| walk, three-quarter, pictures laid flat (no depth) | 114 | 0.958 (0.943) | 11.6 | 2.1 (3.1) | 3.9 | 2.8 (4.8) | 80 | 8.4% |
+| warm-up routine, three-quarter | 26 | 0.960 (0.936) | 6.9 | 1.8 (4.8) | 5.7 | 3.2 (6.5) | 19 | 4.6% |
+| warm-up routine, three-quarter | 62 | 0.968 (0.940) | 5.9 | 1.6 (4.8) | 4.8 | 3.1 (6.5) | 26 | 3.8% |
+| the fight, three-quarter | 26 | 0.936 (0.922) | 8.9 | 1.6 (3.9) | 4.8 | 9.4 (13.5) | 17 | 6.3% |
+| the fight, three-quarter | 62 | 0.942 (0.927) | 7.8 | 1.4 (3.1) | 3.9 | 9.4 (13.5) | 25 | 6.0% |
+
+Going once round him as he stands mid-stride: 26 pictures a part, 158 swaps in the turn, each changing 5.1% of his pixels, outline 0.963; 62 pictures a part, 234 swaps in the turn, each changing 4.0% of his pixels, outline 0.968; 114 pictures a part, 323 swaps in the turn, each changing 3.6% of his pixels, outline 0.971.
+
+"Outline shared" is how much of the two outlines is common (1.0 is the same shape; the ink line wobbling by one pixel all round costs about 0.02). A gap is body the real model has and the cards do not; a seam is a gap within 12 cm of a joint. A swap is one part changing to its next picture. The two "laid flat" rows are the plain technique, without sliding pixels by their depth: 114 pictures a part laid flat (71 MB) do worse than 26 slid (17 MB).
+
+**What it costs.**
+
+| | cards, 26 a part | cards, 62 | cards, 114 | painted mesh | low-poly mesh |
+|---|---|---|---|---|---|
+| triangles | 32 | 32 | 32 | 7,848 | 1,695 |
+| pictures | 416 | 992 | 1,824 | 3 colour textures | none |
+| in memory | 16.7 MB | 38.8 MB | 70.9 MB | 9.4 MB of colour (19.9 with the maps the comic look does not use) | next to nothing |
+| to fetch | 3.0 MB | 7.3 MB | 13.4 MB | 0.76 MB | 0.30 MB |
+
+The sheets are per character, not per copy: a hundred Roosevelts share one. But a town of 50 different people is 50 sets of sheets, 835 MB at 26 pictures a part (390 MB at 128 px a metre), where 50 low-poly meshes are a few megabytes. In time the cards are cheap to place (16 small sums a toon a frame) and dear per pixel (with 26 pictures a part the search reads the data sheet 15 to 20 times a pixel, about 12 with 114, where a mesh reads one texture once); a hundred toons 200 pixels tall is some 40 million reads a frame, nothing to a laptop and noticeable on a phone, which can switch the search off for anyone far away. A hundred low-poly toons is 170,000 triangles, which is also nothing.
+
+**What is good.** Front, back and three-quarter, standing and walking, it reads as the same drawing as the model: the face, the singlet's neckline and the tones of light are in the right place even from between two pictures. Any motion plays, at any frame rate, from any angle, with no new pictures. Cards sort against each other and against the set without any drawing order.
+
+**What is weak.**
+- **The ink line is rougher** than the model's. It is baked into each picture, so where a part turns away from where it was pictured the line is pieced together from slid pixels and comes out a pixel or two ragged, and thicker in places.
+- **Joints.** A typical seam is 1.2 to 1.8 cm; the worst is 2 to 4 cm in a walk (a notch behind a knee, a flap at the hip when the thigh swings back) and 4.8 cm in the warm-up routine, which takes every joint to its limit. The lap that closes a bent joint pokes out when it bends the other way: up to 6.5 cm in the routine.
+- **Hands are open.** The fight curls his fingers with bones the cards do not have, so his fists are flat hands: 9 cm of fingers the real model does not show, 13.5 at worst, and the reason the fight's outline shares only 0.94. A second hand picture, shown when the fingers are curled, would fix it; it is not done.
+- **Swapping pictures.** In a walk seen from three-quarters, 28 swaps a second with 26 pictures a part, a frame with a swap changing about 3.5% of his pixels (a pixel-wide shimmer along a limb's edge, not a jump); more pictures swap oftener and no more gently. Without the depth the same swaps change 10%. The worst single frame is in the fight, as he goes down: half his pixels change at once when the chest and hips swap together. Seen dead side-on a walk swaps nothing at all. "Soften the swaps" on the page mixes the two pictures pixel by pixel near the changeover.
+- **Thin things in front of others** (his spectacles) smear when slid, and what a picture never saw (the top of his head from a high eye, with only 26) is a hole or a smear.
+- **Close up it is wrong.** The sliding is exact only from far off: from 4 m a point 30 cm off its card is drawn up to a degree out. Fine at town distance, not for a close-up.
+
+**The verdict.** Against plain low-poly 3D, for a town of this size: no. The mesh is already cheap (1,695 triangles), costs almost no memory, has no seams and a clean ink line, and the right half of the page shows it can be drawn the same comic way. Cards would start to pay only with thousands on screen, or with detailed models far heavier than ours. Against whole-body sprites in eight directions: yes, clearly. One walk at ten frames a second in eight directions is about 14 MB of pictures at this size (43 MB at the walk's full 30), close to what every motion he will ever have costs as cards, and it still cannot turn smoothly, stand behind a rope, or play the fight. So: keep the toons as meshes drawn the comic way; reach for cards if a crowd scene ever needs hundreds of the same few people, at 128 px a metre with the search off. (Measured since, under Tag below: even a thousand at once cost about the same either way on this Mac.)
+
+Films and stills: `evidence/impostor/` (`walk-quarter-26.mp4`, `fight-quarter-26.mp4`, `rom-quarter-26.mp4`, `turn-walk-26.mp4`, and the same with 62, the walk and the turn with 114 too; each `*-stills.png` is cards, real model, and where they differ; `walk-quarter-26-flat-stills.png` is the walk with the depth left unused).
+
+## Tag
+
+The flat cards timed against meshes, as a crowd: a field of Roosevelts playing tag on the grass. `just gallery`, then `#/tag/<run>` (or "Play tag" on the cards page).
+
+- **The game.** One is "it" (a red ring under him and an arrow over his head) and goes for the nearest runner he may tag. Runners within a few metres bolt, each a little to his own side, dodge when he is close, and stop to catch their breath when they are winded, which is when they get caught. A tag is a tag move for one and a tagged move for the other; the new "it" counts a second before he sets off, and the man who tagged him can't be tagged straight back. It is worked out from a seed in fixed steps, so every way of drawing it sees the same field.
+- **The moves come from a table** at the top of `gallery/tag.js`: a name, a `.glb`, which frames, and whether it loops. They are cut from one shot, `shots/tag-moves/painted-tag.glb` (run, dodge, tag, tagged, catching breath, laugh, sprint). A move that travels is brought to the middle, turned to face ahead, and has its travel taken out; `loop: "find"` looks for the cleanest loop inside its frames and measures how fast it covers ground. If the shot is not there, each move falls back on the plain run and walk.
+- **Five ways to draw them.** Meshes one by one (every runner his own skinned meshes and ink shell); meshes all at once (one draw a piece for the whole field, the bones read from a picture); cards one by one (the cards page as it is); cards all at once (every card of every runner in one draw: the graphics card picks each card's picture and places it); and that with the search by depth switched off past 12 m.
+- **Skeletons are timed apart**, and can be shared: every move is sampled once, thirty poses a second, into a table the graphics card reads, and a runner is then a place, a heading and a row of it. Or each runner works his own skeleton out every frame. Both are offered to every way of drawing.
+- **Measure all** runs every count and way for a few seconds each and shows a table to read or copy; **Measure the looks** does the same for every look. The big number is the work in one frame (skeletons, placing, drawing, and waiting for the graphics card to finish), because frames a second can't go past what the screen shows.
+
+**Measured on this Mac** (Apple M5, Chrome without a window, a picture of 1080 by 608; `evidence/impostor/tag-measured-mac.md`), ms of work a frame with shared poses:
+
+| runners | 10 | 100 | 250 | 500 | 1000 |
+|---|---|---|---|---|---|
+| Meshes, one by one | 3.9 | 8.4 | 14.0 | 15.4 | not run |
+| Meshes, all at once | 3.4 | 6.2 | 8.3 | 9.0 | 8.7 |
+| Cards, one by one | 4.2 | 12.7 | 15.3 | 34.0 | not run |
+| Cards, all at once | 3.6 | 7.0 | 6.1 | 7.9 | 12.7 |
+| Cards, all at once, search off far away | 2.1 | 4.7 | 5.7 | 4.9 | 6.3 |
+
+About 3 ms of that is there with nobody on the field (the set, and the wait for the graphics card). So: **drawn all at once, a thousand painted Roosevelts cost about the same as cards or as meshes**, 9 to 13 ms, and both hold 60 frames a second; the meshes are 15.7 million triangles a frame and this graphics card does not mind. Cards with the search off far away are the cheapest, 6 ms, about a third less than the meshes. At twice the pixels (2160 by 1216) it is 11.0 for meshes, 12.5 for cards, 8.8 for cards with the search off. What matters far more than cards or meshes is drawing them all at once: one by one, 500 runners are 15 ms as meshes and 34 as cards. And each runner working his own skeleton out adds 7 ms for moving the skeletons at a thousand and 4 to 5 more for handing the bones over, whichever way they are drawn. The numbers wobble by a millisecond or two from run to run (100 runners can read slower than 250): they are for the order of things, not the last digit.
+
+## Looks
+
+Three looks, switchable on the cards page and on the tag field, for cards and meshes alike (`gallery/looks.js`).
+
+- **Comic**: what the comics use.
+- **Pixel art**, at two levels. *Baked*: `just impostor <run> painted --look pixel` makes a sheet at 48 pixels a metre, not smoothed, every colour snapped to the 32 this character is most made of, the ink line one pixel wide, read without smoothing. The sheet is 512 by 308: 1.3 MB in memory where the comic one is 16.7, and 0.25 MB to fetch. *On screen*: the whole picture is drawn about 270 rows tall and blown up, so every pixel is square and on one grid; this works on meshes too. Close up, baked pixels alone are what was feared: each card turns and shears its own pixels, so they come out in mixed sizes at odd angles, and the face is lost. On screen they are clean, and **the mesh drawn small and blown up is the best pixel art here and the cheapest way to it**: it needs no sheet at all. At crowd distance the baked sheet is fine (a runner is a few dozen pixels tall; nobody can see which way his pixels lie), and it is what makes cards cheap: a thousand cost 6 ms where the comic sheet costs 10.
+- **Bold ink** (after Viewtiful Joe): two flat tones with a hard shadow edge, strong colour, a little light on the rim, a thick black line round every figure, and thinner lines inside where one part passes in front of another or the surface folds. The lines are drawn on the finished picture from the depth of every pixel, so their weight is the same on screen however small a runner is, and the same for cards and meshes. The cards' own sheet for it (`--look joe`) has no line round the parts and has the lines inside a part drawn in. The meshes do not use their ink shell in this look: the same pass draws their outside line too, which halves their triangles.
+
+What each look costs, ms of work a frame (shared poses, drawn all at once):
+
+| look | meshes, 100 | meshes, 1000 | cards, 100 | cards, 1000 | cards, search off far, 1000 |
+|---|---|---|---|---|---|
+| Comic | 6.2 | 9.6 | 7.2 | 10.1 | 7.2 |
+| Pixels, baked | 6.1 | 9.3 | 3.8 | 6.3 | 5.1 |
+| Pixels, on screen | 4.9 | 9.1 | 5.3 | 8.5 | 5.6 |
+| Pixels, both | 5.1 | 8.0 | 3.4 | 5.9 | 5.4 |
+| Bold ink | 5.1 | 8.0 | 7.8 | 9.6 | 7.3 |
+
+("Pixels, baked" changes nothing for meshes: they have no sheet.) Stills of every look, close and as a crowd of a hundred, cards and meshes: `evidence/impostor/look-*.png`.
+
+**What is weak.** Bold ink's fold lines come from depth alone, so a seam between two cards can draw as a line, and thin things far away (a rope) break into dashes. The baked pixel sheet loses the face; a face needs more pixels than 48 a metre gives it. Pixel art on screen shimmers a little as the eye moves, as any picture drawn small does.
 
 ## Comics
 

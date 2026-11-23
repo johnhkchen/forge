@@ -2517,6 +2517,32 @@ def test_fight_moves(ctx):
         case()
 
 
+def test_flat_cards(ctx):
+    """A character as flat cards, one a bone (scripts/impostor): the arithmetic's own cases; then Roosevelt's painted version cut and pictured in a background Blender (26 pictures a part), and three frames of his walk drawn as cards against the real model from the same eye: the outlines agree, the colours are close, no seam at a joint is wide."""
+    out = subprocess.run([sys.executable, os.path.join(HERE, "impostor", "test_impostor.py"), os.path.join(ctx["out"], "no-runs-here")], capture_output=True, text=True)
+    print("".join("    " + line + "\n" for line in out.stdout.splitlines() if line.startswith("    ")), end="")
+    check("the flat cards' own cases pass", out.returncode == 0, out.stdout.strip().splitlines()[-1] if out.stdout.strip() else out.stderr[-300:])
+    runs = os.path.dirname(ctx["troll"])
+    found = sorted(glob.glob(os.path.join(runs, "*roosevelt-wrestler-1890s")))
+    if not found or not os.path.isfile(os.path.join(found[-1], "profiles", "painted-walk.glb")):
+        print("    (no Roosevelt with a painted walk in the runs folder: skipped)")
+        return
+    folder = os.path.join(ctx["out"], "flat-cards")
+    shutil.rmtree(folder, ignore_errors=True)
+    baked = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "impostor", "bake_impostor.py"), "--", found[-1], "painted", "--views", "26", "--out", folder], capture_output=True, text=True)
+    result = next((json.loads(line[7:]) for line in baked.stdout.splitlines() if line.startswith('RESULT {"folder"')), None)
+    check("Roosevelt is cut into 16 parts and pictured 26 times each, on one sheet under 20 MB", bool(result) and result["parts"] == 16 and result["sets"]["26"]["pictures"] == 416 and result["sets"]["26"]["memory_mb"] < 20,
+          json.dumps(result) if result else (baked.stdout + baked.stderr)[-600:])
+    subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "impostor", "judge_impostor.py"), "--", folder, "--out", os.path.join(folder, "judge"),
+                    "--clip", "walk=" + os.path.join(found[-1], "profiles", "painted-walk.glb"), "--eyes", "quarter", "--step", "9", "--stills", "walk:0,9,18"], capture_output=True, text=True)
+    with open(os.path.join(folder, "judge", "judge.json")) as f:
+        said = json.load(f)["clips"]["walk"]["eyes"]["quarter"]["26"]
+    check("as cards, his walk keeps the real model's outline (over 0.95 shared, every frame)", said["outline_worst"] > 0.95, "%.3f at worst" % said["outline_worst"])
+    check("... its colours (a typical pixel under 10 of 255 off)", said["colour"] < 10, "%.1f" % said["colour"])
+    check("... and no seam at a joint wider than 4 cm", said["seam_cm_worst"] < 4.0, "%.1f cm at worst" % said["seam_cm_worst"])
+    check("stills of the two side by side are written", os.path.isfile(os.path.join(folder, "judge", "walk-quarter-26-stills.png")))
+
+
 def test_fight_baked(ctx):
     """The first fight baked onto Roosevelt and Lincoln in a background Blender (apply_fight.py), and measured there: the baked fist against its spot and the other man's head on every contact frame, the mat, the limits, the planted feet, the closed fists; then one frame of it filmed (film_fight.py)."""
     runs = os.path.dirname(ctx["troll"])
@@ -2569,7 +2595,7 @@ TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_true_size, test_contact, test_drape, test_cloth, test_paint,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body,
          test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build,
-         test_fight_moves, test_fight_baked,
+         test_fight_moves, test_fight_baked, test_flat_cards,
          test_world_places, test_world_house, test_world_toons, test_world_walk, test_world_house_build,
          test_diorama_plan, test_diorama_build]
 

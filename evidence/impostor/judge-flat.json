@@ -1,0 +1,126 @@
+{
+ "folder": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor",
+ "size": [
+  480,
+  540
+ ],
+ "eye_away_m": 4.4,
+ "relief": false,
+ "clips": {
+  "walk": {
+   "glb": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-walk.glb",
+   "frames": 27,
+   "seconds": 0.87,
+   "triangles": 9926,
+   "eyes": {
+    "quarter": {
+     "26": {
+      "frames_measured": 27,
+      "outline": 0.9418,
+      "outline_worst": 0.8959,
+      "colour": 12.9,
+      "gap_cm": 6.42,
+      "gap_cm_worst": 8.3,
+      "seam_cm": 3.41,
+      "seam_cm_worst": 7.42,
+      "spill_cm": 4.12,
+      "spill_cm_worst": 8.3,
+      "gap_pct": 3.74,
+      "spill_pct": 2.23,
+      "pops_per_s": 27.69,
+      "pop_pct": 9.72,
+      "pop_pct_worst": 27.0
+     },
+     "62": {
+      "frames_measured": 27,
+      "outline": 0.9484,
+      "outline_worst": 0.9374,
+      "colour": 11.7,
+      "gap_cm": 3.77,
+      "gap_cm_worst": 4.8,
+      "seam_cm": 2.86,
+      "seam_cm_worst": 3.93,
+      "spill_cm": 3.61,
+      "spill_cm_worst": 4.8,
+      "gap_pct": 2.66,
+      "spill_pct": 2.63,
+      "pops_per_s": 63.46,
+      "pop_pct": 10.07,
+      "pop_pct_worst": 19.63
+     },
+     "114": {
+      "frames_measured": 27,
+      "outline": 0.958,
+      "outline_worst": 0.9433,
+      "colour": 11.6,
+      "gap_cm": 2.8,
+      "gap_cm_worst": 3.93,
+      "seam_cm": 2.12,
+      "seam_cm_worst": 3.06,
+      "spill_cm": 2.8,
+      "spill_cm_worst": 4.8,
+      "gap_pct": 2.39,
+      "spill_pct": 1.9,
+      "pops_per_s": 79.62,
+      "pop_pct": 8.41,
+      "pop_pct_worst": 29.11
+     }
+    },
+    "over": {
+     "26": {
+      "frames_measured": 27,
+      "outline": 0.9288,
+      "outline_worst": 0.8932,
+      "colour": 18.6,
+      "gap_cm": 6.49,
+      "gap_cm_worst": 10.04,
+      "seam_cm": 4.19,
+      "seam_cm_worst": 8.3,
+      "spill_cm": 5.06,
+      "spill_cm_worst": 9.17,
+      "gap_pct": 4.39,
+      "spill_pct": 2.96,
+      "pops_per_s": 39.23,
+      "pop_pct": 10.06,
+      "pop_pct_worst": 34.52
+     },
+     "62": {
+      "frames_measured": 27,
+      "outline": 0.9546,
+      "outline_worst": 0.9461,
+      "colour": 15.0,
+      "gap_cm": 3.15,
+      "gap_cm_worst": 4.8,
+      "seam_cm": 2.28,
+      "seam_cm_worst": 3.06,
+      "spill_cm": 3.22,
+      "spill_cm_worst": 3.93,
+      "gap_pct": 2.83,
+      "spill_pct": 1.79,
+      "pops_per_s": 53.08,
+      "pop_pct": 7.0,
+      "pop_pct_worst": 17.63
+     },
+     "114": {
+      "frames_measured": 27,
+      "outline": 0.9569,
+      "outline_worst": 0.9413,
+      "colour": 12.4,
+      "gap_cm": 2.77,
+      "gap_cm_worst": 3.93,
+      "seam_cm": 2.09,
+      "seam_cm_worst": 3.06,
+      "spill_cm": 2.83,
+      "spill_cm_worst": 4.8,
+      "gap_pct": 2.21,
+      "spill_pct": 2.2,
+      "pops_per_s": 79.62,
+      "pop_pct": 9.1,
+      "pop_pct_worst": 23.98
+     }
+    }
+   }
+  }
+ },
+ "seconds": 18.4
+}
