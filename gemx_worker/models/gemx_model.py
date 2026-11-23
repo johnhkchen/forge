@@ -622,6 +622,12 @@ def motion(params: dict) -> dict:
         S.predictor = load_predictor(S.config["motion"]["checkpoint"], S.config["motion"], stats_path=S.config["motion"].get("stats"), device=S.device)
     result = run_motion(S.predictor, sequence, device=S.device)
     seconds["motion"] = round(time.perf_counter() - t, 2)
+    for key in ("pred_soma_params_global", "pred_soma_params_incam"):
+        params_out = result.get(key)
+        if isinstance(params_out, dict) and torch.is_tensor(params_out.get("scale_params")):
+            exact = params_out["scale_params"].clone()
+            exact[..., 0] = 1.0  # SOMA's adapter wants the overall scale exactly 1.0; prediction can leave it a hair off
+            params_out["scale_params"] = exact
 
     t = time.perf_counter()
     if S.contact is None:
@@ -635,6 +641,10 @@ def motion(params: dict) -> dict:
     # What the body looks like: every joint's place and turn in GEM-X's world, and the same with nothing bent.
     t = time.perf_counter()
     world = {k: v.detach().to(S.device).float() for k, v in result["pred_soma_params_global"].items()}
+    # SOMA's adapter takes the body's overall scale as exactly 1.0 (it is fixed, not learned) and refuses
+    # anything else; what comes back from prediction and post-processing can be a hair off in float32.
+    world["scale_params"] = world["scale_params"].clone()
+    world["scale_params"][..., 0] = 1.0
     body = S.contact.body_model
     with torch.inference_mode(), torch.autocast(torch.device(S.device).type, enabled=False):
         posed = body(**world, return_joints_only=True)
