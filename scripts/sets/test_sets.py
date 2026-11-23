@@ -10,6 +10,8 @@ What it shows:
   rooftop parity   the two hero shots, now filmed on the rooftop set, plan to the very requests they
                    did when the roof was written inside each shot
   placing          every set has an origin, a front and a footprint, and can be put down anywhere as one piece
+  doors            a door mark names the set it leads into and the door it comes out at there; one that
+                   leads nowhere, or to a mark that is not a door, or is not led back to, is told
   segment          the guest-entrance template: both roles the same length, the handshake on the same
                    frames, the two wrists planned a palm's length either side of one spot
 
@@ -246,7 +248,45 @@ def test_placing():
     check("a footprint too small for the set, or geometry off the origin, is told", "outside the set's footprint: mark \"wings\"" in problems and "not built around the set's origin" in problems, problems[:300])
 
 
-TESTS = [test_set_check, test_marks, test_cameras, test_rooftop_parity, test_segment, test_placing]
+def test_doors():
+    """a door mark names the set it leads into and the door it comes out at there; a door that dangles is told."""
+    studio = standing.load("studio")
+
+    def door_said(leads_to, name="studio"):
+        st = copy.deepcopy(studio)
+        st["name"] = name
+        st["marks"]["way_out"] = dict(copy.deepcopy(st["marks"]["wings"]), kind="door", **({"leads_to": leads_to} if leads_to else {}))
+        return "\n".join(p for p in standing.check(st)[0] if "way_out" in p)
+
+    check("a door with nowhere to lead is told", "a door needs leads_to" in door_said(None))
+    check("a door into a set that is not there is told", "which is not a set" in door_said({"set": "no-such-place", "mark": "hatch"}))
+    check("...unless it says the other side is still to come", door_said({"set": "no-such-place", "mark": "hatch", "built": False}) == "")
+    check("a door onto a mark that is not a door is told", "which is not a door there" in door_said({"set": "ring", "mark": "steps"}))
+    doors = [(name, m) for st in map(standing.load, standing.names()) for name, m in st["marks"].items() if m.get("kind") == "door"]
+    check("the sets have a door to try (the Niantic saloon's)", bool(doors))
+    with tempfile.TemporaryDirectory() as tmp:  # two made-up sets whose doors name each other, and then one that names the wrong one back
+        was = standing.SETS
+        try:
+            standing.SETS = tmp
+            for name, other, back in (("inside", "outside", "hatch"), ("outside", "inside", "door")):
+                st = copy.deepcopy(studio)
+                st.pop("dir")
+                st["name"] = name
+                st["marks"]["hatch" if name == "outside" else "door"] = dict(copy.deepcopy(st["marks"]["wings"]), kind="door", leads_to={"set": other, "mark": back})
+                os.makedirs(os.path.join(tmp, name))
+                with open(os.path.join(tmp, name, "set.json"), "w") as f:
+                    json.dump(st, f)
+            inside = standing.load("inside")
+            check("two doors that name each other are sound", not [p for p in standing.check(inside)[0] if "\"door\"" in p], standing.check(inside)[0])
+            inside["marks"]["door"]["leads_to"]["built"] = False
+            check("a door that still says its other side is not built, when it is, is told", "take \"built\": false off" in "\n".join(standing.check(inside)[0]))
+            inside["marks"]["side_door"] = dict(copy.deepcopy(inside["marks"]["door"]), leads_to={"set": "outside", "mark": "hatch"})
+            check("a second door onto a door that leads back to the first is told", "not back here" in "\n".join(standing.check(inside)[0]))
+        finally:
+            standing.SETS = was
+
+
+TESTS = [test_set_check, test_marks, test_cameras, test_rooftop_parity, test_segment, test_placing, test_doors]
 
 
 def cases():

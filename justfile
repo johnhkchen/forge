@@ -37,6 +37,7 @@ check:
     python3 scripts/motion/test_timeline.py | tail -1
     python3 scripts/motion/test_run_clip.py | tail -1
     python3 scripts/sets/test_sets.py | tail -1
+    "{{blender_bin}}" -b --factory-startup -P scripts/sets/test_marble.py 2>&1 | grep -E '^MARBLE|FAIL'
     python3 scripts/world/world.py check | tail -1
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
@@ -118,6 +119,15 @@ marble-compare set who mark="bar" camera="bar" second="0.5" port="8028":
     python3 scripts/sets/marble_shots.py "{{set}}" --port {{port}} --one "/{{camera}}?detail=full_res&bare=1" "evidence/marble/{{set}}-{{camera}}-splats.png"
     ffmpeg -y -loglevel error -i "evidence/marble/{{set}}-{{camera}}-blender.png" -i "evidence/marble/{{set}}-{{camera}}-splats.png" -filter_complex hstack "evidence/marble/{{set}}-{{camera}}-side-by-side.png"
     @echo "COMPARE evidence/marble/{{set}}-{{camera}}-side-by-side.png (left: Blender, right: the splats)"
+
+# A Marble room as diorama pictures for TRELLIS: opened like a doll's house, from high up at three quarters, on white; the painted mesh and the splats through the same cameras, into evidence/marble/diorama/ (the gallery must be running on that port, from this checkout)
+marble-diorama set world port="8028":
+    "{{blender_bin}}" -b --factory-startup -P scripts/sets/marble_diorama.py -- "{{set}}" "{{world}}" 2>&1 | grep -E '^DIORAMA|Error|Traceback'
+    python3 scripts/sets/marble_shots.py "{{set}}" --port {{port}} --views evidence/marble/diorama/views.json
+
+# Lay a mesh (TRELLIS's, made from a picture of the place) over a Marble set and say how far apart the surfaces are: median and 90th percentile, by floor, walls, ceiling and things
+marble-fit set mesh out="":
+    "{{blender_bin}}" -b --factory-startup -P scripts/sets/fit_to_marble.py -- "{{set}}" "{{mesh}}" {{ if out != "" { "--out \"" + out + "\"" } else { "" } }} 2>&1 | grep -E '^FIT|Error|Traceback'
 
 # One picture of an empty set through one of its own cameras, for its card in the gallery (sets/<set>/card.png)
 set-card set camera="":

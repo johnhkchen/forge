@@ -366,7 +366,7 @@ def starter(name: str, world: dict, floor, tall: float) -> dict:
         "blocks": [],
         "marks": {"centre": {"kind": "stand", "at": [0.0, 0.0], "facing_deg": 0.0, "about": "the middle of the floor"}},
         "paths": [],
-        "cameras": {"wide": {"at": [0.0, 1.5, round(0.3 * reach, 2)], "aim": [0.0, 0.95, 0.0], "lens_mm": 24, "sees": ["centre"], "about": "from inside, looking at the middle"}},
+        "cameras": {"wide": {"at": [0.0, 1.3, round(min(reach / 2.0 - 0.3, 3.0), 2)], "aim": [0.0, 0.85, 0.0], "lens_mm": 18, "sees": ["centre"], "about": "from inside, looking at the middle"}},
         "lights": [{"name": "lamplight", "kind": "area", "at": [0.0, round(max(1.2, tall - 0.4), 2), 0.0], "aim": [0.0, 0.0, 0.0], "power": 300.0, "color": [1.0, 0.82, 0.6], "size_m": 3.0}],
         "world": {"color": [0.2, 0.15, 0.1], "strength": 0.5},
         "slots": {}, "dressing": [],
