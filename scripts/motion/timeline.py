@@ -8,6 +8,10 @@ A shot list's beats can each get their motion from somewhere else:
     text    a sentence, made into motion by Kimodo, steered along the shot's
             path and, where the beat says so, through one of our poses or
             with a hand or foot on a spot
+    video   a stretch of a clip's motion (`just video`), read off a real
+            person by GEM-X; the shot says where it stands, the video how it
+            moves (scripts/video/beat.py). It is on hand already, so it asks
+            no worker for anything
 
 Each beat is made on its own, as a piece. Where two pieces meet is a seam, and
 every seam is made the same way: MotionBricks is shown the four frames that
@@ -21,7 +25,9 @@ the place of the last frames of A and the first frames of B:
     from the end of A      4 frames if A is "poses" (its last pose was chosen
                            on purpose; keep nearly all of it)
                            12 frames if A is "text" (a sentence's motion has
-                           no exact last frame worth keeping)
+                           no exact last frame worth keeping) or "video" (which
+                           brings that many frames of the clip past the stretch
+                           asked for, so the stretch itself stays whole)
     from the start of B    13 frames (a text piece spends its start getting
                            going; a later poses piece starts by holding still
                            in its first pose, which is what a tween should
@@ -69,12 +75,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from soma import Skeleton, heading_of, qconj, qmul, qnorm, qrot, qslerp, yaw  # noqa: E402
 
 FPS = 30
-TAKE_FROM_END = {"poses": 4, "text": 12}  # frames of its end a seam may replace, by where the piece comes from
+TAKE_FROM_END = {"poses": 4, "text": 12, "video": 12}  # frames of its end a seam may replace, by where the piece comes from
 TAKE_FROM_START = 13  # frames of its start
 SHORTEST_TWEEN, LONGEST_TWEEN = 17, 57  # what MotionBricks makes: 4 * tokens - 7 frames, tokens 6..16
 EASE_FRAMES = 6  # frames over which what is left of a seam's mismatch is eased out of B
 CONTACT_ORDER = ["left_heel", "left_toe", "right_heel", "right_toe"]
-SOURCES = ("poses", "text")
+SOURCES = ("poses", "text", "video")
+MADE_BY = {"poses": "our poses, MotionBricks between them", "text": "Kimodo, from a sentence", "video": "GEM-X, from a video"}
 
 
 def digest(request: dict) -> str:
@@ -202,8 +209,9 @@ def by_our_joints(sk: Skeleton, motion: dict) -> dict:
 # ---- laying a shot out as pieces -----------------------------------------------
 
 
-def lay_out(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> tuple:
-    """A shot list as pieces and seams. Returns (plan.json's content, {hash: request} for the pieces)."""
+def lay_out(shot: dict, library: dict, sk: Skeleton, set_card: dict = None, made: dict = None) -> tuple:
+    """A shot list as pieces and seams. Returns (plan.json's content, {hash: request} for the pieces).
+    A video beat's motion is on hand already: it is put in `made`, {hash: motion}, for the caller to keep in the cache."""
     from plan_shot import FPS as PLAN_FPS, Stage, move_frames, set_blocks, stand
 
     assert PLAN_FPS == FPS
@@ -213,6 +221,15 @@ def lay_out(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> t
     sx, sz, _, sheading = stage.placed(start)
     requests, marks, beats, pieces = {}, [], [], []
     frame, end_m = 0, 0.0
+
+    def seam_takes(a: dict, b: dict) -> tuple:
+        """(frames of beat A's end, frames of beat B's start) the tween between them takes the place of."""
+        if a.get("source", "poses") not in SOURCES:
+            return 0, 0  # refused below, by name
+        from_end = int(a["join_out_frames"]) if a.get("join_out_frames") is not None else TAKE_FROM_END[a.get("source", "poses")]
+        from_start = int(b["join_in_frames"]) if b.get("join_in_frames") is not None else TAKE_FROM_START
+        return tween_length(from_end, from_start)
+
     for number, beat in enumerate(shot["beats"]):
         source = beat.get("source", "poses")
         first = frame
@@ -243,6 +260,19 @@ def lay_out(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> t
             frame += count
             marks += more_marks
             end_m = max(end_m, float(beat["to_m"]))
+        elif source == "video":
+            import_video_beat()
+            import beat as video_beat
+
+            before = seam_takes(shot["beats"][number - 1], beat)[1] if number else 0
+            after = seam_takes(beat, shot["beats"][number + 1])[0] if number + 1 < len(shot["beats"]) else 0
+            request = None
+            motion, more_marks, count = video_beat.piece(stage, beat, first, piece, sk, before, after)
+            if made is not None:
+                made[piece["video"]] = {"format": "forge-soma-motion/1", "fps": FPS, **{k: motion[k] for k in ("joints", "root", "rotations", "contact_order", "contacts")}}
+            frame += count
+            marks += more_marks
+            end_m = max(end_m, float(beat["to_m"]))
         else:
             raise ValueError(f"beat \"{beat['name']}\": a beat's motion comes from {' or '.join(SOURCES)}, not \"{source}\"")
         piece["last_frame"] = frame
@@ -256,17 +286,14 @@ def lay_out(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> t
                 "source": source,
                 "first_frame": first,
                 "last_frame": frame,
-                "planned_seconds": float(beat["seconds"]),
+                "planned_seconds": float(beat.get("seconds") or (frame - first) / FPS),
                 "seconds": round((frame - first) / FPS, 3),
             }
         )
 
     seams = []
     for i, (a, b) in enumerate(zip(pieces, pieces[1:])):
-        beat_a, beat_b = shot["beats"][i], shot["beats"][i + 1]
-        from_end = int(beat_a["join_out_frames"]) if beat_a.get("join_out_frames") is not None else TAKE_FROM_END[a["source"]]
-        from_start = int(beat_b["join_in_frames"]) if beat_b.get("join_in_frames") is not None else TAKE_FROM_START
-        from_end, from_start = tween_length(from_end, from_start)
+        from_end, from_start = seam_takes(shot["beats"][i], shot["beats"][i + 1])
         edge = a["last_frame"]
         seams.append(
             {
@@ -303,6 +330,13 @@ def lay_out(shot: dict, library: dict, sk: Skeleton, set_card: dict = None) -> t
     if set_card:
         record["set"], record["wall"] = set_blocks(path, set_card, end_m)
     return record, requests
+
+
+def import_video_beat() -> None:
+    """scripts/video is where a video beat is read (beat.py); it is only looked for when a shot has one."""
+    there = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "video")
+    if there not in sys.path:
+        sys.path.insert(0, there)
 
 
 def text_piece(stage, beat: dict, first: int, piece: dict) -> tuple:
@@ -398,7 +432,9 @@ def piece_motion(sk: Skeleton, piece: dict, answers: dict) -> dict:
     """One piece as a motion standing where the plan put it (before any seam moves it)."""
     count = piece["last_frame"] - piece["first_frame"] + 1
     answer = by_our_joints(sk, answers[piece["request"]]) if piece.get("request") else None
-    if piece["source"] == "text":
+    if piece["source"] == "video":
+        motion = by_our_joints(sk, answers[piece["video"]])  # cut and placed when the shot was planned
+    elif piece["source"] == "text":
         first, last = piece["keep"]
         if len(answer["root"]) <= last:
             raise ValueError(f"{piece['name']}: the answer has {len(answer['root'])} frames, the plan keeps up to frame {last}")
@@ -487,7 +523,7 @@ def join(sk: Skeleton, plan: dict, motions: list, tweens: list) -> tuple:
         first = len(out["root"])
         for key in out:
             out[key] += b[key][keep_from : keep_to + 1]
-        made.append({"name": piece["name"], "first_frame": first, "last_frame": len(out["root"]) - 1, "made_by": {"poses": "our poses, MotionBricks between them", "text": "Kimodo, from a sentence"}[piece["source"]]})
+        made.append({"name": piece["name"], "first_frame": first, "last_frame": len(out["root"]) - 1, "made_by": MADE_BY[piece["source"]]})
         if not seam:
             break
         # The tween was made where A was planned to stand; it goes wherever A went.
@@ -571,6 +607,11 @@ def step(shot: str, sk: Skeleton = None) -> dict:
     done = {"pieces": len(plan["pieces"]), "seams": len(plan["seams"]), "joined": False}
     if not todo:
         answers = {p["request"]: load_answer(shot, p["request"]) for p in plan["pieces"] if p.get("request")}
+        for p in plan["pieces"]:
+            if p.get("video"):
+                answers[p["video"]] = load_answer(shot, p["video"])
+                if answers[p["video"]] is None:
+                    raise ValueError(f"{p['name']}: its motion from the clip is not in the shot's cache; plan the shot again (plan_shot.py)")
         motions = [piece_motion(sk, p, answers) for p in plan["pieces"]]
         names = [keep_request(shot, seam_request(seam, motions[i], motions[i + 1])) for i, seam in enumerate(plan["seams"])]
         todo = [{"request": name, "kind": "inbetween", "what": f"{seam['from']} to {seam['to']}"} for name, seam in zip(names, plan["seams"]) if load_answer(shot, name) is None]

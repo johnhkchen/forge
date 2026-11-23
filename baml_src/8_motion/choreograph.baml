@@ -36,6 +36,10 @@ const TEXT_BEAT_MAX_SECONDS = 10.0;
 const TEXT_BEAT_MAX_KEYS = 4;
 // Pieces, then seams, then the join; one more in case a pass only planned.
 const TIMELINE_PASSES = 4;
+// A beat from a video: a stretch of one shot of a clip `just video` has made the motion for.
+const VIDEOS_DIR = "videos";
+const VIDEO_BEAT_MIN_SECONDS = 0.5;
+const VIDEO_BEAT_MAX_SECONDS = 60.0;
 
 // The library poses that sit: only a seat mark takes them.
 const SEATED_POSES: PoseName[] = ["sit", "sit_talk"];
@@ -75,6 +79,10 @@ function beat_frames(beat: ShotBeat) -> int {
     if (beat.source == "text") {
         return beat.frames ?? (beat.seconds * MOTION_FPS).iround();
     }
+    if (beat.source == "video") {
+        // The stretch asked for; the frames it brings for the joins come on top (timeline.py).
+        return (((beat.to_s ?? 0.0) - (beat.from_s ?? 0.0)) * MOTION_FPS).iround();
+    }
     beat.moves.reduce(
         (total, m) -> {
             total + move_frames(m)
@@ -111,6 +119,7 @@ function shot_problems(shot: ShotList, stage: StandingSet? = null) -> string[] {
         match (beat.source) {
             "poses" => poses_beat_problems(beat),
             "text" => text_beat_problems(beat),
+            "video" => video_beat_problems(beat),
             "walk" => {
                 [`beat "${beat.name}": a "walk" beat cannot be made yet; use "poses" or "text"`]
             },
@@ -188,6 +197,91 @@ function text_beat_problems(beat: ShotBeat) -> string[] {
                 `beat "${beat.name}", key ${key.pose}: at ${key.at_seconds} s is outside the beat (0 to ${beat.seconds} s)`,
             );
         }
+    }
+    problems
+}
+
+/// The part of videos/<clip>/shots.json a video beat is checked against.
+class ClipShots {
+    shots: ClipShot[],
+}
+
+class ClipShot {
+    index: int,
+    first_frame: int,
+    last_frame: int,
+}
+
+/// What is wrong with a beat made from a stretch of a clip. It reads videos/<clip>/: the clip must be there
+/// with its cuts found, the seconds inside one shot of it, and that shot's motion made.
+function video_beat_problems(beat: ShotBeat) -> string[] {
+    let clip = beat.clip ?? "";
+    if (!clip) {
+        return [`beat "${beat.name}": a video beat names its clip (a folder in ${VIDEOS_DIR}/)`];
+    }
+    let from = beat.from_s
+        ?? return [`beat "${beat.name}": a video beat says which seconds of the clip it wants (from_s, to_s)`];
+    let to = beat.to_s
+        ?? return [`beat "${beat.name}": a video beat says which seconds of the clip it wants (from_s, to_s)`];
+    let problems: string[] = [];
+    if (beat.moves || beat.prompt) {
+        problems.push(`beat "${beat.name}": a video beat has no moves and no prompt; the clip is its motion`);
+    }
+    if (!beat.at && !beat.to && (beat.from_m == null || beat.to_m == null)) {
+        problems.push(
+            `beat "${beat.name}": a video beat says where it stands: a mark (at, or from and to), or from_m and to_m on the path`,
+        );
+    }
+    if (to - from < VIDEO_BEAT_MIN_SECONDS || to - from > VIDEO_BEAT_MAX_SECONDS) {
+        problems.push(
+            `beat "${beat.name}": a video beat lasts ${VIDEO_BEAT_MIN_SECONDS} to ${VIDEO_BEAT_MAX_SECONDS} s, not ${to - from} s (from_s ${from} to to_s ${to})`,
+        );
+    }
+    let cuts = `${VIDEOS_DIR}/${clip}/shots.json`;
+    if (!baml.fs.exists(cuts)) {
+        problems.push(
+            `beat "${beat.name}": there is no clip "${clip}" with its cuts found (just video-add, then just video ${clip})`,
+        );
+        return problems;
+    }
+    let shots = baml.json.decode<ClipShots>(baml.fs.read(cuts)).shots;
+    let first = (from * MOTION_FPS).iround();
+    let last = (to * MOTION_FPS).iround();
+    let holding = shots.filter((s) -> {
+        s.first_frame <= first && last <= s.last_frame
+    });
+    let found = holding.at(0);
+    if (found == null) {
+        problems.push(
+            `beat "${beat.name}": seconds ${from} to ${to} of "${clip}" are not inside one shot (a cut falls between them, or the clip is shorter)`,
+        );
+        return problems;
+    }
+    let index = found.index;
+    if let named: int = beat.shot {
+        if (named != index + 1) {
+            problems.push(
+                `beat "${beat.name}": seconds ${from} to ${to} of "${clip}" are in shot ${index + 1}, not shot ${named}`,
+            );
+        }
+    }
+    let padded = if (index < 10) {
+        `00${index}`
+    } else if (index < 100) {
+        `0${index}`
+    } else {
+        `${index}`
+    };
+    let chosen = `${VIDEOS_DIR}/${clip}/motion/shot-${padded}.json`;
+    let own = if let who: int = beat.person {
+        baml.fs.exists(`${VIDEOS_DIR}/${clip}/motion/shot-${padded}-person-${who}.json`)
+    } else {
+        false
+    };
+    if (!own && !baml.fs.exists(chosen)) {
+        problems.push(
+            `beat "${beat.name}": shot ${index + 1} of "${clip}" has no motion yet (choose who to follow on its page, then just video ${clip})`,
+        );
     }
     problems
 }
@@ -377,6 +471,17 @@ function shoot(shot: string) -> string {
             run.save("shotlist.json", choreograph(brief));
         }
     }
+    // A beat from a video needs its clip's motion made first; say so here, in plain words, before anything is planned.
+    let from_clips = run.load<ShotList>("shotlist.json").beats
+        .filter((b) -> {
+            b.source == "video"
+        })
+        .flat_map((b) -> {
+            video_beat_problems(b)
+        });
+    if (from_clips) {
+        throw ShotFailed { step: "plan", reason: from_clips.join("; ") }
+    }
     make_motion(run, plan_file);
     //# 5. Film it: from the set's own cameras if it has them, else with the camera that follows
     if (run.load<ShotPlan>("plan.json").has_set_cameras()) {
@@ -512,6 +617,51 @@ test "an unsound text beat is told what is wrong with it" {
     let shot = Choreograph@spec("a rooftop", TEST_BEATS).parse(TEST_REPLY);
     shot.beats = [walk];
     assert.contains(shot_problems(shot).join("\n"), `a "walk" beat cannot be made yet`)
+}
+
+const VIDEO_BEAT_REPLY = `
+    {
+      "name": "the routine", "source": "video", "seconds": 16.0, "moves": [],
+      "clip": "no-such-clip", "shot": 1, "from_s": 4.0, "to_s": 20.0, "from_m": 0.0, "to_m": 0.0
+    }
+`;
+
+test "a beat can be a stretch of a clip, and is told what it lacks" {
+    let beat = baml.json.decode<ShotBeat>(VIDEO_BEAT_REPLY);
+    assert.equal(beat.source, "video");
+    assert.equal(beat_frames(beat), 480);
+    // The clip has to be there, with its cuts found, before a shot can use it.
+    assert.contains(video_beat_problems(beat).join("\n"), `there is no clip "no-such-clip" with its cuts found`);
+    let shot = Choreograph@spec("a stage", TEST_BEATS).parse(TEST_REPLY);
+    shot.beats = [shot.beats.at(0) ?? throw "no first beat", beat];
+    assert.contains(shot_problems(shot).join("\n"), "no-such-clip");
+    let long = ShotBeat { ...beat, to_s: 80.0 };
+    assert.contains(video_beat_problems(long).join("\n"), "a video beat lasts 0.5 to 60.0 s");
+    let nowhere = ShotBeat { ...beat, from_m: null };
+    assert.contains(video_beat_problems(nowhere).join("\n"), "says where it stands");
+    let unnamed = ShotBeat { ...beat, clip: null };
+    assert.contains(video_beat_problems(unnamed).join("\n"), "names its clip");
+    let open = ShotBeat { ...beat, to_s: null };
+    assert.contains(video_beat_problems(open).join("\n"), "which seconds of the clip")
+}
+
+test "the candy-shop crew's shot list kept with its plan reads" {
+    let shot = baml.json.decode<ShotList>(baml.fs.read(`${SHOT_PLANS}/crew-candy-shop.shotlist.json`));
+    assert.equal(
+        shot.beats.map((b) -> {
+            b.source
+        }),
+        ["poses", "text", "video", "text", "poses"],
+    );
+    let routine = shot.beats.at(2) ?? throw "no routine";
+    assert.equal(routine.clip, "candy-shop");
+    assert.equal(routine.at, "monologue");
+    // Everything but the clip itself is sound (the clip is on whoever's Mac added it, not in the repo).
+    let stage = StandingSet.load("studio");
+    let others = shot_problems(shot, stage = stage).filter((p) -> {
+        !p.includes("candy-shop")
+    });
+    assert.equal(others, [])
 }
 
 test "Choreograph is told how a text beat works" {
