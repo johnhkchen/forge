@@ -218,9 +218,9 @@ fight-test:
 video-add file name="" start="" end="":
     python3 scripts/video/clip.py add "{{file}}" "{{name}}" --start "{{start}}" --end "{{end}}"
 
-# Turn a clip into motion for our characters: does whatever comes next (the cuts, the people in each shot, then your choice in the gallery at #/video/<name>, the motion, the shot, a film beside the clip). Run it again to carry on. again=<step> redoes from ready, cuts, people, choice, motion, shot or film. Finding people and making motion use your GEM-X endpoint on RunPod
-video name again="":
-    python3 scripts/video/video.py "{{name}}" {{ if again != "" { "--again " + again } else { "" } }}
+# Turn a clip into motion for our characters: does whatever comes next (the cuts, the people in each shot, then your choice in the gallery at #/video/<name>, the motion, the shot, a film beside the clip). Run it again to carry on. again=<step> redoes from ready, cuts, people, choice, motion, shot or film; also=1:2 makes person 2 of shot 1 too, for a shot list that asks for them. Finding people and making motion use your GEM-X endpoint on RunPod
+video name again="" also="":
+    python3 scripts/video/video.py "{{name}}" {{ if again != "" { "--again " + again } else { "" } }} {{ if also != "" { "--also " + also } else { "" } }}
 
 # Film a character you cast in a clip's shot (`just cast video-<name> runs/<character>`) beside the clip, in step: videos/<name>/side-by-side-lowpoly-<clip>.mp4
 video-film name clip="hero":

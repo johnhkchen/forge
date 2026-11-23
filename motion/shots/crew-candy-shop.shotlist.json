@@ -1,0 +1,57 @@
+{
+ "title": "The candy-shop routine on the ninja's stage",
+ "start_pose": "stand",
+ "start_mark": "wings",
+ "path": [],
+ "props": [],
+ "camera": [],
+ "beats": [
+  {
+   "name": "Waits in the wings",
+   "seconds": 0.97,
+   "source": "poses",
+   "moves": [{"pose": "stand", "at_m": 0.0, "side_m": 0.0, "facing_deg": 0.0, "speed_mps": 0.0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0}],
+   "at": "wings"
+  },
+  {
+   "name": "Walks on",
+   "seconds": 3.5,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person walks forward at an easy, confident pace, then slows and comes to a stop standing upright.",
+   "from_m": 0.0, "to_m": 0.0, "speed_in_mps": 0.0, "speed_out_mps": 0.0,
+   "keys": [{"pose": "stand", "at_seconds": 0.0, "at_m": 0.0, "side_m": 0.0, "facing_deg": 0.0, "only": [], "where": "start"}],
+   "from": "wings",
+   "to": "monologue"
+  },
+  {
+   "name": "The routine",
+   "seconds": 16.0,
+   "source": "video",
+   "moves": [],
+   "clip": "candy-shop",
+   "shot": 1,
+   "from_s": 4.0,
+   "to_s": 20.0,
+   "drift": "flatten",
+   "at": "monologue"
+  },
+  {
+   "name": "Takes a bow",
+   "seconds": 3.5,
+   "source": "text",
+   "moves": [],
+   "prompt": "A person bows deeply from the waist with their arms at their sides, then straightens up and stands still.",
+   "from_m": 0.0, "to_m": 0.0, "speed_in_mps": 0.0, "speed_out_mps": 0.0,
+   "keys": null,
+   "at": "monologue"
+  },
+  {
+   "name": "Stands easy",
+   "seconds": 0.97,
+   "source": "poses",
+   "moves": [{"pose": "stand", "at_m": 0.0, "side_m": 0.0, "facing_deg": 0.0, "speed_mps": 0.0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0}],
+   "at": "monologue"
+  }
+ ]
+}

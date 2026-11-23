@@ -759,6 +759,9 @@ def stage_marks(shot: dict, st: dict, library: dict) -> dict:
                 here_mark = where
         else:
             beat["from_m"], beat["to_m"] = along[stops[("from", b)]], along[stops[("to", b)]]
+            if source == "video":
+                # A stretch of a clip stands on the mark facing the way the mark faces, whichever way the camera saw it.
+                beat["facing_deg"] = facing_at(beat["from_m"], mark(st, here_mark)["facing_deg"])
             for key in beat.get("keys") or []:
                 where = key.pop("where", None)
                 if where == "start":

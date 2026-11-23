@@ -93,12 +93,14 @@ class Move {
 // A shot is a row of pieces, one per beat, and each says where its motion
 // comes from: "poses" (our own poses, with MotionBricks filling in between
 // them) or "text" (a sentence, made into motion by NVIDIA Kimodo and held to
-// the shot's path). "walk" (the procedural walk in walk.py) is named for
+// the shot's path) or "video" (a stretch of a clip's motion, read off a real
+// person by NVIDIA GEM-X for `just video`; written by hand in a kept shot
+// list, never by Opus). "walk" (the procedural walk in walk.py) is named for
 // later and cannot be made yet. A shot whose beats are not all "poses" is
 // made in pieces: where two pieces meet is a seam, and MotionBricks makes a
 // tween across every seam (scripts/motion/timeline.py). Redoing one piece
 // only redoes the tween at each of its ends.
-type MotionSource = "poses" | "text" | "walk";
+type MotionSource = "poses" | "text" | "video" | "walk";
 
 /// A moment in a text beat where one of our poses says how the body must be.
 class TextKey {
@@ -119,7 +121,7 @@ class ShotBeat {
     name: string @description("The beat, in two to five plain words"),
     seconds: float @description("How long the beat lasts"),
     source: MotionSource @description(
-        "Where the beat's motion comes from. \"poses\": library poses with the motion model filling in between them. \"text\": one sentence, for ordinary movement a sentence says well (walking, sneaking, running, jumping, vaulting). Never \"walk\"",
+        "Where the beat's motion comes from. \"poses\": library poses with the motion model filling in between them. \"text\": one sentence, for ordinary movement a sentence says well (walking, sneaking, running, jumping, vaulting). Never \"walk\" and never \"video\"",
     ),
     moves: Move[] @description(
         "For a poses beat: one or more moves, played in order; their lengths add up to the beat's seconds. Empty for a text beat",
@@ -164,6 +166,18 @@ class ShotBeat {
     join_in_frames: int?,
     join_out_frames: int?,
     seed: int?,
+    // A video beat (scripts/video/beat.py), also set by hand: which clip in
+    // videos/, which of its shots (from 1; left out, the one the seconds fall
+    // in), which seconds of the clip, whose motion if several people's were
+    // made, whether the dancer's drift over the stretch is kept or taken out,
+    // and false for `handles` to let the joins eat into the stretch itself.
+    clip: string?,
+    shot: int?,
+    from_s: float?,
+    to_s: float?,
+    person: int?,
+    drift: ("keep" | "flatten")?,
+    handles: bool?,
 }
 
 /// Where a carried prop sits from a moment on.

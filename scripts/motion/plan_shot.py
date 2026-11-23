@@ -357,12 +357,22 @@ def main() -> None:
         # Beats from more than one maker: the shot is made in pieces and joined (timeline.py).
         import timeline
 
-        record, requests = timeline.lay_out(shot, library, sk, set_card)
+        from_video = {}
+        record, requests = timeline.lay_out(shot, library, sk, set_card, made=from_video)
         for request in requests.values():
             timeline.keep_request(args.shot, request)
+        for name, motion in from_video.items():  # a video beat's motion is on hand: kept as its own answer
+            os.makedirs(os.path.join(args.shot, "cache"), exist_ok=True)
+            with open(timeline.cache_path(args.shot, name), "w") as f:
+                json.dump(motion, f, separators=(",", ":"))
         keep_plan(record)
         for beat in record["beats"]:
             print(f"PLAN {beat['name']} ({beat['source']}): {beat['seconds']} s (planned {beat['planned_seconds']} s), frames {beat['first_frame']}-{beat['last_frame']}")
+        for piece in record["pieces"]:
+            if piece["source"] == "video":
+                far = "" if piece["ends_from_its_mark_cm"] <= 30.0 else "; that is a long way for the next join to cover: \"drift\": \"flatten\" brings it back"
+                print(f"PLAN {piece['name']}: frames {piece['clip_frames'][0]}-{piece['clip_frames'][1]} of the clip {piece['clip']} (shot {piece['clip_shot']}, person {piece['person']}), "
+                      f"{piece['handles'][0]} and {piece['handles'][1]} of them for the joins; ends {piece['ends_from_its_mark_cm']} cm from where the next beat starts{far}")
         for seam in record["seams"]:
             print(f"PLAN seam {seam['from']} to {seam['to']}: MotionBricks fills frames {seam['tween_frames'][0]}-{seam['tween_frames'][1]}")
         print(f"PLAN {len(record['pieces'])} pieces, {len(record['seams'])} seams, {record['frames']} frames, {record['seconds']} s, path {record['path_length_m']} m")
