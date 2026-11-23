@@ -32,12 +32,14 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "sets"))
 sys.path.insert(0, os.path.join(HERE, "world"))
 sys.path.insert(0, os.path.join(HERE, "diorama"))
+sys.path.insert(0, os.path.join(HERE, "fight"))
 import blockout_recipe  # noqa: E402
 import check_safe  # noqa: E402
 import test_sets  # noqa: E402  (the standing sets' own cases, which need no Blender)
 import test_world  # noqa: E402  (the world's own cases, which need no Blender either)
 import test_walkabout  # noqa: E402  (walking around the world, in a headless Chrome)
 import test_diorama  # noqa: E402  (the dioramas' own cases, which need no Blender either)
+import test_fight as fight_tests  # noqa: E402  (the fight kit's own cases, which need no Blender either)
 
 
 def blender(base, steps, save=None):
@@ -2509,10 +2511,65 @@ def test_auto_body(ctx):
 
 
 
+def test_fight_moves(ctx):
+    """The fight kit, without Blender: every attack has startup, active and recovery frames; the reaction starts on the active frame; hitstop holds both still; the fist is on its spot; nothing under the mat; no joint past its limit; either body, either stance."""
+    for case in fight_tests.TESTS:
+        case()
+
+
+def test_fight_baked(ctx):
+    """The first fight baked onto Roosevelt and Lincoln in a background Blender (apply_fight.py), and measured there: the baked fist against its spot and the other man's head on every contact frame, the mat, the limits, the planted feet, the closed fists; then one frame of it filmed (film_fight.py)."""
+    runs = os.path.dirname(ctx["troll"])
+    found = {side: sorted(glob.glob(os.path.join(runs, pattern))) for side, pattern in (("left", "*roosevelt-wrestler-1890s"), ("right", "*young-lincoln-frontier-wrestler"))}
+    if not all(found.values()):
+        print("    (no Roosevelt and Lincoln runs in the runs folder: skipped)")
+        return
+    out = os.path.join(ctx["out"], "fight-first")
+    shutil.rmtree(out, ignore_errors=True)
+    script = os.path.join(HERE, "fight", "fights", "first.json")
+    # The script casts Roosevelt in his painted outfit; a runs folder without that version plays him in his low-poly.
+    painted = os.path.exists(os.path.join(found["left"][-1], "profiles", "painted.glb"))
+    done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "fight", "apply_fight.py"), "--", script, out,
+                           "--left", found["left"][-1], "--right", found["right"][-1]] + ([] if painted else ["--left-version", "lowpoly"]), capture_output=True, text=True)
+    baked = os.path.exists(os.path.join(out, "cast-left.glb")) and os.path.exists(os.path.join(out, "cast-right.glb"))
+    check("apply_fight.py baked both fighters", baked, "" if baked else (done.stdout + done.stderr)[-1500:])
+    with open(os.path.join(out, "fight.json")) as f:
+        timeline = json.load(f)
+    seen = timeline["measured"]["cast"]
+    check("the fight is %.1f s with %d hits, every one measured on the baked characters (Roosevelt %s, Lincoln %s)" % (timeline["seconds"], len(timeline["hits"]), timeline["cast"]["left"], timeline["cast"]["right"]),
+          20 <= timeline["seconds"] <= 26 and len(seen["hits"]) == len(timeline["hits"]) and timeline["cast"]["left"] == ("painted" if painted else "lowpoly"))
+    for side in ("left", "right"):
+        with open(os.path.join(out, "cast-%s.glb" % side), "rb") as f:
+            f.read(12)
+            size, _ = struct.unpack("<II", f.read(8))
+            names = {n.get("name") for n in json.loads(f.read(size))["nodes"]}
+        check("%s has closed fists: two finger bones in each hand, in the fight's file only" % side, {"fingers_l", "fingertips_l", "fingers_r", "fingertips_r"} <= names)
+    for hit in seen["hits"]:
+        aimed = next(k for k in hit if k.startswith("fist_from_his_"))
+        most = 40.0 if hit["blocked"] else (32.0 if "chest" in aimed else 22.0)  # a blocked blow stops on the forearms, in front of the head
+        low = 0.0 if hit["blocked"] else 3.0
+        check("   %s %s%s at %d: the baked fist is %.1f cm from its spot, %.1f cm from the middle of his %s" % (
+            hit["by"], hit["move"], " (blocked)" if hit["blocked"] else "", hit["frame"], hit["fist_from_its_spot_cm"], hit[aimed], aimed.split("_")[3]),
+            hit["fist_from_its_spot_cm"] <= 4.0 and low <= hit[aimed] <= most)
+    for side, card in sorted(seen["fighters"].items()):
+        clamped = sum(card["clamped"].values())
+        check("%s: %.2f cm through the mat (%s), %d turns outside a limit, clamped on %d bone-frames %s, a planted foot strays %.2f cm" % (
+            side, card["through_floor_cm"], card["lowest_part"], card["limit_violations"], clamped, card["clamped"], card["planted_foot_strays_cm"]),
+            card["through_floor_cm"] <= 0.5 and card["limit_violations"] == 0 and clamped <= 12 and card["planted_foot_strays_cm"] <= 2.0)
+    held = {side: read_glb(os.path.join(out, "cast-%s.glb" % side)) for side in ("left", "right")}
+    check("each file holds its fighter (%d and %d triangles)" % (held["left"]["triangles"], held["right"]["triangles"]), all(h["triangles"] > 500 for h in held.values()))
+    last = timeline["hits"][-1]["frame"]
+    done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "fight", "film_fight.py"), "--", out, "--cameras", "fight", "--stills", str(last)], capture_output=True, text=True)
+    still = os.path.join(out, "stills", "fight-%04d.png" % last)
+    filmed = os.path.exists(still) and os.path.getsize(still) > 100000
+    check("film_fight.py filmed the knockout's contact frame (%s)" % os.path.basename(still), filmed, "" if filmed else (done.stdout + done.stderr)[-1500:])
+
+
 TESTS = [test_safe, test_open_stand, test_measure, test_build_kettle, test_build_troll, test_split, test_polish, test_face, test_face_human, test_face_paint, test_face_versions,
          test_gear, test_denser, test_midpoly, test_midpoly_others, test_gearbake, test_bone_names, test_walk, test_walk_profile, test_run_profile, test_rig_fit, test_true_size, test_contact, test_drape, test_cloth, test_paint,
          test_garment_made_up, test_garment_dancer, test_follow, test_open_add, test_comic_style, test_comic_panels, test_comic_pov, test_comic_script, test_landmarks, test_proportions, test_body_loops, test_auto_body,
          test_set_check, test_set_marks, test_set_cameras, test_set_rooftop_parity, test_set_build,
+         test_fight_moves, test_fight_baked,
          test_world_places, test_world_house, test_world_toons, test_world_walk, test_world_house_build,
          test_diorama_plan, test_diorama_build]
 
