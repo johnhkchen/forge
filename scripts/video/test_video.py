@@ -13,6 +13,12 @@ upload in parts, the tracker, the pictures, same-person and reflection marks,
 the gallery's save, the conversion onto our skeleton, the join across cuts,
 checks.py, and (with --cast) the film and a character.
 
+The last cases put a stretch of that clip in a shot beside the other two ways
+of making motion: a pose of ours, a sentence (Kimodo) and the clip, with a
+MotionBricks tween at every change. The two motion models are the pretend
+worker from scripts/motion/test_timeline.py; with --cast, a sentence gets a
+real Kimodo answer instead where one is in the cache of a shot beside RUNS.
+
 What this cannot show: that the real GEM-X answers in the shapes and axes the
 worker's code expects. Only a real job on the endpoint shows that.
 """
@@ -467,6 +473,231 @@ def test_filmed_beside_the_clip_and_cast_in_blender():
     record = clip_file.read(os.path.join(result["shot"], "lowpoly-hero.json"))
     assert os.path.getsize(os.path.join(result["shot"], "lowpoly-hero.glb")) > 50000 and record["animation"]["frames"] == FRAMES - 1, record["animation"]
     print(f"      cast {os.path.basename(character)}: {[line for line in done.stdout.splitlines() if line.startswith('APPLY')][0][:260]}")
+    # And the shot of three makers: our poses, sentences (real Kimodo answers from a cache, where there are any) and the clip.
+    mixed = os.path.join(bench.shots, "mixed-cast")
+    made = shoot_offline(mixed, mixed_shot_list({"clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0}), bench.videos)
+    done = subprocess.run([film_blender(), "-b", "--factory-startup", "--python-exit-code", "1", "-P", os.path.join(REPO, "scripts", "motion", "apply_shot.py"), "--", mixed, character, "--versions", "lowpoly", "--name", "hero"],
+                          capture_output=True, text=True)
+    assert done.returncode == 0, (done.stdout + done.stderr)[-2000:]
+    record = clip_file.read(os.path.join(mixed, "lowpoly-hero.json"))
+    assert os.path.getsize(os.path.join(mixed, "lowpoly-hero.glb")) > 50000 and record["animation"]["frames"] == made["plan"]["frames"] - 1, record["animation"]
+    for seam in made["notes"]["seams"]:
+        print(f"      join {seam['from']} to {seam['to']}: the tween ended {seam['tween_missed_by_cm']} cm and {seam['tween_missed_by_deg']} deg from the next piece")
+    print(f"      mixed shot cast: {[line for line in done.stdout.splitlines() if line.startswith('APPLY')][0][:200]}")
+
+
+# ---- a clip as one beat of a shot ------------------------------------------------
+
+
+def mixed_shot_list(routine: dict) -> dict:
+    """Stand in the wings (our pose), walk on (a sentence), the routine (the clip), a bow (a sentence), stand (our pose)."""
+    stand = {"pose": "stand", "at_m": 0.0, "side_m": 0.0, "facing_deg": 0.0, "speed_mps": 0.0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0}
+    return {
+        "title": "Three ways of moving in one shot", "start_pose": "stand", "start_mark": "wings", "path": [], "props": [], "camera": [],
+        "beats": [
+            {"name": "Waits in the wings", "seconds": 0.97, "source": "poses", "moves": [dict(stand)], "at": "wings"},
+            {"name": "Walks on", "seconds": 3.5, "source": "text", "moves": [], "prompt": "A person walks forward at an easy pace, then stops.", "from_m": 0.0, "to_m": 0.0,
+             "keys": [{"pose": "stand", "at_seconds": 0.0, "at_m": 0.0, "side_m": 0.0, "facing_deg": 0.0, "only": [], "where": "start"}], "from": "wings", "to": "monologue"},
+            {"name": "The routine", "seconds": 1.0, "source": "video", "moves": [], "at": "monologue", **routine},
+            {"name": "Takes a bow", "seconds": 2.0, "source": "text", "moves": [], "prompt": "A person bows deeply, then straightens up.", "from_m": 0.0, "to_m": 0.0, "keys": None, "at": "monologue"},
+            {"name": "Stands easy", "seconds": 0.97, "source": "poses", "moves": [dict(stand)], "at": "monologue"},
+        ],
+    }
+
+
+def kimodo_from_a_cache(request: dict):
+    """With --cast: a real Kimodo answer from a shot made before, for a sentence that goes about as far. None if there is none."""
+    shots = os.path.join(os.path.dirname(CAST_RUNS), "shots") if CAST_RUNS else ""
+    if not os.path.isdir(shots):
+        return None
+    need = request["prompts"][0]["frames"]
+    far = lambda r: math.hypot(*next(c for c in r["prompts"][0]["constraints"] if c["type"] == "path")["points"][-1])  # noqa: E731
+    best = None
+    for shot in sorted(os.listdir(shots)):
+        cache = os.path.join(shots, shot, "cache")
+        for name in sorted(os.listdir(cache)) if os.path.isdir(cache) else []:
+            if not name.endswith(".request.json") or not os.path.exists(os.path.join(cache, name.replace(".request", ""))):
+                continue
+            asked = clip_file.read(os.path.join(cache, name)) or {}
+            if asked.get("kind") == "text" and asked["prompts"][0]["frames"] >= need:
+                off = abs(far(asked) - far(request))
+                if best is None or off < best[0]:
+                    best = (off, os.path.join(cache, name.replace(".request", "")), asked["prompts"][0]["text"])
+    if best is None:
+        return None
+    answer = clip_file.read(best[1])
+    print(f"      a real Kimodo answer for \"{request['prompts'][0]['text'][:40]}...\": \"{best[2][:60]}...\" ({os.path.relpath(best[1], shots)})")
+    return {**answer, **{key: answer[key][:need] for key in ("root", "rotations", "contacts")}}
+
+
+def shoot_offline(folder: str, shot_list: dict, videos: str) -> dict:
+    """What `just shoot` does after the shot list, with no worker: plan_shot.py as it is run, then timeline.py's
+    passes with the pretend models answering, then checks.py and to_gltf.py."""
+    import test_timeline
+
+    os.makedirs(folder, exist_ok=True)
+    clip_file.write(os.path.join(folder, "shotlist.json"), shot_list)
+    brief = os.path.join(folder, "brief.json")
+    clip_file.write(brief, {"name": "mixed", "set": "studio"})
+    env = {**os.environ, "FORGE_VIDEOS": videos}
+    planned = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "motion", "plan_shot.py"), folder, "--brief", brief], capture_output=True, text=True, env=env)
+    if planned.returncode != 0:
+        raise ValueError(planned.stderr.strip().splitlines()[-1])
+    asked = []
+    for _ in range(4):
+        result = timeline.step(folder, SK)
+        if not result["todo"]:
+            break
+        for item in result["todo"]:
+            request = clip_file.read(timeline.cache_path(folder, item["request"], "request"))
+            asked.append((item["kind"], item["what"]))
+            answer = (kimodo_from_a_cache(request) if item["kind"] == "text" else None) or test_timeline.pretend(request)
+            clip_file.write(timeline.cache_path(folder, item["request"]), answer, indent=None)
+    assert result["joined"], result
+    for script in ("checks.py", "to_gltf.py"):
+        done = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "motion", script), folder], capture_output=True, text=True)
+        assert done.returncode == 0, done.stderr[-800:]
+    with open(os.path.join(folder, "motion.json")) as f:
+        motion = json.load(f)
+    return {"planned": planned.stdout, "asked": asked, "motion": motion, "plan": clip_file.read(os.path.join(folder, "plan.json")), "notes": result["notes"], "checks": clip_file.read(os.path.join(folder, "checks.json"))}
+
+
+def test_a_stretch_of_a_clip_is_one_beat_between_a_pose_and_two_sentences():
+    bench = Bench.get()
+    folder = os.path.join(bench.shots, "mixed")
+    # Shot 3 of the clip is frames 105 to 164; the stretch wanted is its seconds 4 to 5 (frames 120 to 150).
+    made = shoot_offline(folder, mixed_shot_list({"clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0}), bench.videos)
+    plan, motion = made["plan"], made["motion"]
+    assert [p["source"] for p in plan["pieces"]] == ["poses", "text", "video", "text", "poses"]
+    # Nothing was asked of a worker for the clip: its motion was on hand. The opening pose, the two sentences and four joins were.
+    assert [kind for kind, _ in made["asked"]] == ["inbetween", "text", "text", "inbetween", "inbetween", "inbetween", "inbetween"], made["asked"]
+    routine = plan["pieces"][2]
+    assert routine["clip_frames"] == [107, 162] and routine["handles"] == [13, 12] and routine["asked_for"] == [13, 43] and routine["person"] == 1, routine
+    assert "request" not in routine and os.path.exists(timeline.cache_path(folder, routine["video"]))
+    into, out = plan["seams"][1], plan["seams"][2]
+    assert (into["to"], into["take_from_start"], out["from"], out["take_from_end"]) == ("The routine", 13, "The routine", 12)
+    # In the joined shot: Kimodo, a tween, the clip, a tween, Kimodo, with our poses at the two ends.
+    by = [s["made_by"] for s in motion["segments"]]
+    assert by == ["our poses, MotionBricks between them", "MotionBricks, a tween across the seam", "Kimodo, from a sentence", "MotionBricks, a tween across the seam", "GEM-X, from a video",
+                  "MotionBricks, a tween across the seam", "Kimodo, from a sentence", "MotionBricks, a tween across the seam", "our poses, MotionBricks between them"], by
+    assert len(motion["root"]) == plan["frames"] == made["checks"]["frames"]
+    # The stretch asked for is whole: the joins used up the handles, not the dance. From its second frame (the first
+    # is where the tween arrives) to its last, every joint is turned as the clip's dancer turned it.
+    kept = next(s for s in motion["segments"] if s["made_by"].startswith("GEM-X"))
+    start = plan["pieces"][2]["first_frame"] + 13
+    assert (kept["first_frame"], kept["last_frame"]) == (start + 1, start + 30), (kept, start)
+    truth = stub_worker.dance(SK, 120, 150)
+    for f in range(1, 31):
+        ours, theirs = motion["rotations"][start + f], truth["rotations"][f]
+        worst = max(abs(abs(sum(ours[4 * j + k] * theirs[4 * j + k] for k in range(4))) - 1.0) for j in range(1, len(SK.joints)))
+        assert worst < 1e-4 or (f <= timeline.EASE_FRAMES and worst < 1e-3), (f, worst)
+    # It stands where the set says: on the monologue mark, facing the way that mark faces, though the stand-in's
+    # world for that shot faced somewhere else entirely.
+    with open(os.path.join(REPO, "sets", "studio", "set.json")) as f:
+        mark = json.load(f)["marks"]["monologue"]
+    at = motion["root"][start + 1]
+    hips_ahead = truth["root"][1][2] - truth["root"][0][2]
+    assert math.hypot(at[0] - mark["at"][0], at[2] - mark["at"][1]) < 0.05 + abs(hips_ahead), (at, mark["at"])
+    assert abs((timeline.facing(SK, motion, start + 1) - mark["facing_deg"] + 180.0) % 360.0 - 180.0) < 2.0
+    assert routine["ends_from_its_mark_cm"] < 2.0 and routine["placement"]["travels"] is False
+    assert "The routine: frames 107-162 of the clip drawn-clip (shot 3, person 1), 13 and 12 of them for the joins" in made["planned"]
+    # checks.py measured every join, and the box figure was made.
+    assert len(made["checks"]["seams"]["seams"]) == 4 and os.path.getsize(os.path.join(folder, "motion.glb")) > 10000
+    assert all(seam["tween_missed_by_cm"] < 1.0 for seam in made["notes"]["seams"]), made["notes"]["seams"]
+
+
+def test_a_video_beat_that_asks_for_what_is_not_there_is_told_so():
+    bench = Bench.get()
+    refused = [
+        ({"clip": "drawn-clip", "from_s": 3.0, "to_s": 4.5}, "a cut falls between them"),
+        ({"clip": "drawn-clip", "shot": 2, "from_s": 4.0, "to_s": 5.0}, "shot 2 of \"drawn-clip\" runs from 2.00 to 3.47 s"),
+        ({"clip": "drawn-clip", "shot": 9, "from_s": 4.0, "to_s": 5.0}, "has shots 1 to 4"),
+        ({"clip": "no-such-clip", "from_s": 4.0, "to_s": 5.0}, "there is no clip \"no-such-clip\""),
+        ({"clip": "../etc", "from_s": 4.0, "to_s": 5.0}, "names its clip"),
+        ({"clip": "drawn-clip", "from_s": 4.0}, "which seconds of the clip"),
+        ({"clip": "drawn-clip", "from_s": 4.0, "to_s": 4.2}, "lasts 0.5 to 60 seconds"),
+        ({"clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0, "person": 2}, "has motion for person 1, not 2"),
+        ({"clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0, "drift": "sideways"}, "drift is keep or flatten"),
+    ]
+    for n, (routine, said) in enumerate(refused):
+        error = _fails(lambda: shoot_offline(os.path.join(bench.shots, f"refused-{n}"), mixed_shot_list(routine), bench.videos))
+        assert said in str(error), (routine, str(error))
+    # A shot whose motion was never made (it was skipped on the clip's page) says what to do about it.
+    os.rename(os.path.join(bench.folder, "motion", "shot-002.json"), os.path.join(bench.folder, "motion", "hidden.json"))
+    try:
+        error = _fails(lambda: shoot_offline(os.path.join(bench.shots, "refused-none"), mixed_shot_list({"clip": "drawn-clip", "from_s": 4.0, "to_s": 5.0}), bench.videos))
+        assert "has no motion for shot 3 yet" in str(error) and "just video drawn-clip" in str(error), str(error)
+    finally:
+        os.rename(os.path.join(bench.folder, "motion", "hidden.json"), os.path.join(bench.folder, "motion", "shot-002.json"))
+
+
+def test_another_dancer_of_the_same_shot_can_be_asked_for_by_number():
+    bench = Bench.get()
+    before = len(bench.worker.jobs)
+    result = video.advance(bench.name, bench.videos, bench.shots, connect=lambda: bench.worker, log=QUIET, film=False, also=[(2, 2)])
+    assert bench.worker.jobs[before:] == ["have", "motion"] and result["done"] == ["motion"], (bench.worker.jobs[before:], result)
+    record = clip_file.read(os.path.join(bench.folder, "motion", "shot-001-person-2.record.json"))
+    assert record["person"] == 2 and clip_file.read(os.path.join(bench.folder, "motion", "shot-001.record.json"))["person"] == 1
+    assert video.advance(bench.name, bench.videos, bench.shots, connect=lambda: bench.worker, log=QUIET, film=False, also=[(2, 2)])["done"] == []
+    assert "no person 7 in shot 2" in str(_fails(lambda: video.advance(bench.name, bench.videos, bench.shots, connect=lambda: bench.worker, log=QUIET, film=False, also=[(2, 7)])))
+    # Shot 2 is frames 60 to 104. A beat that names person 2 reads their file; one that names nobody, the chosen one's.
+    for who, want in ((2, 2), (None, 1)):
+        routine = {"clip": "drawn-clip", "shot": 2, "from_s": 2.5, "to_s": 3.2, **({"person": who} if who else {})}
+        made = shoot_offline(os.path.join(bench.shots, f"person-{want}"), mixed_shot_list(routine), bench.videos)
+        assert made["plan"]["pieces"][2]["person"] == want
+
+
+def test_a_dancer_who_drifts_is_kept_put_or_walked_to_a_mark_on_request():
+    bench = Bench.get()
+    # The same clip, but in shot 3 the dancer creeps 1.2 m sideways and 0.6 m back over the two seconds (a camera
+    # that drifted, or a dance that wanders).
+    videos = os.path.join(TEMP, "drifting-videos")
+    shutil.copytree(bench.videos, videos)
+    path = os.path.join(videos, "drawn-clip", "motion", "shot-002.json")
+    answer = clip_file.read(path)
+    for f, root in enumerate(answer["root"]):
+        root[0] += 1.2 * f / 59.0
+        root[2] -= 0.6 * f / 59.0
+    clip_file.write(path, answer, indent=None)
+    import_made = {}
+    saved = os.environ.get("FORGE_VIDEOS")
+    os.environ["FORGE_VIDEOS"] = videos
+    try:
+        def lay(routine: dict) -> tuple:
+            import_made.clear()
+            stand = {"pose": "stand", "at_m": 0.0, "side_m": 0.0, "facing_deg": 0.0, "speed_mps": 0.0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0}
+            shot = {"start_pose": "stand", "path": [{"x": 0.0, "z": 0.0}, {"x": 0.0, "z": 4.0}],
+                    "beats": [{"name": "Waits", "seconds": 0.97, "source": "poses", "moves": [stand]},
+                              {"name": "The routine", "seconds": 1.0, "source": "video", "clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0, "from_m": 0.0, "to_m": 0.0, **routine}]}
+            with open(os.path.join(REPO, "motion", "poses.json")) as f:
+                record, _ = timeline.lay_out(shot, json.load(f), SK, made=import_made)
+            piece = record["pieces"][1]
+            return piece, import_made[piece["video"]]
+
+        size = 0.9346  # our legs over the stand-in body's
+        crept = math.hypot(1.2, 0.6) * 30.0 / 59.0 * size  # over the second asked for
+        kept, motion = lay({})
+        a, b = kept["asked_for"]
+        assert abs(kept["ends_from_its_mark_cm"] - 100.0 * crept) < 1.5 and kept["drift_taken_out_cm"] == 0.0, kept
+        assert math.hypot(motion["root"][a][0], motion["root"][a][2]) < 0.01, "it starts on its spot"
+        flat, motion = lay({"drift": "flatten"})
+        assert flat["ends_from_its_mark_cm"] < 0.5 and abs(flat["drift_taken_out_cm"] - 100.0 * crept) < 1.5, flat
+        assert math.hypot(motion["root"][b][0], motion["root"][b][2]) < 0.01, "and ends on it"
+        # Asked to go somewhere, it is turned to travel the way the path runs and ends on the far point.
+        goes, motion = lay({"to_m": 0.5})
+        assert goes["placement"]["travels"] and goes["ends_from_its_mark_cm"] < 0.5, goes
+        assert abs(motion["root"][b][0]) < 0.01 and abs(motion["root"][b][2] - 0.5) < 0.01 and 0.1 < motion["root"][(a + b) // 2][2] < 0.4
+        # Facing: turned a quarter turn on the path, it faces a quarter turn round.
+        side, motion = lay({"facing_deg": 90.0})
+        assert abs(timeline.facing(SK, motion, a) - 90.0) < 0.5
+        # With no handles asked for, the joins eat the stretch's own ends.
+        bare, _ = lay({"handles": False})
+        assert bare["handles"] == [0, 0] and bare["clip_frames"] == [120, 150]
+    finally:
+        if saved is None:
+            del os.environ["FORGE_VIDEOS"]
+        else:
+            os.environ["FORGE_VIDEOS"] = saved
 
 
 def film_blender() -> str:

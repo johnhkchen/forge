@@ -1,6 +1,6 @@
 """A clip in, motion for our characters out: does whatever step comes next, and stops where it needs you.
 
-    python3 scripts/video/video.py <name> [--again <step>] [--shots DIR]
+    python3 scripts/video/video.py <name> [--again <step>] [--also 1:2,1:3] [--shots DIR]
 
 The steps, in order. Each keeps what it made in videos/<name>/, and a step
 whose file is already there is skipped, so running this again carries on.
@@ -24,6 +24,12 @@ shot and only that shot is made again.
 
 --again <step> forgets that step and everything after it first (ready, cuts,
 people, choice, motion, shot, film).
+
+--also 1:2 makes one more motion: person 2 of shot 1, beside whoever was
+chosen there (motion/shot-000-person-2.json). The shot and the film still
+follow your choice; the extra motion is for a shot list that asks for that
+person by number (a beat with "source": "video", see scripts/video/beat.py),
+so three dancers in a clip can become three characters.
 
 After it: `just cast video-<name> runs/<character>` puts a character in it.
 """
@@ -76,7 +82,7 @@ def wanted(folder: str, choice: dict) -> list:
     return out
 
 
-def advance(name: str, videos: str = None, shots: str = None, connect=None, log=print, film: bool = True) -> dict:
+def advance(name: str, videos: str = None, shots: str = None, connect=None, log=print, film: bool = True, also=()) -> dict:
     """Does every step that can be done now. Returns {"done": [...], "waiting_for": None | "choice"}.
     `film=False` stops before the film (the one step that needs Blender)."""
     folder = clip_file.folder_of(name, videos)
@@ -129,14 +135,25 @@ def advance(name: str, videos: str = None, shots: str = None, connect=None, log=
         base = os.path.join(folder, "motion", f"shot-{shot['index']:03d}")
         if (clip_file.read(base + ".record.json") or {}).get("request") != key or not os.path.exists(base + ".json"):
             todo.append((shot, request, key, base))
+    # Others asked for by number (--also): the same job for another person of a shot, kept beside the chosen one's.
+    raw = clip_file.read(os.path.join(folder, "people-raw.json"))
+    for number, who in also:
+        shot = next((s for s in raw["shots"] if s["index"] == number - 1), None)
+        if shot is None or not any(p["id"] == who for p in shot["people"]):
+            raise clip_file.Stop(f"--also {number}:{who}: there is no person {who} in shot {number} (shots are counted from 1, people as numbered on the clip's page)")
+        request = motion_request(card["clip"]["sha256"], shot, who, choice["camera"])
+        base = os.path.join(folder, "motion", f"shot-{shot['index']:03d}-person-{who}")
+        if (clip_file.read(base + ".record.json") or {}).get("request") != digest(request) or not os.path.exists(base + ".json"):
+            todo.append((shot, request, digest(request), base))
     if todo:
         worker = connect()
         endpoint_file.upload(worker, os.path.join(folder, "clip.mp4"), card["clip"]["sha256"])  # in case the volume forgot it
         for shot, request, key, base in todo:
-            log(f"video: making the motion for shot {shot['index'] + 1} ({(shot['last_frame'] - shot['first_frame'] + 1) / clip_file.FPS:.1f} s) on the GPU worker")
+            who = next(p["id"] for p in shot["people"] if p["boxes"] == request["boxes"])
+            log(f"video: making the motion for shot {shot['index'] + 1}, person {who} ({(shot['last_frame'] - shot['first_frame'] + 1) / clip_file.FPS:.1f} s) on the GPU worker")
             answer, record = worker.call(request)
             clip_file.write(base + ".json", answer, indent=None)
-            clip_file.write(base + ".record.json", {**record, "request": key, "person": choice["shots"][str(shot["index"])]})
+            clip_file.write(base + ".record.json", {**record, "request": key, "person": who})
         done.append("motion")
 
     keys = sorted(key for _, _, key in wanted(folder, choice))
@@ -168,6 +185,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("name")
     parser.add_argument("--again", default="", help="forget this step and everything after it first: " + ", ".join(clip_file.STEPS))
+    parser.add_argument("--also", default="", help="more people to make the motion for, as shot:person, with commas (1:2,1:3)")
     parser.add_argument("--shots", default="", help="the folder of shots (default: shots/)")
     parser.add_argument("--port", default="8028", help="the gallery's port, for the address to open")
     args = parser.parse_args()
@@ -186,7 +204,12 @@ def main() -> None:
                 if name.startswith("side-by-side"):
                     os.remove(os.path.join(folder, name))
             log(f"video: starting again from {args.again}" + (f" (forgot {', '.join(gone)})" if gone else ""))
-        result = advance(args.name, shots=args.shots or None, log=log)
+        try:
+            also = [tuple(int(v) for v in pair.split(":")) for pair in args.also.split(",") if pair.strip()]
+            assert all(len(pair) == 2 for pair in also)
+        except (ValueError, AssertionError):
+            raise clip_file.Stop("--also takes shot:person pairs, like 1:2 or 1:2,1:3")
+        result = advance(args.name, shots=args.shots or None, log=log, also=also)
     except (clip_file.Stop, endpoint_file.WorkerFailed) as stop:
         print(f"VIDEO stopped: {stop}")
         sys.exit(1)
