@@ -38,6 +38,7 @@ check:
     python3 scripts/motion/test_run_clip.py | tail -1
     python3 scripts/sets/test_sets.py | tail -1
     python3 scripts/fight/test_fight.py | tail -1
+    python3 scripts/skate/test_skate.py | tail -1
     python3 scripts/world/world.py check | tail -1
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
@@ -203,6 +204,36 @@ impostor-judge run version="painted" out="evidence/impostor" *more:
 # The flat cards' own tests: the arithmetic, a ball drawn from between its pictures, the page's arithmetic against Python's (in node), and a baked character if runs has one
 impostor-test runs="runs":
     python3 scripts/impostor/test_impostor.py "{{runs}}"
+
+# Put a character on the skateboard and have it ride a run on the halfpipe, from its script (scripts/skate/rides/<ride>.json): lay the run out, bake the rider on his board, carry both along the ramp, and film it from every camera of the set (into shots/halfpipe-<ride>/, or out). versions: lowpoly, or lowpoly,midpoly. One background Blender per camera
+skate ride character versions="" out="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out="{{ if out != "" { out } else { "shots/halfpipe-" + ride } }}"
+    mkdir -p "$out"
+    "{{blender_bin}}" -b --factory-startup -P scripts/skate/apply_ride.py -- "scripts/skate/rides/{{ride}}.json" "$out" --character "{{character}}" {{ if versions != "" { "--versions " + versions } else { "" } }} 2>&1 | grep -E '^RIDE|Error|Traceback'
+    rm -f "$out/films.json" "$out/cast-ride.json"
+    for camera in $(python3 -c "import json, sys; sys.path.insert(0, 'scripts/sets'); import standing; print(' '.join(standing.load(json.load(open('$out/ride.json'))['set'])['cameras']))"); do
+        "{{blender_bin}}" -b --factory-startup -P scripts/skate/film_ride.py -- "$out" --cameras "$camera" 2>&1 | grep -E '^FILM|Error|Traceback' &
+    done
+    wait
+
+# Only lay a run out, with no Blender: what each pass turns out to be and what is measured (body: a rider.body.json, or the fight kit's test bodies)
+skate-plan ride body="scripts/fight/test_bodies.json" out="shots/halfpipe-plan":
+    python3 scripts/skate/ride.py "scripts/skate/rides/{{ride}}.json" "{{body}}" "{{out}}"
+
+# Write the halfpipe's set.json from its numbers (scripts/skate/halfpipe_set.py) and build its geometry from the same numbers, in a background Blender
+halfpipe-build:
+    python3 scripts/skate/halfpipe_set.py
+    "{{blender_bin}}" -b --factory-startup -P scripts/skate/build_halfpipe.py -- halfpipe 2>&1 | grep -E '^HALFPIPE|Error|Traceback'
+
+# Build the skateboard (world/props/skateboard.glb and its card) from scripts/skate/board.py, in a background Blender
+skate-board:
+    "{{blender_bin}}" -b --factory-startup -P scripts/skate/build_board.py 2>&1 | grep -E '^BOARD|Error|Traceback'
+
+# The halfpipe's and the riding kit's own tests, without Blender: the ramp's cut, wheels on the surface, energy, feet on the bolts, joint limits, grabs, a pose from a clip
+skate-test:
+    python3 scripts/skate/test_skate.py
 
 # The fight kit's own tests, without Blender: frame data, reactions on the active frame, hitstop, reach, the mat, joint limits, footwork
 fight-test:
