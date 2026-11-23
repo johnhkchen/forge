@@ -1,0 +1,13 @@
+{
+ "name": "borrowed",
+ "title": "A borrowed pose",
+ "about": "A short run to try a pose from somewhere else. Lincoln turns once, then takes two airs whose body comes from outside the ride: the first from a piece Kimodo made for the grass workout (both fists thrown up in celebration), standing in for a video; the second asks for the handplant in the halfpipe clip, and keeps his own pose until that clip's motion has been made.",
+ "set": "halfpipe",
+ "rider": {"character": "young-lincoln-frontier-wrestler", "version": "lowpoly"},
+ "passes": [
+  {"trick": "kickturn", "below_m": 0.3},
+  {"trick": "air", "height_m": 0.65, "pose_from": {"motion": "shots/grass-workout/cache/df3dacfb4bcc47bed87e.json", "from_s": 0.5, "to_s": 1.7}},
+  {"trick": "air", "height_m": 1.0, "pose_from": {"video": "halfpipe", "shot": 8, "from_s": 37.1, "to_s": 38.6}},
+  {"trick": "kickturn"}
+ ]
+}
