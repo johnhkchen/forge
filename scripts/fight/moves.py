@@ -20,7 +20,8 @@ tall thin one.
                 forearms take it, a small push back), knockdown (a long fall
                 onto the mat, a small bounce, lying still)
     the rest    guard (with a light bounce), block (the arms up, before the
-                blow lands), footwork (shuffle steps, in schedule.py)
+                blow lands), get_up (from the mat back to guard), footwork
+                (shuffle steps, in schedule.py)
 
 A fighter is built in the usual stance (left foot and left hand in front).
 The other stance is the same move in a mirror (mirrored()).
@@ -60,7 +61,7 @@ STRIKES = {
     "haymaker": {"hand": "rear", "startup": 10, "active": 4, "recovery": 14, "aims": "high", "causes": "knockdown", "hitstop": 8, "power": 2.5, "reach": 0.88},
 }
 # How long each reaction lasts, in frames from contact, and what a blocked blow does to the freeze and the flash.
-REACTIONS = {"light_high": 13, "light_low": 17, "heavy": 30, "block": 9, "knockdown": 34}
+REACTIONS = {"light_high": 15, "light_low": 26, "heavy": 38, "block": 9, "knockdown": 44}
 KNOCKOUT_HITSTOP = 12   # the blow that puts a man down freezes longest
 BLOCKED_HITSTOP = 0.6   # a blocked blow freezes for this share of its hitstop (never fewer than 2 frames)
 BLOCKED_POWER = 0.5
@@ -548,6 +549,63 @@ def strike(body, name, spot_of, start=None):
             "lunge_m": lunge, "hand": tag, "other": other}
 
 
+# ---- on the mat ----
+
+LIES_BACK = 0.56  # a man knocked down lies with his hips this share of the hip height behind where he stood
+
+
+def lying_height(body):
+    """How far the hips come down for a man on his back: his back just on the mat."""
+    return -(body.j["hips"][2] - body.back - 0.012)
+
+
+def laid_out(body, pitch, height, y, arms, feet, head=0.0, head_yaw=0.0):
+    """The trunk tipped back as one piece (-90 is flat on the back), the hips at `height` and `y` behind where he stood."""
+    flat = turn(X, pitch)
+    turns = {name: flat for name in ("hips", "spine", "chest")}
+    turns["neck"] = qmul(flat, turn(X, 0.5 * head))
+    turns["head"] = qmul(qmul(flat, turn(Z, head_yaw)), turn(X, head))
+    return make(body, (0.0, y, height), turns, arms, feet)
+
+
+def knees_up(body, hips_y, near, far):
+    """Both feet flat on the mat in front of the hips, knees up: how far each ankle is from the hip joint, as a share of the leg."""
+    row = {}
+    for tag, share in (("l", near), ("r", far)):
+        flip = 1.0 if tag == "l" else -1.0
+        row[tag] = [flip * (body.card["measure"]["hip_half_width"] + 0.07), hips_y - share * body.reach_leg + body.middle, 0.0, 0.0, flip * 14.0]
+    return row
+
+
+def arms_out(up, bend, drop_by):
+    """Arms thrown out to the sides: `up` toward the head, the hands lifted off the mat by `bend`."""
+    out = {}
+    for tag, flip in (("l", 1.0), ("r", -1.0)):
+        upper = unit((flip * 0.9, up[tag], -drop_by))
+        fore = unit(add(upper, (0.0, 0.0, bend)))  # the elbow folds the way it does in the T-pose: toward the man's front, which is up
+        out[tag] = ("arm", upper, fore)
+    return out
+
+
+GET_UP_FRAMES = 46
+
+
+def get_up(body):
+    """From lying where he fell back to guard: he sits up, gathers himself over his feet, and stands, one foot
+    set and then the other. Keys from its first frame, like a reaction's; "back" is from where he stood before the fall."""
+    leg = body.leg
+    lying, back = lying_height(body), LIES_BACK * leg
+    feet = knees_up(body, back, 0.60, 0.52)
+    over = back - 0.52 * body.reach_leg  # where the hips are when they are over the feet
+    sit = laid_out(body, -42.0, lying + 0.04, back, {"l": loose(body, "l", 0.35, 0.75, 0.55, 30.0), "r": loose(body, "r", 0.35, 0.75, 0.55, 30.0)}, feet, head=14.0)
+    squat = built(body, (0.0, over + 0.03 * leg, -0.46 * leg), trunk(0.0, bend=40.0, head_bend=-26.0), feet,
+                  {"l": loose(body, "l", 0.35, 0.8, 0.45, 40.0), "r": loose(body, "r", 0.35, 0.8, 0.45, 40.0)})
+    rise = built(body, (0.0, -0.02 * leg, -0.20 * leg), trunk(GUARD_YAW * 0.5, bend=24.0, head_bend=-14.0), feet_of(body))
+    keys = [key(13, sit, "inout", 0.0), key(17, sit, "hold", 0.0), key(28, squat, "inout", 0.0), key(37, rise, "inout", over, stay=("r",)),
+            key(GET_UP_FRAMES, guard(body), "inout", over)]
+    return {"keys": keys, "frames": GET_UP_FRAMES}
+
+
 # ---- reactions ----
 
 def loose(body, tag, out, forward, down, bend=35.0):
@@ -582,7 +640,7 @@ def reaction(body, name, side=0.0, low=False):
                 return ("fist", add(at["chest"], about_z((0.10 if tag == "l" else -0.10, -(body.chest_front + 0.10), -0.10), GUARD_YAW)), (0.8 if tag == "l" else -0.8, 0.4, -0.6))
             return where
         hit = built(body, (0.0, 0.07 * leg, -drop - 0.07 * leg), trunk(GUARD_YAW, bend=30.0, head_bend=-14.0), feet_of(body), {"l": tucked("l"), "r": tucked("r")})
-        keys = [key(0, blend(g, hit, 0.7), "cut", 0.0), key(2, hit, "out", 0.0), key(6, hit, "hold", 0.0), key(REACTIONS[name], g, "inout", 0.0)]
+        keys = [key(0, blend(g, hit, 0.7), "cut", 0.0), key(2, hit, "out", 0.0), key(12, hit, "hold", 0.0), key(REACTIONS[name], g, "inout", 0.0)]
     elif name == "block":
         b = block(body, low)
         shoved = dict(block(body, low))
@@ -598,45 +656,30 @@ def reaction(body, name, side=0.0, low=False):
                       {"l": loose(body, "l", 0.3, 0.7, 0.6, 60.0), "r": loose(body, "r", 0.35, 0.5, 0.75, 70.0)})
         # Two steps back: the back foot first while the front one stays, then the front foot after it.
         keys = [key(0, blend(g, snap, 0.7), "cut", 0.0), key(2, snap, "out", 0.0), key(4, snap, "hold", 0.0),
-                key(10, reel, "out", 0.36 * leg, stay=("l",)), key(17, catch, "out", 0.68 * leg, stay=("r",)), key(21, catch, "hold", 0.68 * leg),
+                key(11, reel, "out", 0.36 * leg, stay=("l",)), key(19, catch, "out", 0.68 * leg, stay=("r",)), key(26, catch, "hold", 0.68 * leg),
                 key(REACTIONS[name], g, "inout", 0.68 * leg)]
     elif name == "knockdown":
-        lying = -(body.j["hips"][2] - body.back - 0.012)  # the hips this far down: the back just on the mat
-        back = 0.56 * leg                                # and this far behind where the man stood
+        lying, back = lying_height(body), LIES_BACK * leg
+
+        def laid(*args, **more):
+            return laid_out(body, *args, **more)
+
+        def legs(*args):
+            return knees_up(body, *args)
+
+        def spread(*args):
+            return arms_out(*args)
         snap = built(body, (0.03 * side * leg, 0.09 * leg, -drop + 0.03 * leg), trunk(GUARD_YAW + 10.0 * side, roll=5.0 * side, bend=-20.0, head_yaw=22.0 * side, head_bend=-26.0),
                      feet_of(body), {"l": loose(body, "l", 0.6, 0.7, 0.1), "r": loose(body, "r", 0.7, 0.5, 0.3)})
 
-        def laid(pitch, height, y, arms, feet, head=0.0, head_yaw=0.0):
-            flat = turn(X, pitch)
-            turns = {name: flat for name in ("hips", "spine", "chest")}
-            turns["neck"] = qmul(flat, turn(X, 0.5 * head))
-            turns["head"] = qmul(qmul(flat, turn(Z, head_yaw)), turn(X, head))
-            return make(body, (0.0, y, height), turns, arms, feet)
-
-        def legs(hips_y, near, far):
-            """Both feet flat on the mat in front of the hips, knees up: how far each ankle is from the hip joint, as a share of the leg."""
-            row = {}
-            for tag, share in (("l", near), ("r", far)):
-                flip = 1.0 if tag == "l" else -1.0
-                row[tag] = [flip * (body.card["measure"]["hip_half_width"] + 0.07), hips_y - share * body.reach_leg + body.middle, 0.0, 0.0, flip * 14.0]
-            return row
-
-        def spread(up, bend, drop_by):
-            """Arms thrown out to the sides: `up` toward the head, the hands lifted off the mat by `bend`."""
-            out = {}
-            for tag, flip in (("l", 1.0), ("r", -1.0)):
-                upper = unit((flip * 0.9, up[tag], -drop_by))
-                fore = unit(add(upper, (0.0, 0.0, bend)))  # the elbow folds the way it does in the T-pose: toward the man's front, which is up
-                out[tag] = ("arm", upper, fore)
-            return out
 
         tip = built(body, (0.0, 0.30 * leg, -0.30 * leg), trunk(0.0, bend=-40.0, head_bend=-10.0), feet_of(body, lead=-0.10 * leg, wide=1.1),
                     {"l": loose(body, "l", 0.8, 0.5, -0.4, 20.0), "r": loose(body, "r", 0.8, 0.4, -0.3, 20.0)})
         land = laid(-90.0, lying, back, spread({"l": 0.25, "r": 0.5}, 0.10, 0.08), legs(back, 0.80, 0.66), head=6.0)
         hop = laid(-83.0, lying + 0.05, back + 0.015, spread({"l": 0.3, "r": 0.55}, 0.45, -0.10), legs(back + 0.015, 0.80, 0.66), head=16.0)
         still = laid(-90.0, lying, back, spread({"l": 0.15, "r": 0.6}, 0.06, 0.08), legs(back, 0.86, 0.70), head=3.0, head_yaw=-18.0)
-        keys = [key(0, blend(g, snap, 0.7), "cut", 0.0), key(3, snap, "out", 0.0), key(11, tip, "in", 0.0), key(17, land, "in", 0.0),
-                key(20, hop, "out", 0.0), key(24, land, "in", 0.0), key(REACTIONS[name], still, "inout", 0.0)]
+        keys = [key(0, blend(g, snap, 0.7), "cut", 0.0), key(3, snap, "out", 0.0), key(6, snap, "hold", 0.0), key(15, tip, "in", 0.0), key(22, land, "in", 0.0),
+                key(25, hop, "out", 0.0), key(29, land, "in", 0.0), key(REACTIONS[name], still, "inout", 0.0)]
     else:
         raise ValueError("no reaction called %r: choose from %s" % (name, ", ".join(sorted(REACTIONS))))
     return {"keys": keys, "frames": REACTIONS[name], "down": name == "knockdown"}

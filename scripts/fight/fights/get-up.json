@@ -1,0 +1,20 @@
+{
+ "name": "get-up",
+ "about": "A short one, to see a man get back up: Lincoln's haymaker puts Roosevelt down, Roosevelt gets to his feet, they close again and Roosevelt answers with a hook.",
+ "set": "ring",
+ "marks": {"left": "fight_left", "right": "fight_right"},
+ "fighters": {
+  "left": {"character": "roosevelt-wrestler-1890s", "stance": "usual"},
+  "right": {"character": "young-lincoln-frontier-wrestler", "stance": "mirror"}
+ },
+ "start_apart_m": 1.4,
+ "beats": [
+  {"both": "guard", "seconds": 0.8},
+  {"by": "right", "move": "haymaker", "wait": 0.3},
+  {"both": "guard", "seconds": 1.2},
+  {"by": "left", "move": "get_up"},
+  {"both": "guard", "seconds": 0.4},
+  {"by": "left", "move": "left_hook", "wait": 0.3},
+  {"both": "guard", "seconds": 0.8}
+ ]
+}

@@ -18,6 +18,7 @@ measured two real runs). What it shows:
   every body       the same moves, every one of them landed and blocked, fit either body against the
                    other, in either stance
   feet             a planted foot stays where it was put; shuffle steps move one foot at a time
+  get up           a man knocked down can get back to his feet, and the fight goes on
   mirror           the other stance is the same motion in a mirror
   script           a fight script that asks for what can't be is told why
 
@@ -190,6 +191,22 @@ def test_mat():
           14 <= land - hit["hitstop"] <= 24 and 0.02 < max(fall[land:]) - fall[land] < 0.12)
 
 
+def test_get_up():
+    """a man knocked down can get back to his feet, and the fight goes on from the marks."""
+    fight = {"beats": [{"by": "right", "move": "cross", "result": "knockdown"}, {"by": "left", "move": "get_up", "wait": 1.0}, {"by": "left", "move": "jab"}]}
+    for left, right in (("stocky", "lanky"), ("lanky", "stocky")):
+        timeline, motions, bodies = laid_out(fight, left, right)
+        up = [b for b in timeline["beats"] if b["beat"].get("move") == "get_up"][0]
+        m, body = motions["left"], bodies["left"]
+        before, after = body.joints(schedule.pose_of(m, body, up["start"])), body.joints(schedule.pose_of(m, body, up["to_frame"]))
+        check("%s: on his back at frame %d (head %.0f cm up), on his feet in guard by %d (head %.0f cm up)" % (left, up["start"], 100 * before["head"][2], up["to_frame"], 100 * after["head"][2]),
+              before["head"][2] < 0.4 and after["head"][2] > 0.8 * body.j["head"][2] and not timeline["fighters"]["left"]["down"])
+        low = lowest(m, body)
+        check("   nothing under the mat on the way up (lowest %.1f cm, %s)" % (100 * low[0], low[1]), low[0] > 0.02)
+        limit_checks(motions, bodies, "   getting up")
+        fist_checks(timeline, motions, bodies, "   and the fight goes on")
+
+
 def limit_checks(motions, bodies, label):
     for side in ("left", "right"):
         worst = {}
@@ -270,13 +287,14 @@ def test_script():
     check("a result nobody knows", told([{"by": "left", "move": "jab", "result": "explodes"}], "explodes"))
     check("a blow at a man who is down", told([{"by": "left", "move": "jab", "result": "knockdown"}, {"by": "left", "move": "jab"}], "down"))
     timeline = laid_out({"beats": [{"by": "left", "move": "jab"}]})[0]
+    check("getting up when nobody is down", told([{"by": "left", "move": "get_up"}], "not down"))
     check("a blow with no result named causes the move's own reaction (%s)" % timeline["hits"][0]["reaction"], timeline["hits"][0]["reaction"] == moves.STRIKES["jab"]["causes"])
     before = copy.deepcopy(FIRST)
     laid_out()
     check("the fight script is only read", before == FIRST)
 
 
-TESTS = [test_frame_data, test_reaction_starts_on_the_active_frame, test_hitstop, test_fist_reaches_its_spot, test_mat, test_limits, test_every_body, test_feet, test_mirror, test_script]
+TESTS = [test_frame_data, test_reaction_starts_on_the_active_frame, test_hitstop, test_fist_reaches_its_spot, test_mat, test_limits, test_every_body, test_get_up, test_feet, test_mirror, test_script]
 
 
 def main() -> int:

@@ -13,7 +13,8 @@ A fight script is plain data (scripts/fight/fights/first.json is one):
        {"both": "circle", "deg": 20},                both step round the middle, this far (the way a clock doesn't turn is +)
        {"by": "left", "move": "jab", "result": "blocked"},
        {"by": "right", "move": "jab"},               lands, and causes the reaction the move names
-       {"by": "right", "move": "uppercut", "result": "knockdown", "wait": 0.2}
+       {"by": "right", "move": "uppercut", "result": "knockdown", "wait": 0.2},
+       {"by": "left", "move": "get_up", "wait": 1.5}  a man who is down gets back to his feet
      ]}
 
 "result" is the fight script's choice: "blocked", or left out (the blow lands
@@ -271,6 +272,26 @@ def schedule(fight, bodies, marks=None):
             stand(now)
         else:
             side, name = beat["by"], beat["move"]
+            if name == "get_up":  # a man on the mat gets back to his feet; the other waits in guard
+                faller = who[side]
+                if not faller.down:
+                    raise ValueError("%s can't get up: he is not down" % side)
+                stand(now)
+                now += int(round(beat.get("wait", 0.0) * FPS))
+                stand(now)
+                base = faller.base
+                for k in moves.get_up(faller.body)["keys"]:
+                    moved = add((base[0], base[1], 0.0), about_z((0.0, k["back"], 0.0), base[2]))
+                    there = (moved[0], moved[1], base[2])
+                    faller.track.add(now + k["at"], faller.place(k["pose"], there, k["stay"], faller.track.last()[1]), k["ease"])
+                    faller.base = there
+                faller.down = False
+                card["start"] = now
+                now = faller.track.last()[0]
+                stand(now)
+                card["to_frame"] = now
+                beats.append(card)
+                continue
             if name not in moves.STRIKES:
                 raise ValueError("no attack called %r: choose from %s" % (name, ", ".join(sorted(moves.STRIKES))))
             hitter, taker = who[side], who[OTHER[side]]
@@ -355,7 +376,7 @@ def schedule(fight, bodies, marks=None):
     for i, n in enumerate(order):
         film_of.setdefault(n, i)
     for card in beats:
-        for name in ("from_frame", "to_frame", "start", "contact"):
+        for name in ("from_frame", "to_frame", "start", "contact"):  # the same frames, counted on the film (after the freezes)
             if name in card:
                 card[name] = film_of[card[name]]
     motions = {}
@@ -363,6 +384,11 @@ def schedule(fight, bodies, marks=None):
         motions[side] = plain(f, [live[side][n] for n in order], order, 0 if side == "left" else BOUNCE_FRAMES // 2)
     for h in hits:
         del h["live_frame"]
+        if h["reaction"] == "knockdown":  # where the man ends up, so whoever films it can see he is still on the mat
+            side = h["on"]
+            landed = min(len(order) - 1, h["frame"] + h["hitstop"] + moves.REACTIONS["knockdown"])
+            at = bodies[side].joints(pose_of(motions[side], bodies[side], landed))
+            h["lies"] = {"hips": set_point(marks[side], at["hips"]), "head": set_point(marks[side], at["crown"])}
     timeline = {"fps": FPS, "frames": len(order), "seconds": round(len(order) / float(FPS), 2), "range_m": round(between, 3),
                 "fighters": {side: {"stance": "mirror" if f.mirror else "usual", "down": f.down} for side, f in who.items()},
                 "hits": hits, "beats": beats}

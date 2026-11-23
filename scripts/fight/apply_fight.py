@@ -134,6 +134,17 @@ def main():
         with open(os.path.join(out, side + ".motion.json"), "w") as f:
             json.dump(motion, f)
     print("FIGHT timeline: %d frames (%.1f s), %d hits" % (timeline["frames"], timeline["seconds"], len(timeline["hits"])))
+    if fight.get("set"):  # a man knocked down must land on the mat, not through the ropes
+        sys.path.insert(0, os.path.join(REPO, "scripts", "sets"))
+        import standing
+
+        st = standing.load(fight["set"])
+        for hit in timeline["hits"]:
+            for part, spot in sorted((hit.get("lies") or {}).items()):
+                if not standing.on_floor(st, spot[0], spot[2]):
+                    hit["off_the_floor"] = True
+                    print("FIGHT warning: %s is knocked down at frame %d and his %s lands off the set's floor, at x %.2f, z %.2f: move the fight marks or let the other man fall" % (
+                        hit["on"], hit["frame"], part, spot[0], spot[2]))
 
     # 3. Each fighter baked, and looked at on every contact frame.
     timeline["measured"] = {}
