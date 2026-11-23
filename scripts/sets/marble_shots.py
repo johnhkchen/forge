@@ -2,6 +2,7 @@
 
     python3 scripts/sets/marble_shots.py <set> [--port 8028] [--out evidence/marble] [--camera bar] [--seconds 6]
     python3 scripts/sets/marble_shots.py <set> --one "<what follows #/marble/<set>>" <out.png> [--size 1280x720]
+    python3 scripts/sets/marble_shots.py <set> --views <diorama folder>/views.json
 
 The gallery must be running, and able to find the world's own files
 (`python3 scripts/gallery.py --marble <main checkout>/world/marble`). The first
@@ -62,6 +63,15 @@ def main():
     base = "http://localhost:%s/" % opt("--port", "8028")
     page = test_walkabout.Page(base, gpu=True)
     try:
+        if "--views" in args:  # every view of a diorama (scripts/sets/marble_diorama.py wrote the list)
+            listed = os.path.abspath(args[args.index("--views") + 1])
+            with open(listed) as f:
+                views = json.load(f)["views"]
+            for view, card in views.items():
+                path = os.path.join(os.path.dirname(listed), card["splats"])
+                one(page, name, card["open"], path, (card["size"], card["size"]), wait=4.0)
+                print("SHOT %s" % os.path.relpath(path, REPO))
+            return
         if "--one" in args:
             rest, path = args[args.index("--one") + 1], os.path.abspath(args[args.index("--one") + 2])
             wide, tall = [int(v) for v in opt("--size", "1280x720").split("x")]

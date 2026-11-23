@@ -221,15 +221,18 @@ class MarbleView {
 
   // How sharp: one of the world's splat files. The old one goes when the new one is ready.
   async setDetail(key) {
-    const file = this.options.get("file") || this.marble.splats[key];
+    // ?file=/evidence/...: some other .spz stood in the same frame (a cut-away of the room, for a diorama picture).
+    const other = this.options.get("file");
+    const url = other?.startsWith("/") ? other.slice(1) : this.base + (other || this.marble.splats[key]);
+    const file = url.split("/").pop();
     const asked = (this.asked = (this.asked || 0) + 1);
     this.status.hidden = false;
     this.status.textContent = "Fetching the room…";
-    const head = await fetch(this.base + file, { method: "HEAD" });
+    const head = await fetch(url, { method: "HEAD" });
     if (!head.ok) throw new Error(`${file}: ${head.status}`);
     const bytes = Number(head.headers.get("Content-Length")) || 0;
     if (bytes) this.status.textContent = `Fetching the room (${mb(bytes)})…`;
-    const mesh = new this.spark.SplatMesh({ url: this.base + file });
+    const mesh = new this.spark.SplatMesh({ url });
     await mesh.initialized;
     if (!this.alive || asked !== this.asked) return mesh.dispose?.();
     if (this.splats) { this.raw.remove(this.splats); this.splats.dispose?.(); }
@@ -348,6 +351,7 @@ class MarbleView {
     this.lens = lens;
     this.camera.position.fromArray(at);
     this.controls.target.fromArray(aim);
+    this.controls.maxDistance = Math.max(14, this.camera.position.distanceTo(this.controls.target) * 1.2); // a camera asked for from far outside stays there
     this.camera.lookAt(this.controls.target);
     this.controls.update();
     this.resize();

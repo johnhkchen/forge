@@ -303,6 +303,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(all_takes())
         if path == "/api/world":
             return self.send_json(the_world())
+        if path.startswith("/evidence/"):  # pictures taken as proof, and the cut-away splats a diorama picture is drawn from
+            return self.send_file(os.path.join(ROOT, "evidence"), path[len("/evidence/"):])
         if path.startswith("/marble/"):
             return self.send_file(MARBLE, path[len("/marble/"):])
         if path.startswith("/world/"):
