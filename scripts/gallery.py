@@ -1,9 +1,9 @@
 """Serve the gallery on the local network: the newest diorama, the world, every run, before and after, and every set.
 
-    python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR]
+    python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR] [--marble DIR]
 
 Serves gallery/ (the page), runs/ and comics/ (the files), sets/
-(the standing sets), world/ (the toons and props that stand in the world),
+(the standing sets), world/ (the toons and props that stand in the world; /marble/ is world/marble/, the Marble worlds a place's splats are read from),
 dioramas/ (story moments on a base),
 shots/ (what was filmed on the sets) and videos/ (clips you brought for
 `just video`), plus /api/runs, /api/comics, /api/sets,
@@ -38,6 +38,7 @@ COMICS = os.path.join(ROOT, "comics")
 WORLD = os.path.join(ROOT, "world")
 DIORAMAS = os.path.join(ROOT, "dioramas")
 VIDEOS = os.environ.get("FORGE_VIDEOS") or os.path.join(ROOT, "videos")
+MARBLE = os.path.join(WORLD, "marble")  # worlds from World Labs Marble as they were handed over: big, and kept out of git
 sys.path.insert(0, os.path.join(ROOT, "scripts", "diorama"))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "video"))
 import diorama as diorama_file  # noqa: E402  (what a diorama is, and its card for the front page)
@@ -402,6 +403,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(all_takes())
         if path == "/api/world":
             return self.send_json(the_world())
+        if path.startswith("/evidence/"):  # pictures taken as proof, and the cut-away splats a diorama picture is drawn from
+            return self.send_file(os.path.join(ROOT, "evidence"), path[len("/evidence/"):])
+        if path.startswith("/marble/"):
+            return self.send_file(MARBLE, path[len("/marble/"):])
         if path.startswith("/world/"):
             return self.send_file(WORLD, path[len("/world/"):])
         if path == "/api/comics":
@@ -479,7 +484,9 @@ if __name__ == "__main__":
     parser.add_argument("--runs", default=RUNS, help="the folder of runs to show (default: runs/)")
     parser.add_argument("--shots", default=SHOTS, help="the folder of shots, for takes filmed on a set (default: shots/)")
     parser.add_argument("--videos", default=VIDEOS, help="the folder of clips for `just video` (default: videos/)")
+    parser.add_argument("--marble", default=MARBLE, help="the folder of Marble worlds, for places shown as splats (default: world/marble/)")
     args = parser.parse_args()
+    MARBLE = os.path.abspath(args.marble)
     RUNS = os.path.abspath(args.runs)
     SHOTS = os.path.abspath(args.shots)
     VIDEOS = os.path.abspath(args.videos)

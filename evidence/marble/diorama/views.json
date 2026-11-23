@@ -1,0 +1,101 @@
+{
+ "set": "niantic-saloon",
+ "about": "The room opened like a doll's house, once per view: the ceiling and what hangs from it off, and the walls on the camera's side. `open` is what follows #/marble/<set> in the gallery to see the cut splats through the same camera.",
+ "views": {
+  "front": {
+   "at": [
+    0.004,
+    35.044,
+    37.95
+   ],
+   "aim": [
+    0.004,
+    0.873,
+    0.0
+   ],
+   "lens_mm": 70.0,
+   "size": 1536,
+   "mesh": "niantic-saloon-front-mesh.png",
+   "splats": "niantic-saloon-front-splats.png",
+   "cut": "evidence/marble/diorama/cut/niantic-saloon-front.spz",
+   "kept_splats": 1812073,
+   "open": "?file=/evidence/marble/diorama/cut/niantic-saloon-front.spz&bare=1&who=0&clear=ffffff&cam=0.004,35.044,37.95,0.004,0.873,0.0,70.0"
+  },
+  "front-right": {
+   "at": [
+    25.424,
+    30.871,
+    32.536
+   ],
+   "aim": [
+    0.004,
+    0.873,
+    0.0
+   ],
+   "lens_mm": 70.0,
+   "size": 1536,
+   "mesh": "niantic-saloon-front-right-mesh.png",
+   "splats": "niantic-saloon-front-right-splats.png",
+   "cut": "evidence/marble/diorama/cut/niantic-saloon-front-right.spz",
+   "kept_splats": 1800216,
+   "open": "?file=/evidence/marble/diorama/cut/niantic-saloon-front-right.spz&bare=1&who=0&clear=ffffff&cam=25.424,30.871,32.536,0.004,0.873,0.0,70.0"
+  },
+  "front-left": {
+   "at": [
+    -25.415,
+    30.871,
+    32.536
+   ],
+   "aim": [
+    0.004,
+    0.873,
+    0.0
+   ],
+   "lens_mm": 70.0,
+   "size": 1536,
+   "mesh": "niantic-saloon-front-left-mesh.png",
+   "splats": "niantic-saloon-front-left-splats.png",
+   "cut": "evidence/marble/diorama/cut/niantic-saloon-front-left.spz",
+   "kept_splats": 1787151,
+   "open": "?file=/evidence/marble/diorama/cut/niantic-saloon-front-left.spz&bare=1&who=0&clear=ffffff&cam=-25.415,30.871,32.536,0.004,0.873,0.0,70.0"
+  },
+  "back-right": {
+   "at": [
+    25.424,
+    30.871,
+    -32.535
+   ],
+   "aim": [
+    0.004,
+    0.873,
+    0.0
+   ],
+   "lens_mm": 70.0,
+   "size": 1536,
+   "mesh": "niantic-saloon-back-right-mesh.png",
+   "splats": "niantic-saloon-back-right-splats.png",
+   "cut": "evidence/marble/diorama/cut/niantic-saloon-back-right.spz",
+   "kept_splats": 1937426,
+   "open": "?file=/evidence/marble/diorama/cut/niantic-saloon-back-right.spz&bare=1&who=0&clear=ffffff&cam=25.424,30.871,-32.535,0.004,0.873,0.0,70.0"
+  },
+  "back-left": {
+   "at": [
+    -25.415,
+    30.871,
+    -32.535
+   ],
+   "aim": [
+    0.004,
+    0.873,
+    0.0
+   ],
+   "lens_mm": 70.0,
+   "size": 1536,
+   "mesh": "niantic-saloon-back-left-mesh.png",
+   "splats": "niantic-saloon-back-left-splats.png",
+   "cut": "evidence/marble/diorama/cut/niantic-saloon-back-left.spz",
+   "kept_splats": 1920570,
+   "open": "?file=/evidence/marble/diorama/cut/niantic-saloon-back-left.spz&bare=1&who=0&clear=ffffff&cam=-25.415,30.871,-32.535,0.004,0.873,0.0,70.0"
+  }
+ }
+}

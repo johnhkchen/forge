@@ -80,7 +80,7 @@ function shelf() {
 
 // ---------- one set ----------
 
-const MARK_WORDS = { stand: "stand here", sit: "sit here", touch: "stand here, hand out", lean: "stand here, hand on it" };
+const MARK_WORDS = { stand: "stand here", sit: "sit here", touch: "stand here, hand out", lean: "stand here, hand on it", door: "the way in and out" };
 
 function setPage(set, wantedTake, wantedCamera) {
   const filmed = takes.filter((t) => t.set === set.id);
@@ -161,6 +161,7 @@ function setPage(set, wantedTake, wantedCamera) {
     inWorld ? h("a", { class: "back", href: `#/world/${world.epochs[world.epochs.length - 1].name}/${encodeURIComponent(inWorld[0])}` }, "← The world") : h("a", { class: "back", href: "#/" }, "← Everything"),
     h("h1", {}, set.title || set.name),
     set.about ? h("p", { class: "lede" }, set.about) : null,
+    set.marble ? h("p", {}, h("a", { class: "clay-button", href: `#/marble/${encodeURIComponent(set.id)}` }, "Step inside"), " ", h("span", { class: "hint" }, "the room as the world model made it; below is the plainer copy Blender films")) : null,
     h("div", { class: "versions", role: "group", "aria-label": "Look from" }, lookChips),
     h("div", { class: "controls" }, h("div", { class: "toggles" }, marksBtn, cameraNames.length ? camsBtn : null, blocksBtn, takeBtns)),
     dressing.length ? h("div", { class: "gear", role: "group", "aria-label": "Dressing" }, h("span", { class: "hint" }, "Dressing"), dressing, h("span", { class: "hint" }, "Tap a piece to take it away.")) : null,
@@ -1893,6 +1894,16 @@ async function route() {
   const inWorld = location.hash.match(/^#\/world(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/);
   if (inWorld && world?.epochs?.length) {
     app.replaceChildren(worldPage(inWorld[1] && decodeURIComponent(inWorld[1]), inWorld[2] && decodeURIComponent(inWorld[2]), inWorld[3] && decodeURIComponent(inWorld[3])));
+    window.scrollTo(0, 0);
+    return;
+  }
+  // #/marble/<set>[/<camera>]: a place grown by a world model, shown as its splats (gallery/marble.js, fetched when asked for).
+  const grown = location.hash.match(/^#\/marble\/([^/?]+)(?:\/([^/?]+))?(?:\?(.*))?$/);
+  const grownSet = grown && sets.find((x) => x.id === decodeURIComponent(grown[1]) && x.marble);
+  if (grownSet) {
+    viewer?.dispose();
+    viewer = (await import("./marble.js")).marblePage(grownSet, runs, grown[2], new URLSearchParams(grown[3] || ""));
+    app.replaceChildren(viewer.el);
     window.scrollTo(0, 0);
     return;
   }

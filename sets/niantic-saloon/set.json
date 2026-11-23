@@ -1,0 +1,714 @@
+{
+ "format": "forge-set/1",
+ "name": "niantic-saloon",
+ "title": "The Niantic saloon",
+ "about": "Below decks in the beached whaleship: curved ribs overhead, lanterns, a long bar with a brass rail down one side, round tables in two rows, coils of rope along the hull. Grown by a world model (World Labs Marble) from one picture; nobody is in it.",
+ "stage": "open",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is the middle of the room, on the floor, in the aisle between the two rows of tables; the bar runs along the back (-z), and the front is the hull side with the rope coils"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -11.47,
+    -4.01
+   ],
+   [
+    11.3,
+    -4.01
+   ],
+   [
+    11.3,
+    3.99
+   ],
+   [
+    -11.47,
+    3.99
+   ]
+  ],
+  "about": "everything the collision mesh covers, walls and all"
+ },
+ "units": "metres. y is up and 0 is the floor. The room is 22 m long (x), 7.4 m across (z) and just under 3 m high; the bar is along -z.",
+ "floor": {
+  "areas": [
+   [
+    [
+     -10.4,
+     -2.3
+    ],
+    [
+     10.4,
+     2.5
+    ]
+   ]
+  ],
+  "note": "everything between the bar and the rope coils, end wall to end wall. The tables and chairs stand on it and are in `blocks`; what is clear is the aisle down the middle, a narrow walk along the bar, and the gaps between tables",
+  "measured": {
+   "area_m2": 25.2,
+   "box": [
+    [
+     -10.94,
+     -3.64
+    ],
+    [
+     10.94,
+     3.64
+    ]
+   ],
+   "height_m": -0.0003
+  }
+ },
+ "ground": {
+  "y": -0.02,
+  "color": [
+   0.12,
+   0.09,
+   0.07
+  ],
+  "size_m": 60.0
+ },
+ "blocks": [
+  {
+   "name": "bar west",
+   "kind": "bar",
+   "center": [
+    -5.25,
+    0.635,
+    -2.8
+   ],
+   "size": [
+    10.5,
+    1.27,
+    1.0
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "bar east",
+   "kind": "bar",
+   "center": [
+    5.3,
+    0.635,
+    -2.7
+   ],
+   "size": [
+    10.6,
+    1.27,
+    1.2
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "back bar",
+   "kind": "shelves",
+   "center": [
+    0.05,
+    1.2,
+    -3.5
+   ],
+   "size": [
+    21.1,
+    2.4,
+    0.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b1",
+   "kind": "table",
+   "center": [
+    -9.9,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    0.8,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b2",
+   "kind": "table",
+   "center": [
+    -8.0,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b3",
+   "kind": "table",
+   "center": [
+    -6.2,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b4",
+   "kind": "table",
+   "center": [
+    -4.2,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b5",
+   "kind": "table",
+   "center": [
+    -1.8,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b6",
+   "kind": "table",
+   "center": [
+    0.8,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b7",
+   "kind": "table",
+   "center": [
+    3.4,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.8,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b8",
+   "kind": "table",
+   "center": [
+    5.7,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.6,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b9",
+   "kind": "table",
+   "center": [
+    7.9,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.2,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table b10",
+   "kind": "table",
+   "center": [
+    9.6,
+    0.39,
+    -1.02
+   ],
+   "size": [
+    1.0,
+    0.78,
+    1.45
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f1",
+   "kind": "table",
+   "center": [
+    -8.7,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.2,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f2",
+   "kind": "table",
+   "center": [
+    -6.5,
+    0.39,
+    1.8
+   ],
+   "size": [
+    2.8,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f3",
+   "kind": "table",
+   "center": [
+    -3.8,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f4",
+   "kind": "table",
+   "center": [
+    -1.6,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f5",
+   "kind": "table",
+   "center": [
+    0.6,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f6",
+   "kind": "table",
+   "center": [
+    3.7,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.6,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f7",
+   "kind": "table",
+   "center": [
+    6.2,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.4,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f8",
+   "kind": "table",
+   "center": [
+    7.6,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.0,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "table f9",
+   "kind": "table",
+   "center": [
+    9.55,
+    0.39,
+    1.8
+   ],
+   "size": [
+    1.7,
+    0.78,
+    1.4
+   ],
+   "heading": 0.0
+  },
+  {
+   "name": "rope coils",
+   "kind": "rope coils",
+   "center": [
+    0.0,
+    0.3,
+    2.88
+   ],
+   "size": [
+    20.8,
+    0.6,
+    0.65
+   ],
+   "heading": 0.0
+  }
+ ],
+ "marks": {
+  "bar": {
+   "kind": "lean",
+   "at": [
+    -3.0,
+    -1.95
+   ],
+   "facing_deg": 180.0,
+   "touch": {
+    "hand": "right",
+    "at": [
+     -3.25,
+     1.28,
+     -2.45
+    ]
+   },
+   "about": "standing at the bar, a hand on its top; reached from the aisle through the gap between two tables"
+  },
+  "bar_beside": {
+   "kind": "stand",
+   "at": [
+    -2.1,
+    -2.02
+   ],
+   "facing_deg": -90.0,
+   "about": "next to whoever is at the bar, turned to them"
+  },
+  "aisle": {
+   "kind": "stand",
+   "at": [
+    -3.0,
+    0.4
+   ],
+   "facing_deg": 180.0,
+   "about": "in the aisle, where the way to the bar turns off"
+  },
+  "centre": {
+   "kind": "stand",
+   "at": [
+    0.0,
+    0.4
+   ],
+   "facing_deg": 90.0,
+   "about": "the middle of the aisle"
+  },
+  "table_back": {
+   "kind": "stand",
+   "at": [
+    0.8,
+    -0.05
+   ],
+   "facing_deg": 180.0,
+   "about": "standing at a table on the bar side"
+  },
+  "table_front": {
+   "kind": "stand",
+   "at": [
+    0.6,
+    0.85
+   ],
+   "facing_deg": 0.0,
+   "about": "standing at a table on the hull side"
+  },
+  "door": {
+   "kind": "door",
+   "at": [
+    -9.8,
+    0.4
+   ],
+   "facing_deg": 90.0,
+   "leads_to": {
+    "set": "niantic-cove",
+    "mark": "hatch",
+    "built": false
+   },
+   "about": "just inside the door at the end of the aisle: the way in from outside, where the cove will be"
+  },
+  "far_door": {
+   "kind": "stand",
+   "at": [
+    10.0,
+    0.4
+   ],
+   "facing_deg": -90.0,
+   "about": "the other end of the aisle, by the second door"
+  }
+ },
+ "paths": [
+  {
+   "from": "door",
+   "to": "aisle"
+  },
+  {
+   "from": "aisle",
+   "to": "bar"
+  },
+  {
+   "from": "bar",
+   "to": "bar_beside",
+   "via": [
+    [
+     -2.6,
+     -2.0
+    ]
+   ]
+  },
+  {
+   "from": "aisle",
+   "to": "centre"
+  },
+  {
+   "from": "centre",
+   "to": "table_back"
+  },
+  {
+   "from": "centre",
+   "to": "table_front"
+  },
+  {
+   "from": "centre",
+   "to": "far_door"
+  },
+  {
+   "from": "door",
+   "to": "centre"
+  }
+ ],
+ "cameras": {
+  "bar": {
+   "at": [
+    -0.4,
+    1.45,
+    0.9
+   ],
+   "aim": [
+    -3.0,
+    0.95,
+    -2.0
+   ],
+   "lens_mm": 28,
+   "sees": [
+    "bar",
+    "bar_beside"
+   ],
+   "about": "from the aisle, across a table, at whoever is at the bar"
+  },
+  "aisle": {
+   "at": [
+    -9.9,
+    1.6,
+    0.75
+   ],
+   "aim": [
+    0.0,
+    1.0,
+    0.3
+   ],
+   "lens_mm": 24,
+   "sees": [
+    "aisle",
+    "centre"
+   ],
+   "about": "down the aisle from the door"
+  },
+  "corner": {
+   "at": [
+    9.6,
+    2.3,
+    1.9
+   ],
+   "aim": [
+    -1.0,
+    0.8,
+    -0.9
+   ],
+   "lens_mm": 20,
+   "sees": [
+    "centre",
+    "table_back"
+   ],
+   "about": "the whole room from up in a far corner"
+  }
+ },
+ "lights": [
+  {
+   "name": "lantern over the bar",
+   "kind": "area",
+   "at": [
+    -3.0,
+    2.5,
+    -1.2
+   ],
+   "aim": [
+    -3.0,
+    0.0,
+    -1.8
+   ],
+   "power": 260.0,
+   "color": [
+    1.0,
+    0.8,
+    0.55
+   ],
+   "size_m": 1.2
+  },
+  {
+   "name": "lantern over the aisle",
+   "kind": "area",
+   "at": [
+    0.5,
+    2.5,
+    0.4
+   ],
+   "aim": [
+    0.5,
+    0.0,
+    0.4
+   ],
+   "power": 320.0,
+   "color": [
+    1.0,
+    0.8,
+    0.55
+   ],
+   "size_m": 1.5
+  },
+  {
+   "name": "daylight from the door",
+   "kind": "area",
+   "at": [
+    -10.2,
+    1.7,
+    0.5
+   ],
+   "aim": [
+    -6.0,
+    1.0,
+    0.4
+   ],
+   "power": 160.0,
+   "color": [
+    0.75,
+    0.85,
+    1.0
+   ],
+   "size_m": 1.0
+  }
+ ],
+ "world": {
+  "color": [
+   0.5,
+   0.42,
+   0.33
+  ],
+  "strength": 0.35
+ },
+ "slots": {},
+ "dressing": [],
+ "geometry": {
+  "glb": "set.glb",
+  "move": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "turn_deg": 0.0,
+  "built_by": "the Marble world's collision mesh in metres, floor at 0, colors from its 500k splats (just set-from-marble <world folder> niantic-saloon)"
+ },
+ "marble": {
+  "world": "niantic-saloon",
+  "id": "a1db5dee-72e0-4a02-830c-c8ba4786c700",
+  "model": "marble-1.1-plus",
+  "scale": 2.0031325817108154,
+  "ground": 1.69275,
+  "ground_as_given": 1.700982928276062,
+  "turn_deg": 115.56,
+  "move": [
+   -0.1931,
+   0.0,
+   0.5399
+  ],
+  "splats": {
+   "100k": "splats-100k.spz",
+   "150k": "splats-150k.spz",
+   "500k": "splats-500k.spz",
+   "full_res": "splats-full_res.spz"
+  },
+  "about": "how the raw files stand in this set: point = turn_y(turn_deg) * [x * scale, ground - y * scale, -z * scale] + move. The folder is world/marble/<world>/, kept out of git"
+ },
+ "blocks_note": "measured from the splats (a height map of the solid ones, in 20 cm squares). A table block is a table with its chairs; the collision mesh drapes over each group the same way",
+ "lights_note": "for whoever is brought in: the room's own surfaces already carry the lamplight in their colors and take no light"
+}

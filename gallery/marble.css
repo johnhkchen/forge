@@ -1,0 +1,21 @@
+/* A Marble place (gallery/marble.js). Everything else comes from style.css and the clay kit. */
+.marble-stage .pane { position: relative; aspect-ratio: 16 / 9; background: #14100c; border-radius: var(--clay-radius-md, 14px); overflow: hidden; }
+.marble-stage canvas { display: block; width: 100%; height: 100%; outline: none; cursor: grab; }
+.marble-stage canvas:active { cursor: grabbing; }
+.marble-stage .status { position: absolute; inset: auto 12px 12px 12px; padding: 0.5em 0.9em; border-radius: 999px; background: rgba(250, 248, 245, 0.92); color: #1c1917; font-size: 0.9rem; width: fit-content; max-width: calc(100% - 24px); }
+.marble-stage .status[hidden] { display: none; }
+.marble-how, .marble-speed { margin: 8px 2px 0; }
+.marble-speed { font-variant-numeric: tabular-nums; min-height: 1.3em; }
+.marble-stick { position: absolute; width: 0; height: 0; pointer-events: none; }
+.marble-stick::before { content: ""; position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 50%; background: rgba(250, 248, 245, 0.18); border: 1px solid rgba(250, 248, 245, 0.4); }
+.marble-knob { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: rgba(250, 248, 245, 0.75); box-shadow: 0 2px 8px rgba(28, 25, 23, 0.35); }
+
+/* A phone held upright: a taller picture, so the room is more than a letterbox. */
+@media (max-width: 640px) and (orientation: portrait) {
+  .marble-stage .pane { aspect-ratio: 4 / 5; }
+}
+
+/* ?bare=1: only the picture, edge to edge, for a still to set beside Blender's. */
+.marble-bare > :not(.marble-stage) { display: none; }
+.marble-bare .marble-stage { position: fixed; inset: 0; padding: 0; margin: 0; z-index: 50; border-radius: 0; }
+.marble-bare .marble-stage .pane { aspect-ratio: auto; width: 100vw; height: 100vh; border-radius: 0; }

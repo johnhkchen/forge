@@ -663,6 +663,49 @@ The tag field also has the fair opponent: **low-poly meshes** (1,695 triangles a
 
 **What is weak.** Bold ink's fold lines come from depth alone, so a seam between two cards can draw as a line, and thin things far away (a rope) break into dashes. The baked pixel sheet loses the face; a face needs more pixels than 48 a metre gives it. Pixel art on screen shimmers a little as the eye moves, as any picture drawn small does.
 
+## A place from a world model
+
+The Niantic saloon is the first place we did not build. World Labs' Marble grew it from one picture: an empty Gold Rush saloon in the hold of a beached whaleship. What Marble hands over is kept out of git, in `world/marble/niantic-saloon/`: the place itself as a cloud of soft colored dots ("splats", in four sizes from 100 thousand dots to 4.3 million), a coarse mesh of every surface for bumping into, and a record that says how big it really is.
+
+```
+just set-from-marble world/marble/niantic-saloon niantic-saloon
+just gallery                    # then open #/marble/niantic-saloon
+just marble-compare niantic-saloon shots/tag-moves/painted-tag.glb
+just marble-diorama niantic-saloon world/marble/niantic-saloon
+just marble-fit niantic-saloon <a mesh TRELLIS made>.glb
+```
+
+**Step inside** (`#/marble/niantic-saloon`, or "Step inside" on the place's own page). The gallery draws the dots themselves, with World Labs' open renderer (Spark 0.1.10 from the CDN, the last release that works with our three.js 0.170), at true size with the floor at 0. Roosevelt stands at the bar, 1.78 m, so you can judge how one of ours sits in a place like this. On the page:
+
+- **From the bar / aisle / corner**: the set's own cameras. Drag to look round from there;
+- **Walk around**: your own eyes at head height. W A S D or the arrows on a keyboard; on a phone, a thumb on the lower half walks and the upper half looks. Tables, the bar and the walls stop you;
+- **How sharp**: Quick (100 thousand dots, 1.3 MB), Sharper (half a million, 7.7 MB, where it starts), Sharpest (all 4.3 million, 66 MB);
+- **The room**: as it is, or as Blender films it (the painted mesh, below);
+- **What you'd bump into**: Marble's collision mesh, as lines;
+- **His shadow**: the floor's own dots are dimmed where he stands. Dots have no surface to lay a shadow on.
+
+The page says how many pictures a second it is drawing. On this Mac (an M5 MacBook Pro) one picture of the bar view at 1280 x 720 takes about 1.5 ms at 100 thousand dots, 2.5 ms at half a million and 14 to 16 ms at all 4.3 million (3, 5 and 21 ms at twice the dots each way, as its own screen has): a steady 60 a second at the first two, and 48 to 60 at the last. A headless Chrome did the measuring; no real phone has been timed yet. `just marble-shots` measures it and takes the pictures in `evidence/marble/`.
+
+The world's files are read from `world/marble/` beside the gallery; from another checkout, start it with `--marble <that checkout>/world/marble`.
+
+**A Marble world as a set.** `just set-from-marble <world folder> <set>` makes `sets/<set>/` (`scripts/sets/from_marble.py`, in a background Blender, which has numpy):
+
+- **metres**: the raw numbers times the record's `metric_scale_factor` (2.003 here);
+- **floor at 0**: Marble's frame has y pointing down and the floor `ground_plane_offset` below its origin. The mesh's own floor is then measured and what is left taken off (8 mm here);
+- **our axes**: y up, by a half turn about x, the way World Labs' viewer does it;
+- **squared up**: turned until the walls run along x and z, the long side along x; the middle of the room is the origin;
+- **colors**: the collision mesh has none worth having. It is cut finer (each triangle into four) and every corner takes the color of the nearest solid dots. The `.spz` file is read here in plain numpy.
+
+`set.glb` comes out at 5.3 MB, 239 thousand triangles, small enough to keep. It carries no lighting of its own: the dots' colors already have the lamplight in them, so Blender shows the room as it is and the set's lamps light only who is brought in. `set.json` is written once with a mark in the middle and one camera; after that the marks, paths and cameras are a person's, and making the set again keeps them and the turn. The saloon's were placed from a height map of the dots: at the bar (a hand on its top), beside whoever is there, the aisle, two tables, both doors. `marble` in `set.json` says how the raw files stand in the set, which is how the gallery puts the dots in the same place as the marks.
+
+**Side by side.** `just marble-compare` films a character on a mark in Blender and takes the same view of the dots: `evidence/marble/niantic-saloon-bar-side-by-side.png` and `-corner-`. He lands on the same spot at the same size in both. The room does not look the same: Marble's collision mesh drapes over each table and its chairs as one lump and hangs in folds round the lanterns, so the Blender room is a blurred cast of the real one.
+
+**The way back to a mesh, ready and not run.** The test we want: Marble, a picture, Codex tidying the picture, TRELLIS, and a clean mesh that is still the same room. `just marble-diorama` makes the pictures: the room opened like a doll's house (the ceiling off, and the walls on the camera's side), from high up at three quarters, on white, five views, each as the painted mesh and as the dots through the same camera (`evidence/marble/diorama/`). `just marble-fit <set> <mesh.glb>` is the measuring: it lays a mesh of any size and facing over the set's (sixteen starts, then closest points until it settles) and says how far apart the surfaces are, both ways, as a median and a 90th percentile for the floor, the walls, the ceiling and things. Tried on Marble's own raw collision mesh, it finds the scale to a tenth of a percent and puts the surfaces 2 mm apart.
+
+**Doors.** A mark can be a `door`: a place to stand just inside a way out, that names the set it leads into and the door it comes out at there. `just set-check` wants the two to name each other; `"built": false` says the other side is still to come. The saloon's door leads to `niantic-cove`, which is not built.
+
+**What is weak.** The painted mesh is only as good as Marble's collision mesh, and that is coarse: fine for where the floor and walls are, poor to look at. Sitting is not marked, because the chairs are part of a lump. The dots look best from standing height; from near the floor they fray. Roosevelt is lit by three lamps we placed by eye, not by the room, and nothing of him shows in the bar's glass. Walking in the saloon is first person only, and the world map does not know the place yet.
+
 ## Comics
 
 Webcomics got cheap by a few habits: one drawing "hand" used on everything, the same poses and framings again and again, plain backgrounds, a sheet of faces to swap, and words doing the work. We have 3D characters that can already stand, walk and vault a wall, so a panel is a frozen moment of one of them, drawn in one style. A panel takes about a quarter of a second to draw.

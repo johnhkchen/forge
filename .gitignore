@@ -20,4 +20,7 @@ comics/cast/*/faces.png
 # Quick tries of a diorama (just diorama-draft)
 dioramas/*/draft/
 runs/*/card.jpg
+
+# Marble worlds as World Labs hands them over (splats, collision mesh, panorama): big, and fetched with credits
 world/marble/
+evidence/marble/diorama/cut/
