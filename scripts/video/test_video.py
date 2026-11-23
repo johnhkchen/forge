@@ -521,6 +521,8 @@ def kimodo_from_a_cache(request: dict):
             asked = clip_file.read(os.path.join(cache, name)) or {}
             if asked.get("kind") == "text" and asked["prompts"][0]["frames"] >= need:
                 off = abs(far(asked) - far(request))
+                if "walks" in request["prompts"][0]["text"] and not any(word in asked["prompts"][0]["text"] for word in ("walk", "jog", "run")):
+                    off += 100.0  # for a walk, a sentence about going somewhere on foot before any other
                 if best is None or off < best[0]:
                     best = (off, os.path.join(cache, name.replace(".request", "")), asked["prompts"][0]["text"])
     if best is None:
