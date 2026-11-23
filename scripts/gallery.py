@@ -168,7 +168,8 @@ def cards_summary(run_id, run_dir):
         card = read_json(os.path.join(profiles, name, "impostor.json")) if name.endswith("-impostor") or "-impostor-" in name else None
         if not card:
             continue
-        version = card.get("profile") or name[:-len("-impostor")]
+        pictured = card.get("profile") or name.split("-impostor")[0]
+        version = card.get("plays") or pictured  # a detailed mesh given another version's skeleton plays that version's clips
         motions = [{"id": clip, "name": label, "glb": "runs/%s/profiles/%s-%s.glb" % (run_id, version, clip)}
                    for clip, label in (("walk", "Walk"), ("rom", "Warm-up"), ("run", "Run"))
                    if os.path.isfile(os.path.join(profiles, "%s-%s.glb" % (version, clip)))]
@@ -182,7 +183,7 @@ def cards_summary(run_id, run_dir):
                         motions.append({"id": shot, "name": take.get("title") or shot.replace("-", " ").capitalize(), "glb": "shots/%s/%s" % (shot, part["glb"]),
                                         "at": mark.get("at"), "facing_deg": mark.get("facing_deg", 0.0)})
         if motions:
-            out.append({"profile": version, "folder": "profiles/" + name, "parts": len(card.get("parts") or []), "views": list(card.get("sets") or {}), "motions": motions})
+            out.append({"profile": pictured, "plays": version, "title": card.get("title") or "", "folder": "profiles/" + name, "parts": len(card.get("parts") or []), "views": list(card.get("sets") or {}), "motions": motions})
     return out
 
 

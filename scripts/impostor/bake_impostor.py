@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
+        [--look comic|pixel|joe] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor/:
@@ -28,9 +28,14 @@ out from the stored facing, so a forearm is lit from the same side whichever way
 Every part of one direction is drawn in one render, each in its own square; the squares are then
 trimmed to what is in them and packed onto one sheet.
 
+--plays names the rigged version whose clips the cards play, when the one pictured is not it: a detailed mesh
+given another version's skeleton (rig_detailed.py) is pictured, and the cards then play that version's walk,
+routine and fights. --title is what the page calls this choice. --soften is how many pixels wide toon.py
+reads a texture at (smaller is flatter; a detailed mesh wants more than a painted one).
+
 --look bakes a sheet for one of the page's other looks, into <version>-impostor-<look>/:
     pixel   pixel art: 48 pixels a metre, no smoothing, every colour snapped to the 32 this character is most
-            made of, the ink line one pixel wide; the page reads it without smoothing either
+            made of, a line one pixel wide drawn round each picture; the page reads it without smoothing either
     joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
             screen however small the figure), and the lines inside a part drawn into its picture
 
@@ -347,7 +352,9 @@ def main():
     scene.collection.objects.link(cam)
     scene.camera = cam
     scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage = wide, tall, 100
-    run_toon(shade=[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], line_px=ink_m * ppm, background=None, samples=16, **({"levels": 6, "soften": 64} if look == "pixel" else {}))
+    # Pixel art gets its line afterwards, one pixel all round each picture: a shell on so coarse a grid speckles
+    # every fold of a detailed mesh with ink.
+    run_toon(shade=[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], line_px=0 if look == "pixel" else ink_m * ppm, background=None, samples=16, **({"levels": 6} if look == "pixel" else {}), **({"soften": int(flag("--soften", "64"))} if look == "pixel" or "--soften" in args else {}))
     # The faces a part borrows from next door get no ink line of their own: the line there is the neighbour's
     # to draw. Left on, a limb's line ran on up into the shoulder and showed as scratches over the chest.
     for objects in made.values():
@@ -362,7 +369,7 @@ def main():
     painted = {o.name: list(o.data.materials) for o in part_objects}
     tmp_colour, tmp_data = os.path.join(out, ".bake-colour.png"), os.path.join(out, ".bake-data.exr")
 
-    card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
+    card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "plays": flag("--plays", profile), "title": flag("--title", ""), "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}
@@ -413,6 +420,13 @@ def main():
                 # thin ink line when the card is drawn (it is kept where the cover is over a half). The colour
                 # under it is the smoothed render's, carried a pixel outward where that one had not reached.
                 there = dat[..., 3] > 0.5
+                if look == "pixel":
+                    ring = ~there & (np.roll(there, 1, 0) | np.roll(there, -1, 0) | np.roll(there, 1, 1) | np.roll(there, -1, 1))
+                    dat = dat.copy()
+                    dat[ring] = (0.0, 0.0, 0.0, 1.0)  # marked as line, as the shell's pixels are: it takes its depth from the surface beside it
+                    col[..., :3] = np.where(ring[..., None], (0.11, 0.09, 0.13), col[..., :3])
+                    col[..., 3] = np.where(ring, 1.0, col[..., 3])
+                    there = there | ring
                 col[..., :3] = spread(col[..., :3], col[..., 3] > 0.5, 3)
                 col[..., 3] = there
                 if not there.any():

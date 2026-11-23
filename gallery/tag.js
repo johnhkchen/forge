@@ -5,6 +5,8 @@
 //
 //   meshes, one by one      every runner is his own skinned meshes, drawn the comic way with the ink shell
 //   meshes, all at once     the same meshes, every runner in one draw per piece: the bones come from a picture
+//   low-poly, all at once   the cheapest real mesh there is of him (1,695 triangles, plain colours), drawn the same way
+//   meshes near, cards far  the painted meshes within a few metres of the eye, cards beyond
 //   cards, one by one       the cards page as it is: 16 cards a runner, each placed here and drawn on its own
 //   cards, all at once      every card of every runner in one draw: the graphics card picks each card's picture
 //                           and places it, from the same picture of bones
@@ -23,7 +25,7 @@ import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps } from "./impostor-math.js";
 import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture } from "./impostor.js";
-import { LOOKS, lookOf, bakedFor, paintOf, setPaint, Screen } from "./looks.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
 
 // name: where its poses come from.
 //   glb      a file in the run's folder ("profiles/...") or anywhere the gallery serves ("shots/...")
@@ -57,16 +59,21 @@ export const MOVES = {
   plain_breath: { like: "walk", frame: 0, speed: 0 },
   plain_laugh: { like: "walk", frame: 13, speed: 0 },
 };
+const LOW = "profiles/lowpoly-walk.glb";   // the same man in his low-poly version: the same skeleton, plain colours on its points
 const BODY = "profiles/painted-walk.glb"; // the meshes, bones and binds every move is played on (the file the cards were cut from)
 const FPS = 30;
+const COLUMNS = 12;       // the pose table's columns a bone: where the bone is (4), its bind for the painted mesh (4), for the low-poly one (4)
 const COUNTS = [10, 50, 100, 250, 500, 1000];
 const WAYS = [
   { id: "mesh-each", name: "Meshes, one by one", most: 500 },
   { id: "mesh-batch", name: "Meshes, all at once" },
+  { id: "mesh-low", name: "Low-poly meshes, all at once" },
   { id: "card-each", name: "Cards, one by one", most: 500 },
   { id: "card-batch", name: "Cards, all at once" },
   { id: "card-far", name: "Cards, all at once, search off far away" },
+  { id: "mix", name: "Meshes near, cards far" },
 ];
+const NEAR_M = 9;          // "meshes near, cards far": a runner nearer the eye than this is a mesh
 const FAR_M = 12;         // "search off far away": past this a card's picture is laid flat
 const STEP = 1 / 60;      // the game's own clock
 const SKY = 0xcfdde6;
@@ -225,7 +232,7 @@ class Game {
 
 // Every move's poses in one table: a row a frame; in a row, for every bone, where the bone is (4 numbers by 4)
 // and the same times the bone's bind (what a mesh's points are moved by). All measured from the runner's feet.
-async function sampleMoves(loader, runFolder, base) {
+async function sampleMoves(loader, runFolder, base, low) {
   const names = base.bones.map((b) => b.name);
   const hips = names.indexOf("hips");
   const fetched = new Map();
@@ -304,12 +311,14 @@ async function sampleMoves(loader, runFolder, base) {
     ranges[name].speed = speed ?? (got.loop && got.measured ? got.measured : 0);
     ranges[name].from = card.glb;
   }
-  const wide = names.length * 8;
+  const wide = names.length * COLUMNS;
   const data = new Float32Array(rows.length * wide * 4);
   const skin = new THREE.Matrix4();
+  const lowBone = low ? low.bones.map((b) => names.indexOf(b.name)) : []; // the low-poly mesh numbers its bones its own way
   rows.forEach((frame, r) => frame.forEach((m, b) => {
-    data.set(m.elements, (r * wide + b * 8) * 4);
-    data.set(skin.multiplyMatrices(m, base.boneInverses[b]).elements, (r * wide + b * 8 + 4) * 4);
+    data.set(m.elements, (r * wide + b * COLUMNS) * 4);
+    data.set(skin.multiplyMatrices(m, base.boneInverses[b]).elements, (r * wide + b * COLUMNS + 4) * 4);
+    if (lowBone[b] >= 0) data.set(skin.multiplyMatrices(frame[lowBone[b]], low.boneInverses[b]).elements, (r * wide + b * COLUMNS + 8) * 4);
   }));
   return { data, wide, tall: rows.length, ranges, names, rows };
 }
@@ -361,7 +370,12 @@ function cleanLoop(frames, hipsAt) {
 const RUNNER = `
 precision highp sampler2D;
 uniform sampler2D poseTex;
+uniform vec2 keep;      // only runners this near to this far from the eye are drawn (metres)
 attribute vec4 runner;
+bool putAway() {
+  float gone = distance(cameraPosition, vec3(runner.x, 1.0, runner.y));
+  return gone < keep.x || gone >= keep.y;
+}
 mat4 fromTable(int column, float row) {
   int y = int(row + 0.5);
   return mat4(texelFetch(poseTex, ivec2(column, y), 0), texelFetch(poseTex, ivec2(column + 1, y), 0),
@@ -399,8 +413,9 @@ flat out mat3 facingToEye;
 varying vec2 vSheet;
 varying vec3 vView;
 void main() {
+  if (putAway()) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   int part = gl_InstanceID % partCount;
-  mat4 bone = feet() * fromTable(partBone[part] * 8, runner.w);
+  mat4 bone = feet() * fromTable(partBone[part] * 12, runner.w);
   mat3 turn = mat3(bone);
   vec3 head = bone[3].xyz;
   vec3 middle = head + turn * centers[part];
@@ -456,17 +471,40 @@ const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back",
 // Every runner's meshes in one draw a piece: each point is moved by its bones' rows of the table.
 const MESHES_VERTEX = `${RUNNER}
 uniform float inkM;
+uniform int bindAt;     // which of a bone's binds this mesh uses: column 4 (painted) or 8 (low-poly)
 attribute vec4 skinIndex;
 attribute vec4 skinWeight;
+attribute vec4 color;
 varying vec2 vUv;
 varying vec3 vFacing;
+varying vec3 vColor;
 void main() {
+  if (putAway()) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   vUv = uv;
-  mat4 moved = skinWeight.x * fromTable(int(skinIndex.x) * 8 + 4, runner.w) + skinWeight.y * fromTable(int(skinIndex.y) * 8 + 4, runner.w)
-             + skinWeight.z * fromTable(int(skinIndex.z) * 8 + 4, runner.w) + skinWeight.w * fromTable(int(skinIndex.w) * 8 + 4, runner.w);
+  vColor = color.rgb;
+  mat4 moved = skinWeight.x * fromTable(int(skinIndex.x) * 12 + bindAt, runner.w) + skinWeight.y * fromTable(int(skinIndex.y) * 12 + bindAt, runner.w)
+             + skinWeight.z * fromTable(int(skinIndex.z) * 12 + bindAt, runner.w) + skinWeight.w * fromTable(int(skinIndex.w) * 12 + bindAt, runner.w);
   mat4 whole = feet() * moved;
   vFacing = normalize(mat3(viewMatrix) * mat3(whole) * normal);
   gl_Position = projectionMatrix * viewMatrix * whole * vec4(position + normalize(normal) * inkM, 1.0);
+}`;
+// The low-poly mesh has no picture wrapped on it, only a colour at each point: the same tones and rim, on that.
+const LOW_FRAGMENT = `
+uniform vec3 light;
+uniform vec3 shadeMid;
+uniform vec3 shadeDark;
+uniform vec2 edges;
+uniform float punch;
+uniform float rim;
+varying vec3 vFacing;
+varying vec3 vColor;
+void main() {
+  vec3 toEye = normalize(vFacing) * (gl_FrontFacing ? 1.0 : -1.0);
+  float facing = dot(toEye, light);
+  vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
+  vec3 paint = mix(vec3(dot(vColor, vec3(0.2126, 0.7152, 0.0722))), vColor, punch) * 1.5;
+  gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(toEye.z, 0.0, 1.0), 3.0) * step(edges.x, facing), 1.0);
+  #include <colorspace_fragment>
 }`;
 const EACH_VERTEX = `
 #include <common>
@@ -508,7 +546,7 @@ class Field {
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.minDistance = 2;
     this.controls.maxDistance = 140;
-    this.state = { count: 50, way: "card-batch", shared: true, views: null, paused: false, seed: 7, look: "comic" };
+    this.state = { count: 50, way: "card-batch", shared: true, views: null, paused: false, seed: 7, look: "comic", model: modelsOf(run)[0].id };
     this.look = lookOf("comic");
     this.screen = new Screen(this.renderer);
     this.times = { frame: [], anim: [], place: [], draw: [], work: [] };
@@ -539,12 +577,18 @@ class Field {
     this.source.traverse((o) => { if (o.isSkinnedMesh && !o.userData.under) keep.push(o); });
     this.pieces = keep;
     this.base = keep[0].skeleton;
-    this.table = await sampleMoves(this.loader, this.folder, this.base);
+    const lowFile = await this.loader.loadAsync(`${this.folder}/${LOW}`).catch(() => null);
+    this.lowPieces = [];
+    lowFile?.scene.traverse((o) => { if (o.isSkinnedMesh && !o.userData.under) this.lowPieces.push(o); });
+    this.low = this.lowPieces[0]?.skeleton || null;
+    this.lowBone = this.low ? this.low.bones.map((b) => this.base.bones.findIndex((x) => x.name === b.name)) : [];
+    this.table = await sampleMoves(this.loader, this.folder, this.base, this.low);
     this.poseTex = new THREE.DataTexture(this.table.data, this.table.wide, this.table.tall, THREE.RGBAFormat, THREE.FloatType);
     this.poseTex.needsUpdate = true;
     this.speeds = Object.fromEntries(Object.entries(this.table.ranges).map(([k, v]) => [k, v.speed]));
     this.lengths = Object.fromEntries(Object.entries(this.table.ranges).map(([k, v]) => [k, v.frames / FPS]));
     this.pose = { value: this.poseTex };
+    this.keepAll = { value: new THREE.Vector2(0, 1e9) };
     this.marker = new THREE.Group();
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.78, 28), new THREE.MeshBasicMaterial({ color: 0xd9502b, side: THREE.DoubleSide }));
     ring.rotation.x = -Math.PI / 2;
@@ -562,7 +606,7 @@ class Field {
   // Change the look: the paint's numbers, and (when the look has a sheet of its own) which baked cards are read.
   async useLook(id) {
     const look = lookOf(id);
-    const folder = `${this.folder}/${bakedFor(this.run, look).folder}`;
+    const folder = `${this.folder}/${bakedFor(this.run, look, this.state.model).folder}`;
     if (folder !== this.cardFolder) {
       const card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
       this.cardFolder = folder;
@@ -643,20 +687,20 @@ class Field {
   // Stand every skeleton as the game has it. Shared: the bones are copied out of the table. Own: each mixer works.
   animate() {
     const { game, table, state } = this;
-    const need = state.way === "mesh-each" || !state.shared;
+    const need = state.way === "mesh-each" || !this.sharing();
     if (!need) return;
     const own = this.ownRunners();
     const m = new THREE.Matrix4(), root = new THREE.Matrix4();
     for (let i = 0; i < game.count; i++) {
       const runner = own[i];
-      if (state.shared) {
+      if (this.sharing()) {
         if (state.way !== "mesh-each") continue;
         root.makeRotationY(game.heading[i]).setPosition(game.x[i], 0, game.z[i]);
         const at = this.row(i) * table.wide * 4;
         const bones = runner.skeleton.bones;
         for (let b = 0; b < bones.length; b++) {
           bones[b].matrixWorldAutoUpdate = false;
-          bones[b].matrixWorld.multiplyMatrices(root, m.fromArray(table.data, at + b * 32));
+          bones[b].matrixWorld.multiplyMatrices(root, m.fromArray(table.data, at + b * COLUMNS * 4));
         }
       } else {
         const name = game.move(i);
@@ -681,8 +725,11 @@ class Field {
 
   // The bones of every runner, for the ways that read them from a picture. Shared: the table itself, and each
   // runner is a row of it. Own: a picture written afresh each frame, a row a runner.
+  // "meshes near, cards far" sorts runners by how far their feet are, which only shared poses carry
+  sharing() { return this.state.shared || this.state.way === "mix"; }
+
   boneSource() {
-    if (this.state.shared) return { tex: this.poseTex, runner: (i, out, at) => { out[at] = this.game.x[i]; out[at + 1] = this.game.z[i]; out[at + 2] = this.game.heading[i]; out[at + 3] = this.row(i); } };
+    if (this.sharing()) return { tex: this.poseTex, runner: (i, out, at) => { out[at] = this.game.x[i]; out[at + 1] = this.game.z[i]; out[at + 2] = this.game.heading[i]; out[at + 3] = this.row(i); } };
     const own = this.ownRunners(), wide = this.table.wide;
     if (!this.liveTex || this.liveTex.image.height !== own.length) {
       this.liveTex?.dispose();
@@ -692,20 +739,23 @@ class Field {
     for (let i = 0; i < own.length; i++) {
       const bones = own[i].skeleton.bones;
       for (let b = 0; b < bones.length; b++) {
-        data.set(bones[b].matrixWorld.elements, (i * wide + b * 8) * 4);
-        data.set(skin.multiplyMatrices(bones[b].matrixWorld, inverses[b]).elements, (i * wide + b * 8 + 4) * 4);
+        data.set(bones[b].matrixWorld.elements, (i * wide + b * COLUMNS) * 4);
+        data.set(skin.multiplyMatrices(bones[b].matrixWorld, inverses[b]).elements, (i * wide + b * COLUMNS + 4) * 4);
+        if (this.lowBone[b] >= 0) data.set(skin.multiplyMatrices(bones[this.lowBone[b]].matrixWorld, this.low.boneInverses[b]).elements, (i * wide + b * COLUMNS + 8) * 4);
       }
     }
     this.liveTex.needsUpdate = true;
     return { tex: this.liveTex, runner: (i, out, at) => { out[at] = 0; out[at + 1] = 0; out[at + 2] = 0; out[at + 3] = i; } };
   }
 
-  toonMaterial(mesh, vertex, ink) {
-    if (ink) return new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: INK_FRAGMENT, side: THREE.BackSide, uniforms: { poseTex: this.pose, inkM: { value: this.card.ink_m }, ink: { value: new THREE.Color(0x1c1721) } } });
+  toonMaterial(mesh, vertex, ink, keep = this.keepAll, bindAt = 4) {
+    const more = { poseTex: this.pose, keep, bindAt: { value: bindAt } };
+    if (ink) return new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: INK_FRAGMENT, side: THREE.BackSide, uniforms: { ...more, inkM: { value: 0.014 }, ink: { value: new THREE.Color(0x1c1721) } } });
+    if (bindAt === 8) return new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: LOW_FRAGMENT, side: THREE.DoubleSide, uniforms: { ...this.shade, ...more, inkM: { value: 0 } } });
     const map = mesh.material.map || mesh.userData.map;
     mesh.userData.map = map;
     return new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: TOON_FRAGMENT, side: THREE.DoubleSide,
-      uniforms: { ...this.shade, poseTex: this.pose, inkM: { value: 0 }, map: { value: map }, soften: { value: map ? Math.max(0, Math.log2(map.image.width / (/head/i.test(mesh.material.name) ? 512 : 256))) : 0 } } });
+      uniforms: { ...this.shade, ...more, inkM: { value: 0 }, map: { value: map }, soften: { value: map ? Math.max(0, Math.log2(map.image.width / (/head/i.test(mesh.material.name) ? 512 : 256))) : 0 } } });
   }
 
   // ---- the five ways ----
@@ -736,32 +786,11 @@ class Field {
       }
       layer.hull = (on) => { for (const runner of own) for (const line of runner.lines) line.visible = on; };
       layer.dispose = () => { for (const runner of own) group.remove(runner.holder); };
-    } else if (way === "mesh-batch") {
-      const spots = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4);
-      spots.setUsage(THREE.DynamicDrawUsage);
-      const made = [];
-      for (const piece of this.pieces) {
-        const shape = new THREE.InstancedBufferGeometry();
-        for (const name of ["position", "normal", "uv", "skinIndex", "skinWeight"]) shape.setAttribute(name, piece.geometry.attributes[name]);
-        shape.setIndex(piece.geometry.index);
-        shape.setAttribute("runner", spots);
-        shape.instanceCount = n;
-        for (const inked of [false, true]) {
-          const mesh = new THREE.Mesh(shape, this.toonMaterial(piece, MESHES_VERTEX, inked));
-          mesh.frustumCulled = false;
-          group.add(mesh);
-          made.push(mesh);
-        }
-      }
-      layer.place = () => {
-        const from = this.boneSource();
-        this.pose.value = from.tex;
-        for (const mesh of made) mesh.material.uniforms.poseTex.value = from.tex;
-        for (let i = 0; i < n; i++) from.runner(i, spots.array, i * 4);
-        spots.needsUpdate = true;
-      };
-      layer.hull = (on) => made.forEach((mesh, k) => { if (k % 2) mesh.visible = on; });
-      layer.dispose = () => made.forEach((mesh) => mesh.material.dispose());
+    } else if (way === "mesh-batch" || way === "mesh-low") {
+      const made = this.meshesAtOnce(group, way === "mesh-low" ? this.lowPieces : this.pieces, way === "mesh-low" ? 8 : 4, this.keepAll);
+      layer.place = made.place;
+      layer.hull = made.hull;
+      layer.dispose = made.dispose;
     } else if (way === "card-each") {
       const quads = [];
       for (let i = 0; i < n; i++) for (const part of card.parts) {
@@ -783,12 +812,12 @@ class Field {
       const world = new THREE.Matrix4(), root = new THREE.Matrix4(), m = new THREE.Matrix4(), toEye = new THREE.Matrix4();
       layer.place = () => {
         const eye = this.camera.position.toArray();
-        const own = this.state.shared ? null : this.ownRunners();
+        const own = this.sharing() ? null : this.ownRunners();
         for (let i = 0; i < n; i++) {
           const at = this.row(i) * this.table.wide * 4;
           if (!own) root.makeRotationY(game.heading[i]).setPosition(game.x[i], 0, game.z[i]);
           card.parts.forEach((part, p) => {
-            if (own) world.copy(own[i].skeleton.bones[bones[p]].matrixWorld); else world.multiplyMatrices(root, m.fromArray(this.table.data, at + bones[p] * 32));
+            if (own) world.copy(own[i].skeleton.bones[bones[p]].matrixWorld); else world.multiplyMatrices(root, m.fromArray(this.table.data, at + bones[p] * COLUMNS * 4));
             const quad = quads[i * card.parts.length + p];
             const view = choose(sheet.dirs, eyeInBone(world.elements, part.center, eye), null, 0, card.blend_deg).first;
             const cell = sheet.cells[part.name][view];
@@ -812,37 +841,81 @@ class Field {
       };
       layer.dispose = () => quads.forEach((quad) => { quad.geometry.dispose(); quad.material.dispose(); });
     } else {
-      const parts = card.parts;
+      const far = { value: way === "mix" ? new THREE.Vector2(NEAR_M, 1e9) : this.keepAll.value };
+      const cards = this.cardsAtOnce(group, way === "card-far" ? FAR_M : 0, far);
+      const near = way === "mix" ? this.meshesAtOnce(group, this.pieces, 4, { value: new THREE.Vector2(0, NEAR_M) }) : null;
+      layer.place = () => { cards.place(); near?.place(); };
+      layer.hull = near?.hull;
+      layer.dispose = () => { cards.dispose(); near?.dispose(); };
+    }
+    this.layers[way] = layer;
+    return layer;
+  }
+
+  // Every runner's meshes in one draw a piece (and one more a piece for its ink shell).
+  meshesAtOnce(group, pieces, bindAt, keep) {
+    const n = this.game.count;
+    const spots = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4);
+    spots.setUsage(THREE.DynamicDrawUsage);
+    const made = [];
+    for (const piece of pieces) {
       const shape = new THREE.InstancedBufferGeometry();
-      shape.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]), 3));
-      shape.setIndex([0, 1, 2, 0, 2, 3]);
-      const spots = new THREE.InstancedBufferAttribute(new Float32Array(n * parts.length * 4), 4);
-      spots.setUsage(THREE.DynamicDrawUsage);
+      for (const name of ["position", "normal", "uv", "color", "skinIndex", "skinWeight"]) if (piece.geometry.attributes[name]) shape.setAttribute(name, piece.geometry.attributes[name]);
+      shape.setIndex(piece.geometry.index);
       shape.setAttribute("runner", spots);
-      shape.instanceCount = n * parts.length;
-      const pad = (list, fill) => [...list, ...Array.from({ length: 20 - list.length }, () => fill())];
-      const paint = new THREE.ShaderMaterial({ vertexShader: CARDS_VERTEX, fragmentShader: CARDS_FRAGMENT, side: THREE.DoubleSide, uniforms: {
-        ...this.shade, poseTex: this.pose, cellTex: { value: sheet.cellTex }, colourMap: { value: sheet.colour }, dataMap: { value: sheet.data },
-        dirs: { value: [...sheet.dirs.map((d) => new THREE.Vector3(...d)), ...Array.from({ length: 114 - sheet.dirs.length }, () => new THREE.Vector3())] },
-        viewCount: { value: sheet.dirs.length }, partCount: { value: parts.length },
-        partBone: { value: pad(parts.map((part) => this.table.names.indexOf(part.bone)), () => 0) },
-        centers: { value: pad(parts.map((part) => new THREE.Vector3(...part.center)), () => new THREE.Vector3()) },
-        depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
-        sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: card.px_per_m }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
-        wallM: { value: card.march.wall_m }, farAway: { value: way === "card-far" ? FAR_M : 0 }, share: { value: 1 }, mix_: { value: 0 } } });
-      const mesh = new THREE.Mesh(shape, paint);
-      mesh.frustumCulled = false;
-      group.add(mesh);
-      layer.place = () => {
+      shape.instanceCount = n;
+      for (const inked of [false, true]) {
+        const mesh = new THREE.Mesh(shape, this.toonMaterial(piece, MESHES_VERTEX, inked, keep, bindAt));
+        mesh.frustumCulled = false;
+        group.add(mesh);
+        made.push(mesh);
+      }
+    }
+    return {
+      place: () => {
+        const from = this.boneSource();
+        for (const mesh of made) mesh.material.uniforms.poseTex.value = from.tex;
+        for (let i = 0; i < n; i++) from.runner(i, spots.array, i * 4);
+        spots.needsUpdate = true;
+      },
+      hull: (on) => made.forEach((mesh, k) => { if (k % 2) mesh.visible = on; }),
+      dispose: () => made.forEach((mesh) => mesh.material.dispose()),
+    };
+  }
+
+  // Every card of every runner in one draw.
+  cardsAtOnce(group, farAway, keep) {
+    const { card, sheet } = this;
+    const n = this.game.count, parts = card.parts;
+    const shape = new THREE.InstancedBufferGeometry();
+    shape.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]), 3));
+    shape.setIndex([0, 1, 2, 0, 2, 3]);
+    const spots = new THREE.InstancedBufferAttribute(new Float32Array(n * parts.length * 4), 4);
+    spots.setUsage(THREE.DynamicDrawUsage);
+    shape.setAttribute("runner", spots);
+    shape.instanceCount = n * parts.length;
+    const pad = (list, fill) => [...list, ...Array.from({ length: 20 - list.length }, () => fill())];
+    const paint = new THREE.ShaderMaterial({ vertexShader: CARDS_VERTEX, fragmentShader: CARDS_FRAGMENT, side: THREE.DoubleSide, uniforms: {
+      ...this.shade, poseTex: this.pose, keep, cellTex: { value: sheet.cellTex }, colourMap: { value: sheet.colour }, dataMap: { value: sheet.data },
+      dirs: { value: [...sheet.dirs.map((d) => new THREE.Vector3(...d)), ...Array.from({ length: 114 - sheet.dirs.length }, () => new THREE.Vector3())] },
+      viewCount: { value: sheet.dirs.length }, partCount: { value: parts.length },
+      partBone: { value: pad(parts.map((part) => this.table.names.indexOf(part.bone)), () => 0) },
+      centers: { value: pad(parts.map((part) => new THREE.Vector3(...part.center)), () => new THREE.Vector3()) },
+      depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
+      sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: card.px_per_m }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
+      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 } } });
+    const mesh = new THREE.Mesh(shape, paint);
+    mesh.frustumCulled = false;
+    group.add(mesh);
+    return {
+      place: () => {
         const from = this.boneSource();
         paint.uniforms.poseTex.value = from.tex;
         for (let i = 0; i < n; i++) for (let p = 0; p < parts.length; p++) from.runner(i, spots.array, (i * parts.length + p) * 4);
         spots.needsUpdate = true;
-      };
-      layer.dispose = () => { shape.dispose(); paint.dispose(); };
-    }
-    this.layers[way] = layer;
-    return layer;
+      },
+      dispose: () => { shape.dispose(); paint.dispose(); },
+    };
   }
 
   // One frame: the game, the skeletons, the placing, the drawing; each timed.
@@ -906,7 +979,7 @@ class Field {
     const t = this.times;
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     return {
-      ready: Boolean(this.game && this.table), count: this.game?.count, way: this.state.way, look: this.state.look, shared: this.state.shared, views: this.state.views,
+      ready: Boolean(this.game && this.table), count: this.game?.count, way: this.state.way, look: this.state.look, model: this.state.model, shared: this.state.shared, views: this.state.views,
       frame_ms: mean(t.frame), slow_ms: slow(t.frame), fps: 1000 / Math.max(mean(t.frame), 1e-6), anim_ms: mean(t.anim), place_ms: mean(t.place), draw_ms: mean(t.draw), work_ms: mean(t.work),
       work_slow_ms: slow(t.work), calls: this.info?.calls, triangles: this.info?.triangles, memory: this.table ? this.memory() : null, pixels: [size.x, size.y], tags: this.game?.tags, it: this.game?.it,
       error: this.error || null,
@@ -914,8 +987,8 @@ class Field {
   }
 
   // Time one count drawn one way for a while: the same game from its first frame each time.
-  async measure(count, way, shared, seconds = 3, warm = 0.8, look = this.state.look) {
-    Object.assign(this.state, { count, way, shared });
+  async measure(count, way, shared, seconds = 3, warm = 0.8, look = this.state.look, model = this.state.model) {
+    Object.assign(this.state, { count, way, shared, model });
     await this.useLook(look);
     this.drop();
     this.measuring = true;
@@ -964,6 +1037,8 @@ export function tagPage({ run, sets, h, loader }) {
   const shareChips = [chip("Sampled once, shared", true, () => { press(shareChips, 0); field.state.shared = true; field.drop(); }),
     chip("Each works his own out", false, () => { press(shareChips, 1); field.state.shared = false; field.drop(); })];
   const lookChips = LOOKS.map((look, i) => chip(look.name, i === 0, () => { press(lookChips, i); field.useLook(look.id).then(() => field.drop()); }));
+  const models = modelsOf(run);
+  const modelChips = models.map((model, i) => chip(model.name, i === 0, () => { press(modelChips, i); field.state.model = model.id; field.useLook(field.state.look).then(() => field.drop()); }));
   const pause = h("button", { class: "toggle clay-button clay-button--soft", type: "button", "aria-pressed": "false", onclick: () => {
     field.state.paused = !field.state.paused;
     pause.setAttribute("aria-pressed", String(field.state.paused));
@@ -989,7 +1064,7 @@ export function tagPage({ run, sets, h, loader }) {
   let last = [COUNTS, WAYS.map((w) => w.id), [true], ["comic"]];
   const runAll = async (options = {}) => {
     const counts = options.counts || COUNTS, ways = options.ways || WAYS.map((w) => w.id), seconds = options.seconds || 3;
-    const shared = options.shared ?? [true], looks = options.looks || [field.state.look];
+    const shared = options.shared ?? [true], looks = options.looks || [field.state.look], model = options.model || field.state.model;
     results.length = 0;
     last = [counts, ways, shared, looks];
     measure.disabled = looksButton.disabled = true;
@@ -997,7 +1072,7 @@ export function tagPage({ run, sets, h, loader }) {
       const most = WAYS.find((w) => w.id === way).most;
       if (most && count > most && !options.all) { results.push({ way, count, shared: share, look, skipped: true }); continue; }
       measure.textContent = `Measuring ${count}, ${WAYS.find((w) => w.id === way).name.toLowerCase()}…`;
-      results.push(await field.measure(count, way, share, seconds, 0.8, look));
+      results.push(await field.measure(count, way, share, seconds, 0.8, look, model));
       draw(counts, ways, shared, looks);
     }
     measure.disabled = looksButton.disabled = false;
@@ -1036,7 +1111,7 @@ export function tagPage({ run, sets, h, loader }) {
   };
   const measure = h("button", { class: "clay-button", type: "button", onclick: () => runAll() }, "Measure all");
   const looksButton = h("button", { class: "toggle clay-button clay-button--soft", type: "button", title: "Every look, a hundred and a thousand runners, as meshes and as cards drawn all at once",
-    onclick: () => runAll({ looks: LOOKS.map((l) => l.id), ways: ["mesh-batch", "card-batch"], counts: [100, 1000] }) }, "Measure the looks");
+    onclick: () => runAll({ looks: LOOKS.map((l) => l.id), ways: ["mesh-batch", "mesh-low", "card-batch", "mix"], counts: [100, 1000] }) }, "Measure the looks");
 
   const page = h("article", { class: "object cards-page tag-page" },
     h("a", { class: "back", href: `#/cards/${encodeURIComponent(run.id)}` }, "← Flat cards"),
@@ -1046,6 +1121,7 @@ export function tagPage({ run, sets, h, loader }) {
     group("Drawn as", wayChips),
     group("Skeletons", shareChips),
     group("In the look", lookChips),
+    models.length > 1 ? group("Cards pictured from", modelChips) : null,
     h("div", { class: "controls" }, h("div", { class: "toggles" }, pause, again, measure, looksButton)),
     stage,
     facts,
@@ -1055,8 +1131,15 @@ export function tagPage({ run, sets, h, loader }) {
     field = new Field(pane, { run, baked, set: sets.find((s) => s.id === "grass"), loader, onReady: show });
     window.forgeTag = { state: () => field.reading(), measureAll: runAll, look: (id) => field.useLook(id).then(() => field.drop()), results, text: () => text(...last), field,
       // one moment of the game, held still: for pictures of the same field drawn different ways
-      still: async (count, way, look, steps = 600) => {
-        Object.assign(field.state, { count, way, paused: true });
+      // the eye brought up close to one runner
+      near: (i = 0, away = 3.6) => {
+        const g = field.game;
+        field.controls.target.set(g.x[i], 0.95, g.z[i]);
+        field.camera.position.set(g.x[i] + away * 0.45, 1.5, g.z[i] + away * 0.9);
+        field.controls.update();
+      },
+      still: async (count, way, look, steps = 600, model = field.state.model) => {
+        Object.assign(field.state, { count, way, model, paused: true });
         await field.useLook(look);
         field.restart();
         for (let k = 0; k < steps; k++) field.game.step(STEP);
