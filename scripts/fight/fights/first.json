@@ -1,0 +1,36 @@
+{
+ "name": "first",
+ "about": "Roosevelt and Lincoln in the 1890s ring. They square off and circle, feel each other out, trade, Roosevelt folds Lincoln with a body shot, Lincoln's cross staggers him, and an uppercut puts Roosevelt on the mat.",
+ "set": "ring",
+ "marks": {"left": "fight_left", "right": "fight_right"},
+ "fighters": {
+  "left": {"character": "roosevelt-wrestler-1890s", "stance": "usual"},
+  "right": {"character": "young-lincoln-frontier-wrestler", "stance": "mirror"}
+ },
+ "start_apart_m": 1.9,
+ "beats": [
+  {"both": "guard", "seconds": 1.2},
+  {"both": "shuffle", "apart_m": 1.45},
+  {"both": "circle", "deg": 22},
+  {"both": "guard", "seconds": 0.4},
+  {"both": "circle", "deg": -22},
+  {"by": "left", "move": "jab", "result": "blocked", "wait": 0.5},
+  {"by": "right", "move": "jab", "wait": 0.6},
+  {"both": "shuffle", "apart_m": 1.3},
+  {"both": "guard", "seconds": 0.5},
+  {"by": "left", "move": "jab", "wait": 0.3},
+  {"by": "right", "move": "left_hook", "wait": 0.25},
+  {"by": "left", "move": "cross", "result": "blocked", "wait": 0.3},
+  {"by": "right", "move": "jab", "result": "blocked", "wait": 0.2},
+  {"both": "shuffle", "apart_m": 1.4},
+  {"both": "circle", "deg": 18},
+  {"both": "guard", "seconds": 0.4},
+  {"by": "left", "move": "body_shot", "wait": 0.3},
+  {"by": "left", "move": "haymaker", "result": "blocked", "wait": 0.15},
+  {"by": "right", "move": "cross", "wait": 0.35},
+  {"both": "guard", "seconds": 0.5},
+  {"by": "left", "move": "jab", "result": "blocked", "wait": 0.4},
+  {"by": "right", "move": "uppercut", "result": "knockdown", "wait": 0.25},
+  {"both": "guard", "seconds": 2.6}
+ ]
+}

@@ -267,6 +267,24 @@
    },
    "about": "the other side of that handshake"
   },
+  "fight_left": {
+   "kind": "stand",
+   "at": [
+    -0.1,
+    0.0
+   ],
+   "facing_deg": 90.0,
+   "about": "a fighter's mark, on the left: 90 cm from the other, the range every blow of the fight kit is built to reach. Left of centre so a man knocked down from here falls inside the ropes"
+  },
+  "fight_right": {
+   "kind": "stand",
+   "at": [
+    0.8,
+    0.0
+   ],
+   "facing_deg": -90.0,
+   "about": "the other fighter's mark"
+  },
   "corner_front_left": {
    "kind": "stand",
    "at": [
@@ -385,7 +403,9 @@
     "corner_front_left",
     "corner_front_right",
     "corner_back_left",
-    "corner_back_right"
+    "corner_back_right",
+    "fight_left",
+    "fight_right"
    ],
    "about": "the whole ring, from the steps' side"
   },
@@ -404,7 +424,9 @@
    "sees": [
     "centre",
     "meet_left",
-    "meet_right"
+    "meet_right",
+    "fight_left",
+    "fight_right"
    ],
    "about": "low, from a front-row seat"
   },
@@ -424,7 +446,9 @@
     "centre",
     "meet_left",
     "meet_right",
-    "corner_back_right"
+    "corner_back_right",
+    "fight_left",
+    "fight_right"
    ],
    "about": "from up in the gallery"
   }
