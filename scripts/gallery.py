@@ -1,9 +1,9 @@
 """Serve the gallery on the local network: the newest diorama, the world, every run, before and after, and every set.
 
-    python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR]
+    python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR] [--marble DIR]
 
 Read-only. Serves gallery/ (the page), runs/ and comics/ (the files), sets/
-(the standing sets), world/ (the toons and props that stand in the world),
+(the standing sets), world/ (the toons and props that stand in the world; /marble/ is world/marble/, the Marble worlds a place's splats are read from),
 dioramas/ (story moments on a base) and
 shots/ (what was filmed on the sets), plus /api/runs, /api/comics, /api/sets,
 /api/takes, /api/dioramas (newest first) and /api/world (world.json and every saved epoch), built from the folders on each
@@ -30,6 +30,7 @@ SHOTS = os.path.join(ROOT, "shots")
 COMICS = os.path.join(ROOT, "comics")
 WORLD = os.path.join(ROOT, "world")
 DIORAMAS = os.path.join(ROOT, "dioramas")
+MARBLE = os.path.join(WORLD, "marble")  # worlds from World Labs Marble as they were handed over: big, and kept out of git
 sys.path.insert(0, os.path.join(ROOT, "scripts", "diorama"))
 import diorama as diorama_file  # noqa: E402  (what a diorama is, and its card for the front page)
 PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
@@ -302,6 +303,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(all_takes())
         if path == "/api/world":
             return self.send_json(the_world())
+        if path.startswith("/marble/"):
+            return self.send_file(MARBLE, path[len("/marble/"):])
         if path.startswith("/world/"):
             return self.send_file(WORLD, path[len("/world/"):])
         if path == "/api/comics":
@@ -340,7 +343,9 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8028)
     parser.add_argument("--runs", default=RUNS, help="the folder of runs to show (default: runs/)")
     parser.add_argument("--shots", default=SHOTS, help="the folder of shots, for takes filmed on a set (default: shots/)")
+    parser.add_argument("--marble", default=MARBLE, help="the folder of Marble worlds, for places shown as splats (default: world/marble/)")
     args = parser.parse_args()
+    MARBLE = os.path.abspath(args.marble)
     RUNS = os.path.abspath(args.runs)
     SHOTS = os.path.abspath(args.shots)
     server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
