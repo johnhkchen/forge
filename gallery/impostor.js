@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps } from "./impostor-math.js";
-import { LOOKS, lookOf, bakedFor, paintOf, setPaint, Screen } from "./looks.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
 
@@ -200,7 +200,7 @@ class CardViewer {
   constructor(stage, { run, baked, set, state, onFacts, loader }) {
     Object.assign(this, { run, baked, set, state, onFacts, loader }); // the gallery's own loader: it can read the set's packed mesh
     this.look = lookOf(state.look);
-    this.folder = `runs/${encodeURIComponent(run.id)}/${bakedFor(run, this.look).folder}`;
+    this.folder = "";
     this.el = stage;
     this.status = stage.querySelector(".status");
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -441,7 +441,7 @@ class CardViewer {
   async useLook(id) {
     this.look = lookOf(id);
     this.state.look = this.look.id;
-    const folder = `runs/${encodeURIComponent(this.run.id)}/${bakedFor(this.run, this.look).folder}`;
+    const folder = `runs/${encodeURIComponent(this.run.id)}/${bakedFor(this.run, this.look, this.state.model).folder}`;
     if (folder !== this.folder || !this.card) {
       this.folder = folder;
       this.card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
@@ -482,8 +482,9 @@ class CardViewer {
 
 // The page: the toon's name, the two halves, what to play, and the plain numbers.
 export function cardsPage({ run, sets, h, loader }) {
-  const baked = run.cards[0];
-  const state = { motion: baked.motions[0], views: null, look: "comic", soften: false, relief: true, edges: false, paused: false, slow: false };
+  const models = modelsOf(run);
+  const baked = bakedFor(run, LOOKS[0], models[0].id);
+  const state = { motion: baked.motions[0], views: null, look: "comic", model: models[0].id, soften: false, relief: true, edges: false, paused: false, slow: false };
   const stage = h("div", { class: "stage clay-surface cards-stage" },
     h("div", { class: "pane cards-pane" },
       h("span", { class: "tag" }, "Flat cards"),
@@ -518,6 +519,13 @@ export function cardsPage({ run, sets, h, loader }) {
     lookChips.forEach((c, k) => c.setAttribute("aria-pressed", String(k === i)));
     viewer.useLook(look.id).then(() => viewChips.forEach((c, k) => { c.hidden = !viewer.card.sets[baked.views[k]]; c.setAttribute("aria-pressed", String(baked.views[k] === state.views)); }));
   }));
+  const showViews = () => viewChips.forEach((c, k) => { c.hidden = !viewer.card.sets[baked.views[k]]; c.setAttribute("aria-pressed", String(baked.views[k] === state.views)); });
+  // which model the cards were pictured from: the rigged one itself, or the detailed mesh given its skeleton
+  const modelChips = models.map((model, i) => chip(model.name, i === 0, () => {
+    modelChips.forEach((c, k) => c.setAttribute("aria-pressed", String(k === i)));
+    state.model = model.id;
+    viewer.useLook(state.look).then(showViews);
+  }));
   const toggle = (key, label, title) => {
     const btn = h("button", { class: "toggle clay-button clay-button--soft", type: "button", title, "aria-pressed": String(state[key]), onclick: () => {
       state[key] = !state[key];
@@ -532,6 +540,7 @@ export function cardsPage({ run, sets, h, loader }) {
     group("Play", motionChips),
     group("Pictures a part", viewChips),
     group("Drawn as", lookChips),
+    models.length > 1 ? group("Pictured from", modelChips) : null,
     h("div", { class: "controls" }, h("div", { class: "toggles" },
       toggle("soften", "Soften the swaps", "When a part changes to its next picture, mix the two for a moment instead of jumping"),
       toggle("relief", "Use the depth", "Slide every pixel of a picture by how far it stands out, so a picture taken from a little to one side still lands where the real surface is. Off: each picture is laid flat on its card"),
@@ -546,7 +555,7 @@ export function cardsPage({ run, sets, h, loader }) {
   queueMicrotask(() => {
     viewer = new CardViewer(pane, { run, baked, set: sets.find((s) => s.id === "ring"), state, onFacts: showFacts, loader });
     page.viewer = viewer;
-    window.forgeCards = { state: () => viewer.report(), viewer, look: (id) => viewer.useLook(id) };
+    window.forgeCards = { state: () => viewer.report(), viewer, look: (id, model) => { state.model = model || state.model; return viewer.useLook(id); } };
   });
   page.dispose = () => viewer?.dispose();
   return page;

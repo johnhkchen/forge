@@ -24,10 +24,20 @@ export const LOOKS = [
 ];
 export const lookOf = (id) => LOOKS.find((look) => look.id === id) || LOOKS[0];
 
-// Which of a run's baked card sets a look reads: its own ("...-impostor-pixel"), or the plain one if that was never baked.
-export function bakedFor(run, look) {
-  const plain = run.cards.find((c) => c.folder.endsWith("-impostor")) || run.cards[0];
-  return (look.sheet && run.cards.find((c) => c.folder.endsWith(`-impostor-${look.sheet}`))) || plain;
+// The models a run's cards were pictured from: the rigged version itself first ("painted"), then any other model
+// given its skeleton (the detailed mesh). Each has a name for the page.
+export function modelsOf(run) {
+  const seen = new Map();
+  for (const c of run.cards) if (!seen.has(c.profile)) seen.set(c.profile, { id: c.profile, name: c.title || `${c.profile[0].toUpperCase()}${c.profile.slice(1)} model`, own: c.plays === c.profile });
+  return [...seen.values()].sort((a, b) => Number(b.own) - Number(a.own));
+}
+
+// Which of a run's baked card sets a look reads, for one model: the look's own ("...-impostor-pixel"), or the
+// plain one if that was never baked.
+export function bakedFor(run, look, model) {
+  const mine = run.cards.filter((c) => c.profile === (model || modelsOf(run)[0].id));
+  const plain = mine.find((c) => c.folder.endsWith("-impostor")) || mine[0];
+  return (look.sheet && mine.find((c) => c.folder.endsWith(`-impostor-${look.sheet}`))) || plain;
 }
 
 const FULL_VERTEX = `

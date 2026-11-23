@@ -196,6 +196,12 @@ fight fight left right out="":
 impostor run version="painted" *more:
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" "{{version}}" {{ if more == "" { "--views 26,62,114" } else { more } }} 2>&1 | grep -E '^IMPOSTOR|^RESULT \{"folder|Error|Traceback'
 
+# Cards pictured from a character's detailed mesh (final.glb, some 290,000 triangles) instead of a rigged version: the detailed mesh is given that version's skeleton (weights taken from the nearest place on its surface), then pictured as pixel art (96 pixels a metre) and in the comic look. The cards play the rigged version's clips; the gallery offers it as "Detailed model"
+impostor-detailed run from="painted":
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/rig_detailed.py -- "{{run}}" --from "{{from}}" 2>&1 | grep -E '^RIG|^RESULT|Error|Traceback'
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --look pixel --px 96 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
+
 # Judge a character's flat cards against the real model, with no browser: the same frames drawn both ways from the same eye, and how far apart they are (outline, colour, gaps at the joints, how often a picture is swapped). Writes judge.json, stills and films into out. clips: name=file.glb pairs; more: any of judge_impostor.py's flags
 impostor-judge run version="painted" out="evidence/impostor" *more:
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_impostor.py -- "{{run}}/profiles/{{version}}-impostor" --out "{{out}}" --clip "walk={{run}}/profiles/{{version}}-walk.glb" {{more}} 2>&1 | grep -E '^JUDGE|^RESULT|Error|Traceback'
