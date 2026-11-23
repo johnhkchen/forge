@@ -97,8 +97,9 @@ class Pipe:
         return {"x": side * x, "y": y, "tangent": (t[0], side * t[1]), "normal": (side * n[0], n[1]),
                 "slope_deg": math.degrees(math.atan2(side * t[1], t[0])), "part": self.part(s)}
 
-    def where(self, x: float, y: float) -> tuple:
-        """(s, off): the nearest point of the riding surface, and how far off it (x, y) is. Off is minus behind the surface."""
+    def where(self, x: float, y: float, carry_on: bool = False) -> tuple:
+        """(s, off): the nearest point of the riding surface, and how far off it (x, y) is. Off is minus behind the surface.
+        `carry_on`: above the lip, measure from the wall carried straight on up (where a truck that has just left the top still is)."""
         side = -1.0 if x < 0 else 1.0
         a = abs(x)
         if a <= self.half_flat:
@@ -107,7 +108,7 @@ class Pipe:
             dx, dy = a - self.half_flat, self.radius - y
             th = min(max(math.atan2(dx, dy), 0.0), math.pi / 2.0)
             return side * (self.half_flat + self.radius * th), self.radius - math.hypot(dx, dy)
-        if y <= self.height:
+        if y <= self.height or carry_on:
             return side * (self.half_flat + self.arc + y - self.radius), self.wall_x - a
         away = math.hypot(self.wall_x - a, y - self.height)  # above the lip: the lip is the nearest of it
         return side * self.lip, away if a <= self.wall_x else -away
