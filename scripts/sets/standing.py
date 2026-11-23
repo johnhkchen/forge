@@ -30,6 +30,10 @@ A set is a folder, sets/<name>/, with a set.json:
                  touch   a stand mark with a spot for a hand:
                          {..., touch {hand, at [x, y, z]}}
                  lean    the same, for a hand resting on something
+                 door    a stand mark just inside a way out, that says where it comes
+                         out: {..., leads_to {set, mark}}, the door mark of another
+                         set. The two name each other. `built: false` in leads_to
+                         says the other side is not made yet
     paths      which marks people walk between, with turning points where a
                straight line would cross something: {from, to, via [[x, z]]}
     cameras    fixed, named: {at [x, y, z], aim [x, y, z], lens_mm, sees [marks]}
@@ -91,7 +95,7 @@ HEAD_ABOVE_SEAT, CHEST_ABOVE_SEAT = 0.80, 0.45
 PALM = 0.07  # from the wrist to the middle of the palm
 SENSOR_MM, ASPECT = 36.0, 16.0 / 9.0
 FRAME_MARGIN = 0.04  # a mark's head and feet stay this share of the frame inside its edge
-MARK_KINDS = ("stand", "sit", "touch", "lean")
+MARK_KINDS = ("stand", "sit", "touch", "lean", "door")
 BLOCK_KEYS = ("name", "kind", "center", "size", "heading")  # what a plan's `set` holds for each block
 
 
@@ -389,6 +393,25 @@ def placed_bounds(st: dict):
     return [min(xs), lo[1] + move[1], min(zs)], [max(xs), hi[1] + move[1], max(zs)]
 
 
+def door_problem(st: dict, name: str, m: dict) -> str:
+    """What is wrong with a door mark, or ''. A door names the set it leads into and the door mark it comes out at
+    there; that mark leads back here. A side that is not made yet is said so (`built: false`), not left dangling."""
+    to = m.get("leads_to") or {}
+    if not to.get("set") or not to.get("mark"):
+        return f"mark \"{name}\": a door needs leads_to {{set, mark}}: the set it leads into and the door it comes out at"
+    if not os.path.exists(os.path.join(SETS, to["set"], "set.json")):
+        return "" if to.get("built") is False else f"mark \"{name}\" leads to \"{to['set']}\", which is not a set (say \"built\": false in leads_to if it is still to come)"
+    if to.get("built") is False:
+        return f"mark \"{name}\": \"{to['set']}\" is a set now; take \"built\": false off the door"
+    other = (load(to["set"]).get("marks") or {}).get(to["mark"])
+    if not other or other.get("kind") != "door":
+        return f"mark \"{name}\" leads to \"{to['mark']}\" in \"{to['set']}\", which is not a door there"
+    back = other.get("leads_to") or {}
+    if back.get("set") != st.get("name") or back.get("mark") != name:
+        return f"mark \"{name}\" leads to \"{to['mark']}\" in \"{to['set']}\", but that door leads to \"{back.get('mark')}\" in \"{back.get('set')}\", not back here"
+    return ""
+
+
 def check(st: dict) -> tuple:
     """(what is wrong with a set, in words; what was looked at). Nothing wrong: the first is empty."""
     problems, seen = [], {}
@@ -483,6 +506,10 @@ def check(st: dict) -> tuple:
                 say(f"mark \"{name}\": the hand's spot is {ty} m up and {reach:.2f} m out; an arm reaches 0.5 to 1.45 m up, 0.7 m out")
             if any(gap_to(b, tx, tz) == 0.0 and ty < top_of(b) - 0.005 for b in tall):
                 say(f"mark \"{name}\": the hand's spot is inside a block")
+        if m["kind"] == "door":
+            problem = door_problem(st, name, m)
+            if problem:
+                say(problem)
     # Two people at marks that share a hand's spot (a handshake) face each other across it.
     shared = {}
     for name, m in marks.items():
