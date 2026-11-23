@@ -1,10 +1,10 @@
 {
  "name": "first",
- "about": "Roosevelt and Lincoln in the 1890s ring. They square off and circle, feel each other out, trade, Roosevelt folds Lincoln with a body shot, Lincoln's cross staggers him, and an uppercut puts Roosevelt on the mat.",
+ "about": "Roosevelt and Lincoln in the 1890s ring. They square off and circle, feel each other out, trade, Roosevelt folds Lincoln with a body shot, Lincoln's cross staggers him, and an uppercut puts Roosevelt on the mat. Lincoln steps back and raises his fists.",
  "set": "ring",
  "marks": {"left": "fight_left", "right": "fight_right"},
  "fighters": {
-  "left": {"character": "roosevelt-wrestler-1890s", "stance": "usual"},
+  "left": {"character": "roosevelt-wrestler-1890s", "stance": "usual", "version": "painted"},
   "right": {"character": "young-lincoln-frontier-wrestler", "stance": "mirror"}
  },
  "start_apart_m": 1.9,
@@ -31,8 +31,9 @@
   {"both": "guard", "seconds": 0.5},
   {"by": "left", "move": "jab", "result": "blocked", "wait": 0.4},
   {"by": "right", "move": "uppercut", "result": "knockdown", "wait": 0.25},
-  {"both": "guard", "seconds": 0.5},
-  {"both": "shuffle", "apart_m": 1.7},
-  {"both": "guard", "seconds": 2.0}
+  {"both": "guard", "seconds": 0.6},
+  {"both": "shuffle", "apart_m": 1.5},
+  {"by": "right", "move": "victory", "wait": 0.2},
+  {"both": "guard", "seconds": 2.6}
  ]
 }

@@ -20,7 +20,8 @@ tall thin one.
                 forearms take it, a small push back), knockdown (a long fall
                 onto the mat, a small bounce, lying still)
     the rest    guard (with a light bounce), block (the arms up, before the
-                blow lands), get_up (from the mat back to guard), footwork
+                blow lands), get_up (from the mat back to guard), victory
+                (both fists raised, and held), footwork
                 (shuffle steps, in schedule.py)
 
 A fighter is built in the usual stance (left foot and left hand in front).
@@ -371,7 +372,7 @@ GUARD_BEND = 8.0
 GUARD_DROP = 0.06   # the knees a little bent: the hips this share of the hip height lower
 
 
-def feet_of(body, lead=0.0, rear=0.0, rear_heel=8.0, rear_yaw=-40.0, wide=1.0):
+def feet_of(body, lead=0.0, rear=0.0, rear_heel=0.0, rear_yaw=-24.0, wide=1.0):
     """The feet in the fighting stance: left in front, right behind and turned out. `lead` and `rear` move each forward (m)."""
     return {"l": [wide * body.wide, body.middle - 0.20 * body.leg - lead, 0.0, 0.0, -8.0],
             "r": [-wide * body.wide, body.middle + 0.22 * body.leg - rear, 0.0, rear_heel, rear_yaw]}
@@ -410,6 +411,16 @@ def built(body, hips, turns, feet, hands=None, yaw=GUARD_YAW, bounce=0.0):
 def guard(body):
     """Standing ready: knees bent, the left shoulder in front, both fists up. It bounces lightly (schedule.py adds that)."""
     return built(body, (0.0, -0.02 * body.leg, -GUARD_DROP * body.leg), trunk(GUARD_YAW, bend=GUARD_BEND, head_bend=-2.0), feet_of(body), bounce=1.0)
+
+
+def victory(body):
+    """The winner: stood up straight, feet apart, both fists raised over his head."""
+    def up(tag):
+        flip = 1.0 if tag == "l" else -1.0
+        return ("arm", (flip * 0.80, -0.10, 0.55), (flip * 0.30, -0.10, 0.95))
+
+    feet = {"l": [1.15 * body.wide, body.middle, 0.0, 0.0, 10.0], "r": [-1.15 * body.wide, body.middle, 0.0, 0.0, -10.0]}
+    return make(body, (0.0, 0.0, -0.01 * body.leg), trunk(0.0, bend=-5.0, head_bend=-6.0), {"l": up("l"), "r": up("r")}, feet)
 
 
 def block(body, low=False):
@@ -480,9 +491,9 @@ SHAPES = {
     "jab": {"wind": (-24.0, 0.0, (0.05, -0.50, -0.20), (0.7, 0.3, -1.0)), "hit": (-52.0, -2.0, 7.0, 0.0), "pole": (0.7, 0.3, -1.0), "side": 0.0},
     "cross": {"wind": (-44.0, 0.02, (0.12, -0.36, -0.22), (0.7, 0.3, -1.0)), "hit": (38.0, 3.0, 9.0, 0.01), "pole": (0.7, 0.3, -1.0), "side": 0.0, "pivot": True},
     "left_hook": {"wind": (-6.0, 0.04, (0.40, -0.38, -0.18), (1.0, 0.1, -0.4)), "hit": (-50.0, -4.0, 6.0, 0.02), "pole": (1.0, 0.05, 0.12), "side": -0.85},
-    "uppercut": {"wind": (-46.0, 0.12, (0.12, -0.34, -0.62), (0.5, 0.8, -0.6)), "hit": (34.0, 0.0, -4.0, -0.03), "pole": (0.25, -0.5, -1.0), "under": True, "pivot": True},
-    "body_shot": {"wind": (-44.0, 0.10, (0.15, -0.40, -0.45), (0.8, 0.5, -0.5)), "hit": (40.0, 6.0, 18.0, 0.13), "pole": (0.8, 0.3, -0.5), "side": 0.0, "pivot": True},
-    "haymaker": {"wind": (-64.0, 0.05, (0.55, -0.32, 0.10), (1.0, 0.15, -0.2)), "hit": (44.0, 8.0, 12.0, 0.03), "pole": (1.0, -0.1, 0.0), "side": 0.8, "pivot": True},
+    "uppercut": {"wind": (-46.0, 0.12, (0.12, -0.34, -0.62), (0.5, 0.8, -0.6)), "hit": (34.0, 0.0, -4.0, -0.03), "pole": (0.5, -0.3, -1.0), "under": True, "pivot": True},
+    "body_shot": {"wind": (-44.0, 0.10, (0.15, -0.40, -0.45), (0.8, 0.5, -0.5)), "hit": (40.0, 6.0, 18.0, 0.03), "pole": (0.8, 0.3, -0.5), "side": 0.0, "pivot": True},
+    "haymaker": {"wind": (-64.0, 0.05, (0.55, -0.32, 0.10), (1.0, 0.15, -0.2)), "hit": (44.0, 8.0, 12.0, 0.03), "pole": (1.0, 0.2, -0.5), "side": 0.8, "pivot": True},
 }
 
 
@@ -506,10 +517,10 @@ def strike(body, name, spot_of, start=None):
     want = card["reach"] * body.arm
 
     def stretched(lunge):
-        drag = max(0.0, lunge - 0.2 * body.leg)
+        drag = max(0.0, lunge - 0.08 * body.leg)  # the back foot comes along: a leg left far behind twists its boot
         drop = GUARD_DROP * body.leg + crouch * body.leg + 0.3 * min(abs(lunge), 0.2 * body.leg)
         hips = (0.0, -0.02 * body.leg - lunge, -drop)
-        feet = feet_of(body, lead=max(0.0, lunge), rear=drag, rear_heel=28.0 if shape.get("pivot") else 8.0, rear_yaw=-14.0 if shape.get("pivot") else -40.0)
+        feet = feet_of(body, lead=max(0.0, lunge), rear=drag, rear_heel=10.0 if shape.get("pivot") else 0.0, rear_yaw=-12.0 if shape.get("pivot") else -24.0)
         turns = trunk(yaw, roll, bend, head_yaw=0.0, head_bend=-2.0 - 0.4 * bend)
         return built(body, hips, turns, feet, {tag: ("fist", spot, pole)}, yaw=yaw)
 
@@ -551,6 +562,7 @@ def strike(body, name, spot_of, start=None):
 
 # ---- on the mat ----
 
+STAGGER = 1.15    # a heavy blow sends a man back this share of his hip height, in three steps
 LIES_BACK = 0.56  # a man knocked down lies with his hips this share of the hip height behind where he stood
 
 
@@ -654,10 +666,10 @@ def reaction(body, name, side=0.0, low=False):
                      feet_of(body, wide=1.25), {"l": loose(body, "l", 0.45, 0.5, 0.75), "r": loose(body, "r", 0.5, 0.3, 0.8)})
         catch = built(body, (0.0, -0.03 * leg, -drop - 0.06 * leg), trunk(GUARD_YAW, bend=22.0, head_bend=-12.0), feet_of(body, wide=1.2),
                       {"l": loose(body, "l", 0.3, 0.7, 0.6, 60.0), "r": loose(body, "r", 0.35, 0.5, 0.75, 70.0)})
-        # Two steps back: the back foot first while the front one stays, then the front foot after it.
+        # Three steps back, covering more than the length of his own leg: the back foot, the front foot, the back foot again.
         keys = [key(0, blend(g, snap, 0.7), "cut", 0.0), key(2, snap, "out", 0.0), key(4, snap, "hold", 0.0),
-                key(11, reel, "out", 0.36 * leg, stay=("l",)), key(19, catch, "out", 0.68 * leg, stay=("r",)), key(26, catch, "hold", 0.68 * leg),
-                key(REACTIONS[name], g, "inout", 0.68 * leg)]
+                key(10, reel, "out", 0.42 * leg, stay=("l",)), key(16, reel, "out", 0.80 * leg, stay=("r",)), key(23, catch, "out", STAGGER * leg, stay=("l",)),
+                key(30, catch, "hold", STAGGER * leg), key(REACTIONS[name], g, "inout", STAGGER * leg)]
     elif name == "knockdown":
         lying, back = lying_height(body), LIES_BACK * leg
 

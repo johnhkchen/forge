@@ -19,6 +19,7 @@ measured two real runs). What it shows:
                    other, in either stance
   feet             a planted foot stays where it was put; shuffle steps move one foot at a time
   get up           a man knocked down can get back to his feet, and the fight goes on
+  stagger, victory a heavy blow carries a man back three steps; the winner raises his fists and holds them
   mirror           the other stance is the same motion in a mirror
   script           a fight script that asks for what can't be is told why
 
@@ -207,6 +208,30 @@ def test_get_up():
         fist_checks(timeline, motions, bodies, "   and the fight goes on")
 
 
+def test_stagger_and_victory():
+    """a heavy blow sends a man back more than the length of his leg in three steps; the winner raises both fists and holds them to the end."""
+    timeline, motions, bodies = laid_out()
+    hit = next(h for h in timeline["hits"] if h["reaction"] == "heavy")
+    m, body = motions[hit["on"]], bodies[hit["on"]]
+    back = [math.hypot(m["hips"][f][0] - m["hips"][hit["frame"] - 1][0], m["hips"][f][1] - m["hips"][hit["frame"] - 1][1]) * body.leg for f in range(hit["frame"], hit["frame"] + hit["hitstop"] + moves.REACTIONS["heavy"])]
+    steps = sum(1 for tag in ("l", "r") for f in range(hit["frame"], hit["frame"] + hit["hitstop"] + moves.REACTIONS["heavy"]) if m["feet"][tag][f][5] and not m["feet"][tag][f + 1][5])
+    check("the stagger carries him %.0f cm back in %d steps" % (100 * max(back), steps), max(back) > 0.75 and steps >= 3)
+    card = [b for b in timeline["beats"] if b["beat"].get("move") == "victory"][0]
+    winner = card["beat"]["by"]
+    m, body = motions[winner], bodies[winner]
+    last = m["frames"]
+    at = body.joints(schedule.pose_of(m, body, last))
+    check("%s ends with both fists over his head (%.0f and %.0f cm above its top)" % (winner, 100 * (at["fist_l"][2] - at["crown"][2]), 100 * (at["fist_r"][2] - at["crown"][2])),
+          at["fist_l"][2] > at["crown"][2] and at["fist_r"][2] > at["crown"][2])
+    held = last - card["to_frame"]
+    check("and holds it for the last %.1f s, the other man still down" % (held / 30.0), held >= 45 and all(row(m, f) == row(m, last) for f in range(card["to_frame"], last))
+          and timeline["fighters"][OTHER[winner]]["down"])
+    limit_checks(motions, bodies, "the victory")
+
+
+OTHER = {"left": "right", "right": "left"}
+
+
 def limit_checks(motions, bodies, label):
     for side in ("left", "right"):
         worst = {}
@@ -254,6 +279,12 @@ def test_feet():
         for beat in walk:
             both_up += sum(1 for f in range(beat["from_frame"], beat["to_frame"] + 1) if not m["feet"]["l"][f][5] and not m["feet"]["r"][f][5])
         check("%s: a planted foot slides %.2f cm at most; in %d stretches of footwork both feet are never off the mat at once" % (side, 100 * slid, len(walk)), slid < 0.001 and both_up == 0)
+    start = [b for b in timeline["beats"] if "contact" in b][0]["start"]  # both in guard on their marks
+    lead = {}
+    for side, tag in (("left", "l"), ("right", "r")):  # the first fight: the left man in the usual stance, the right one mirrored
+        spot = motions[side]["feet"][tag][start]
+        lead[side] = schedule.set_point(MARKS[side], (spot[0] * bodies[side].leg, spot[1] * bodies[side].leg, 0.0))
+    check("at range the two front feet are on two lines, %.0f cm apart across the ring" % (100 * abs(lead["left"][2] - lead["right"][2])), abs(lead["left"][2] - lead["right"][2]) > 0.15)
     first = timeline["beats"][0]
     dips = [motions["left"]["hips"][f][2] for f in range(first["from_frame"], first["to_frame"])]
     check("guard bounces lightly: the hips rise and fall %.1f cm" % (100 * (max(dips) - min(dips)) * bodies["left"].leg), 0.01 < (max(dips) - min(dips)) * bodies["left"].leg < 0.05)
@@ -261,7 +292,7 @@ def test_feet():
 
 def test_mirror():
     """the other stance is the same motion in a mirror."""
-    fight = {"start_apart_m": 1.5, "beats": [{"both": "guard", "seconds": 0.5}, {"both": "shuffle", "apart_m": 0.9}, {"both": "guard", "seconds": 0.3}]}
+    fight = {"start_apart_m": 1.5, "lane_m": 0.0, "beats": [{"both": "guard", "seconds": 0.5}, {"both": "shuffle", "apart_m": 0.9}, {"both": "guard", "seconds": 0.3}]}
     usual = laid_out(dict(fight, fighters={"left": {"stance": "usual"}}))[1]["left"]
     other = laid_out(dict(fight, fighters={"left": {"stance": "mirror"}}))[1]["left"]
     worst = 0.0
@@ -294,7 +325,7 @@ def test_script():
     check("the fight script is only read", before == FIRST)
 
 
-TESTS = [test_frame_data, test_reaction_starts_on_the_active_frame, test_hitstop, test_fist_reaches_its_spot, test_mat, test_limits, test_every_body, test_get_up, test_feet, test_mirror, test_script]
+TESTS = [test_frame_data, test_reaction_starts_on_the_active_frame, test_hitstop, test_fist_reaches_its_spot, test_mat, test_limits, test_every_body, test_get_up, test_stagger_and_victory, test_feet, test_mirror, test_script]
 
 
 def main() -> int:

@@ -184,6 +184,7 @@ fight fight left right out="":
     out="{{ if out != "" { out } else { "shots/fight-" + fight } }}"
     mkdir -p "$out"
     "{{blender_bin}}" -b --factory-startup -P scripts/fight/apply_fight.py -- "scripts/fight/fights/{{fight}}.json" "$out" --left "{{left}}" --right "{{right}}" 2>&1 | grep -E '^FIGHT|Error|Traceback'
+    rm -f "$out/films.json"
     for camera in $(python3 -c "import json, sys; sys.path.insert(0, 'scripts/sets'); import standing; print(' '.join(standing.load(json.load(open('$out/fight.json'))['set'])['cameras']))"); do
         "{{blender_bin}}" -b --factory-startup -P scripts/fight/film_fight.py -- "$out" --cameras "$camera" 2>&1 | grep -E '^FILM|Error|Traceback' &
     done

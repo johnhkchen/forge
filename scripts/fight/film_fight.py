@@ -1,7 +1,7 @@
 """Films a fight on its set, from every one of the set's cameras, in a background Blender.
 
     Blender -b --factory-startup -P scripts/fight/film_fight.py -- <fight folder>
-        [--version lowpoly] [--cameras wide,ringside] [--size 960x540] [--strip-only] [--stills 94,126,507]
+        [--version cast] [--cameras wide,ringside] [--size 960x540] [--strip-only] [--stills 94,126,507]
 
 The fight folder is what apply_fight.py wrote: fight.json (the timeline, its
 hits, the set and the two fight marks) and each fighter's <version>-<side>.glb.
@@ -21,6 +21,7 @@ It writes, as render_take.py does, one film and one strip of twelve stills
 per camera:
 
     <version>-<camera>.mp4, <version>-<camera>-strip.png    960x540, 30 frames a second, H.264
+                                                             (version: "cast", the pairing the fight script chose)
     films.json                                               what was filmed
 
 --stills renders single frames instead (stills/<camera>-<frame>.png), for
@@ -31,6 +32,7 @@ import json
 import math
 import os
 import random
+import time
 import sys
 
 import bpy
@@ -175,7 +177,7 @@ def fcurves_of(action):
 def main():
     args = sys.argv[sys.argv.index("--") + 1:]
     folder = os.path.abspath(args[0])
-    version = args[args.index("--version") + 1] if "--version" in args else "lowpoly"
+    version = args[args.index("--version") + 1] if "--version" in args else "cast"
     size = tuple(int(v) for v in (args[args.index("--size") + 1] if "--size" in args else "960x540").split("x"))
     strip_only = "--strip-only" in args
     stills = [int(v) for v in args[args.index("--stills") + 1].split(",")] if "--stills" in args else None
@@ -231,11 +233,27 @@ def main():
         made[name] = strip_and_film(scene, folder, "%s-%s" % (version, name), frames, size, strip_only)
     if stills:
         return
-    listed = load(os.path.join(folder, "films.json")) if os.path.exists(os.path.join(folder, "films.json")) else {}
-    listed.setdefault(version, {}).update(made)
-    listed["frames"], listed["seconds"], listed["set"] = frames, round(frames / float(timeline["fps"]), 2), st["name"]
-    with open(os.path.join(folder, "films.json"), "w") as f:
-        json.dump(listed, f, indent=1)
+    # Several cameras may be filmed at once, one Blender each, and all of them add to films.json: one at a time,
+    # behind a lock file, so none writes over what another just added.
+    lock = os.path.join(folder, ".films.lock")
+    for attempt in range(600):
+        try:
+            os.close(os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            break
+        except FileExistsError:
+            if time.time() - os.path.getmtime(lock) > 60:  # left behind by a Blender that died
+                os.remove(lock)
+            time.sleep(0.1)
+    try:
+        listed = load(os.path.join(folder, "films.json")) if os.path.exists(os.path.join(folder, "films.json")) else {}
+        listed.setdefault(version, {}).update(made)
+        listed["frames"], listed["seconds"], listed["set"] = frames, round(frames / float(timeline["fps"]), 2), st["name"]
+        with open(os.path.join(folder, "films.json") + ".part", "w") as f:
+            json.dump(listed, f, indent=1)
+        os.replace(os.path.join(folder, "films.json") + ".part", os.path.join(folder, "films.json"))
+    finally:
+        if os.path.exists(lock):
+            os.remove(lock)
 
 
 main()

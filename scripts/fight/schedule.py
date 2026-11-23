@@ -14,7 +14,8 @@ A fight script is plain data (scripts/fight/fights/first.json is one):
        {"by": "left", "move": "jab", "result": "blocked"},
        {"by": "right", "move": "jab"},               lands, and causes the reaction the move names
        {"by": "right", "move": "uppercut", "result": "knockdown", "wait": 0.2},
-       {"by": "left", "move": "get_up", "wait": 1.5}  a man who is down gets back to his feet
+       {"by": "left", "move": "get_up", "wait": 1.5},  a man who is down gets back to his feet
+       {"by": "right", "move": "victory"}             the winner raises both fists and holds it to the end
      ]}
 
 "result" is the fight script's choice: "blocked", or left out (the blow lands
@@ -70,6 +71,7 @@ BOUNCE_FRAMES = 14    # the guard's bounce: one dip every this many frames
 BOUNCE_M = 0.03       # and how deep, as a share of the hip height
 WAIT_S = 0.5          # guard before an exchange, when the script names no wait
 A_STEP = 0.015        # metres: a foot that moves further than this between two keys is stepping, not planted
+LANE_M = 0.17         # each man stands this far to his own left of the line between the marks ("lane_m" in a fight script changes it)
 OTHER = {"left": "right", "right": "left"}
 
 
@@ -141,8 +143,9 @@ class Track:
 
 
 class Fighter:
-    def __init__(self, side, body, stance, apart, between):
+    def __init__(self, side, body, stance, apart, between, lane=0.0):
         self.side, self.body = side, body
+        self.lane = lane                # how far to his own left of the line between the marks he stands
         self.mirror = stance in ("mirror", "southpaw")
         self.between = between          # the range: how far apart the two fight marks are
         self.ring, self.apart = 0.0, apart
@@ -154,8 +157,10 @@ class Fighter:
     def home(self, apart, ring):
         """Where he stands (x, y, the way he faces) when the two are `apart` and have circled the middle by `ring` degrees. In his own mark's axes."""
         middle = (0.0, -self.between / 2.0, 0.0)
-        spot = add(middle, about_z((0.0, apart / 2.0, 0.0), ring))
-        return (spot[0], spot[1], ring)
+        spot = add(middle, about_z((self.lane, apart / 2.0, 0.0), ring))
+        # Each man stands a little to his own left of the line, so the two pairs of feet are on two lines and
+        # no boot is toe to toe with another; and each turns that little way to face the other.
+        return (spot[0], spot[1], ring - 0.6 * math.degrees(math.atan2(2.0 * self.lane, max(apart, 0.3))))
 
     def place(self, pose, base=None, stay=(), before=None):
         """A pose of the move set, put where this fighter stands: mirrored for the other stance, turned and moved to his base.
@@ -243,7 +248,8 @@ def schedule(fight, bodies, marks=None):
         marks = {"left": {"at": [-0.5, 0.0], "facing_deg": 90.0}, "right": {"at": [0.5, 0.0], "facing_deg": -90.0}}
     between = math.hypot(marks["left"]["at"][0] - marks["right"]["at"][0], marks["left"]["at"][1] - marks["right"]["at"][1])
     apart = float(fight.get("start_apart_m", between))
-    who = {side: Fighter(side, bodies[side], (fight.get("fighters") or {}).get(side, {}).get("stance", "usual"), apart, between) for side in ("left", "right")}
+    lane = float(fight.get("lane_m", LANE_M))
+    who = {side: Fighter(side, bodies[side], (fight.get("fighters") or {}).get(side, {}).get("stance", "usual"), apart, between, lane) for side in ("left", "right")}
     for f in who.values():
         f.track.add(0, f.rest(), "hold")
     now, ring = 0, 0.0
@@ -272,6 +278,21 @@ def schedule(fight, bodies, marks=None):
             stand(now)
         else:
             side, name = beat["by"], beat["move"]
+            if name == "victory":  # the winner raises his fists, and holds it for as long as the fight goes on
+                winner = who[side]
+                if winner.down:
+                    raise ValueError("%s can't raise his fists: he is down" % side)
+                stand(now)
+                now += int(round(beat.get("wait", 0.0) * FPS))
+                stand(now)
+                winner.idle = moves.victory(winner.body)
+                card["start"] = now
+                now += 12
+                winner.track.add(now, winner.place(winner.idle), "out")
+                stand(now)
+                card["to_frame"] = now
+                beats.append(card)
+                continue
             if name == "get_up":  # a man on the mat gets back to his feet; the other waits in guard
                 faller = who[side]
                 if not faller.down:

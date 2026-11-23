@@ -2518,7 +2518,7 @@ def test_fight_moves(ctx):
 
 
 def test_fight_baked(ctx):
-    """The first fight baked onto Roosevelt and Lincoln in a background Blender (apply_fight.py), and measured there: the baked fist against its spot and the other man's head on every contact frame, the mat, the limits, the planted feet; then one frame of it filmed (film_fight.py)."""
+    """The first fight baked onto Roosevelt and Lincoln in a background Blender (apply_fight.py), and measured there: the baked fist against its spot and the other man's head on every contact frame, the mat, the limits, the planted feet, the closed fists; then one frame of it filmed (film_fight.py)."""
     runs = os.path.dirname(ctx["troll"])
     found = {side: sorted(glob.glob(os.path.join(runs, pattern))) for side, pattern in (("left", "*roosevelt-wrestler-1890s"), ("right", "*young-lincoln-frontier-wrestler"))}
     if not all(found.values()):
@@ -2527,14 +2527,23 @@ def test_fight_baked(ctx):
     out = os.path.join(ctx["out"], "fight-first")
     shutil.rmtree(out, ignore_errors=True)
     script = os.path.join(HERE, "fight", "fights", "first.json")
+    # The script casts Roosevelt in his painted outfit; a runs folder without that version plays him in his low-poly.
+    painted = os.path.exists(os.path.join(found["left"][-1], "profiles", "painted.glb"))
     done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "fight", "apply_fight.py"), "--", script, out,
-                           "--left", found["left"][-1], "--right", found["right"][-1]], capture_output=True, text=True)
-    baked = os.path.exists(os.path.join(out, "lowpoly-left.glb")) and os.path.exists(os.path.join(out, "lowpoly-right.glb"))
+                           "--left", found["left"][-1], "--right", found["right"][-1]] + ([] if painted else ["--left-version", "lowpoly"]), capture_output=True, text=True)
+    baked = os.path.exists(os.path.join(out, "cast-left.glb")) and os.path.exists(os.path.join(out, "cast-right.glb"))
     check("apply_fight.py baked both fighters", baked, "" if baked else (done.stdout + done.stderr)[-1500:])
     with open(os.path.join(out, "fight.json")) as f:
         timeline = json.load(f)
-    seen = timeline["measured"]["lowpoly"]
-    check("the fight is %.1f s with %d hits, every one measured on the baked characters" % (timeline["seconds"], len(timeline["hits"])), 20 <= timeline["seconds"] <= 25 and len(seen["hits"]) == len(timeline["hits"]))
+    seen = timeline["measured"]["cast"]
+    check("the fight is %.1f s with %d hits, every one measured on the baked characters (Roosevelt %s, Lincoln %s)" % (timeline["seconds"], len(timeline["hits"]), timeline["cast"]["left"], timeline["cast"]["right"]),
+          20 <= timeline["seconds"] <= 26 and len(seen["hits"]) == len(timeline["hits"]) and timeline["cast"]["left"] == ("painted" if painted else "lowpoly"))
+    for side in ("left", "right"):
+        with open(os.path.join(out, "cast-%s.glb" % side), "rb") as f:
+            f.read(12)
+            size, _ = struct.unpack("<II", f.read(8))
+            names = {n.get("name") for n in json.loads(f.read(size))["nodes"]}
+        check("%s has closed fists: two finger bones in each hand, in the fight's file only" % side, {"fingers_l", "fingertips_l", "fingers_r", "fingertips_r"} <= names)
     for hit in seen["hits"]:
         aimed = next(k for k in hit if k.startswith("fist_from_his_"))
         most = 40.0 if hit["blocked"] else (32.0 if "chest" in aimed else 22.0)  # a blocked blow stops on the forearms, in front of the head
@@ -2547,7 +2556,7 @@ def test_fight_baked(ctx):
         check("%s: %.2f cm through the mat (%s), %d turns outside a limit, clamped on %d bone-frames %s, a planted foot strays %.2f cm" % (
             side, card["through_floor_cm"], card["lowest_part"], card["limit_violations"], clamped, card["clamped"], card["planted_foot_strays_cm"]),
             card["through_floor_cm"] <= 0.5 and card["limit_violations"] == 0 and clamped <= 12 and card["planted_foot_strays_cm"] <= 2.0)
-    held = {side: read_glb(os.path.join(out, "lowpoly-%s.glb" % side)) for side in ("left", "right")}
+    held = {side: read_glb(os.path.join(out, "cast-%s.glb" % side)) for side in ("left", "right")}
     check("each file holds its fighter (%d and %d triangles)" % (held["left"]["triangles"], held["right"]["triangles"]), all(h["triangles"] > 500 for h in held.values()))
     last = timeline["hits"][-1]["frame"]
     done = subprocess.run([BLENDER, "-b", "--factory-startup", "-P", os.path.join(HERE, "fight", "film_fight.py"), "--", out, "--cameras", "fight", "--stills", str(last)], capture_output=True, text=True)
