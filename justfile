@@ -37,6 +37,7 @@ check:
     python3 scripts/motion/test_timeline.py | tail -1
     python3 scripts/motion/test_run_clip.py | tail -1
     python3 scripts/sets/test_sets.py | tail -1
+    python3 scripts/fight/test_fight.py | tail -1
     python3 scripts/world/world.py check | tail -1
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
@@ -175,6 +176,22 @@ clip-to-gallery shot character clip="hero":
         done
     done
     ls "{{character}}/profiles" | grep -- '-{{clip}}\.'
+
+# Stage a fight from its script (scripts/fight/fights/<fight>.json) on two characters' run folders: lay it out on one timeline, bake each fighter, and film it from every camera of its set with hitstop, camera shake and impact flashes (into shots/fight-<fight>/, or out). One background Blender per camera
+fight fight left right out="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out="{{ if out != "" { out } else { "shots/fight-" + fight } }}"
+    mkdir -p "$out"
+    "{{blender_bin}}" -b --factory-startup -P scripts/fight/apply_fight.py -- "scripts/fight/fights/{{fight}}.json" "$out" --left "{{left}}" --right "{{right}}" 2>&1 | grep -E '^FIGHT|Error|Traceback'
+    for camera in $(python3 -c "import json, sys; sys.path.insert(0, 'scripts/sets'); import standing; print(' '.join(standing.load(json.load(open('$out/fight.json'))['set'])['cameras']))"); do
+        "{{blender_bin}}" -b --factory-startup -P scripts/fight/film_fight.py -- "$out" --cameras "$camera" 2>&1 | grep -E '^FILM|Error|Traceback' &
+    done
+    wait
+
+# The fight kit's own tests, without Blender: frame data, reactions on the active frame, hitstop, reach, the mat, joint limits, footwork
+fight-test:
+    python3 scripts/fight/test_fight.py
 
 # What Kimodo (text to motion) has fetched onto the volume and loaded, with revisions and timings; the first call on a fresh volume is the one that fetches
 text-info:

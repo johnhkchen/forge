@@ -68,7 +68,7 @@ def strip_and_film(scene, folder, name, frames, size, strip_only):
     scene.render.image_settings.media_type = "IMAGE"
     scene.render.image_settings.file_format = "PNG"
     sheet = np.zeros((cell[1] * STRIP[1], cell[0] * STRIP[0], 4), dtype=np.float32)
-    temp = os.path.join(folder, ".strip-still.png")
+    temp = os.path.join(folder, ".strip-still-%s.png" % name)  # its own name: several cameras may be filmed at once, one Blender each
     for n, frame in enumerate(stills):
         scene.frame_set(frame)
         scene.render.filepath = temp
