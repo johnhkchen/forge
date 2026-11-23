@@ -23,7 +23,8 @@ A set is a folder, sets/<name>/, with a set.json:
                `see_through` (ropes) stops a body but not a camera.
     ground     what is under and around the floor: {y, color, size_m}
     marks      named spots. Each has a kind:
-                 stand   {at [x, z], facing_deg}
+                 stand   {at [x, z], facing_deg}; `floor_y` if its floor is not at 0
+                         (a stage, a platform): what is under that floor is not in its way
                  sit     {at (the hips, seated), stand_at (in front, standing),
                           facing_deg, seat_height_m, seat (the block sat on),
                           beside (blocks that belong to the seat: its back, an arm)}
@@ -294,10 +295,11 @@ def seat_spot(m: dict) -> list:
 def head_and_feet(m: dict) -> list:
     """The points of a person at a mark that a camera must hold: the head, the chest, and the feet or the seat."""
     x, z = m["at"]
+    up = float(m.get("floor_y", 0.0))  # a mark on a stage or a platform: its floor is this high
     if m["kind"] == "sit":
         seat = float(m["seat_height_m"])
         return [("head", (x, seat + HEAD_ABOVE_SEAT, z)), ("chest", (x, seat + CHEST_ABOVE_SEAT, z))]
-    return [("head", (x, HEAD_STANDING, z)), ("chest", (x, CHEST_STANDING, z)), ("feet", (x, 0.05, z))]
+    return [("head", (x, up + HEAD_STANDING, z)), ("chest", (x, up + CHEST_STANDING, z)), ("feet", (x, up + 0.05, z))]
 
 
 def wrist_for(m: dict) -> list:
@@ -447,8 +449,8 @@ def check(st: dict) -> tuple:
             if not on_floor(st, x, z):
                 say(f"mark \"{name}\" {label} off the floor, at ({x}, {z})")
             for block in tall:
-                if block["name"] in own(m):
-                    continue
+                if block["name"] in own(m) or top_of(block) <= float(m.get("floor_y", 0.0)) + 0.05:
+                    continue  # its own seat, or what its floor is the top of
                 room = gap_to(block, x, z)
                 if room < BODY:
                     say(f"mark \"{name}\" {label} {100 * room:.0f} cm from \"{block['name']}\": a body needs {100 * BODY:.0f} cm")

@@ -175,6 +175,16 @@
    "label": "The dancer's house",
    "whose": "dancer",
    "about": "The first home anyone chose for themselves. She asked for its front to look out on the spawn spot, so every new arrival sees a stage and a seat waiting."
+  },
+  "halfpipe": {
+   "set": "halfpipe",
+   "at": [
+    40.5,
+    -12.5
+   ],
+   "facing_deg": 180.0,
+   "label": "The halfpipe",
+   "about": "A plywood ramp on the open ground north of the ninja's stage and east of the settlement. Lincoln has taken to it: patient on the way up, honest about the way down."
   }
  },
  "artifacts": [
