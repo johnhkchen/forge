@@ -65,6 +65,8 @@ KNOCKOUT_HITSTOP = 12   # the blow that puts a man down freezes longest
 BLOCKED_HITSTOP = 0.6   # a blocked blow freezes for this share of its hitstop (never fewer than 2 frames)
 BLOCKED_POWER = 0.5
 MOST_LUNGE = 0.5        # a blow that falls short steps in, by at most this share of the hip height
+MOST_ROCK = 0.12        # a blow from too near rocks the hips back to make room, by at most this share of the hip height
+MOST_FOLD = 0.4         # a fist is never asked nearer its own shoulder than this share of the arm: an elbow only folds so far
 
 
 # ---- a little arithmetic: points are (x, y, z), turns are [w, x, y, z] ----
@@ -107,6 +109,10 @@ def qmul(a, b):
     bw, bx, by, bz = b
     return (aw * bw - ax * bx - ay * by - az * bz, aw * bx + ax * bw + ay * bz - az * by,
             aw * by - ax * bz + ay * bw + az * bx, aw * bz + ax * by - ay * bx + az * bw)
+
+def qback(q):
+    """The turn that undoes a turn."""
+    return (q[0], -q[1], -q[2], -q[3])
 
 def qturned(q, v):
     """A point turned by a turn."""
@@ -198,6 +204,49 @@ class Body:
         return at
 
 
+# How rig.py's bones lie at rest, as animate.py turns them: each one's own x, y and z axes in the character's.
+# A trunk bone points up with its bend axis to the left; an arm bone is turned from a true T-pose.
+TRUNK_AXES = ((1.0, 0.0, 0.0), (0.0, 0.0, 1.0), (0.0, -1.0, 0.0))
+ARM_AXES = {"l": ((0.0, -1.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0)), "r": ((0.0, 1.0, 0.0), (-1.0, 0.0, 0.0), (0.0, 0.0, 1.0))}
+
+
+def asked(pose):
+    """What a pose asks of each joint with a limit: {bone: [x, y, z] degrees}, the bone's turn against the bone it
+    hangs from, in its own axes, read the way animate.py reads it before clamping."""
+    q = pose["turns"]
+
+    def own(parent, child, axes):
+        between = qmul((parent[0], -parent[1], -parent[2], -parent[3]), child)
+        cols = [qturned(between, a) for a in axes]              # where the turn takes each of the bone's axes
+        m = [[dot(axes[r], cols[c]) for c in range(3)] for r in range(3)]  # ... written in the bone's axes
+        y = -math.asin(clamp(m[2][0], -1.0, 1.0))
+        one = [math.degrees(math.atan2(m[2][1], m[2][2])), math.degrees(y), math.degrees(math.atan2(m[1][0], m[0][0]))]
+        # The same turn can be written two ways; Blender keeps the one with the smaller angles, and so do the limits.
+        two = [(one[0] + 360.0) % 360.0 - 180.0, (360.0 - one[1]) % 360.0 - 180.0, (one[2] + 360.0) % 360.0 - 180.0]
+        return one if sum(abs(v) for v in one) <= sum(abs(v) for v in two) else two
+
+    out = {}
+    for child, parent in (("spine", "hips"), ("chest", "spine"), ("neck", "chest"), ("head", "neck")):
+        out[child] = own(q[parent], q[child], TRUNK_AXES)
+    for tag, flip in (("l", 1.0), ("r", -1.0)):
+        out["upper_arm_" + tag] = own(q["chest"], q["upper_arm_" + tag], ARM_AXES[tag])
+        out["forearm_" + tag] = [0.0, 0.0, -flip * pose["elbow"][tag]]
+    return out
+
+
+def past_limits(body, pose, slack=0.5):
+    """Which joints a pose asks for more than rig.py's limits allow: {bone: degrees past}. Empty when animate.py would clamp nothing."""
+    out = {}
+    for name, turn_by in asked(pose).items():
+        lim = body.card.get("limits", {}).get(name)
+        if not lim:
+            continue
+        over = max(max(lim[2 * k] - turn_by[k], turn_by[k] - lim[2 * k + 1]) for k in range(3))
+        if over > slack:
+            out[name] = round(over, 1)
+    return out
+
+
 def card_of(rig_record, extras=None):
     """A body's card from what rig.py reported ("joints", "measure", "limits"), with anything measured on the mesh added."""
     card = {"joints": rig_record["joints"], "measure": rig_record["measure"], "limits": rig_record.get("limits", {})}
@@ -247,7 +296,7 @@ def arm_to(body, tag, shoulder, wrist, pole):
     Returns (the upper arm's turn, the elbow's bend, the way the forearm points, how far short of the spot the wrist is)."""
     l1, l2 = body.upper, body.fore
     gap = sub(wrist, shoulder)
-    far = clamp(length(gap), abs(l1 - l2) + 1e-4, 0.999 * (l1 + l2))
+    far = clamp(length(gap), max(abs(l1 - l2) + 1e-4, MOST_FOLD * (l1 + l2)), 0.999 * (l1 + l2))
     along = unit(gap)
     side = sub(pole, times(along, dot(pole, along)))
     if length(side) < 1e-6:
@@ -300,8 +349,14 @@ def mirrored(pose):
 
 
 def blend(a, b, t):
-    """Part of the way from one pose to another (the feet are schedule.py's business: it knows when one is stepping)."""
-    out = {"hips": mix(a["hips"], b["hips"], t), "turns": {name: qslerp(a["turns"][name], b["turns"][name], t) for name in a["turns"]},
+    """Part of the way from one pose to another (the feet are schedule.py's business: it knows when one is stepping).
+    An arm rides the chest: what is eased is how the upper arm is turned against the chest, so a shoulder that is
+    inside its limits in both poses is inside them all the way between."""
+    turns = {name: qslerp(a["turns"][name], b["turns"][name], t) for name in a["turns"] if name not in ARMS}
+    for name in ARMS:
+        ride = qslerp(qmul(qback(a["turns"]["chest"]), a["turns"][name]), qmul(qback(b["turns"]["chest"]), b["turns"][name]), t)
+        turns[name] = qmul(turns["chest"], ride)
+    out = {"hips": mix(a["hips"], b["hips"], t), "turns": turns,
            "elbow": {tag: a["elbow"][tag] + (b["elbow"][tag] - a["elbow"][tag]) * t for tag in ("l", "r")},
            "feet": {tag: list(mix(a["feet"][tag], b["feet"][tag], t)) for tag in ("l", "r")},
            "bounce": a["bounce"] + (b["bounce"] - a["bounce"]) * t}
@@ -324,9 +379,9 @@ def feet_of(body, lead=0.0, rear=0.0, rear_heel=8.0, rear_yaw=-40.0, wide=1.0):
 def by_the_chin(body, at, yaw, tag, lower=0.0, nearer=0.0):
     """Where a guarding fist is: the front one out ahead of the chin, the back one by the jaw. Measured from the head, so it goes where the head goes."""
     if tag == "l":
-        off = (0.09, -(0.24 + 0.32 * body.arm) + nearer, -0.35 * body.head_tall - lower)
+        off = (0.09, -(0.22 + 0.32 * body.arm) + nearer, -1.05 * body.head_tall - lower)
     else:
-        off = (-0.10, -(0.12 + 0.10 * body.arm) + nearer, -0.42 * body.head_tall - lower)
+        off = (-0.11, -(0.13 + 0.10 * body.arm) + nearer, -0.95 * body.head_tall - lower)
     return add(at["head_middle"], about_z(off, yaw))
 
 
@@ -334,7 +389,7 @@ ELBOW_DOWN = {"l": (0.45, 0.25, -1.0), "r": (-0.45, 0.25, -1.0)}
 
 
 def built(body, hips, turns, feet, hands=None, yaw=GUARD_YAW, bounce=0.0):
-    """A pose whose hands, where nothing else is said, guard the chin."""
+    """A pose whose hands, where nothing else is said, guard the chin. `yaw` is the chest's: the guard and the elbows turn with it."""
     bare = {"hips": tuple(hips), "turns": dict(turns, upper_arm_l=(1.0, 0.0, 0.0, 0.0), upper_arm_r=(1.0, 0.0, 0.0, 0.0)), "elbow": {"l": 0.0, "r": 0.0}}
     at = body.joints(bare)
     want = {}
@@ -346,6 +401,8 @@ def built(body, hips, turns, feet, hands=None, yaw=GUARD_YAW, bounce=0.0):
             want[tag] = given(at)
         else:
             want[tag] = given
+        if want[tag][0] == "fist":  # which side the elbow goes is said as the chest sees it: turned with the chest
+            want[tag] = ("fist", want[tag][1], about_z(want[tag][2], yaw))
     return make(body, hips, turns, want, feet, bounce)
 
 
@@ -372,10 +429,12 @@ def block(body, low=False):
     return built(body, (0.0, 0.0, -drop * body.leg), turns, feet_of(body), {"l": cover("l"), "r": cover("r")})
 
 
-def covered_spot(body, pose, toward):
-    """Where a blocked blow lands: on the forearms, between the two fists."""
+def covered_spot(body, pose, toward, swung=False):
+    """Where a blocked blow lands: on the forearms, between them. A straight blow lands up by the fists; one that is
+    swung round or up from below (`swung`) lands lower on the forearms, where a shorter man's swing can get to."""
     at = body.joints(pose)
-    middle = mix(mix(at["fist_l"], at["wrist_l"], 0.5), mix(at["fist_r"], at["wrist_r"], 0.5), 0.5)
+    up = 0.45 if swung else 0.9
+    middle = mix(mix(at["elbow_l"], at["fist_l"], up), mix(at["elbow_r"], at["fist_r"], up), 0.5)
     return add(middle, times(toward, 0.05))
 
 
@@ -410,18 +469,19 @@ def key(at, pose, ease, back=0.0, stay=()):
 # ---- attacks ----
 
 # The shape of each attack, in the usual stance. Angles in degrees, lengths as shares of the hip height.
-#   wind       the chest's yaw and the extra crouch at the end of the wind-up, and where the striking fist is
-#              drawn back to (from that shoulder, turned with the chest)
+#   wind       the chest's yaw and the extra crouch at the end of the wind-up, where the striking fist is drawn
+#              back to (from that shoulder, turned with the chest: out to its own side, back, up, as shares
+#              of the arm's length) and which side the elbow is on there
 #   hit        the chest's yaw, roll and bend at contact, and the extra crouch
 #   pole       which side the elbow is on at contact (for the left arm; mirrored for the right)
 #   side/under how the fist comes at the head: round the side, or from below
 SHAPES = {
-    "jab": {"wind": (-24.0, 0.0, (0.02, -0.16, -0.12)), "hit": (-52.0, -2.0, 7.0, 0.0), "pole": (0.3, 0.3, -1.0), "side": 0.0},
-    "cross": {"wind": (-44.0, 0.02, (-0.03, -0.02, -0.10)), "hit": (38.0, 3.0, 9.0, 0.01), "pole": (0.3, 0.3, -1.0), "side": 0.0, "pivot": True},
-    "left_hook": {"wind": (-6.0, 0.04, (0.20, 0.02, -0.14)), "hit": (-66.0, -4.0, 6.0, 0.02), "pole": (1.0, 0.35, 0.12), "side": -0.85},
-    "uppercut": {"wind": (-46.0, 0.12, (-0.04, -0.06, -0.42)), "hit": (34.0, 0.0, -4.0, -0.03), "pole": (0.25, 0.9, -1.0), "under": True, "pivot": True},
-    "body_shot": {"wind": (-44.0, 0.10, (-0.05, -0.02, -0.26)), "hit": (40.0, 6.0, 18.0, 0.13), "pole": (0.8, 0.3, -0.5), "side": 0.0, "pivot": True},
-    "haymaker": {"wind": (-64.0, 0.05, (-0.26, 0.20, 0.02)), "hit": (52.0, 8.0, 12.0, 0.03), "pole": (1.0, 0.3, 0.55), "side": 0.8, "pivot": True},
+    "jab": {"wind": (-24.0, 0.0, (0.05, -0.50, -0.20), (0.7, 0.3, -1.0)), "hit": (-52.0, -2.0, 7.0, 0.0), "pole": (0.7, 0.3, -1.0), "side": 0.0},
+    "cross": {"wind": (-44.0, 0.02, (0.12, -0.36, -0.22), (0.7, 0.3, -1.0)), "hit": (38.0, 3.0, 9.0, 0.01), "pole": (0.7, 0.3, -1.0), "side": 0.0, "pivot": True},
+    "left_hook": {"wind": (-6.0, 0.04, (0.40, -0.38, -0.18), (1.0, 0.1, -0.4)), "hit": (-50.0, -4.0, 6.0, 0.02), "pole": (1.0, 0.05, 0.12), "side": -0.85},
+    "uppercut": {"wind": (-46.0, 0.12, (0.12, -0.34, -0.62), (0.5, 0.8, -0.6)), "hit": (34.0, 0.0, -4.0, -0.03), "pole": (0.25, -0.5, -1.0), "under": True, "pivot": True},
+    "body_shot": {"wind": (-44.0, 0.10, (0.15, -0.40, -0.45), (0.8, 0.5, -0.5)), "hit": (40.0, 6.0, 18.0, 0.13), "pole": (0.8, 0.3, -0.5), "side": 0.0, "pivot": True},
+    "haymaker": {"wind": (-64.0, 0.05, (0.55, -0.32, 0.10), (1.0, 0.15, -0.2)), "hit": (44.0, 8.0, 12.0, 0.03), "pole": (1.0, -0.1, 0.0), "side": 0.8, "pivot": True},
 }
 
 
@@ -446,9 +506,9 @@ def strike(body, name, spot_of, start=None):
 
     def stretched(lunge):
         drag = max(0.0, lunge - 0.2 * body.leg)
-        drop = GUARD_DROP * body.leg + crouch * body.leg + 0.3 * min(lunge, 0.2 * body.leg)
+        drop = GUARD_DROP * body.leg + crouch * body.leg + 0.3 * min(abs(lunge), 0.2 * body.leg)
         hips = (0.0, -0.02 * body.leg - lunge, -drop)
-        feet = feet_of(body, lead=lunge, rear=drag, rear_heel=28.0 if shape.get("pivot") else 8.0, rear_yaw=-14.0 if shape.get("pivot") else -40.0)
+        feet = feet_of(body, lead=max(0.0, lunge), rear=drag, rear_heel=28.0 if shape.get("pivot") else 8.0, rear_yaw=-14.0 if shape.get("pivot") else -40.0)
         turns = trunk(yaw, roll, bend, head_yaw=0.0, head_bend=-2.0 - 0.4 * bend)
         return built(body, hips, turns, feet, {tag: ("fist", spot, pole)}, yaw=yaw)
 
@@ -457,9 +517,13 @@ def strike(body, name, spot_of, start=None):
         at = body.joints(pose)
         return length(sub(sub(spot, times(unit(sub(at["fist_" + tag], at["wrist_" + tag])), body.fist)), at["shoulder_" + tag]))
 
-    lunge = 0.0
-    if gap(0.0) > want:
-        lo, hi = 0.0, MOST_LUNGE * body.leg
+    # Too far: step in. Too near (a long arm, a blocked blow): rock the hips back to make room, feet where they are.
+    lo, hi = (0.0, MOST_LUNGE * body.leg) if gap(0.0) > want else (-MOST_ROCK * body.leg, 0.0)
+    if gap(hi) > want:
+        lunge = hi  # the longest step in, and still short: the fist stops short of its spot
+    elif gap(lo) < want:
+        lunge = lo  # rocked back as far as he goes, and still near: the elbow stays a little more bent
+    else:
         for step in range(18):
             mid = (lo + hi) / 2.0
             if gap(mid) > want:
@@ -470,10 +534,11 @@ def strike(body, name, spot_of, start=None):
     hit = stretched(lunge)
     fist = body.joints(hit)["fist_" + tag]
 
-    wind_yaw, wind_crouch, back = shape["wind"]
+    wind_yaw, wind_crouch, back, wind_pole = shape["wind"]
 
     def drawn(at):
-        return ("fist", add(at["shoulder_" + tag], about_z((back[0], back[1] - 0.12 * body.arm, back[2]), wind_yaw)), ELBOW_DOWN[tag] if name != "haymaker" else (-1.0, 0.4, 0.2))
+        spot = add(at["shoulder_" + tag], about_z((flip * back[0] * body.arm, back[1] * body.arm, back[2] * body.arm), wind_yaw))
+        return ("fist", spot, (flip * wind_pole[0], wind_pole[1], wind_pole[2]))
 
     wind = built(body, (0.0, 0.0, -(GUARD_DROP + wind_crouch) * body.leg), trunk(wind_yaw, bend=GUARD_BEND + 30.0 * wind_crouch, head_bend=-2.0),
                  feet_of(body), {tag: drawn}, yaw=wind_yaw)
@@ -533,8 +598,8 @@ def reaction(body, name, side=0.0, low=False):
                       {"l": loose(body, "l", 0.3, 0.7, 0.6, 60.0), "r": loose(body, "r", 0.35, 0.5, 0.75, 70.0)})
         # Two steps back: the back foot first while the front one stays, then the front foot after it.
         keys = [key(0, blend(g, snap, 0.7), "cut", 0.0), key(2, snap, "out", 0.0), key(4, snap, "hold", 0.0),
-                key(10, reel, "out", 0.26 * leg, stay=("l",)), key(17, catch, "out", 0.48 * leg, stay=("r",)), key(21, catch, "hold", 0.48 * leg),
-                key(REACTIONS[name], g, "inout", 0.48 * leg)]
+                key(10, reel, "out", 0.36 * leg, stay=("l",)), key(17, catch, "out", 0.68 * leg, stay=("r",)), key(21, catch, "hold", 0.68 * leg),
+                key(REACTIONS[name], g, "inout", 0.68 * leg)]
     elif name == "knockdown":
         lying = -(body.j["hips"][2] - body.back - 0.012)  # the hips this far down: the back just on the mat
         back = 0.56 * leg                                # and this far behind where the man stood
@@ -557,19 +622,19 @@ def reaction(body, name, side=0.0, low=False):
             return row
 
         def spread(up, bend, drop_by):
-            """Arms thrown out to the sides: `up` toward the head, the elbows a little bent."""
+            """Arms thrown out to the sides: `up` toward the head, the hands lifted off the mat by `bend`."""
             out = {}
             for tag, flip in (("l", 1.0), ("r", -1.0)):
                 upper = unit((flip * 0.9, up[tag], -drop_by))
-                fore = unit((flip * 0.75, up[tag] + bend, -drop_by))
+                fore = unit(add(upper, (0.0, 0.0, bend)))  # the elbow folds the way it does in the T-pose: toward the man's front, which is up
                 out[tag] = ("arm", upper, fore)
             return out
 
         tip = built(body, (0.0, 0.30 * leg, -0.30 * leg), trunk(0.0, bend=-40.0, head_bend=-10.0), feet_of(body, lead=-0.10 * leg, wide=1.1),
                     {"l": loose(body, "l", 0.8, 0.5, -0.4, 20.0), "r": loose(body, "r", 0.8, 0.4, -0.3, 20.0)})
-        land = laid(-90.0, lying, back, spread({"l": 0.25, "r": 0.5}, 0.35, 0.10), legs(back, 0.80, 0.66), head=6.0)
-        hop = laid(-83.0, lying + 0.05, back + 0.015, spread({"l": 0.3, "r": 0.55}, 0.45, -0.12), legs(back + 0.015, 0.80, 0.66), head=16.0)
-        still = laid(-90.0, lying, back, spread({"l": 0.15, "r": 0.6}, 0.3, 0.10), legs(back, 0.86, 0.70), head=3.0, head_yaw=-18.0)
+        land = laid(-90.0, lying, back, spread({"l": 0.25, "r": 0.5}, 0.10, 0.08), legs(back, 0.80, 0.66), head=6.0)
+        hop = laid(-83.0, lying + 0.05, back + 0.015, spread({"l": 0.3, "r": 0.55}, 0.45, -0.10), legs(back + 0.015, 0.80, 0.66), head=16.0)
+        still = laid(-90.0, lying, back, spread({"l": 0.15, "r": 0.6}, 0.06, 0.08), legs(back, 0.86, 0.70), head=3.0, head_yaw=-18.0)
         keys = [key(0, blend(g, snap, 0.7), "cut", 0.0), key(3, snap, "out", 0.0), key(11, tip, "in", 0.0), key(17, land, "in", 0.0),
                 key(20, hop, "out", 0.0), key(24, land, "in", 0.0), key(REACTIONS[name], still, "inout", 0.0)]
     else:

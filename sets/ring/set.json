@@ -274,12 +274,12 @@
     0.0
    ],
    "facing_deg": 90.0,
-   "about": "a fighter's mark, on the left: 90 cm from the other, the range every blow of the fight kit is built to reach. Left of centre so a man knocked down from here falls inside the ropes"
+   "about": "a fighter's mark, on the left: a metre from the other, the range every blow of the fight kit is built to reach. Left of centre so a man knocked down from here falls inside the ropes"
   },
   "fight_right": {
    "kind": "stand",
    "at": [
-    0.8,
+    0.9,
     0.0
    ],
    "facing_deg": -90.0,
@@ -451,6 +451,24 @@
     "fight_right"
    ],
    "about": "from up in the gallery"
+  },
+  "fight": {
+   "at": [
+    0.4,
+    2.3,
+    6.4
+   ],
+   "aim": [
+    0.4,
+    0.85,
+    0.0
+   ],
+   "lens_mm": 50,
+   "sees": [
+    "fight_left",
+    "fight_right"
+   ],
+   "about": "the two fight marks and room to fall, from above the top rope: the ropes cross the legs, not the heads and fists"
   }
  },
  "lights": [

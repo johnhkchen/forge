@@ -66,7 +66,7 @@ FPS = 30
 STEP_FRAMES = 7       # one shuffle step: one foot goes, then the other
 STEP_M = 0.30         # how far one shuffle step covers, as a share of the hip height
 BOUNCE_FRAMES = 14    # the guard's bounce: one dip every this many frames
-BOUNCE_M = 0.022      # and how deep, as a share of the hip height
+BOUNCE_M = 0.03       # and how deep, as a share of the hip height
 WAIT_S = 0.5          # guard before an exchange, when the script names no wait
 A_STEP = 0.015        # metres: a foot that moves further than this between two keys is stepping, not planted
 OTHER = {"left": "right", "right": "left"}
@@ -95,6 +95,11 @@ class Track:
     def add(self, frame, pose, ease):
         while self.keys and self.keys[-1][0] >= frame:
             self.keys.pop()
+        if self.keys:  # a foot asked to move less than a step has not moved: it stays planted where it is
+            was = self.keys[-1][1]["feet"]
+            for tag, spot in pose["feet"].items():
+                if math.hypot(spot[0] - was[tag][0], spot[1] - was[tag][1]) <= A_STEP and spot[2] <= 0.004 and was[tag][2] <= 0.004:
+                    spot[0], spot[1] = was[tag][0], was[tag][1]
         self.keys.append((frame, pose, ease))
 
     def last(self):
@@ -300,7 +305,7 @@ def schedule(fight, bodies, marks=None):
                 if hitter.mirror:
                     round_side = -round_side
                 if blocked:
-                    spot = moves.covered_spot(taker.body, stood, toward)
+                    spot = moves.covered_spot(taker.body, stood, toward, swung=bool(under or round_side))
                 else:
                     spot = moves.target_on(taker.body, stood, "low" if low else "high", toward, round_side, under)
                 return hitter.into(taker.seen_by_other(spot))
