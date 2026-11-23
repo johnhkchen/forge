@@ -1,0 +1,42 @@
+{
+  "name": "fight-reactions",
+  "brief": "A test of hit reactions made from sentences (not a story shot): one boxer at the centre of the ring takes one blow after another, from a flinch to a knockout, about 17 seconds, filmed from the ring's cameras.",
+  "beats": [
+    {
+      "time": "",
+      "action": "Stands ready",
+      "driven_by": "poses"
+    },
+    {
+      "time": "",
+      "action": "Guard",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Flinch",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Glancing blow",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Body blow",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Heavy blow",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Knockout",
+      "driven_by": "text"
+    }
+  ],
+  "set": "ring"
+}

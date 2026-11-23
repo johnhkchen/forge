@@ -1,0 +1,32 @@
+{
+  "name": "ring-faceoff",
+  "brief": "Two wrestlers square off in the 1890s ring, about 15 seconds, one take from the ring's three cameras. Roosevelt and Lincoln come out of the far corners, meet at centre and shake right hands, step back, and drop into a low crouch facing each other, heads turning as they size each other up.",
+  "beats": [
+    {
+      "time": "0-4 s",
+      "action": "each waits a moment in his far corner, then walks to centre",
+      "driven_by": "poses: stand. text: the two walks, each held to the set's path"
+    },
+    {
+      "time": "4-7 s",
+      "action": "they shake right hands at centre",
+      "driven_by": "poses: shake, shake_dip, the right hands pinned to the same spot"
+    },
+    {
+      "time": "7-10 s",
+      "action": "each turns, walks back a few steps and turns to face the other",
+      "driven_by": "text: two short walks that end standing"
+    },
+    {
+      "time": "10-15.5 s",
+      "action": "both drop into a low crouch and size each other up, heads turning",
+      "driven_by": "poses: stand, crouch, crouch_look_left, crouch_look_right"
+    }
+  ],
+  "set": "ring",
+  "segment": "ring-faceoff",
+  "roles": {
+    "left": "roosevelt-wrestler-1890s",
+    "right": "young-lincoln-frontier-wrestler"
+  }
+}

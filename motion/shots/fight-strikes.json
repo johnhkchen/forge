@@ -1,0 +1,52 @@
+{
+  "name": "fight-strikes",
+  "brief": "A test of strikes made from sentences (not a story shot): one boxer at the centre of the ring throws one strike after another, each from a guard and back to it, about 16 seconds, filmed from the ring's cameras.",
+  "beats": [
+    {
+      "time": "",
+      "action": "Stands ready",
+      "driven_by": "poses"
+    },
+    {
+      "time": "",
+      "action": "Guard",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Jab",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Cross",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Left hook",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Uppercut",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Body shot",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Haymaker",
+      "driven_by": "text"
+    },
+    {
+      "time": "",
+      "action": "Stands easy",
+      "driven_by": "poses"
+    }
+  ],
+  "set": "ring"
+}

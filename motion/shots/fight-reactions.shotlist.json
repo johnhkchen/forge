@@ -1,0 +1,107 @@
+{
+  "title": "Reaction test reel",
+  "start_pose": "stand",
+  "start_mark": "centre",
+  "path": [],
+  "props": [],
+  "camera": [],
+  "beats": [
+    {
+      "name": "Stands ready",
+      "seconds": 0.97,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "stand",
+          "at_m": 0.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 9,
+          "early_frames": 0,
+          "pins": [],
+          "hold_pins_frames": 0
+        }
+      ],
+      "at": "centre"
+    },
+    {
+      "name": "Guard",
+      "seconds": 1.6,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person raises both fists to the chin in a boxing guard and bounces lightly on the balls of their feet.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Flinch",
+      "seconds": 1.6,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing guard flinches, ducking the head and pulling it back sharply, then settles back into guard.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Glancing blow",
+      "seconds": 2.0,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing guard is clipped on the jaw by a punch, the head snaps to the side, and they shake it off and return to guard.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Body blow",
+      "seconds": 2.5,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing guard is punched hard in the stomach, doubles over wincing in pain, then slowly straightens up.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Heavy blow",
+      "seconds": 3.0,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person is hit hard in the face, the head snaps back, and they stagger backward two steps before catching their balance.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Knockout",
+      "seconds": 3.5,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person is knocked out by a punch to the jaw, goes limp and collapses backward onto the ground, lying still.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    }
+  ]
+}

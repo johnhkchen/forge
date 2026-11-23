@@ -1,0 +1,139 @@
+{
+  "title": "Strike test reel",
+  "start_pose": "stand",
+  "start_mark": "centre",
+  "path": [],
+  "props": [],
+  "camera": [],
+  "beats": [
+    {
+      "name": "Stands ready",
+      "seconds": 0.97,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "stand",
+          "at_m": 0.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 9,
+          "early_frames": 0,
+          "pins": [],
+          "hold_pins_frames": 0
+        }
+      ],
+      "at": "centre"
+    },
+    {
+      "name": "Guard",
+      "seconds": 2.0,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person raises both fists to the chin in a boxing guard and bounces lightly on the balls of their feet.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Jab",
+      "seconds": 1.6,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing stance throws a quick left jab straight forward and snaps it back to guard.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Cross",
+      "seconds": 2.0,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing stance throws a hard straight right punch, turning the hips and shoulders into it, then returns to guard.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Left hook",
+      "seconds": 2.0,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing stance throws a left hook to head height, the arm bent and the body turning, then returns to guard.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Uppercut",
+      "seconds": 2.0,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing stance dips slightly and throws a right uppercut upward, then returns to guard.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Body shot",
+      "seconds": 2.0,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person in a boxing stance bends the knees and throws a right punch low to the body, then comes back up to guard.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Haymaker",
+      "seconds": 2.5,
+      "source": "text",
+      "moves": [],
+      "prompt": "A person winds up and throws a big looping overhand right punch with their whole body, then recovers their balance.",
+      "from_m": 0.0,
+      "to_m": 0.0,
+      "speed_in_mps": 0.0,
+      "speed_out_mps": 0.0,
+      "keys": null,
+      "at": "centre"
+    },
+    {
+      "name": "Stands easy",
+      "seconds": 0.97,
+      "source": "poses",
+      "moves": [
+        {
+          "pose": "stand",
+          "at_m": 0.0,
+          "side_m": 0.0,
+          "facing_deg": 0.0,
+          "speed_mps": 0.0,
+          "tokens": 9,
+          "early_frames": 0,
+          "pins": [],
+          "hold_pins_frames": 0
+        }
+      ],
+      "at": "centre"
+    }
+  ]
+}

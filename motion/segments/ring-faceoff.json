@@ -1,0 +1,504 @@
+{
+  "name": "ring-faceoff",
+  "title": "Ring face-off",
+  "about": "Two wrestlers come out of the far corners, meet at centre and shake hands, step back, and drop into a crouch facing each other, sizing each other up.",
+  "needs": {
+    "roles": [
+      "left",
+      "right"
+    ],
+    "marks": [
+      "corner_back_left",
+      "corner_back_right",
+      "meet_left",
+      "meet_right",
+      "square_left",
+      "square_right"
+    ]
+  },
+  "sentences": {
+    "to_centre": "A person walks forward at an easy pace and comes to a stop.",
+    "step_back": "A person turns around and walks back a few steps, then turns around and stands still."
+  },
+  "together": [
+    "Handshake"
+  ],
+  "beats": [
+    {
+      "time": "0-4 s",
+      "action": "each waits a moment in his far corner, then walks to centre",
+      "driven_by": "poses: stand. text: the two walks, each held to the set's path"
+    },
+    {
+      "time": "4-7 s",
+      "action": "they shake right hands at centre",
+      "driven_by": "poses: shake, shake_dip, the right hands pinned to the same spot"
+    },
+    {
+      "time": "7-10 s",
+      "action": "each turns, walks back a few steps and turns to face the other",
+      "driven_by": "text: two short walks that end standing"
+    },
+    {
+      "time": "10-15.5 s",
+      "action": "both drop into a low crouch and size each other up, heads turning",
+      "driven_by": "poses: stand, crouch, crouch_look_left, crouch_look_right"
+    }
+  ],
+  "roles": {
+    "left": {
+      "title": "Ring face-off: the left corner",
+      "start_pose": "stand",
+      "start_mark": "corner_back_left",
+      "path": [],
+      "beats": [
+        {
+          "name": "Wait in the corner",
+          "seconds": 0.83,
+          "source": "poses",
+          "at": "corner_back_left",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 8,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "Walk to centre",
+          "seconds": 3.0,
+          "source": "text",
+          "moves": [],
+          "frames": 90,
+          "to": "meet_left",
+          "prompt": "{to_centre}",
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.2,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Handshake",
+          "seconds": 3.1,
+          "source": "poses",
+          "at": "meet_left",
+          "moves": [
+            {
+              "pose": "shake",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 8,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "shake_dip",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            },
+            {
+              "pose": "shake",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            },
+            {
+              "pose": "shake_dip",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            },
+            {
+              "pose": "shake",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            }
+          ]
+        },
+        {
+          "name": "Step back",
+          "seconds": 3.0,
+          "source": "text",
+          "moves": [],
+          "frames": 90,
+          "to": "square_left",
+          "prompt": "{step_back}",
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.0,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "join_in_frames": 29,
+          "seed": 0
+        },
+        {
+          "name": "Square off",
+          "seconds": 5.53,
+          "source": "poses",
+          "at": "square_left",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 7,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 10,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch_look_right",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 8,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch_look_left",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        }
+      ],
+      "props": [],
+      "camera": []
+    },
+    "right": {
+      "title": "Ring face-off: the right corner",
+      "start_pose": "stand",
+      "start_mark": "corner_back_right",
+      "path": [],
+      "beats": [
+        {
+          "name": "Wait in the corner",
+          "seconds": 0.83,
+          "source": "poses",
+          "at": "corner_back_right",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 8,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "Walk to centre",
+          "seconds": 3.0,
+          "source": "text",
+          "moves": [],
+          "frames": 90,
+          "to": "meet_right",
+          "prompt": "{to_centre}",
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.2,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Handshake",
+          "seconds": 3.1,
+          "source": "poses",
+          "at": "meet_right",
+          "moves": [
+            {
+              "pose": "shake",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 8,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "shake_dip",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            },
+            {
+              "pose": "shake",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            },
+            {
+              "pose": "shake_dip",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            },
+            {
+              "pose": "shake",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 6,
+              "early_frames": 0,
+              "pins": [
+                "right_hand"
+              ],
+              "hold_pins_frames": 17
+            }
+          ]
+        },
+        {
+          "name": "Step back",
+          "seconds": 3.0,
+          "source": "text",
+          "moves": [],
+          "frames": 90,
+          "to": "square_right",
+          "prompt": "{step_back}",
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.0,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "join_in_frames": 29,
+          "seed": 0
+        },
+        {
+          "name": "Square off",
+          "seconds": 5.53,
+          "source": "poses",
+          "at": "square_right",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 7,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 10,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch_look_left",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 8,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch_look_right",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            },
+            {
+              "pose": "crouch",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        }
+      ],
+      "props": [],
+      "camera": []
+    }
+  }
+}

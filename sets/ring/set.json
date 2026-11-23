@@ -302,6 +302,24 @@
    ],
    "facing_deg": -47.0,
    "about": "the far corner, on the right"
+  },
+  "square_left": {
+   "kind": "stand",
+   "at": [
+    -1.05,
+    -0.35
+   ],
+   "facing_deg": 90.0,
+   "about": "squared off after the handshake, on the left, facing the other man"
+  },
+  "square_right": {
+   "kind": "stand",
+   "at": [
+    1.05,
+    -0.35
+   ],
+   "facing_deg": -90.0,
+   "about": "the other side of that face-off"
   }
  },
  "paths": [
@@ -362,6 +380,14 @@
   {
    "from": "corner_back_right",
    "to": "centre"
+  },
+  {
+   "from": "meet_left",
+   "to": "square_left"
+  },
+  {
+   "from": "meet_right",
+   "to": "square_right"
   }
  ],
  "cameras": {
@@ -385,7 +411,9 @@
     "corner_front_left",
     "corner_front_right",
     "corner_back_left",
-    "corner_back_right"
+    "corner_back_right",
+    "square_left",
+    "square_right"
    ],
    "about": "the whole ring, from the steps' side"
   },
@@ -404,7 +432,8 @@
    "sees": [
     "centre",
     "meet_left",
-    "meet_right"
+    "meet_right",
+    "square_left"
    ],
    "about": "low, from a front-row seat"
   },
@@ -424,7 +453,9 @@
     "centre",
     "meet_left",
     "meet_right",
-    "corner_back_right"
+    "corner_back_right",
+    "square_left",
+    "square_right"
    ],
    "about": "from up in the gallery"
   }
