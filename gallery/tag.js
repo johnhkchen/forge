@@ -23,7 +23,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
 import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
 
@@ -396,7 +396,7 @@ uniform int partCount;
 uniform int partBone[20];
 uniform vec3 centers[20];
 uniform float depths[20];
-uniform float pxPerM;
+uniform float fine[20];
 uniform float marchPx;
 uniform float marchMax;
 uniform float farAway;
@@ -408,6 +408,7 @@ flat out vec2 lean;
 flat out vec3 deep;
 flat out float size;
 flat out float depthM;
+flat out float pxPerM;
 flat out int steps;
 flat out mat3 facingToEye;
 varying vec2 vSheet;
@@ -415,6 +416,7 @@ varying vec3 vView;
 void main() {
   if (putAway()) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   int part = gl_InstanceID % partCount;
+  pxPerM = fine[part];
   mat4 bone = feet() * fromTable(partBone[part] * 12, runner.w);
   mat3 turn = mat3(bone);
   vec3 head = bone[3].xyz;
@@ -465,7 +467,7 @@ void main() {
   gl_Position = projectionMatrix * vec4(vView, 1.0);
 }`;
 // The cards page's own pixel shader, told that what was one card's settings now comes with each card.
-const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "int steps", "mat3 facingToEye"]
+const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye"]
   .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT);
 
 // Every runner's meshes in one draw a piece: each point is moved by its bones' rows of the table.
@@ -800,7 +802,7 @@ class Field {
         shape.setIndex([0, 1, 2, 0, 2, 3]);
         const quad = new THREE.Mesh(shape, new THREE.ShaderMaterial({ vertexShader: CARD_VERTEX, fragmentShader: CARD_FRAGMENT, side: THREE.DoubleSide, uniforms: {
           colourMap: { value: sheet.colour }, dataMap: { value: sheet.data }, facingToEye: { value: new THREE.Matrix3() }, sheetSize: { value: new THREE.Vector2(...sheet.size) },
-          pxPerM: { value: card.px_per_m }, cell: { value: new THREE.Vector4() }, anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() },
+          pxPerM: { value: density(card, part) }, cell: { value: new THREE.Vector4() }, anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() },
           back: { value: new THREE.Vector4() }, lean: { value: new THREE.Vector2() }, deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m },
           steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.shade } }));
         quad.frustumCulled = false;
@@ -822,7 +824,7 @@ class Field {
             const view = choose(sheet.dirs, eyeInBone(world.elements, part.center, eye), null, 0, card.blend_deg).first;
             const cell = sheet.cells[part.name][view];
             const where = place(sheet.views[view], world.elements, part.center, eye);
-            const spots = corners(where, cell, card.px_per_m, true);
+            const spots = corners(where, cell, density(card, part), true);
             const pos = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
             spots.world.forEach((s, k) => pos.setXYZ(k, s[0], s[1], s[2]));
             spots.sheet.forEach((s, k) => uv.setXY(k, s[0], s[1]));
@@ -834,7 +836,7 @@ class Field {
             u.back.value.set(...where.back);
             u.lean.value.set(...where.lean);
             u.deep.value.set(...where.deep);
-            u.steps.value = marchSteps(where, cell, card.px_per_m, card.march);
+            u.steps.value = marchSteps(where, cell, density(card, part), card.march);
             u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, world));
           });
         }
@@ -902,7 +904,8 @@ class Field {
       partBone: { value: pad(parts.map((part) => this.table.names.indexOf(part.bone)), () => 0) },
       centers: { value: pad(parts.map((part) => new THREE.Vector3(...part.center)), () => new THREE.Vector3()) },
       depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
-      sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: card.px_per_m }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
+      fine: { value: pad(parts.map((part) => density(card, part)), () => 0) },
+      sheetSize: { value: new THREE.Vector2(...sheet.size) }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
       wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 } } });
     const mesh = new THREE.Mesh(shape, paint);
     mesh.frustumCulled = false;

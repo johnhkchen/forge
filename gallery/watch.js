@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
 import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
 
@@ -186,6 +186,9 @@ class TakeViewer {
       actor.meshes.push(mesh);
       actor.lines.push(line);
     }
+    // which way the face looks, as the head bone has it: the figure rests facing +z
+    holder.updateMatrixWorld(true);
+    actor.front = actor.bones.head ? new THREE.Vector3(0, 0, 1).applyQuaternion(holder.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(actor.bones.head.getWorldQuaternion(new THREE.Quaternion()).invert()) : new THREE.Vector3(0, 0, 1);
     actor.mixer = new THREE.AnimationMixer(gltf.scene);
     const clip = gltf.animations[0];
     if (clip) actor.mixer.clipAction(clip).play();
@@ -220,7 +223,7 @@ class TakeViewer {
         shape.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(8), 2));
         shape.setIndex([0, 1, 2, 0, 2, 3]);
         const quad = new THREE.Mesh(shape, new THREE.ShaderMaterial({ vertexShader: CARD_VERTEX, fragmentShader: CARD_FRAGMENT, side: THREE.DoubleSide, uniforms: {
-          colourMap: { value: colour }, dataMap: { value: data }, facingToEye: { value: new THREE.Matrix3() }, sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: card.px_per_m },
+          colourMap: { value: colour }, dataMap: { value: data }, facingToEye: { value: new THREE.Matrix3() }, sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: density(card, part) },
           cell: { value: new THREE.Vector4() }, anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() }, back: { value: new THREE.Vector4() }, lean: { value: new THREE.Vector2() },
           deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m }, steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.paint } }));
         quad.frustumCulled = false;
@@ -250,7 +253,7 @@ class TakeViewer {
       actor.held[part.name] = pick.first;
       const cell = sheet.cells[part.name][pick.first];
       const where = place(sheet.views[pick.first], world, part.center, eye);
-      const spots = corners(where, cell, card.px_per_m, true);
+      const spots = corners(where, cell, density(card, part), true);
       const at = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
       spots.world.forEach((s, k) => at.setXYZ(k, s[0], s[1], s[2]));
       spots.sheet.forEach((s, k) => uv.setXY(k, s[0], s[1]));
@@ -263,7 +266,7 @@ class TakeViewer {
       u.lean.value.set(...where.lean);
       u.deep.value.set(...where.deep);
       u.size.value = where.size;
-      u.steps.value = marchSteps(where, cell, card.px_per_m, card.march);
+      u.steps.value = marchSteps(where, cell, density(card, part), card.march);
       u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, bone.matrixWorld)).multiplyScalar(1 / where.size);
     });
   }
@@ -355,6 +358,20 @@ export function watchPage({ take, sets, runs, h, loader }) {
     window.forgeWatch = { state: () => viewer.report(), viewer, look: (id) => viewer.useLook(id), eye: (name) => viewer.useEye(name),
       set: (what) => { Object.assign(state, what); if (what.time !== undefined) viewer.time = what.time; },
       // the free eye brought up close to one of the cast, for a picture
+      THREE,
+      // the free eye stood in front of one of the cast's faces, a little to one side
+      face: (i, away = 1.3) => {
+        const actor = viewer.cast[i], head = actor.bones.head;
+        const at = new THREE.Vector3().setFromMatrixPosition(head.matrixWorld);
+        at.y += 0.1 / (actor.role.size || 1);
+        const out = actor.front.clone().applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()));
+        out.y = 0;
+        out.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.3);
+        viewer.useEye("");
+        viewer.controls.target.copy(at);
+        viewer.free.position.copy(at).addScaledVector(out, away).add(new THREE.Vector3(0, 0.05 * away, 0));
+        viewer.controls.update();
+      },
       near: (i, away = 2.6) => {
         const hips = new THREE.Vector3().setFromMatrixPosition(viewer.cast[i].bones.hips.matrixWorld);
         viewer.useEye("");

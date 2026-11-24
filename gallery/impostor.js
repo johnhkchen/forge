@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
@@ -289,7 +289,7 @@ class CardViewer {
           vertexShader: CARD_VERTEX, fragmentShader: CARD_FRAGMENT, side: THREE.DoubleSide,
           uniforms: {
             colourMap: { value: sheet.colour }, dataMap: { value: sheet.data }, facingToEye: { value: new THREE.Matrix3() },
-            sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: card.px_per_m }, cell: { value: new THREE.Vector4() },
+            sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: density(card, part) }, cell: { value: new THREE.Vector4() },
             anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() }, back: { value: new THREE.Vector4() },
             lean: { value: new THREE.Vector2() }, deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m }, steps: { value: 0 },
             depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.paint,
@@ -374,7 +374,7 @@ class CardViewer {
         const cell = sheet.cells[part.name][view];
         const where = place(sheet.views[view], world, part.center, eye);
         const at = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
-        const spots = corners(where, cell, card.px_per_m, state.relief);
+        const spots = corners(where, cell, density(card, part), state.relief);
         spots.world.forEach((p, i) => at.setXYZ(i, p[0], p[1], p[2]));
         spots.sheet.forEach((p, i) => uv.setXY(i, p[0], p[1]));
         at.needsUpdate = uv.needsUpdate = true;
@@ -386,7 +386,7 @@ class CardViewer {
         u.lean.value.set(...where.lean);
         u.deep.value.set(...where.deep);
         u.size.value = where.size;
-        u.steps.value = state.relief ? marchSteps(where, cell, card.px_per_m, card.march) : 0;
+        u.steps.value = state.relief ? marchSteps(where, cell, density(card, part), card.march) : 0;
         u.facingToEye.value.setFromMatrix4(toEye).multiplyScalar(1 / where.size);
         u.share.value = pick.share;
         u.mix_.value = mixing ? n + 1 : 0;

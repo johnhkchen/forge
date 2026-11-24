@@ -434,7 +434,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True):
     x0, y0, w, h, ax, ay, low, high = cell
     if w <= 0 or h <= 0:
         return None
-    ppm = character.px_per_m
+    ppm = float(part.get("px_per_m") or character.px_per_m)  # a part pictured finer than the rest (a head) says so
     quad = corners(card, cell, ppm, relief)
     spots, ahead = eye.to_pixels(quad)
     if (ahead <= eye.near).any():

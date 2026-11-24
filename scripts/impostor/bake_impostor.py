@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
+        [--look comic|pixel|joe] [--head-px 2] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor/:
@@ -35,7 +35,10 @@ reads a texture at (smaller is flatter; a detailed mesh wants more than a painte
 
 --look bakes a sheet for one of the page's other looks, into <version>-impostor-<look>/:
     pixel   pixel art: 48 pixels a metre, no smoothing, every colour snapped to the 32 this character is most
-            made of, a line one pixel wide drawn round each picture; the page reads it without smoothing either
+            made of, a line one pixel wide drawn round each picture; the page reads it without smoothing either.
+            The head is pictured finer than the body (--head-px times, 2 unless told) and its face is drawn on
+            purpose, from the character's recipe (pixel_face.py; --face none leaves it as rendered). A sheet
+            with either goes into <version>-impostor-pixel-faces/, which pages older than it do not read.
     joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
             screen however small the figure), and the lines inside a part drawn into its picture
 
@@ -52,11 +55,13 @@ import bpy
 import bmesh
 import numpy as np
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import impostor  # noqa: E402
+import pixel_face  # noqa: E402
 
 TOON = os.path.join(REPO, ".claude", "skills", "tidy-mesh", "scripts", "toon.py")
 # The parts, and the bones each is made of. The first bone is the one the card rides on.
@@ -246,22 +251,6 @@ def spread(values, known, rounds):
     return values
 
 
-def few_colours(pixels, count):
-    """The `count` colours a set of pixels is most made of (boxes of colour split at their middles, widest first)."""
-    boxes = [pixels]
-    while len(boxes) < count:
-        widest = max(range(len(boxes)), key=lambda i: (boxes[i].max(axis=0) - boxes[i].min(axis=0)).max() * math.log(len(boxes[i]) + 1.0) if len(boxes[i]) > 1 else -1.0)
-        box = boxes.pop(widest)
-        channel = int((box.max(axis=0) - box.min(axis=0)).argmax())
-        middle = np.median(box[:, channel])
-        low, high = box[box[:, channel] <= middle], box[box[:, channel] > middle]
-        if not len(low) or not len(high):
-            boxes.append(box)
-            break
-        boxes += [low, high]
-    return np.array([box.mean(axis=0) for box in boxes], dtype=np.float32)
-
-
 def pack(sizes):
     """Shelves: [(w, h)] to ([(x, y)], sheet width, sheet height). The width is picked to leave the sheet near square."""
     area = sum((w + GUTTER) * (h + GUTTER) for w, h in sizes)
@@ -295,7 +284,19 @@ def main():
     ink_m = float(flag("--ink-cm", str(100.0 / ppm) if look == "pixel" else "0" if look == "joe" else "1.4")) / 100.0
     colours = int(flag("--colours", "32" if look == "pixel" else "0"))
     source = flag("--source", os.path.join(run, "profiles", profile + "-walk.glb"))
-    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor" if look == "comic" else "impostor-" + look)))))
+    # Pixel art: the head finer than the body, and a face drawn on purpose from the character's recipe.
+    head_px = float(flag("--head-px", "2" if look == "pixel" else "1"))
+    face = flag("--face", "auto" if look == "pixel" else "none")
+    if face == "auto":
+        recipe = pixel_face.recipe_for(run)
+    elif face == "none":
+        recipe = None
+    else:
+        with open(face) as f:
+            recipe = json.load(f)
+    finer = {"head": head_px} if head_px != 1.0 else {}
+    plain = "impostor" if look == "comic" else "impostor-" + look
+    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", plain + "-faces" if look == "pixel" and (finer or recipe) else plain)))))
     os.makedirs(out, exist_ok=True)
     began = time.time()
 
@@ -327,15 +328,32 @@ def main():
         reach = float(np.linalg.norm(points, axis=1).max()) + ink_m
         lo, hi = points.min(axis=0), points.max(axis=0)
         made[name] = objects
-        parts.append({"name": name, "bone": bones[0], "bones": bones, "center": [round(float(c), 4) for c in (lo + hi) / 2.0],
+        parts.append({"name": name, "bone": bones[0], "bones": bones, **({"px_per_m": ppm * finer[name]} if name in finer else {}), "center": [round(float(c), 4) for c in (lo + hi) / 2.0],
                       "depth_m": round(reach + 0.01, 4), "reach_m": round(reach, 4),
                       "triangles": sum(len(p.vertices) - 2 for o in objects for p in o.data.polygons), "own_triangles": own[name]})
     for obj in list(scene.objects):
         if obj.type in ("MESH", "ARMATURE", "EMPTY") and not obj.name.startswith("part: "):
             bpy.data.objects.remove(obj)
 
+    # The face: each of the recipe's marks found on the head's own surface, from straight in front.
+    marks = []
+    if recipe and "head" in made:
+        points, faces = [], []
+        for obj in made["head"]:
+            first = len(points)
+            points += [v.co.copy() for v in obj.data.vertices]
+            faces += [[first + i for i in poly.vertices] for poly in obj.data.polygons]
+        tree = BVHTree.FromPolygons(points, faces)
+
+        def front_at(x, y):
+            hit = tree.ray_cast(Vector((x, y, 2.0)), Vector((0.0, 0.0, -1.0)))
+            return None if hit[0] is None else hit[0].z
+
+        marks = pixel_face.place(recipe, front_at)
+        print("IMPOSTOR face: %d of the recipe's %d marks found on the head" % (len(marks), len(recipe.get("marks", []))), flush=True)
+
     # One square each, in rows: where every part's bone head sits in the render.
-    half = {p["name"]: int(math.ceil(p["reach_m"] * ppm)) + 3 for p in parts}
+    half = {p["name"]: int(math.ceil((p["reach_m"] * ppm + 3) * finer.get(p["name"], 1.0))) for p in parts}
     spots, x, y, shelf = {}, 0, 0, 0
     for p in sorted(parts, key=lambda p: -half[p["name"]]):
         side = 2 * half[p["name"]]
@@ -376,6 +394,7 @@ def main():
     for set_name in sets:
         views = impostor.views_of(set_name)
         pictures = []  # (part, view, colour, data)
+        heads = []     # the head's pictures, kept as they stand to have the face drawn on: (view, colour, height, where the head is, where the bone's head is)
         for vi, view in enumerate(views):
             d, r, u = Vector(view["d"]), Vector(view["r"]), Vector(view["u"])
             cam.matrix_world = Matrix(((r.x, u.x, d.x, d.x * EYE_AWAY), (r.y, u.y, d.y, d.y * EYE_AWAY), (r.z, u.z, d.z, d.z * EYE_AWAY), (0, 0, 0, 1)))
@@ -383,7 +402,7 @@ def main():
                 sx, sy = spots[p["name"]]
                 at = r * ((sx - wide / 2.0) / ppm) + u * ((sy - tall / 2.0) / ppm)
                 for obj in made[p["name"]]:
-                    obj.matrix_world = Matrix.Translation(at)
+                    obj.matrix_world = Matrix.Translation(at) @ Matrix.Diagonal((finer.get(p["name"], 1.0),) * 3 + (1.0,))  # a finer part is pictured larger
             # colour and line
             for obj in part_objects:
                 for i, mat in enumerate(painted[obj.name]):
@@ -414,14 +433,21 @@ def main():
             for p in parts:
                 sx, sy = spots[p["name"]]
                 hs = half[p["name"]]
+                fine = finer.get(p["name"], 1.0)
                 col = colour[sy - hs:sy + hs, sx - hs:sx + hs].copy()
                 dat = data[sy - hs:sy + hs, sx - hs:sx + hs]
+                if fine != 1.0:  # pictured larger, so everything stood further forward too
+                    dat = dat.copy()
+                    dat[..., 2] = (dat[..., 2] - 0.5) / fine + 0.5
                 # The outline is the unsmoothed one: a pixel is the part or it is not. A soft edge would lose the
                 # thin ink line when the card is drawn (it is kept where the cover is over a half). The colour
                 # under it is the smoothed render's, carried a pixel outward where that one had not reached.
                 there = dat[..., 3] > 0.5
                 if look == "pixel":
-                    ring = ~there & (np.roll(there, 1, 0) | np.roll(there, -1, 0) | np.roll(there, 1, 1) | np.roll(there, -1, 1))
+                    grown = there
+                    for _ in range(max(1, int(round(fine)))):  # the line is as wide on a finer part as on the rest
+                        grown = grown | np.roll(grown, 1, 0) | np.roll(grown, -1, 0) | np.roll(grown, 1, 1) | np.roll(grown, -1, 1)
+                    ring = grown & ~there
                     dat = dat.copy()
                     dat[ring] = (0.0, 0.0, 0.0, 1.0)  # marked as line, as the shell's pixels are: it takes its depth from the surface beside it
                     col[..., :3] = np.where(ring[..., None], (0.11, 0.09, 0.13), col[..., :3])
@@ -462,18 +488,34 @@ def main():
                     inked |= np.roll(inked, 1, axis=0) & known  # two pixels wide: about a centimetre
                     col[..., :3] = np.where(inked[..., None], (0.07, 0.055, 0.086), col[..., :3])
                 metres = (np.round(packed[..., 2][known] * 255.0) / 255.0 * 2.0 - 1.0) * p["depth_m"]
+                if marks and p["name"] == "head":
+                    heads.append((vi, col[y0:y1, x0:x1], (dat[..., 2] * 2.0 - 1.0)[y0:y1, x0:x1], (known & ~line)[y0:y1, x0:x1], (hs - x0, hs - y0)))
                 pictures.append((p, vi, col[y0:y1, x0:x1], packed[y0:y1, x0:x1], (hs - x0, hs - y0), (float(metres.min()), float(metres.max()))))
             if vi % 8 == 0:
                 print("IMPOSTOR views %s: %d of %d pictured" % (set_name, vi + 1, len(views)), flush=True)
-        palette = None
+        palette, keep = None, []
+        if heads:
+            # The face, drawn into every picture of the head. What a wash finds is found once, from the front.
+            head_ppm = ppm * finer.get("head", 1.0)
+            least = max(1, int(round(1.5 * finer.get("head", 1.0))))
+            vi, col, height, there, anchor = max(heads, key=lambda h: views[h[0]]["d"][2])
+            found = pixel_face.find_colours(marks, col, height, there, views[vi], head_ppm, anchor)
+            drawn = {}
+            for vi, col, height, there, anchor in heads:
+                for name, count in pixel_face.draw(col, height, there, views[vi], head_ppm, anchor, marks, recipe.get("colours", {}), found, least).items():
+                    drawn[name] = drawn.get(name, 0) + (1 if count else 0)
+            keep = pixel_face.kept_colours(marks, recipe.get("colours", {}), found)
+            card["face"] = {"least_px": least, "marks": pixel_face.for_page(marks, recipe.get("colours", {}), found), "pictures_with": drawn}
+            print("IMPOSTOR face: drawn in %s" % ", ".join("%s %d" % (k, v) for k, v in drawn.items()), flush=True)
         if colours:
             # Pixel art keeps to a few colours: the ones this character is most made of. Every pixel takes the nearest.
             seen = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None])
-            palette = few_colours(seen[:: max(1, len(seen) // 200000)], colours)
+            palette = pixel_face.few_colours(seen[:: max(1, len(seen) // 200000)], colours, keep)
+            drawn_as = pixel_face.folded(palette, (recipe or {}).get("same"))  # colours the recipe says are one thing
             for pic in pictures:
                 if pic[2] is not None:
-                    flat = pic[2][..., :3].reshape(-1, 3)
-                    pic[2][..., :3] = palette[((flat[:, None, :] - palette[None]) ** 2).sum(axis=-1).argmin(axis=1)].reshape(pic[2].shape[0], pic[2].shape[1], 3)
+                    pic[2][..., :3] = pixel_face.snap(pic[2][..., :3], palette, drawn_as)
+            palette = np.unique(np.round(drawn_as * 255.0), axis=0).astype(np.float32) / 255.0
             card["palette"] = [[int(round(c * 255)) for c in colour] for colour in palette]
         sizes = [(pic[2].shape[1], pic[2].shape[0]) if pic[2] is not None else (1, 1) for pic in pictures]
         where, sheet_w, sheet_h, used = pack(sizes)

@@ -17,6 +17,9 @@ const turned = (m, v) => [m[0] * v[0] + m[4] * v[1] + m[8] * v[2], m[1] * v[0] +
 const turnedBack = (m, v) => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[4] * v[0] + m[5] * v[1] + m[6] * v[2], m[8] * v[0] + m[9] * v[1] + m[10] * v[2]];
 const angle = (a, b) => (Math.acos(Math.max(-1, Math.min(1, dot(a, b)))) * 180) / Math.PI;
 
+// How fine a part's pictures are, pixels a metre: its own when it was pictured finer than the rest (a head).
+export const density = (card, part) => part.px_per_m || card.px_per_m;
+
 // The direction from the middle of a part to the eye, in the bone's frame.
 export function eyeInBone(bone, center, eye) {
   const middle = add([bone[12], bone[13], bone[14]], turned(bone, center));

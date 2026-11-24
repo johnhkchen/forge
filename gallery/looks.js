@@ -32,12 +32,13 @@ export function modelsOf(run) {
   return [...seen.values()].sort((a, b) => Number(b.own) - Number(a.own));
 }
 
-// Which of a run's baked card sets a look reads, for one model: the look's own ("...-impostor-pixel"), or the
-// plain one if that was never baked.
+// Which of a run's baked card sets a look reads, for one model: the look's own ("...-impostor-pixel"; for pixel
+// art the one with a finer head and a drawn face, "...-impostor-pixel-faces", when there is one), or the plain
+// one if that was never baked.
 export function bakedFor(run, look, model) {
   const mine = run.cards.filter((c) => c.profile === (model || modelsOf(run)[0].id));
   const plain = mine.find((c) => c.folder.endsWith("-impostor")) || mine[0];
-  return (look.sheet && mine.find((c) => c.folder.endsWith(`-impostor-${look.sheet}`))) || plain;
+  return (look.sheet && (mine.find((c) => c.folder.endsWith(`-impostor-${look.sheet}-faces`)) || mine.find((c) => c.folder.endsWith(`-impostor-${look.sheet}`)))) || plain;
 }
 
 const FULL_VERTEX = `

@@ -1,0 +1,18 @@
+{
+ "about": "The pirate: one eye under a thick brow, a black patch over the other, a set mouth in the beard. The hat, the bandana and the beard are his texture's own.",
+ "half_wide": 0.095,
+ "middle": 0.0,
+ "colours": {
+  "ink": [28, 23, 33],
+  "hair": [70, 48, 34],
+  "patch": [34, 30, 40],
+  "mouth": [52, 34, 28]
+ },
+ "marks": [
+  {"name": "socket", "kind": "wash", "x": [-0.078, -0.012], "y": [0.032, 0.072], "colour": "found"},
+  {"name": "brow_r", "kind": "block", "at": [-0.043, 0.063], "size": [0.036, 0.012], "colour": "hair"},
+  {"name": "eye_r", "kind": "block", "at": [-0.042, 0.045], "size": [0.016, 0.016], "colour": "ink"},
+  {"name": "patch", "kind": "disc", "at": [0.059, 0.056], "size": [0.066, 0.066], "colour": "patch"},
+  {"name": "mouth", "kind": "block", "at": [0.0, -0.058], "size": [0.034, 0.012], "colour": "mouth"}
+ ]
+}
