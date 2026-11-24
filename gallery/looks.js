@@ -13,6 +13,17 @@
 // A look is: which baked sheet the cards read, numbers for the paint (tones, colour, rim), whether the meshes
 // keep their ink shell (bold ink draws every line on the finished picture instead, for cards and meshes alike),
 // and what is done to the finished picture (Screen, below).
+//
+// The line round a figure drawn as cards. A sheet pictures every part with its own ink line all the way round,
+// and marks which pixels are line (bake_impostor.py). Shown as they are, a line would cross the figure at every
+// joint, where one part's edge lies on the next part. So a look does one of two things with them (cardLine):
+//   - a look drawn straight to the screen (comic; pixels, baked) keeps the line as a shell a little behind the
+//     part's surface, the way a mesh's ink shell is: the part next door covers it where they meet, and it shows
+//     only where nothing of the figure is beside it;
+//   - a look that goes by way of a picture of its own (pixels on screen, bold ink) leaves the sheet's line out and
+//     draws the line once, on the finished picture: every card pixel says which figure and which part it is
+//     (cardNumber, in the picture's fourth channel), and a line goes just outside a figure, or inside it only
+//     where the surface really steps back.
 import * as THREE from "three";
 
 export const LOOKS = [
@@ -23,6 +34,17 @@ export const LOOKS = [
   { id: "joe", name: "Bold ink", sheet: "joe", shade: [[0.5, 0.46, 0.66], [0.5, 0.46, 0.66]], edges: [0.08, -2], punch: 1.45, rim: 0.35, hull: false, screen: { lines: { outer: 3.2, inner: 1.2 } } },
 ];
 export const lookOf = (id) => LOOKS.find((look) => look.id === id) || LOOKS[0];
+
+// What a card's shader is told about its sheet's ink line in a look: `line` is how far behind the surface the
+// line stands (m), under 0 to leave it out, 0 for a sheet that marks none; `ids` is whether each card pixel
+// writes its number for the lines drawn on the finished picture.
+export function cardLine(card, look) {
+  if (!card.line_marked) return { line: 0, ids: false };
+  const onScreen = Boolean(look.screen);
+  return { line: onScreen ? -1 : card.line_back_m || 0.03, ids: onScreen };
+}
+// A card pixel's number: 1 + 16 times which figure (they come round again after fifteen) + which of its parts.
+export const cardNumber = (figure, part) => (1 + 16 * (figure % 15) + (part % 16)) / 255;
 
 // The models a run's cards were pictured from: the rigged version itself first ("painted"), then any other model
 // given its skeleton (the detailed mesh). Each has a name for the page.
@@ -35,10 +57,13 @@ export function modelsOf(run) {
 // Which of a run's baked card sets a look reads, for one model: the look's own ("...-impostor-pixel"; for pixel
 // art the one with a finer head and a drawn face, "...-impostor-pixel-faces", when there is one), or the plain
 // one if that was never baked.
+// Sheets baked since the joints were mended are in "...-impostor-<look>-joined" (the comic one too) and are
+// read first; the older ones stay where they were for pages older than this.
 export function bakedFor(run, look, model) {
   const mine = run.cards.filter((c) => c.profile === (model || modelsOf(run)[0].id));
-  const plain = mine.find((c) => c.folder.endsWith("-impostor")) || mine[0];
-  return (look.sheet && (mine.find((c) => c.folder.endsWith(`-impostor-${look.sheet}-faces`)) || mine.find((c) => c.folder.endsWith(`-impostor-${look.sheet}`)))) || plain;
+  const ends = (tail) => mine.find((c) => c.folder.endsWith(tail));
+  const plain = ends("-impostor-comic-joined") || ends("-impostor") || mine[0];
+  return (look.sheet && (ends(`-impostor-${look.sheet}-joined`) || ends(`-impostor-${look.sheet}-faces`) || ends(`-impostor-${look.sheet}`))) || plain;
 }
 
 const FULL_VERTEX = `
@@ -48,9 +73,11 @@ void main() {
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 // The finished picture, put on the screen. Blown up from a small one, each pixel read whole (and its colours
-// cut to a few steps); or at full size with ink lines added from the depth of every pixel: a thick line just
-// outside anything that stands well in front of what is behind it, a thin one where one thing passes just in
-// front of another, and a thin one where the surface folds.
+// cut to a few steps), with a line one of its pixels wide round every figure drawn as cards; or at full size
+// with ink lines added from the depth of every pixel: a thick line just outside anything that stands well in
+// front of what is behind it, a thin one where one thing passes just in front of another, and a thin one where
+// the surface folds. A card pixel's number (cardNumber) is in the picture's fourth channel; anything else has
+// 255 there. scripts/impostor/impostor.py has the same two sets of lines in Python (grid_line, bold_lines).
 const FULL_FRAGMENT = `
 uniform sampler2D picture;
 uniform sampler2D depths;
@@ -61,16 +88,47 @@ uniform float levels;    // colour steps a channel; 0 leaves colours alone
 uniform float outer;     // the outside line's width in pixels; 0 draws no lines
 uniform float inner;
 uniform vec3 ink;
+uniform float grid;      // over 0: a line one pixel wide round every figure drawn as cards
+uniform vec3 gridInk;
+uniform float pixelM;    // how big one pixel of the picture is, a metre away
+uniform float breakM;    // within one figure the grid's line needs the surface to step back by more than this
+uniform float seamM;     // bold ink's thin lines leave a step under this alone where two cards of one figure meet
 varying vec2 vUv;
 float away(vec2 uv) {
   float z = texture2D(depths, uv).x * 2.0 - 1.0;
   return 2.0 * near * far / (far + near - z * (far - near));
 }
+float card(vec2 uv) {    // which card a pixel shows: 1 + 16 * figure + part, or 0 for anything that is not a card
+  float a = floor(texture2D(picture, uv).a * 255.0 + 0.5);
+  return a > 240.5 ? 0.0 : a;
+}
+float figureOf(float c) {
+  return floor((c - 1.0) / 16.0);
+}
 void main() {
   vec4 colour = texture2D(picture, vUv);
   if (levels > 0.0) colour.rgb = pow(floor(pow(colour.rgb, vec3(1.0 / 2.2)) * levels + 0.5) / levels, vec3(2.2)); // cut as the eye sees them
+  if (grid > 0.0) {
+    // just outside a card: this pixel is not that figure and is the further of the two. Or inside one figure,
+    // where the surface steps back by more than a slope would make it: an arm in front of a chest.
+    float here = away(vUv), me = card(vUv), line = 0.0;
+    for (int i = 0; i < 4; i++) {
+      vec2 step_ = (i == 0 ? vec2(1.0, 0.0) : i == 1 ? vec2(-1.0, 0.0) : i == 2 ? vec2(0.0, 1.0) : vec2(0.0, -1.0)) * pixel;
+      float it = card(vUv + step_);
+      if (it < 0.5) continue;
+      float there = away(vUv + step_), drop = here - there;
+      if (me < 0.5 || figureOf(me) != figureOf(it)) {
+        if (drop > 0.0) line = 1.0;
+        continue;
+      }
+      float past = card(vUv - step_);
+      float slope = past > 0.5 && figureOf(past) == figureOf(me) ? abs(away(vUv - step_) - here) : 0.0;
+      if (drop > max(breakM, 1.5 * pixelM * there) && drop > 2.5 * slope) line = 1.0;
+    }
+    colour.rgb = mix(colour.rgb, gridInk, line);
+  }
   if (outer > 0.0) {
-    float here = away(vUv);
+    float here = away(vUv), me = card(vUv);
     float line = 0.0;
     float wide[8];
     float close[8];
@@ -86,16 +144,27 @@ void main() {
       if (drop > 0.3 + 0.03 * wide[i] && drop > 2.5 * slope) line = 1.0;       // something stands well in front, close by: the outside line
       drop = here - close[i];
       slope = abs(close[(i + 4) % 8] - here);
-      if (drop > 0.04 + 0.004 * close[i] && drop > 2.5 * slope) line = 1.0;    // one part passing in front of another
+      if (drop > 0.04 + 0.004 * close[i] && drop > 2.5 * slope) {              // one part passing in front of another
+        float it = card(vUv + vec2(cos(float(i) * 0.7853982), sin(float(i) * 0.7853982)) * pixel * inner);
+        // ... unless it is two cards of one figure meeting at a joint, a little out of step
+        if (!(me > 0.5 && it > 0.5 && it != me && figureOf(it) == figureOf(me) && drop < seamM)) line = 1.0;
+      }
     }
     // a fold: the depth bends here (flat ground does not bend, whatever its slope)
     float raw = texture2D(depths, vUv).x;
     float bend = abs(texture2D(depths, vUv + vec2(pixel.x * inner, 0.0)).x + texture2D(depths, vUv - vec2(pixel.x * inner, 0.0)).x - 2.0 * raw)
                + abs(texture2D(depths, vUv + vec2(0.0, pixel.y * inner)).x + texture2D(depths, vUv - vec2(0.0, pixel.y * inner)).x - 2.0 * raw);
-    if (here < 40.0 && bend * here * here * (far - near) / (near * far) > 0.02 + 0.004 * here) line = 1.0; // far off, the depth is too coarse to tell
+    if (here < 40.0 && bend * here * here * (far - near) / (near * far) > 0.02 + 0.004 * here) { // far off, the depth is too coarse to tell
+      bool joint = false; // where two cards of one figure meet the depth bends too, and that is not a fold
+      for (int i = 0; i < 4; i++) {
+        float it = card(vUv + (i == 0 ? vec2(pixel.x, 0.0) : i == 1 ? vec2(-pixel.x, 0.0) : i == 2 ? vec2(0.0, pixel.y) : vec2(0.0, -pixel.y)) * inner);
+        if (me > 0.5 && it > 0.5 && it != me && figureOf(it) == figureOf(me)) joint = true;
+      }
+      if (!joint) line = 1.0;
+    }
     colour.rgb = mix(colour.rgb, ink, line);
   }
-  gl_FragColor = colour;
+  gl_FragColor = vec4(colour.rgb, 1.0);
   #include <colorspace_fragment>
 }`;
 
@@ -108,7 +177,8 @@ export class Screen {
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
       vertexShader: FULL_VERTEX, fragmentShader: FULL_FRAGMENT, depthTest: false, depthWrite: false,
       uniforms: { picture: { value: null }, depths: { value: null }, pixel: { value: new THREE.Vector2() }, near: { value: 0.1 }, far: { value: 100 },
-        levels: { value: 0 }, outer: { value: 0 }, inner: { value: 0 }, ink: { value: new THREE.Color(0x120e16) } } }));
+        levels: { value: 0 }, outer: { value: 0 }, inner: { value: 0 }, ink: { value: new THREE.Color(0x120e16) },
+        grid: { value: 0 }, gridInk: { value: new THREE.Color(0x1c1721) }, pixelM: { value: 0 }, breakM: { value: 0.05 }, seamM: { value: 0.09 } } }));
     this.quad.frustumCulled = false;
     this.flat = new THREE.Scene();
     this.flat.add(this.quad);
@@ -165,6 +235,8 @@ export class Screen {
     u.levels.value = screen.levels || 0;
     u.outer.value = screen.lines ? screen.lines.outer * ratio : 0;
     u.inner.value = screen.lines ? screen.lines.inner * ratio : 0;
+    u.grid.value = screen.rows ? 1 : 0;
+    u.pixelM.value = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov || 30) / 2)) / Math.max(1, Math.round(halves[0].h * tall));
     renderer.render(this.flat, this.eye);
   }
 

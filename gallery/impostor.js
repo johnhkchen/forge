@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
 
@@ -31,8 +31,16 @@ void main() {
 // One card. The colour sheet holds flat colour and the ink line; the data sheet holds the facing (two numbers,
 // unfolded here) and the depth (0: nothing there). A pixel of the card looks down a line through the picture
 // (impostor-math.js: place) and shows the first place where the picture's surface is as high as the line: a
-// search in short steps, then halved in on. Mixing two views is done by a fixed pattern of pixels, each pixel
-// one view or the other, so every pixel still has one true depth.
+// search in short steps, then halved in on. A place found far under the surface is the side of something the
+// picture never saw the back of (the rim of a sleeve, the edge of the part): the search goes on from there, under
+// it, to the next place the line comes down onto the surface, and only gives up when there is none. Mixing two
+// views is done by a fixed pattern of pixels, each pixel one view or the other, so every pixel still has one
+// true depth.
+//
+// The ink line round the part is marked in the data sheet (both of the facing's numbers are 0) and painted here.
+// `line` says what becomes of it (looks.js: cardLine): over 0, it stands that many metres behind the surface, so
+// the part next door covers it where two parts meet; under 0, it is left out, because the look draws one line
+// round the whole figure on the finished picture, and `who` is then this card's number for that (cardNumber).
 export const CARD_FRAGMENT = `
 uniform mat4 projectionMatrix;
 uniform sampler2D colourMap;
@@ -58,6 +66,9 @@ uniform vec3 shadeDark;
 uniform vec2 edges;
 uniform float punch;
 uniform float rim;
+uniform float line;
+uniform float who;
+uniform vec3 lineInk;
 varying vec2 vSheet;
 varying vec3 vView;
 float pattern(vec2 at) {
@@ -93,39 +104,50 @@ void main() {
   if (steps > 0) {
     float top = heights.y + 0.002, bottom = heights.x - 0.002;
     float above = top, below = bottom;
-    bool found = false;
+    bool found = false, was = false;
     for (int i = 1; i <= 32; i++) {
       if (i > steps || found) break;
       float at = top + (bottom - top) * float(i) / float(steps);
-      if (readAt(inPicture(vSheet - at * lean), height, data) && height >= at) { below = at; found = true; } else above = at;
+      bool under = readAt(inPicture(vSheet - at * lean), height, data) && height >= at;
+      if (under && !was) { // the line has just gone under the surface: halve in on where
+        float a = above, b = at;
+        for (int k = 0; k < 5; k++) {
+          float mid = (a + b) * 0.5;
+          if (readAt(inPicture(vSheet - mid * lean), height, data) && height >= mid) b = mid; else a = mid;
+        }
+        // the surface itself, or the side of something? Under a side the search goes on
+        if (readAt(inPicture(vSheet - b * lean), height, data) && height - b < wallM + (top - bottom) / float(steps) / 32.0) { below = b; found = true; }
+      }
+      if (!under) above = at;
+      was = under;
     }
     if (!found) discard;
-    for (int k = 0; k < 5; k++) {
-      float mid = (above + below) * 0.5;
-      if (readAt(inPicture(vSheet - mid * lean), height, data) && height >= mid) below = mid; else above = mid;
-    }
     xy = inPicture(vSheet - below * lean);
-    ok = readAt(xy, height, data) && height - below < wallM + (top - bottom) / float(steps) / 32.0;
+    ok = readAt(xy, height, data);
   } else {
     xy = inPicture(vSheet);
     ok = readAt(xy, height, data);
   }
   if (!ok) discard;
+  bool inked = line != 0.0 && data.x + data.y < 0.5 / 255.0;
+  if (inked && line < 0.0) discard;
   vec4 colour = textureLod(colourMap, (cell.xy + xy * pxPerM + anchor) / sheetSize, 0.0);
   if (colour.a < 0.5) discard;
   if (mix_ == 1 && pattern(gl_FragCoord.xy) >= share) discard;
   if (mix_ == 2 && pattern(gl_FragCoord.xy) < share) discard;
-  vec3 seen = facingToEye * unfold(data.xy);
+  vec3 seen = inked ? vec3(0.0, 0.0, 1.0) : facingToEye * unfold(data.xy);
   float facing = dot(seen, light);
   vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
-  float out_ = (xy.x * deep.x + xy.y * deep.y + height * deep.z) * size;
+  float out_ = (xy.x * deep.x + xy.y * deep.y + (height - (inked ? line : 0.0)) * deep.z) * size;
   vec3 point = vView + normalize(-vView) * out_;
   vec4 clip = projectionMatrix * vec4(point, 1.0);
   gl_FragDepth = clip.z / clip.w * 0.5 + 0.5;
   vec3 paint = mix(vec3(dot(colour.rgb, vec3(0.2126, 0.7152, 0.0722))), colour.rgb, punch);
-  gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), 1.0);
+  gl_FragColor = vec4(inked ? lineInk : paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), who);
   #include <colorspace_fragment>
 }`;
+// What every card's shader needs about the sheet's ink line, to go in with a material's other uniforms.
+export const lineUniforms = () => ({ line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) } });
 
 // The real model the comic way (toon.py's paint, near enough): the texture read small and soft, its light-to-dark
 // snapped to a few steps, then one of three flat tones by how far the surface faces a light fixed to the eye.
@@ -292,7 +314,7 @@ class CardViewer {
             sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: density(card, part) }, cell: { value: new THREE.Vector4() },
             anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() }, back: { value: new THREE.Vector4() },
             lean: { value: new THREE.Vector2() }, deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m }, steps: { value: 0 },
-            depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.paint,
+            depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ...this.paint,
           },
         });
         const quad = new THREE.Mesh(shape, paint);
@@ -307,6 +329,16 @@ class CardViewer {
       this.edges.add(outline);
       return { ...part, quads };
     });
+    this.setLine();
+  }
+
+  // Tell every card what this look does with the sheet's ink line.
+  setLine() {
+    const told = cardLine(this.card, this.look);
+    (this.parts || []).forEach((part, p) => part.quads.forEach((quad) => {
+      quad.material.uniforms.line.value = told.line;
+      quad.material.uniforms.who.value = told.ids ? cardNumber(0, p) : 1;
+    }));
   }
 
   // Bring a clip on: its .glb holds the same toon and skeleton, so the cards ride whichever is playing.
@@ -451,6 +483,7 @@ class CardViewer {
       await this.useViews(this.card.sets[this.state.views] ? this.state.views : this.card.default_views);
     }
     setPaint(this.paint, this.look);
+    this.setLine();
     this.onFacts?.();
   }
 

@@ -40,9 +40,11 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
-// The folder of a run's baked cards that has a drawn face, for one model ("detailed"), or null.
+// The folder of a run's baked cards that may have a drawn face, for one model ("detailed"), or null: the pixel
+// sheet baked since the joints were mended, or the older one that was kept apart for having a face.
 export function faceFolderOf(run, model) {
-  const found = (run?.cards || []).find((c) => c.profile === model && c.folder.endsWith("-faces")) || (run?.cards || []).find((c) => c.folder.endsWith("-faces"));
+  const cards = run?.cards || [];
+  const found = cards.find((c) => c.profile === model && c.folder.endsWith("-impostor-pixel-joined")) || cards.find((c) => c.profile === model && c.folder.endsWith("-faces")) || cards.find((c) => c.folder.endsWith("-faces"));
   return found ? found.folder : null;
 }
 

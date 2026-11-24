@@ -24,8 +24,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture } from "./impostor.js";
-import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms } from "./impostor.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
 
 // name: where its poses come from.
 //   glb      a file in the run's folder ("profiles/...") or anywhere the gallery serves ("shots/...")
@@ -400,6 +400,8 @@ uniform float fine[20];
 uniform float marchPx;
 uniform float marchMax;
 uniform float farAway;
+uniform float ids;
+flat out float who;
 flat out vec4 cell;
 flat out vec2 anchor;
 flat out vec2 heights;
@@ -416,6 +418,8 @@ varying vec3 vView;
 void main() {
   if (putAway()) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   int part = gl_InstanceID % partCount;
+  // this card's number, for a look that draws its line on the finished picture (looks.js: cardNumber)
+  who = ids > 0.5 ? (1.0 + float((gl_InstanceID / partCount) % 15) * 16.0 + float(part % 16)) / 255.0 : 1.0;
   pxPerM = fine[part];
   mat4 bone = feet() * fromTable(partBone[part] * 12, runner.w);
   mat3 turn = mat3(bone);
@@ -467,7 +471,7 @@ void main() {
   gl_Position = projectionMatrix * vec4(vView, 1.0);
 }`;
 // The cards page's own pixel shader, told that what was one card's settings now comes with each card.
-const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye"]
+const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who"]
   .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT);
 
 // Every runner's meshes in one draw a piece: each point is moved by its bones' rows of the table.
@@ -804,7 +808,7 @@ class Field {
           colourMap: { value: sheet.colour }, dataMap: { value: sheet.data }, facingToEye: { value: new THREE.Matrix3() }, sheetSize: { value: new THREE.Vector2(...sheet.size) },
           pxPerM: { value: density(card, part) }, cell: { value: new THREE.Vector4() }, anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() },
           back: { value: new THREE.Vector4() }, lean: { value: new THREE.Vector2() }, deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m },
-          steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.shade } }));
+          steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ...this.shade } }));
         quad.frustumCulled = false;
         quad.matrixAutoUpdate = false;
         group.add(quad);
@@ -815,6 +819,7 @@ class Field {
       layer.place = () => {
         const eye = this.camera.position.toArray();
         const own = this.sharing() ? null : this.ownRunners();
+        const told = cardLine(card, this.look); // what this look does with the sheet's ink line
         for (let i = 0; i < n; i++) {
           const at = this.row(i) * this.table.wide * 4;
           if (!own) root.makeRotationY(game.heading[i]).setPosition(game.x[i], 0, game.z[i]);
@@ -837,6 +842,8 @@ class Field {
             u.lean.value.set(...where.lean);
             u.deep.value.set(...where.deep);
             u.steps.value = marchSteps(where, cell, density(card, part), card.march);
+            u.line.value = told.line;
+            u.who.value = told.ids ? cardNumber(i, p) : 1;
             u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, world));
           });
         }
@@ -906,13 +913,16 @@ class Field {
       depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
       fine: { value: pad(parts.map((part) => density(card, part)), () => 0) },
       sheetSize: { value: new THREE.Vector2(...sheet.size) }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
-      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 } } });
+      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ids: { value: 0 } } });
     const mesh = new THREE.Mesh(shape, paint);
     mesh.frustumCulled = false;
     group.add(mesh);
     return {
       place: () => {
         const from = this.boneSource();
+        const told = cardLine(card, this.look); // what this look does with the sheet's ink line
+        paint.uniforms.line.value = told.line;
+        paint.uniforms.ids.value = told.ids ? 1 : 0;
         paint.uniforms.poseTex.value = from.tex;
         for (let i = 0; i < n; i++) for (let p = 0; p < parts.length; p++) from.runner(i, spots.array, (i * parts.length + p) * 4);
         spots.needsUpdate = true;

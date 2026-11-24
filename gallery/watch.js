@@ -9,8 +9,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture } from "./impostor.js";
-import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms } from "./impostor.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
 
 const WATCH_LOOKS = ["pixel-both", "pixel-screen", "comic", "joe"];
@@ -210,12 +210,14 @@ class TakeViewer {
     this.look = lookOf(id);
     this.state.look = this.look.id;
     setPaint(this.paint, this.look);
-    for (const actor of this.cast) {
+    for (const [who, actor] of this.cast.entries()) {
       if (!actor.run?.cards?.length) continue;
       const models = modelsOf(actor.run);
       const model = (models.find((m) => m.id === "detailed") || models[0]).id; // the detailed model's cards when there are some
       const folder = `runs/${encodeURIComponent(actor.run.id)}/${bakedFor(actor.run, this.look, model).folder}`;
-      if (folder === actor.folder) continue;
+      // what this look does with the sheet's ink line: a shell behind the surface, or one line on the finished picture
+      const line = () => { const told = cardLine(actor.card, this.look); actor.quads.forEach((quad, p) => { quad.material.uniforms.line.value = told.line; quad.material.uniforms.who.value = told.ids ? cardNumber(who, p) : 1; }); };
+      if (folder === actor.folder) { line(); continue; }
       actor.folder = folder;
       const card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
       const sheet = card.sets[card.default_views];
@@ -232,12 +234,13 @@ class TakeViewer {
         const quad = new THREE.Mesh(shape, new THREE.ShaderMaterial({ vertexShader: CARD_VERTEX, fragmentShader: CARD_FRAGMENT, side: THREE.DoubleSide, uniforms: {
           colourMap: { value: colour }, dataMap: { value: data }, facingToEye: { value: new THREE.Matrix3() }, sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: density(card, part) },
           cell: { value: new THREE.Vector4() }, anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() }, back: { value: new THREE.Vector4() }, lean: { value: new THREE.Vector2() },
-          deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m }, steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.paint } }));
+          deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m }, steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ...this.paint } }));
         quad.frustumCulled = false;
         quad.matrixAutoUpdate = false;
         actor.cards.add(quad);
         return quad;
       });
+      line();
     }
   }
 
