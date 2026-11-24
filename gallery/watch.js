@@ -11,6 +11,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
 import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
+import { faceFolderOf, faceMarks } from "./face-marks.js";
 
 const WATCH_LOOKS = ["pixel-both", "pixel-screen", "comic", "joe"];
 const LIGHT = [-0.55, 0.5, 0.67];
@@ -189,6 +190,12 @@ class TakeViewer {
     // which way the face looks, as the head bone has it: the figure rests facing +z
     holder.updateMatrixWorld(true);
     actor.front = actor.bones.head ? new THREE.Vector3(0, 0, 1).applyQuaternion(holder.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(actor.bones.head.getWorldQuaternion(new THREE.Quaternion()).invert()) : new THREE.Vector3(0, 0, 1);
+    // A drawn face for the mesh when it is shown as pixel art: the marks the cards' bake kept, dropped onto this mesh's head.
+    const faces = faceFolderOf(actor.run, "detailed");
+    if (faces && actor.bones.head && actor.meshes.length) {
+      const baked = await fetch(`runs/${encodeURIComponent(actor.run.id)}/${faces}/impostor.json`).then((r) => r.json()).catch(() => null);
+      if (baked?.face?.marks?.length) actor.face = faceMarks(baked.face.marks, actor.bones.head, actor.meshes);
+    }
     actor.mixer = new THREE.AnimationMixer(gltf.scene);
     const clip = gltf.animations[0];
     if (clip) actor.mixer.clipAction(clip).play();
@@ -285,6 +292,7 @@ class TakeViewer {
       actor.cards.visible = cards;
       for (const mesh of actor.meshes) mesh.visible = !cards;
       for (const line of actor.lines) line.visible = !cards && this.look.hull !== false;
+      if (actor.face) actor.face.visible = !cards && Boolean(this.look.screen?.rows); // the drawn face is for a mesh drawn small
       if (cards) this.setCards(actor);
     }
     this.screen.render(this.scene, this.camera, this.look);
@@ -299,7 +307,7 @@ class TakeViewer {
 
   report() {
     return { ready: this.cast.length === this.take.roles.length && this.cast.every((c) => c.mixer), take: this.take.id, time: this.time, length: this.length, look: this.look.id, eye: this.state.eye || "free",
-      cards: this.state.cards, cast: this.cast.map((c) => ({ role: c.role.role, run: c.run?.id || null, cards: c.folder || null, quads: c.quads.length, meshes: c.meshes.length })), error: this.error || null };
+      cards: this.state.cards, cast: this.cast.map((c) => ({ role: c.role.role, run: c.run?.id || null, cards: c.folder || null, quads: c.quads.length, meshes: c.meshes.length, face: c.face ? { marks: c.face.geometry.index.count / 6, dropped: c.face.userData.dropped } : null })), error: this.error || null };
   }
 
   dispose() {

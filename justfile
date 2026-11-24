@@ -220,7 +220,7 @@ fight fight left right out="":
     done
     wait
 
-# A character as flat cards, one a bone: cut a rigged version (one with a walk) into rigid parts and picture each from all around, into <run>/profiles/<version>-impostor/. more: bake_impostor.py's flags (--views 26,62 --px 128; --look pixel or --look joe for the sheet of another look). The gallery then shows it at #/cards/<run>, and a field of them at #/tag/<run>. A few seconds a view set; never touches the open Blender
+# A character as flat cards, one a bone: cut a rigged version (one with a walk) into rigid parts and picture each from all around, into <run>/profiles/<version>-impostor/. more: bake_impostor.py's flags (--views 26,62 --px 128; --look pixel or --look joe for the sheet of another look; a pixel sheet of a model that has a face recipe in scripts/impostor/faces/ gets a finer head and a drawn face, into <version>-impostor-pixel-faces/). The gallery then shows it at #/cards/<run>, and a field of them at #/tag/<run>. A few seconds a view set; never touches the open Blender
 impostor run version="painted" *more:
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" "{{version}}" {{ if more == "" { "--views 26,62,114" } else { more } }} 2>&1 | grep -E '^IMPOSTOR|^RESULT \{"folder|Error|Traceback'
 
@@ -229,6 +229,10 @@ impostor-detailed run from="painted":
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/rig_detailed.py -- "{{run}}" --from "{{from}}" 2>&1 | grep -E '^RIG|^RESULT|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --look pixel --px 96 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
+
+# Stills of a take's faces on the watch page (pixel cards, and meshes drawn small), from the set's camera and close on each, and how many pixels each face gets, into out as <tag>-*.png and <tag>-faces.json (the gallery must be running on that port; needs Chrome)
+face-shots take="crew-candy-shop" tag="after" port="8028" out="evidence/faces" at="12":
+    python3 scripts/impostor/face_shots.py --base "http://localhost:{{port}}/" --take "{{take}}" --tag "{{tag}}" --out "{{out}}" --at "{{at}}" | grep -E '^FACES|Error|Traceback'
 
 # Judge a character's flat cards against the real model, with no browser: the same frames drawn both ways from the same eye, and how far apart they are (outline, colour, gaps at the joints, how often a picture is swapped). Writes judge.json, stills and films into out. clips: name=file.glb pairs; more: any of judge_impostor.py's flags
 impostor-judge run version="painted" out="evidence/impostor" *more:

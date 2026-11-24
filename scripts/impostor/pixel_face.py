@@ -13,7 +13,9 @@ the picture (the character's left), y up from the bone's head, z out of the face
 
 A recipe:
 
-    {"half_wide": 0.075,                   how far from the middle of the face to its side, metres
+    {"drawn_on": "detailed",               the model whose head the places were read off; the bake leaves the recipe
+                                           off any other model of the character, whose features sit elsewhere
+     "half_wide": 0.075,                   how far from the middle of the face to its side, metres
      "middle": 0.0,                        where the middle of the face is across (x)
      "colours": {"ink": [28, 23, 33],      names for colours (0 to 255, as the screen has them), or
                  "shade": {"like": "face", "times": [0.8, 0.7, 0.7]}},     ... a wash's found colour, darkened
@@ -35,10 +37,16 @@ A recipe:
 [{"colours": [[84, 74, 65]], "as": [84, 65, 49]}] folds a grey that a texture has in brown hair into the brown.
 It is used on the whole sheet, so name only colours that are nowhere else on the character.
 
+"mesh": false on a mark keeps it off the character's mesh (gallery/face-marks.js lays the other marks on a mesh
+shown as pixel art): a low-poly head that already models its eyes or its spectacles would get them twice.
+
 Marks are drawn in the order given, later ones over earlier ones. A mark keeps to its own place on the head,
-so it turns with it: seen from the side it is narrower, from behind it is not drawn, and behind the brim of a
-hat it is hidden (its pixels are only drawn where the picture's surface is within 8 cm of as far forward as the
-mark is: the far eye of a turned face is still drawn, on the flank of the nose that would hide it).
+so it turns with it: seen from the side it is narrower, and from behind it is not drawn. Its pixels are only
+drawn where the picture's surface is within the mark's "reach" of as far forward as the mark is, 8 cm unless the
+mark says: enough that the far eye of a turned face is still drawn, on the flank of the nose that would hide it,
+and that spectacles standing proud of the face do not hide the eyes behind them. It also means that something
+only 3 to 8 cm in front, seen from above, does not hide a mark: a hat's brim close over the eyes, a fringe. A
+character in a hat gives the marks under it "reach": 0.03, and they are hidden as they truly would be.
 """
 
 import json
@@ -51,11 +59,20 @@ FRONT, UP, RIGHT = np.array([0.0, 0.0, 1.0]), np.array([0.0, 1.0, 0.0]), np.arra
 LEAN = 0.8          # how much the face turns aside toward the cheek: a mark at the edge of the face looks 39 degrees off
 SEEN = 0.2          # a mark is drawn while it faces the eye by at least this (cosine)
 SQUARE_ON = 0.5     # ... and at its full least size while it faces it by this
-REACH_M = 0.08      # a mark's pixels are drawn where the surface is within this of the mark, toward or away. Measured on the
-                    # three dancers: seen from 45 degrees round, the nose stands 5 to 7 cm in front of the far eye and a
-                    # spectacle's own rim 3.5 cm in front of the near one, and those eyes are drawn, as anyone drawing a
-                    # turned face draws both; a hat's brim or a hand stands 20 cm or more in front, and hides them
+REACH_M = 0.08      # a mark's pixels are drawn where the surface is within this of the mark, toward or away, unless the mark
+                    # gives a "reach" of its own. Measured on the three dancers, every picture of each head: seen from 45
+                    # degrees round the nose stands 5 to 7 cm in front of the far eye, and Roosevelt's spectacles stand 3.5 to
+                    # 6 cm proud of his eyes from most sides; those are drawn, as anyone drawing a turned face draws both
+                    # eyes. The pirate's brim is 6 cm in front of his eye from above and to one side, which is why his marks
+                    # carry a reach of 3 cm
 DEEP_M = 0.04       # how far back from the front of the face a wash reaches
+LEAST_M = 0.0156    # no mark is narrower or shorter than this: one big pixel of the picture at the crew camera's furthest
+
+
+def least_for(ppm):
+    """The least a mark may measure on a sheet this fine, in its pixels: a size on the head, not a count of pixels,
+    so a head pictured at 96 a metre gets 2 and one at 192 gets 3."""
+    return max(1, int(math.ceil(LEAST_M * ppm - 0.01)))  # rounded up: a pixel short of the size is a mark that drops out
 FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "faces")
 
 
@@ -257,7 +274,7 @@ def draw(colour, height, there, view, ppm, anchor, marks, colours, found, least_
             colour[cy[ok & oval], cx[ok & oval], :3] = paint
             drawn[mark["name"]] = int((ok & oval).sum())
         elif mark["kind"] == "ring":
-            rim = max(least_px - 1, int(round(mark.get("rim_m", 0.01) * ppm)))
+            rim = max(1, int(round(mark.get("rim_m", 0.01) * ppm)))
             inner = np.sqrt(((xs - x0 + 0.5 - wpx / 2.0) / max(wpx / 2.0 - rim, 0.5)) ** 2 + ((ys - y0 + 0.5 - hpx / 2.0) / max(hpx / 2.0 - rim, 0.5)) ** 2) <= 1.0
             lens = paint_of(mark, "lens", colours, found)
             if lens is not None:

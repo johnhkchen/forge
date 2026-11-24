@@ -1,7 +1,7 @@
 """Pictures of the cast's faces on the watch page, and how many pixels each face gets, taken by a headless Chrome.
 
     python3 scripts/impostor/face_shots.py [--base http://localhost:8028/] [--take crew-candy-shop] [--out evidence/faces]
-        [--tag after] [--at 57.5] [--eye crew] [--close 1.3]
+        [--tag after] [--at 12] [--eye crew] [--close 1.3]
 
 The gallery must be running on that port. For the take, stopped at --at seconds, it takes:
 
@@ -12,12 +12,24 @@ The gallery must be running on that port. For the take, stopped at --at seconds,
 for pixel cards ("Pixels, both") and for meshes drawn small ("Pixels, on screen"), and writes <tag>-faces.json:
 for each of the cast, how far the eye is from his head and how many of the picture's big pixels a metre is
 there, so how many a face 15 cm wide and an eye 3 cm wide get. Prints FACES lines.
+
+Cutting the heads out needs numpy. When this Python has none, the file runs itself again in Blender's own Python
+(which has it); with neither, the heads are left out and it says so.
 """
 
+import glob
 import json
 import os
+import subprocess
 import sys
 import time
+
+try:
+    import numpy  # noqa: F401
+except ImportError:
+    found = sorted(glob.glob("/Applications/Blender.app/Contents/Resources/*/python/bin/python3*"))
+    if found and not os.environ.get("FACE_SHOTS_AGAIN"):
+        sys.exit(subprocess.run([found[-1], os.path.abspath(__file__)] + sys.argv[1:], env=dict(os.environ, FACE_SHOTS_AGAIN="1")).returncode)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
@@ -83,7 +95,7 @@ def main():
     args = sys.argv[1:]
     flag = lambda name, default: args[args.index(name) + 1] if name in args else default
     base, take, out, tag = flag("--base", "http://localhost:8028/"), flag("--take", "crew-candy-shop"), os.path.abspath(flag("--out", os.path.join(REPO, "evidence", "faces"))), flag("--tag", "after")
-    at, eye, close = float(flag("--at", "57.5")), flag("--eye", "crew"), float(flag("--close", "1.3"))
+    at, eye, close = float(flag("--at", "12")), flag("--eye", "crew"), float(flag("--close", "1.3"))
     page = test_walkabout.Page(base, gpu=True)
     facts = {"take": take, "seconds": at, "eye": eye, "face_m": FACE_M, "eye_m": EYE_M, "views": {}}
     try:
@@ -99,7 +111,8 @@ def main():
             heads = json.loads(page.value(HEADS))
             path = os.path.join(out, "%s-%s-%s.png" % (tag, eye, name))
             shoot(page, path, heads["box"])
-            heads_strip(path, path[:-4] + "-heads.png", heads["cast"])
+            if not heads_strip(path, path[:-4] + "-heads.png", heads["cast"]):
+                print("FACES the heads were not cut out of %s: no numpy here" % os.path.basename(path))
             facts["views"]["%s %s" % (eye, name)] = [dict(role=h["role"], away_m=round(h["away"], 2), px_per_m=round(h["px_per_m"], 1), face_px=round(h["px_per_m"] * FACE_M, 1), eye_px=round(h["px_per_m"] * EYE_M, 1)) for h in heads["cast"]]
             for i, h in enumerate(heads["cast"]):
                 page.value("window.forgeWatch.face(%d, %s); 1" % (i, close))

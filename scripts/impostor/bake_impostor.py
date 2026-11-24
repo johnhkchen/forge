@@ -36,9 +36,11 @@ reads a texture at (smaller is flatter; a detailed mesh wants more than a painte
 --look bakes a sheet for one of the page's other looks, into <version>-impostor-<look>/:
     pixel   pixel art: 48 pixels a metre, no smoothing, every colour snapped to the 32 this character is most
             made of, a line one pixel wide drawn round each picture; the page reads it without smoothing either.
-            The head is pictured finer than the body (--head-px times, 2 unless told) and its face is drawn on
-            purpose, from the character's recipe (pixel_face.py; --face none leaves it as rendered). A sheet
-            with either goes into <version>-impostor-pixel-faces/, which pages older than it do not read.
+            When the character has a recipe for a face drawn on this model (pixel_face.py), the head is
+            pictured twice as fine as the body (--head-px says otherwise) and the face is drawn on purpose;
+            --face none leaves it as rendered. A sheet with either goes into
+            <version>-impostor-pixel-faces/, which pages older than it do not read. With no recipe the sheet
+            is as it always was.
     joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
             screen however small the figure), and the lines inside a part drawn into its picture
 
@@ -285,15 +287,20 @@ def main():
     colours = int(flag("--colours", "32" if look == "pixel" else "0"))
     source = flag("--source", os.path.join(run, "profiles", profile + "-walk.glb"))
     # Pixel art: the head finer than the body, and a face drawn on purpose from the character's recipe.
-    head_px = float(flag("--head-px", "2" if look == "pixel" else "1"))
     face = flag("--face", "auto" if look == "pixel" else "none")
     if face == "auto":
+        # A recipe was drawn on one model's head and fits no other: the painted head's eyes are not where the
+        # detailed head's are. Left to itself the bake uses it only for the model it says it was drawn on.
         recipe = pixel_face.recipe_for(run)
+        if recipe and recipe.get("drawn_on", profile) != profile:
+            print("IMPOSTOR face: the recipe was drawn on the %s model, not %s: left off (--face FILE to use one anyway)" % (recipe["drawn_on"], profile), flush=True)
+            recipe = None
     elif face == "none":
         recipe = None
     else:
         with open(face) as f:
             recipe = json.load(f)
+    head_px = float(flag("--head-px", "2" if recipe else "1"))  # a finer head comes with a drawn face, unless asked for
     finer = {"head": head_px} if head_px != 1.0 else {}
     plain = "impostor" if look == "comic" else "impostor-" + look
     out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", plain + "-faces" if look == "pixel" and (finer or recipe) else plain)))))
@@ -497,7 +504,7 @@ def main():
         if heads:
             # The face, drawn into every picture of the head. What a wash finds is found once, from the front.
             head_ppm = ppm * finer.get("head", 1.0)
-            least = max(1, int(round(1.5 * finer.get("head", 1.0))))
+            least = pixel_face.least_for(head_ppm)
             vi, col, height, there, anchor = max(heads, key=lambda h: views[h[0]]["d"][2])
             found = pixel_face.find_colours(marks, col, height, there, views[vi], head_ppm, anchor)
             drawn = {}
