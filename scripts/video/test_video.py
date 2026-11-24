@@ -568,8 +568,14 @@ def test_a_stretch_of_a_clip_is_one_beat_between_a_pose_and_two_sentences():
     bench = Bench.get()
     folder = os.path.join(bench.shots, "mixed")
     # Shot 3 of the clip is frames 105 to 164; the stretch wanted is its seconds 4 to 5 (frames 120 to 150).
-    made = shoot_offline(folder, mixed_shot_list({"clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0}), bench.videos)
+    # Feet held (as they are unless a beat says otherwise): the joined shot is locked too, joins and all, and says so.
+    held = shoot_offline(folder + "-held", mixed_shot_list({"clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0}), bench.videos)
+    assert held["plan"]["pieces"][2]["feet"]["locked"] and held["notes"]["feet"]["locked"] and max(held["notes"]["feet"]["slides_where_held_cm_per_s"].values()) < 0.5, held["notes"].get("feet")
+    assert set(c for row in held["motion"]["contacts"] for c in row) <= {0.0, 1.0}
+    # With the feet left as the clip has them, the stretch can be compared with the clip joint for joint.
+    made = shoot_offline(folder, mixed_shot_list({"clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0, "lock_feet": False}), bench.videos)
     plan, motion = made["plan"], made["motion"]
+    assert "feet" not in made["notes"] and not plan["pieces"][2]["feet"]["locked"]
     assert [p["source"] for p in plan["pieces"]] == ["poses", "text", "video", "text", "poses"]
     # Nothing was asked of a worker for the clip: its motion was on hand. The opening pose, the two sentences and four joins were.
     assert [kind for kind, _ in made["asked"]] == ["inbetween", "text", "text", "inbetween", "inbetween", "inbetween", "inbetween"], made["asked"]
@@ -753,6 +759,51 @@ def test_where_people_stand_is_read_from_their_boxes():
     assert where[1][100][1] < where[2][100][1] and where[2][100][0] < where[1][100][0] < where[3][100][0]
 
 
+def test_a_group_that_slides_as_one_was_the_camera_and_is_held():
+    import formation
+
+    # Three dancers whose feet never leave the floor, each a little out of step with the others. The camera
+    # sways: in every one's own motion the whole body, feet and all, goes 12 cm side to side once every two seconds.
+    count = 240
+    motions, where = {}, {}
+    for p, start in ((1, 0), (2, 7), (3, 15)):
+        motion = stub_worker.dance(SK, start, start + count - 1)
+        for f, root in enumerate(motion["root"]):
+            root[0] += 0.12 * math.sin(2.0 * math.pi * f / 60.0)
+        motions[p] = motion
+        where[p] = [((p - 2) * 0.8, 1.0 / 3.0 if p != 2 else -2.0 / 3.0)] * count  # a V, the middle one out front
+    sizes = {1: 1.0, 2: 1.0, 3: 1.0}
+    saved = os.environ.pop("FORGE_GROUP_HOLD", None)
+    try:
+        os.environ["FORGE_GROUP_HOLD"] = "0"
+        before = formation.group_drift(SK, formation.stand(SK, motions, where, sizes))
+        del os.environ["FORGE_GROUP_HOLD"]
+        placed = formation.stand(SK, motions, where, sizes)
+        after = formation.group_drift(SK, placed)
+    finally:
+        if saved is not None:
+            os.environ["FORGE_GROUP_HOLD"] = saved
+    # Taken as each dancer's own quick movement, the sway had all three skating together; told apart, it is gone.
+    assert before["slides_together_cm_in_all"] > 150.0 and before["share_of_frames_over_5_cm_per_s"] > 0.5, before
+    assert after["slides_together_cm_in_all"] < 5.0 and after["moments"] == [], after
+    # Each is still where the picture had them in the group, and the group's middle has not gone anywhere.
+    for f in (0, 100, 239):
+        middle = (sum(placed[p]["root"][f][0] for p in placed) / 3.0, sum(placed[p]["root"][f][2] for p in placed) / 3.0)
+        assert math.hypot(*middle) < 0.02, middle
+        assert abs((placed[3]["root"][f][0] - placed[1]["root"][f][0]) - (-0.8 * 2)) < 0.05  # facing the house, the camera's left is the stage's -X
+    # What only ONE of them does is theirs and stays: a step to the side by the second dancer is not the group's.
+    for f in range(100, count):
+        motions[2]["root"][f][0] += 0.3 * min(1.0, (f - 100) / 15.0)
+    for f in range(100, 116):
+        motions[2]["contacts"][f] = [0.0, 0.0, 0.0, 0.0]
+    stepped = formation.stand(SK, motions, where, sizes)
+    gone = (stepped[2]["root"][118][0] - stepped[2]["root"][98][0]) - (placed[2]["root"][118][0] - placed[2]["root"][98][0])
+    others = (stepped[1]["root"][118][0] - stepped[1]["root"][98][0]) - (placed[1]["root"][118][0] - placed[1]["root"][98][0])
+    assert abs(gone) > 0.15 and abs(others) < 0.12, (gone, others)
+    # `travel` keeps only a share of what the group does together (for a stage too small for all of it).
+    assert formation.stand(SK, motions, where, sizes, travel=0.0)[1]["root"][50] != []
+
+
 def test_the_floor_follows_the_feet_when_the_models_floor_creeps():
     truth = stub_worker.dance(SK, 0, 239)
     raw = stub_worker.as_gemx(SK, CARD, truth, 0)
@@ -769,7 +820,7 @@ def test_the_floor_follows_the_feet_when_the_models_floor_creeps():
 # ---- feet that are down stay down ------------------------------------------------
 
 
-def gliding(first: int, last: int, steps: bool = False, pivot: bool = False) -> dict:
+def gliding(first: int, last: int, steps: bool = False, pivot: bool = False, far: float = 1.0) -> dict:
     """The stand-in's dance (feet planted) made to skate: the whole body slid 60 cm sideways and 30 cm back over
     four seconds, as a camera's creep or a formation's nudging would. With `steps`, the model's contacts say the
     feet take turns (left down, both, right down, both, ...). With `pivot`, the left foot is up on its ball and
@@ -781,7 +832,7 @@ def gliding(first: int, last: int, steps: bool = False, pivot: bool = False) -> 
     ankle = SK.index["LeftFoot"]
     for f in range(count):
         t = f / float(count - 1)
-        motion["root"][f] = [motion["root"][f][0] + 0.6 * t, motion["root"][f][1], motion["root"][f][2] - 0.3 * t]
+        motion["root"][f] = [motion["root"][f][0] + 0.6 * far * t, motion["root"][f][1], motion["root"][f][2] - 0.3 * far * t]
         if steps:
             phase = (f // 20) % 4
             motion["contacts"][f] = [1.0, 1.0, 1.0, 1.0] if phase in (1, 3) else ([1.0, 1.0, 0.0, 0.0] if phase == 0 else [0.0, 0.0, 1.0, 1.0])
@@ -802,12 +853,12 @@ def test_feet_that_are_down_are_held_and_drift_becomes_steps():
     import footlock
 
     toes = {"l": SK.index["LeftToeBase"], "r": SK.index["RightToeBase"]}
-    # 1. Both feet down the whole time, the body skating 67 cm: held, the feet do not move and the body stays over them.
-    skating = gliding(0, 119)
+    # 1. Both feet down the whole time, the body skating 40 cm: held, the feet do not move and the body stays over them.
+    skating = gliding(0, 119, far=0.6)
     locked, report = footlock.lock(SK, skating)
     before, after = footlock.slide(SK, skating), footlock.slide(SK, locked)
     assert report["slides_cm_per_s"] == after["cm_per_s"] == report["slides_where_held_cm_per_s"], "the model's contacts and the held stances are the same here"
-    assert min(before["cm_per_s"].values()) > 15.0 and max(after["cm_per_s"].values()) < 0.3, (before, after)
+    assert min(before["cm_per_s"].values()) > 9.0 and max(after["cm_per_s"].values()) < 0.3, (before, after)
     assert max(after["worst_stretch_cm"].values()) < 0.5 and report["frames_a_leg_could_not_reach"] == 0, (after, report)
     assert math.dist(locked["root"][0][::2], locked["root"][119][::2]) < 0.02, "nothing carried the hips anywhere"
     # The legs still reach the floor and nothing above the hips changed.
@@ -834,12 +885,15 @@ def test_feet_that_are_down_are_held_and_drift_becomes_steps():
     assert math.dist(locked["root"][159][::2], locked["root"][0][::2]) > 0.45, "the body got where it was going, by stepping"
     assert max(math.dist(a[::2], b[::2]) for a, b in zip(locked["root"], stepping["root"])) < 0.25
     # 3. A pivot is still a pivot: up on the ball of the left foot and turning, the ball is held and the foot turns about it.
-    turning = gliding(0, 89, pivot=True)
+    turning = gliding(0, 89, pivot=True, far=0.6)
     locked, _ = footlock.lock(SK, turning)
     ball = [positions(locked, f)[toes["l"]] for f in range(90)]
     assert max(math.dist(p[::2], ball[0][::2]) for p in ball) < 0.005
     heel_before, heel_after = positions(locked, 0)[SK.index["LeftFoot"]], positions(locked, 89)[SK.index["LeftFoot"]]
     assert math.dist(heel_before[::2], heel_after[::2]) > 0.08, "the heel swung round the ball"
+    # A "foot down" that travels a metre is no stance, whatever the contacts say: it is let go, not wrenched back.
+    far_off, report = footlock.lock(SK, gliding(0, 119, far=1.6))
+    assert report["feet"]["l"]["spots"] == 0 and report["hips_moved_cm_at_most"] == 0.0, report
     # 4. In the air, nothing is held: a motion with no foot down comes back as it was.
     flying = gliding(0, 59)
     for row in flying["contacts"]:

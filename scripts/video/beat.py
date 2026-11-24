@@ -198,7 +198,7 @@ def crew(sk, beat: dict, before: int, after: int, videos: str = None) -> dict:
     lead, tail = handles_for(beat, one, before, after)
     first, last = one["first"] - lead, one["last"] + tail
     locking = footlock.wanted(beat.get("lock_feet"))
-    key = timeline.digest({"clip": one["clip"], "frames": [first, last], "form": form, "lock": locking, "files": {str(p): [os.path.getmtime(f) for f in wants[p]["files"]] for p in people}})
+    key = timeline.digest({"clip": one["clip"], "frames": [first, last], "form": form, "lock": locking, "hold": formation.holding_the_group(), "files": {str(p): [os.path.getmtime(f) for f in wants[p]["files"]] for p in people}})
     if key in CREWS:
         return CREWS[key]
     motions, sizes, reports, seen = {}, {}, {}, {}
@@ -208,7 +208,7 @@ def crew(sk, beat: dict, before: int, after: int, videos: str = None) -> dict:
         sizes[p], reports[p] = report["size_ours_over_theirs"], report
         seen[p] = report["camera_root"][first - base : last - base + 1] if report.get("camera_root") else None
     where, notes = formation.measure(one["folder"], people, first, last, motions, sizes, sk, camera=seen if all(seen.values()) else None)
-    placed = formation.stand(sk, motions, where, sizes, tuple(form["origin"]), float(form.get("heading") or 0.0), float(form.get("spread") or 1.0))
+    placed = formation.stand(sk, motions, where, sizes, tuple(form["origin"]), float(form.get("heading") or 0.0), float(form.get("spread") or 1.0), float(form["travel"]) if form.get("travel") is not None else 1.0)
     feet = {}
     for p in people:
         # Held to a place in the group, a body is nudged all the time. With its feet locked the nudging waits for a step.
@@ -218,7 +218,7 @@ def crew(sk, beat: dict, before: int, after: int, videos: str = None) -> dict:
             placed[p], done = footlock.lock(sk, in_formation)
             feet[p].update({**done,
                             "from_its_place_in_the_group_cm_at_most": round(100.0 * max(math.hypot(a[0] - b[0], a[2] - b[2]) for a, b in zip(placed[p]["root"], in_formation["root"])), 1)})
-    CREWS[key] = {"placed": placed, "people": people, "frames": [first, last], "handles": [lead, tail], "reports": reports, "feet": feet, "notes": notes, "closest": formation.closest(sk, placed),
+    CREWS[key] = {"placed": placed, "people": people, "frames": [first, last], "handles": [lead, tail], "reports": reports, "feet": feet, "notes": notes, "closest": formation.closest(sk, placed), "group": formation.group_drift(sk, placed),
                   "places_in_the_group_m": {str(p): {"at_the_start": [round(c, 2) for c in where[p][lead]], "at_the_end": [round(c, 2) for c in where[p][len(where[p]) - 1 - tail]]} for p in people}}
     return CREWS[key]
 
@@ -320,5 +320,6 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
     )
     if group:
         piece_card["formation"] = {**beat["formation"], "starts_at": [round(begins[0], 3), round(begins[2], 3)], "ends_at": [round(ends[0], 3), round(ends[2], 3)],
-                                   "places_in_the_group_m": group["places_in_the_group_m"], "closest": group["closest"], "read_from": group["notes"]}
+                                   "places_in_the_group_m": group["places_in_the_group_m"], "closest": group["closest"], "read_from": group["notes"],
+                                   "slides_as_one": {k: v for k, v in group["group"].items() if k != "moments"}}
     return motion, marks, count

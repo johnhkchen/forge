@@ -192,6 +192,7 @@ class VideoFormation {
     origin: float[]?,
     heading: float?,
     spread: float?,
+    travel: float?,
 }
 
 /// Where a carried prop sits from a moment on.
