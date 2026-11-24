@@ -95,6 +95,22 @@ export function box(card, cell, pxPerM, relief = true) {
   return [x0 + Math.min(lx * low, lx * high), y0 + Math.min(ly * low, ly * high), x1 + Math.max(lx * low, lx * high), y1 + Math.max(ly * low, ly * high)];
 }
 
+// Layers behind the first. A picture holds the first surface its eye met; a sheet baked with layers
+// (scripts/impostor/bake_impostor.py --layers) also holds, for some pictures, what lay behind that surface and
+// could be seen from a little to one side: the crown of a hat behind its brim, a wrist inside a cuff. Such a
+// layer is a picture of its own on the same sheet, cut down to what it holds, listed under the view set's
+// "behind" as "cells" lists the first. behindOf gives a picture's (null when it has none); deepest gives the
+// first layer's cell with its lowest made the lowest of the two, for a card's corners, which lean by how low and
+// high its surface goes. (impostor.py: deepest, march_more; MARCH_MORE is how many steps more the search may
+// take below the first layer's lowest.)
+export const MARCH_MORE = 16;
+export function behindOf(sheet, partName, view) {
+  const cell = sheet.behind?.[0]?.[partName]?.[view];
+  return cell && cell[2] > 0 ? cell : null;
+}
+export const deepest = (cell, behind) => (behind && behind[6] < cell[6] ? [cell[0], cell[1], cell[2], cell[3], cell[4], cell[5], behind[6], cell[7]] : cell);
+export const marchMore = (steps, cell, behind) => (behind && behind[6] < cell[6] ? Math.min(MARCH_MORE, Math.ceil(((cell[6] - behind[6]) * steps) / Math.max(cell[7] - cell[6] + 0.004, 1e-9))) : 0);
+
 // The four corners of a card in the world (left-bottom, right-bottom, right-top, left-top), and the same four
 // as places on the sheet.
 export function corners(card, cell, pxPerM, relief = true) {

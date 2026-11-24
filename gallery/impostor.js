@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density, FILL, partBalls, ownTint, tintPlace, inBone, ballBack, jointNumber } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, density, FILL, partBalls, ownTint, tintPlace, inBone, ballBack, jointNumber, behindOf, deepest, MARCH_MORE } from "./impostor-math.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
@@ -63,6 +63,16 @@ void main() {
 //     the card shows only what is within the core's radius of its own bone's line, stood zoneBackM further back
 //     (impostor-math.js: partBalls): the piece is what is there.
 //
+// A layer behind the first (impostor-math.js: behindOf). cellB, anchorB and lowB are the picture of what lay behind
+// this one's surface: where it is on the sheet, where the bone's head is in it, and the lowest it stands (cellB's
+// width 0: there is none, and nothing here is done). It is searched as the first is, step for step: the line goes
+// under it, the place is halved in on, and it counts if that is the surface and not the side of something; of the
+// two layers met in one step the higher shows. A layer behind may stand lower than the first ever does, so the
+// search goes on down for it alone, up to MARCH_MORE steps. One thing more: the line may pass under the edge of
+// something (a hat's brim) and come down on what is below (the crown) just where the brim's picture ends and the
+// crown's own begins, both in the first layer. So where the first layer's surface has dropped by more than a wall
+// since the last step and the line is now only just under it, that counts as coming down on it.
+//
 // The ink line round the part is marked in the data sheet (both of the facing's numbers are 0) and painted here.
 // `line` says what becomes of it (looks.js: cardLine): over 0, it stands that many metres behind the surface, so
 // the part next door covers it where two parts meet; under 0, it is left out, because the look draws one line
@@ -76,6 +86,9 @@ uniform float pxPerM;
 uniform vec4 cell;
 uniform vec2 anchor;
 uniform vec2 heights;
+uniform vec4 cellB;
+uniform vec2 anchorB;
+uniform float lowB;
 uniform vec4 back;
 uniform vec2 lean;
 uniform vec3 deep;
@@ -144,6 +157,14 @@ bool readAt(vec2 xy, out float height, out vec3 data) {
   height = (data.z * 2.0 - 1.0) * depthM;
   return c.x >= 0.0 && c.x < cell.z && c.y >= 0.0 && c.y < cell.w && data.z > 0.5 / 255.0;
 }
+// The same of the layer behind.
+bool readB(vec2 xy, out float height, out vec3 data) {
+  vec2 c = xy * pxPerM + anchorB;
+  if (!(c.x >= 0.0 && c.x < cellB.z && c.y >= 0.0 && c.y < cellB.w)) return false;
+  data = textureLod(dataMap, (cellB.xy + c) / sheetSize, 0.0).rgb;
+  height = (data.z * 2.0 - 1.0) * depthM;
+  return data.z > 0.5 / 255.0;
+}
 void main() {
   if (mix_ == 1 && pattern(gl_FragCoord.xy) >= share) discard;
   if (mix_ == 2 && pattern(gl_FragCoord.xy) < share) discard;
@@ -151,16 +172,22 @@ void main() {
   float height;
   vec3 data;
   bool ok;
+  bool behind = false;
   if (steps > 0) {
     float top = heights.y + 0.002, bottom = heights.x - 0.002;
     float above = top, below = bottom;
     bool found = false, was = false, filled = false;
     float fillAt = bottom;
-    for (int i = 1; i <= 32; i++) {
-      if (i > steps || found) break;
+    bool layered = cellB.z > 0.0, wasB = false, thereWas = false;
+    float heightWas = 0.0, slack = (top - bottom) / float(steps) / 32.0;
+    int more = layered && lowB < heights.x ? int(min(float(MARCH_MORE_), ceil((heights.x - lowB) * float(steps) / (top - bottom)))) : 0;
+    for (int i = 1; i <= 32 + MARCH_MORE_; i++) {
+      if (i > steps + more || found) break;
       float at = top + (bottom - top) * float(i) / float(steps);
       vec2 spot = inPicture(vSheet - at * lean);
-      bool under = readAt(spot, height, data) && height >= at;
+      bool there = i <= steps && readAt(spot, height, data);  // (below the first layer's lowest only the layer behind is searched)
+      bool under = there && height >= at;
+      float heightNow = height;
       if (under && !was) { // the line has just gone under the surface: halve in on where
         float a = above, b = at;
         for (int k = 0; k < 5; k++) {
@@ -172,12 +199,37 @@ void main() {
       }
       // under the surface with no surface found, and inside a joint's ball: the first such place is kept for the filling
       if (under && !found && !filled && inBall(spot, at)) { filled = true; fillAt = at; }
+      if (layered) {
+        float last = top + (bottom - top) * float(i - 1) / float(steps);
+        if (under && was && thereWas && heightWas - heightNow > wallM && heightNow - at < wallM) { // down past an edge onto what is below it
+          float a = last, b = at, lid = heightNow + wallM * 0.5;
+          for (int k = 0; k < 5; k++) {
+            float mid = (a + b) * 0.5;
+            if (readAt(inPicture(vSheet - mid * lean), height, data) && height >= mid && height < lid) b = mid; else a = mid;
+          }
+          if (readAt(inPicture(vSheet - b * lean), height, data) && height >= b && height - b < wallM + slack && height < lid && (!found || b > below)) { below = b; found = true; }
+        }
+        float heightB;
+        vec3 dataB;
+        bool underB = readB(spot, heightB, dataB) && heightB >= at;
+        if (underB && !wasB) {
+          float a = last, b = at;
+          for (int k = 0; k < 5; k++) {
+            float mid = (a + b) * 0.5;
+            if (readB(inPicture(vSheet - mid * lean), heightB, dataB) && heightB >= mid) b = mid; else a = mid;
+          }
+          if (readB(inPicture(vSheet - b * lean), heightB, dataB) && heightB >= b && heightB - b < wallM + slack && (!found || b > below)) { below = b; found = true; behind = true; }
+        }
+        wasB = underB;
+        thereWas = there;
+        heightWas = heightNow;
+      }
       if (!under) above = at;
       was = under;
     }
     if (!found) below = fillAt;
     xy = inPicture(vSheet - below * lean);
-    ok = (found || filled) && readAt(xy, height, data);
+    ok = behind ? readB(xy, height, data) : (found || filled) && readAt(xy, height, data);
     if (ok && !found) {
       // the edge of a picture is its ink line: the colour is taken from a little further in along the pixel's line
       float run = length(inPicture(lean)) * pxPerM;
@@ -198,8 +250,12 @@ void main() {
   bool inked = ok && line != 0.0 && data.x + data.y < 0.5 / 255.0;
   if (inked && line < 0.0) ok = false;
   vec4 colour = vec4(0.0);
+  vec4 cellNow = behind ? cellB : cell;      // the picture the pixel shown is read from: the first layer's, or the one behind
+  vec2 anchorNow = behind ? anchorB : anchor;
   if (ok) {
-    colour = textureLod(colourMap, (cell.xy + xy * pxPerM + anchor) / sheetSize, 0.0);
+    colour = textureLod(colourMap, (cellNow.xy + xy * pxPerM + anchorNow) / sheetSize, 0.0);
+    // at the edge of a layer behind, smoothing mixes in the empty pixels beside it: the one sheet pixel it falls in
+    if (behind && colour.a < 0.5) colour = texelFetch(colourMap, ivec2(floor(cellNow.xy + xy * pxPerM + anchorNow)), 0);
     if (colour.a < 0.5) ok = false;
   }
   if (!ok) discard;
@@ -248,10 +304,10 @@ void main() {
     if (covers > 1.0) {
       float reach = min(covers, 3.0) / 3.0, middle = dot(pow(colour.rgb, vec3(1.0 / 2.2)), vec3(0.2126, 0.7152, 0.0722)), best = middle;
       for (int i = 0; i < 4; i++) {
-        vec2 c = xy * pxPerM + anchor + (i == 0 ? vec2(reach, 0.0) : i == 1 ? vec2(-reach, 0.0) : i == 2 ? vec2(0.0, reach) : vec2(0.0, -reach));
-        if (c.x < 0.0 || c.x >= cell.z || c.y < 0.0 || c.y >= cell.w) continue;
-        vec4 near = textureLod(colourMap, (cell.xy + c) / sheetSize, 0.0);
-        vec3 nearData = textureLod(dataMap, (cell.xy + c) / sheetSize, 0.0).rgb;
+        vec2 c = xy * pxPerM + anchorNow + (i == 0 ? vec2(reach, 0.0) : i == 1 ? vec2(-reach, 0.0) : i == 2 ? vec2(0.0, reach) : vec2(0.0, -reach));
+        if (c.x < 0.0 || c.x >= cellNow.z || c.y < 0.0 || c.y >= cellNow.w) continue;
+        vec4 near = textureLod(colourMap, (cellNow.xy + c) / sheetSize, 0.0);
+        vec3 nearData = textureLod(dataMap, (cellNow.xy + c) / sheetSize, 0.0).rgb;
         float grey = dot(pow(near.rgb, vec3(1.0 / 2.2)), vec3(0.2126, 0.7152, 0.0722));
         if (near.a > 0.5 && nearData.z > 0.5 / 255.0 && nearData.x + nearData.y > 0.5 / 255.0 && abs((nearData.z * 2.0 - 1.0) * depthM - height) < 0.02 && grey < best && grey < middle - 0.12) { best = grey; colour = near; }
       }
@@ -266,9 +322,20 @@ void main() {
   vec3 paint = mix(vec3(dot(colour.rgb, vec3(0.2126, 0.7152, 0.0722))), colour.rgb, punch);
   gl_FragColor = vec4(inked ? lineInk : paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), who);
   #include <colorspace_fragment>
-}`;
+}`.replaceAll("MARCH_MORE_", String(MARCH_MORE));
+// Tell a card of the layer behind the picture it is showing (`behind`: behindOf's cell, or null), and give back the
+// first layer's cell as its corners must have it (deepest): room for the lower layer to lean.
+export function setBehind(quad, cell, behind) {
+  const u = quad.material.uniforms;
+  if (behind) {
+    u.cellB.value.set(behind[0], behind[1], behind[2], behind[3]);
+    u.anchorB.value.set(behind[4], behind[5]);
+    u.lowB.value = behind[6];
+  } else u.cellB.value.set(0, 0, 0, 0);
+  return deepest(cell, behind);
+}
 // What every card's shader needs about the sheet's ink line, to go in with a material's other uniforms.
-export const lineUniforms = () => ({ line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 },
+export const lineUniforms = () => ({ cellB: { value: new THREE.Vector4() }, anchorB: { value: new THREE.Vector2() }, lowB: { value: 0 }, line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 },
   balls: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, ballTint: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, fillBackM: { value: FILL.backM }, ballBackM: { value: FILL.ballBackM },
   zone: { value: [0, 1, 2, 3].map(() => new THREE.Vector2()) }, zoneBackM: { value: FILL.zoneBackM } });
 // For every part of a baked character, its joints for the filling (impostor-math.js: partBalls), each with
@@ -735,7 +802,7 @@ class CardViewer {
         const cell = sheet.cells[part.name][view];
         const where = place(sheet.views[view], world, part.center, eye);
         const at = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
-        const spots = corners(where, cell, density(card, part), state.relief);
+        const spots = corners(where, setBehind(quad, cell, state.relief ? behindOf(sheet, part.name, view) : null), density(card, part), state.relief);
         spots.world.forEach((p, i) => at.setXYZ(i, p[0], p[1], p[2]));
         spots.sheet.forEach((p, i) => uv.setXY(i, p[0], p[1]));
         at.needsUpdate = uv.needsUpdate = true;

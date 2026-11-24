@@ -23,8 +23,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density, FILL, inBone } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, JOINT_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setBalls, sheetBalls, skinFor } from "./impostor.js";
+import { eyeInBone, choose, place, corners, marchSteps, density, FILL, inBone, behindOf } from "./impostor-math.js";
+import { CARD_VERTEX, CARD_FRAGMENT, JOINT_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setBalls, setBehind, sheetBalls, skinFor } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, FINE_FROM, withoutHeads } from "./looks.js";
 
 // name: where its poses come from.
@@ -917,7 +917,7 @@ class Field {
             const view = choose(sheet.dirs, eyeInBone(world.elements, part.center, eye), null, 0, card.blend_deg).first;
             const cell = sheet.cells[part.name][view];
             const where = place(sheet.views[view], world.elements, part.center, eye);
-            const spots = corners(where, cell, density(card, part), true);
+            const spots = corners(where, setBehind(quad, cell, behindOf(sheet, part.name, view)), density(card, part), true);
             const pos = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
             spots.world.forEach((s, k) => pos.setXYZ(k, s[0], s[1], s[2]));
             spots.sheet.forEach((s, k) => uv.setXY(k, s[0], s[1]));

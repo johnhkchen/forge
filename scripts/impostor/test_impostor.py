@@ -59,6 +59,12 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             further pixel; the page has the same numbers. With RUNS_DIR holding a sheet baked for it
             (profiles/*-impostor-pixel-clear): its head is pictured at 192 pixels a metre, has folds drawn in,
             and the sheet has no more colours than it may
+  layers    a brim in front of a plate, baked two layers deep and seen from one side: with the first layer alone
+            the plate behind the brim's edge is a hole; with the layer behind it is filled, in the plate's colour,
+            and nothing else changes. The page makes the same room for a lower layer, takes as many steps more,
+            and reads layered cards first (needs node). With RUNS_DIR holding layered cards
+            (profiles/*-impostor-joe-layered): every picture has a layer behind listed, inside the sheet, the first
+            layer is the sheet that was there before, and a frame of the walk covers all it covered without
   baked     with RUNS_DIR holding a baked character (profiles/*-impostor-comic-joined, or the older
             *-impostor): its sheets are the size its card says, every part has every picture, a bone's frame in
             the file is where its skin was bound, and a frame of its walk draws as one whole figure; a sheet
@@ -1065,10 +1071,161 @@ def test_skin(runs):
           "%d pixels with, %d without, %d lost" % (with_pieces.sum(), without.sum(), (without & ~with_pieces).sum()))
 
 
+def brim_over_plate(folder, radius=0.1, brim=0.04, up=0.08, ppm=192.0):
+    """A round plate through its bone's head with a smaller one (a brim) standing in front of its middle, baked two
+    layers deep: the first layer is the brim where it covers the plate and the plate elsewhere; the layer behind is
+    the plate under the brim, a picture of its own cut down to that."""
+    views = impostor.views_of("26")
+    half, small = int(math.ceil(radius * ppm)) + 2, int(math.ceil(brim * ppm)) + 1
+    side = 2 * half
+    ys, xs = np.mgrid[0:side, 0:side]
+    x, y = (xs + 0.5 - half) / ppm, (ys + 0.5 - half) / ppm
+    plate, over = x * x + y * y < radius * radius, x * x + y * y < brim * brim
+    depth_m = radius + 0.02
+    cols = 6
+    rows = (len(views) + cols - 1) // cols
+    colour = np.zeros((2 * rows * (side + 2) + 2, cols * (side + 2) + 2, 4), dtype=np.uint8)
+    data = np.zeros(colour.shape[:2] + (3,), dtype=np.uint8)
+    cells, behind = [], []
+    high = lambda z: np.clip(z / depth_m * 0.5 + 0.5, 1 / 255.0, 1.0)
+    for i, view in enumerate(views):
+        x0, y0 = 2 + (i % cols) * (side + 2), 2 + (i // cols) * (side + 2)
+        facing = impostor.pack_normal(np.broadcast_to(np.array(view["d"]), x.shape + (3,)))
+        packed = np.concatenate([facing, high(np.where(over, up, 0.0))[..., None]], axis=-1)
+        packed[~plate] = (0.5, 0.5, 0.0)
+        colour[y0:y0 + side, x0:x0 + side] = np.where(over[..., None], (40, 60, 220, 255), np.where(plate[..., None], (200, 200, 200, 255), (0, 0, 0, 0)))
+        data[y0:y0 + side, x0:x0 + side] = np.round(packed * 255.0)
+        cells.append([x0, y0, side, side, half, half, 0.0, up])
+        # the layer behind: the plate where the brim hid it
+        y1 = y0 + rows * (side + 2)
+        cut = slice(half - small, half + small)
+        under = np.concatenate([facing, high(np.zeros_like(x))[..., None]], axis=-1)
+        under[~over] = (0.5, 0.5, 0.0)
+        colour[y1:y1 + 2 * small, x0:x0 + 2 * small] = np.where(over[..., None], (200, 200, 200, 255), (0, 0, 0, 0))[cut, cut]
+        data[y1:y1 + 2 * small, x0:x0 + 2 * small] = np.round(under * 255.0)[cut, cut]
+        behind.append([x0, y1, 2 * small, 2 * small, small, small, 0.0, 0.0])
+    impostor.write_png(os.path.join(folder, "c.png"), colour)
+    impostor.write_png(os.path.join(folder, "d.png"), data)
+    card = {"px_per_m": ppm, "default_views": "26", "layers": 2, "parts": [{"name": "hat", "bone": "b", "center": [0, 0, 0], "depth_m": depth_m}],
+            "sets": {"26": {"color": "c.png", "data": "d.png", "size": [colour.shape[1], colour.shape[0]], "views": views, "cells": {"hat": cells}, "behind": [{"hat": behind}]}}}
+    with open(os.path.join(folder, "impostor.json"), "w") as f:
+        json.dump(card, f)
+    return radius, brim, up
+
+
+def test_layers(runs):
+    folder = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        radius, brim, up = brim_over_plate(folder)
+        bone = np.eye(4)
+        bone[:3, 3] = (0.2, 1.0, -0.1)
+        tilt = math.radians(20.0)
+        eye = impostor.Eye(bone[:3, 3] + 3.0 * np.array([math.sin(tilt), 0.0, math.cos(tilt)]), bone[:3, 3], 6.0, (240, 240))
+        # where the plate truly shows: every point of it, a little in from its edge, put through the eye
+        rs, around = np.meshgrid(np.linspace(0.0, radius - 0.006, 120), np.linspace(0.0, 2.0 * math.pi, 720))
+        spots, _ = eye.to_pixels(bone[:3, 3] + np.stack([rs * np.cos(around), rs * np.sin(around), np.zeros_like(rs)], axis=-1).reshape(-1, 3))
+        true = np.zeros((240, 240), dtype=bool)
+        true[np.floor(spots[:, 1]).astype(int), np.floor(spots[:, 0]).astype(int)] = True
+        drawn = {}
+        for label, on in (("first", False), ("both", True)):
+            impostor.LAYERS = on
+            picture, depth, _ = impostor.draw(impostor.Character(folder), {"b": bone}, eye, forced={"hat": 8})
+            drawn[label] = picture
+        impostor.LAYERS = True
+        bare = {label: true & ~(picture[..., 3] > 0) for label, picture in drawn.items()}
+        check("a brim in front of a plate, seen from 20 degrees to one side with one layer: the plate behind the brim's edge is a hole", bare["first"].sum() > 300, "%d pixels" % bare["first"].sum())
+        check("... with the layer behind it is filled, bar a speck at each tip", bare["both"].sum() < 0.04 * bare["first"].sum(), "%d pixels left of %d" % (bare["both"].sum(), bare["first"].sum()))
+        filled = bare["first"] & ~bare["both"]
+        grey = drawn["both"][filled][:, :3].astype(int)
+        check("... what fills it is the plate, in the plate's colour, not the brim's", bool(len(grey)) and float((np.abs(grey[:, 0] - grey[:, 2]) < 12).mean()) > 0.97, "%.0f%% grey" % (100.0 * (np.abs(grey[:, 0] - grey[:, 2]) < 12).mean()))
+        same = (drawn["first"][..., 3] > 0) & ~filled
+        check("... and nothing else of the picture changes", bool((drawn["first"][same] == drawn["both"][same]).all()) and not ((drawn["both"][..., 3] > 0) & ~(drawn["first"][..., 3] > 0) & ~filled).any())
+        cell, low = [3, 4, 50, 60, 25, 30, -0.05, 0.12], [9, 9, 20, 20, 10, 10, -0.21, -0.1]
+        check("a card's corners make room for a layer that stands lower than the first, and the search goes on down for it", impostor.deepest(cell, [low])[6] == -0.21 and impostor.deepest(cell, [low])[:6] == cell[:6]
+              and impostor.deepest(cell, []) is cell and impostor.march_more(20, cell, [low]) == min(impostor.MARCH_MORE, math.ceil(0.16 * 20 / 0.174)) and impostor.march_more(20, cell, []) == 0)
+        with open(os.path.join(REPO, "gallery", "impostor.js")) as f:
+            page = f.read()
+        check("the page's shader searches the layer behind too", all(text in page for text in ("uniform vec4 cellB;", "bool readB(", "MARCH_MORE_", "heightWas - heightNow > wallM")))
+    finally:
+        impostor.LAYERS = True
+        shutil.rmtree(folder)
+    node = shutil.which("node")
+    if not node:
+        print("    skipped  the page's layers against impostor.py (no node here)")
+    else:
+        with open(os.path.join(REPO, "gallery", "looks.js")) as f:
+            looks = f.read()
+        shim = tempfile.mkdtemp(prefix="impostor-test-")
+        try:
+            with open(os.path.join(shim, "looks.mjs"), "w") as f:
+                f.write(looks.replace('import * as THREE from "three";', "const THREE = { Color: class {}, Vector2: class {}, Vector3: class {} };"))
+            script = """
+              import { behindOf, deepest, marchMore, MARCH_MORE } from %s;
+              import { bakedFor, lookOf } from %s;
+              const folders = (names) => ({ cards: names.map((n) => ({ profile: "detailed", plays: "lowpoly", folder: "profiles/detailed-impostor" + n })) });
+              const old = ["", "-comic-joined", "-comic-skinned", "-joe-joined", "-joe-skinned", "-pixel-joined", "-pixel-skinned", "-pixel-clear", "-pixel-clear-skinned"];
+              const all = folders([...old, "-comic-layered", "-comic-layered-skinned", "-joe-layered", "-joe-layered-skinned", "-pixel-layered", "-pixel-layered-skinned", "-pixel-clear-layered", "-pixel-clear-layered-skinned"]);
+              const bare = folders([...old, "-joe-layered", "-pixel-clear-layered"]);
+              const ids = ["comic", "pixel-baked", "pixel-screen", "pixel-both", "joe"];
+              const cell = [3, 4, 50, 60, 25, 30, -0.05, 0.12], low = [9, 9, 20, 20, 10, 10, -0.21, -0.1];
+              const sheet = { behind: [{ hat: [low, [0, 0, 0, 0, 0, 0, 0, 0]] }] };
+              console.log(JSON.stringify({ most: MARCH_MORE, deep: deepest(cell, low), same: deepest(cell, null) === cell, more: [marchMore(20, cell, low), marchMore(20, cell, null), marchMore(400, cell, low)],
+                behind: [behindOf(sheet, "hat", 0), behindOf(sheet, "hat", 1), behindOf(sheet, "head", 0), behindOf({}, "hat", 0)],
+                picked: ids.map((id) => bakedFor(all, lookOf(id), "detailed").folder), off: ids.map((id) => bakedFor(all, lookOf(id), "detailed", false).folder),
+                bare: ids.map((id) => bakedFor(bare, lookOf(id), "detailed").folder) }));
+            """ % (json.dumps("file://" + os.path.join(REPO, "gallery", "impostor-math.js")), json.dumps("file://" + os.path.join(shim, "looks.mjs")))
+            out = subprocess.run([node, "--input-type=module", "-e", script], capture_output=True, text=True)
+        finally:
+            shutil.rmtree(shim)
+        if out.returncode:
+            raise AssertionError("node could not run the page's layers:\n" + out.stderr[-800:])
+        js = json.loads(out.stdout)
+        cell, low = [3, 4, 50, 60, 25, 30, -0.05, 0.12], [9, 9, 20, 20, 10, 10, -0.21, -0.1]
+        check("the page makes the same room for a lower layer and takes as many steps more", js["most"] == impostor.MARCH_MORE and js["deep"] == impostor.deepest(cell, [low]) and js["same"]
+              and js["more"] == [impostor.march_more(20, cell, [low]), 0, impostor.march_more(400, cell, [low])] and js["more"][2] == impostor.MARCH_MORE)
+        check("... and finds a picture's layer behind only where it has one", js["behind"] == [low, None, None, None])
+        tail = lambda names: [n.split("-impostor")[1] for n in names]
+        check("the page reads layered cards first, with their pieces, each look its own", tail(js["picked"]) == ["-comic-layered-skinned", "-pixel-layered-skinned", "-comic-layered-skinned", "-pixel-clear-layered-skinned", "-joe-layered-skinned"], str(tail(js["picked"])))
+        check("... layered cards without pieces before unlayered ones with, and only the looks that have them", tail(js["bare"]) == ["-comic-skinned", "-pixel-skinned", "-comic-skinned", "-pixel-clear-layered", "-joe-layered"], str(tail(js["bare"])))
+        check("... and with the layers switched off, what it read before", tail(js["off"]) == ["-comic-skinned", "-pixel-skinned", "-comic-skinned", "-pixel-clear-skinned", "-joe-skinned"], str(tail(js["off"])))
+    found = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-joe-layered", "impostor.json")))
+    if not found:
+        print("    skipped  baked layers (no profiles/*-impostor-joe-layered under %s)" % runs)
+        return
+    folder = os.path.dirname(found[0])
+    character = impostor.Character(folder)
+    sheet = character.sheet
+    wide, tall = sheet["size"]
+    behind = sheet["behind"][0]
+    held = [c for row in behind.values() for c in row if c[2] > 0]
+    check("baked layers: a layer behind for every part and picture, each inside the sheet, some of them holding something",
+          set(behind) == set(sheet["cells"]) and all(len(behind[n]) == len(sheet["cells"][n]) for n in behind) and all(c[0] >= 0 and c[1] >= 0 and c[0] + c[2] <= wide and c[1] + c[3] <= tall for c in held) and len(held) > 20,
+          "%d of %d pictures have one" % (len(held), sum(len(row) for row in behind.values())))
+    under = sum(c[2] * c[3] for c in held) / float(sum(c[2] * c[3] for row in sheet["cells"].values() for c in row))
+    check("... taking well under half the room the first layer takes", sheet["behind_share"] < 0.5 and under < 0.5, "%.0f%% as much" % (100.0 * under))
+    lower = all(b[7] <= c[7] + 1e-6 for n in behind for b, c in zip(behind[n], sheet["cells"][n]) if b[2] > 0)
+    check("... and never standing higher than the first layer's highest", lower)
+    before = folder[:-len("-layered")] + "-joined"
+    if os.path.isfile(os.path.join(before, "impostor.json")):
+        with open(os.path.join(before, "impostor.json")) as f:
+            was = json.load(f)
+        check("... the first layer is the sheet that was there before, picture for picture", {n: [c[2:] for c in row] for n, row in was["sets"][character.set_name]["cells"].items()} == {n: [c[2:] for c in row] for n, row in sheet["cells"].items()})
+    walk = impostor.Glb(os.path.join(os.path.dirname(folder), "%s-walk.glb" % character.card["plays"]))
+    pose = walk.pose(walk.seconds * 0.3)
+    eye = impostor.Eye(pose["hips"][:3, 3] + np.array([1.6, 0.9, 3.2]), pose["hips"][:3, 3], 30.0, (300, 400))
+    both = impostor.draw(character, pose, eye)[0][..., 3] > 0
+    impostor.LAYERS = False
+    try:
+        first = impostor.draw(impostor.Character(folder), pose, eye)[0][..., 3] > 0
+    finally:
+        impostor.LAYERS = True
+    check("... a frame of the walk drawn with the layers covers all it covered without, and a little more", not (first & ~both).any() and both.sum() >= first.sum(), "%d pixels more" % (both.sum() - first.sum()))
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("skin", lambda: test_skin(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
+             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("layers", lambda: test_layers(runs)), ("skin", lambda: test_skin(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
     failed = 0
     for name, case in cases:
         print(name)

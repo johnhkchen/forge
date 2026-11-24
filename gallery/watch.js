@@ -10,8 +10,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, sheetBalls, skinFor, skinMeshes } from "./impostor.js";
+import { eyeInBone, choose, place, corners, marchSteps, density, behindOf } from "./impostor-math.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, setBehind, sheetBalls, skinFor, skinMeshes } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, withoutHeads } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
 
@@ -274,7 +274,7 @@ class TakeViewer {
       actor.held[part.name] = pick.first;
       const cell = sheet.cells[part.name][pick.first];
       const where = place(sheet.views[pick.first], world, part.center, eye);
-      const spots = corners(where, cell, density(card, part), true);
+      const spots = corners(where, setBehind(quad, cell, behindOf(sheet, part.name, pick.first)), density(card, part), true);
       const at = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
       spots.world.forEach((s, k) => at.setXYZ(k, s[0], s[1], s[2]));
       spots.sheet.forEach((s, k) => uv.setXY(k, s[0], s[1]));

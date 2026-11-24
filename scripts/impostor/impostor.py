@@ -40,6 +40,7 @@ MARCH_PX = 1.0       # sliding a pixel by its depth: the picture is searched in 
 MARCH_MAX = 32       # ... and never more steps than this (a longer search takes longer steps)
 REFINE = 5           # ... then the place found is halved in on this many times
 WALL_M = 0.04        # a pixel found this far below the surface it landed on is looking at nothing the picture saw
+LAYERS = True        # a sheet baked with layers behind the first (bake_impostor.py --layers) has them searched too (False: the first layer alone, as if it had none)
 GO_ON = True         # ... and the search then goes on under it to the next surface (False: it gives up there, as the page did before the joints were mended)
 FILL = {"ball", "joint", "screen"}  # what fills a bent joint, each of which judge_seams.py --fill can leave out: "ball" (a ball in every joint), "joint" (a see-through pixel near a joint), "screen" (cracks, on the finished picture)
 FILL_BALL = 1.0      # a see-through pixel is filled inside a ball about a joint this many times the radius of the ring where its two parts meet
@@ -195,6 +196,33 @@ def eye_in_bone(bone, center, eye):
     bone = np.asarray(bone, dtype=np.float64)
     middle = bone[:3, 3] + bone[:3, :3] @ np.asarray(center, dtype=np.float64)
     return unit(bone[:3, :3].T @ (np.asarray(eye, dtype=np.float64) - middle))
+
+
+def layered_folder(cards, pieces=True):
+    """The same cards baked more than one surface deep (bake_impostor.py --layers), as gallery/looks.js finds them
+    (bakedFor): the folder named as `cards` is with "-layered" for "-joined" (or added), and with "-skinned" after
+    that when it has a piece of the model in each big joint and those are wanted. None when there is none."""
+    base = cards[:-len("-joined")] if cards.endswith("-joined") else cards
+    for name in ([base + "-layered-skinned"] if pieces else []) + [base + "-layered"]:
+        if os.path.isfile(os.path.join(name, "impostor.json")):
+            return name
+    return None
+
+
+MARCH_MORE = 16      # a layer behind the first may stand lower than the first ever does: the search goes on down for it, in steps of the same length, this many at most
+
+
+def deepest(cell, behind):
+    """A picture's cell with its lowest made the lowest of any of its layers (behind: the cells of the layers behind
+    it): a card's corners lean by how low and high its surface goes, and must make room for them all."""
+    low = min([cell[6]] + [c[6] for c in behind if c[2] > 0])
+    return cell if low == cell[6] else list(cell[:6]) + [low, cell[7]]
+
+
+def march_more(steps, cell, behind):
+    """How many steps more the search takes below the first layer's lowest, to reach the lowest of the layers behind."""
+    low = min([cell[6]] + [c[6] for c in behind if c[2] > 0])
+    return int(min(MARCH_MORE, math.ceil((cell[6] - low) * steps / max(cell[7] - cell[6] + 0.004, 1e-9)))) if low < cell[6] else 0
 
 
 def box(card, cell, px_per_m, relief=True):
@@ -589,6 +617,7 @@ class Character:
         self.colour = read_png(os.path.join(self.folder, sheet["color"])).astype(np.float32) / 255.0
         self.data = read_png(os.path.join(self.folder, sheet["data"])).astype(np.float32) / 255.0
         self.cells = sheet["cells"]
+        self.behind = sheet.get("behind", []) if LAYERS else []  # the layers behind the first: for each, every part's pictures as "cells" has them
         lit = np.round(self.colour * 255.0)
         self.balls, self.tints, self.pixel = part_balls(self.card), getattr(self, "tints", {}), lambda x, y: lit[y, x]
         self.zones = part_zones(self.card)
@@ -613,7 +642,10 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     if w <= 0 or h <= 0:
         return None
     ppm = float(part.get("px_per_m") or character.px_per_m)  # a part pictured finer than the rest (a head) says so
-    quad = corners(card, cell, ppm, relief)
+    # the layers behind the first that this picture has: each a picture of its own on the sheet, cut down to what it holds
+    hidden = [c[part["name"]][view_index] for c in getattr(character, "behind", [])]
+    hidden = [c for c in hidden if c[2] > 0] if relief else []
+    quad = corners(card, deepest(cell, hidden), ppm, relief)
     spots, ahead = eye.to_pixels(quad)
     if (ahead <= eye.near).any():
         return None
@@ -636,8 +668,12 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     sheet_tall, sheet_wide = character.colour.shape[:2]
     back, lean = card["back"], card["lean"]
 
-    def read(xy):
-        """The data sheet at a place of the picture: (is there surface here, how high, the pixel's numbers)."""
+    x0_, y0_, ax_, ay_ = x0, y0, ax, ay  # where on the sheet the pixel shown is read from: the first layer's picture, or one behind
+
+    def read(xy, of=None):
+        """The data sheet at a place of the picture: (is there surface here, how high, the pixel's numbers). of: a
+        layer behind the first (its cell), in place of the first."""
+        x0, y0, w, h, ax, ay = (of or cell)[:6]
         cx, cy = xy[..., 0] * ppm + ax, xy[..., 1] * ppm + ay
         inside = (cx >= 0) & (cx < w) & (cy >= 0) & (cy < h)
         data = character.data[np.clip(np.floor(y0 + cy).astype(int), 0, sheet_tall - 1), np.clip(np.floor(x0 + cx).astype(int), 0, sheet_wide - 1)]
@@ -654,11 +690,55 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         found, was, over = np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool)
         walled, wall_at = np.zeros(xs.shape, dtype=bool), np.full(xs.shape, bottom)
         round_ = balls if "joint" in FILL else []
-        for i in range(1, steps + 1):
+        # Layers behind the first (hidden). Each is searched as the first is: the line goes under it, the place is
+        # halved in on, and it counts if it is the surface and not the side of something. Of two layers met in one
+        # step the higher is shown. One thing more: the line may pass under the edge of something (a hat's brim)
+        # and come down on what is below it (the crown) just where the brim's picture ends and the crown's own
+        # begins, in the first layer both. That is no new going-under, the line was under the brim; so where the
+        # first layer's surface has dropped by more than a wall since the last step and the line is now only just
+        # under it, that counts as coming down on it.
+        lay = np.zeros(xs.shape, dtype=int)                      # which layer each pixel found its surface in (0: the first)
+
+        def search_behind(tries, i, at):
+            """Step i of the search, at height `at`, for the layers behind: tries are (the layer's cell or None for
+            the first, its number, the pixels whose line has just gone under it, a height its surface must be under
+            or None)."""
+            last_at = top + (bottom - top) * (i - 1) / steps
+            for of, number, new, ceiling in tries:
+                if not new.any():
+                    continue
+                rows, cols = np.nonzero(new)
+                mine, a, b = sheet[rows, cols], np.full(len(rows), last_at), np.full(len(rows), at)
+                lid = ceiling[rows, cols] if ceiling is not None else np.inf  # (coming down past an edge: under the lower surface, not the one that ended)
+                for _ in range(REFINE):
+                    mid = (a + b) / 2.0
+                    there_k, height_k, _ = read((mine - mid[:, None] * lean) @ back.T, of)
+                    deep = there_k & (height_k >= mid) & (height_k < lid)
+                    b, a = np.where(deep, mid, b), np.where(deep, a, mid)
+                there_k, height_k, _ = read((mine - b[:, None] * lean) @ back.T, of)
+                hit = there_k & (height_k >= b) & (height_k - b < WALL_M + (top - bottom) / steps / 2 ** REFINE) & (height_k < lid)
+                hit &= ~found[rows, cols] | (b > below[rows, cols])  # of two layers met in one step, the higher
+                below[rows[hit], cols[hit]] = b[hit]
+                found[rows[hit], cols[hit]] = True
+                lay[rows[hit], cols[hit]] = number
+        was_behind = [np.zeros(xs.shape, dtype=bool) for _ in hidden]
+        there_was, height_was = np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape)
+        for i in range(1, steps + march_more(steps, cell, hidden) + 1):
             at = top + (bottom - top) * i / steps
             spot = (sheet - at * lean) @ back.T
             there, height, _ = read(spot)
             under = there & (height >= at)
+            if i > steps:  # below the first layer's lowest: only the layers behind are searched
+                under, found_before = np.zeros_like(under), found.copy()
+                tries = []
+                for k, of in enumerate(hidden):
+                    there_k, height_k, _ = read(spot, of)
+                    under_k = there_k & (height_k >= at)
+                    tries.append((of, k + 1, under_k & ~was_behind[k] & ~found_before, None))
+                    was_behind[k] = under_k
+                search_behind(tries, i, at)
+                continue
+            found_before, there_now, height_now = found.copy() if hidden else None, there, height
             if round_ and (under & ~found & ~walled).any():
                 # under the surface, and inside a joint's ball: the first such place on the line is kept for the filling
                 here = world + toward_eye * ((spot[..., 0] * card["deep"][0] + spot[..., 1] * card["deep"][1] + at * card["deep"][2]) * card["size"])[..., None]
@@ -683,6 +763,15 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
                 found[rows[hit], cols[hit]] = True
                 if not GO_ON:
                     over[rows[~hit], cols[~hit]] = True
+            if hidden:
+                tries = [(None, 0, under & was & ~found_before & there_was & (height_was - height_now > WALL_M) & (height_now - at < WALL_M), height_now + WALL_M / 2.0)]
+                for k, of in enumerate(hidden):
+                    there_k, height_k, _ = read(spot, of)
+                    under_k = there_k & (height_k >= at)
+                    tries.append((of, k + 1, under_k & ~was_behind[k] & ~found_before, None))
+                    was_behind[k] = under_k
+                search_behind(tries, i, at)
+                there_was, height_was = there_now, height_now
             above[~under & ~found] = at
             was = under
         # Filling a joint. A line that went in only by the side of something, and came down on no surface after,
@@ -709,20 +798,32 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
                 below, xy = np.where(take, further, below), np.where(take[..., None], (sheet - further[..., None] * lean) @ back.T, xy)
                 height, data = np.where(take, height2, height), np.where(take[..., None], data2, data)
         height = np.where(skirt, below - FILL_BACK_M, height)
+        for k, of in enumerate(hidden):  # a pixel that found its surface in a layer behind is read from that layer's picture
+            mine = lay == k + 1
+            if mine.any():
+                there_k, height_k, data_k = read(xy, of)
+                there, height, data = np.where(mine, there_k, there), np.where(mine, height_k, height), np.where(mine[..., None], data_k, data)
+                x0_, y0_, ax_, ay_ = np.where(mine, of[0], x0_), np.where(mine, of[1], y0_), np.where(mine, of[4], ax_), np.where(mine, of[5], ay_)
         inside = found & there
     else:
         xy = sheet @ back.T
         inside, height, data = read(xy)
     if not inside.any():
         return None
-    cx, cy = xy[..., 0] * ppm + ax, xy[..., 1] * ppm + ay
-    u, v = x0 + cx, y0 + cy
+    cx, cy = xy[..., 0] * ppm + ax_, xy[..., 1] * ppm + ay_
+    u, v = x0_ + cx, y0_ + cy
     # colour: smoothed between the four pixels around, as a texture is
     fu, fv = u - 0.5, v - 0.5
     iu, iv = np.floor(fu).astype(int), np.floor(fv).astype(int)
     tu, tv = (fu - iu)[..., None], (fv - iv)[..., None]
     grab = lambda a, b: character.colour[np.clip(b, 0, sheet_tall - 1), np.clip(a, 0, sheet_wide - 1)]
     rgba = (grab(iu, iv) * (1 - tu) + grab(iu + 1, iv) * tu) * (1 - tv) + (grab(iu, iv + 1) * (1 - tu) + grab(iu + 1, iv + 1) * tu) * tv
+    if relief and hidden:
+        # At the edge of a layer behind, smoothing mixes in the empty pixels beside it and the cover falls under a
+        # half: the pixel would be dropped, and a hole left where the first layer alone had gone on and found
+        # something. The search found surface there, so the pixel takes the one sheet pixel it falls in.
+        thin = (lay > 0) & (rgba[..., 3] < 0.5)
+        rgba = np.where(thin[..., None], grab(np.floor(u).astype(int), np.floor(v).astype(int)), rgba)
     if character.card.get("nearest"):  # pixel art is read without smoothing: the one pixel it falls in
         rgba = grab(np.floor(u).astype(int), np.floor(v).astype(int))
         covers = ppm * eye.m_per_px(head) / card["size"]  # how many of the sheet's pixels one of the eye's is across

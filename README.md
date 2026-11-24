@@ -626,7 +626,7 @@ just impostor-judge runs/<roosevelt> painted    # the same frames as cards and a
 - **Cut by bone.** Every face goes to the part whose bones pull on it most: hips, spine, chest (with the shoulders and neck), head, and for each side upper arm, forearm, hand (fingers folded in), thigh, shin, foot (toes folded in). 16 parts. The pull is evened out along the surface first, so the line between two parts is one clean ring. Two parts that meet each reach a little way into the other (0.4 of the ring's radius, and as far as their own bones still pull a good deal, which is how the skin under an arm goes up with the arm), and the part below a joint carries a ball in it: the skin round the ring pulled in onto a ball about the joint, as big as fits inside the body. A bend opens the outside of a joint, and the ball is what shows through ("Where two cards meet", below, has why). He is cut with his arms hanging as they do in his walk, not straight out as the skeleton rests: a part is only exact near the pose it was cut in, and nobody walks in a T.
 - **Pictured from all around, ahead of time** (`scripts/impostor/bake_impostor.py`). Each part is laid in its own bone's frame and drawn without perspective from a fixed set of directions: 8 around at three heights plus straight along the bone both ways (26), or 12 around at five heights (62), or 16 around at seven (114). `toon.py` draws them with the tones of light switched off: flat colour, and an ink line round the part. Beside the colour every pixel keeps which way its surface faces and how far it stands toward the eye, and whether it is a pixel of that line. All of one view set goes on two sheets, `views<N>-color.png` and `views<N>-data.png`, with `impostor.json` saying where each picture is.
 - **One card a bone** (`gallery/impostor.js`, `impostor-math.js`). The page plays any clip on the skeleton with the mesh hidden. Each bone gets one flat card through its head, square on to you, showing the picture taken from nearest to where you are *as that bone sees you*. 16 cards, 32 triangles, whatever he is doing: a walk, the warm-up routine and the whole fight play from the same 416 pictures.
-- **Each pixel slid by its depth.** A picture taken from 20 degrees to one side is wrong by centimetres on a chest. So a card does not lay its picture flat: every pixel looks down a line through the picture and shows the first place where the stored surface is as high as the line (a short search, then halved in on). That turns the picture, foreshortens it and shifts everything by how far it stands out, exactly, as long as you are far off compared with the part. It is what makes 26 pictures a part enough. A line that comes down on the side of something the picture never saw the back of (the rim of a sleeve, the part's own edge) carries on under it to the next surface; if there is none, and a joint is close by, the pixel is filled all the same ("A bent joint, filled", below). The stored depth also goes to the depth buffer, so cards hide each other pixel by pixel and the ring's ropes pass in front of a leg.
+- **Each pixel slid by its depth.** A picture taken from 20 degrees to one side is wrong by centimetres on a chest. So a card does not lay its picture flat: every pixel looks down a line through the picture and shows the first place where the stored surface is as high as the line (a short search, then halved in on). That turns the picture, foreshortens it and shifts everything by how far it stands out, exactly, as long as you are far off compared with the part. It is what makes 26 pictures a part enough. A line that comes down on the side of something the picture never saw the back of (the rim of a sleeve, the part's own edge) carries on under it to the next surface (and, in sheets baked two surfaces deep, finds what lay behind the first: "Behind the first surface", below); if there is none, and a joint is close by, the pixel is filled all the same ("A bent joint, filled", below). The stored depth also goes to the depth buffer, so cards hide each other pixel by pixel and the ring's ropes pass in front of a leg.
 - **One line round the figure, none across it.** Each part is pictured with a line all round it, and a line all round a forearm crosses the arm at the elbow. So the line is not drawn where the picture has it. In the comic look it stands 3 cm behind its part's surface, the way a mesh's ink shell does: the part next door covers it where they meet, and it shows only where nothing of the figure is beside it. In the looks that go by way of a picture of their own (pixels on screen, bold ink) the sheet's line is left out and one line is drawn on the finished picture.
 - **Light is worked out, not baked.** The stored facing picks one of the comic's three flat tones from a light fixed to the eye, as `toon.py` does, so a forearm is lit from the same side whichever way it is turned.
 - **Judged without a browser** (`scripts/impostor/impostor.py`, `judge_impostor.py`). `impostor.py` is the page's arithmetic and its shader done slowly in Python, a pixel at a time; `test_impostor.py` runs the page's own file in node against it (the same to 14 decimal places) and is part of `just check`. The judge draws each frame both ways from the same eye in the same light and measures the difference.
@@ -1069,6 +1069,97 @@ On the tag field on this Mac (1080 by 608, poses shared, the gallery as it was a
 - No phone has run it.
 
 Stills (`evidence/knees/`, taken by `just joint-shots`, the cards alone on the left and with the pieces on the right): `stage-38-<look>.png` is the squat through the crew camera; `knee-<who>-left-<look>.png`, `-right-` and `-deep-` are a square round each knee, down the page through the crew camera, from 2 m and from 1 m; `elbow-`, `hip-` and `shoulder-` the same for the other joints. `before-*` and `after-*` are the judge's own: the real model, then the cards in each look.
+
+## Behind the first surface
+
+The pirate's hat had a piece missing: seen from a little below, a wedge of the stage showed through the dip in its brim, where the crown of the hat should be. Every card had the same blind spot. Now a card's pictures go two surfaces deep.
+
+```
+just impostor-layered runs/<character>             # the layered sheets and their joint pieces: five minutes
+just impostor-layers crew-candy-shop after         # what the layer behind fills, counted, no browser
+just gallery                                       # the pages read layered cards first; add ?layers=off to an address to see them without
+```
+
+**What was lost, and why** (`evidence/layers/hat-18-close-joe.png`, `after-right-18-close-joe.png`).
+
+- **A picture holds one surface for each pixel: the first its eye met.** From the front the hat's brim hides the crown behind it. Stand a little to one side, or below, and you should see past the brim's edge to the crown. The card's pixel looks down its line through the picture, passes under the brim's edge, and finds nothing: the crown was never pictured there. So it shows the stage.
+- **It is the one layer, and nothing else.** Give the same sheet a second layer and change nothing more, and the wedge fills: so it is not the cut, and not the test of the colour sheet's cover. Nothing is thrown away for facing the wrong way either: the bake draws both sides of every face, and from its 26 directions 1.9% of the head's pixels are a face seen from behind (the thin rim of the brim).
+- **How much there is behind.** A line through the pirate's head meets a second surface, with air between, at 60% of its pixels, a third at 40% and a fourth at 21%. Nearly all of that is the inside of things: the model is thin shells, a head inside a hat inside a brim, and nobody ever sees the inside of a shell. What an eye a little to one side can see is far less: a fifth as much as the first layer for the pirate, a tenth for Lincoln, a twentieth for Roosevelt, who wears a singlet and no hat.
+
+**What was done** (`scripts/impostor/bake_impostor.py --layers 2`: behind, patches, peel_group; `gallery/impostor.js`: CARD_FRAGMENT; `impostor.py`: card_pixels).
+
+- **Each direction is pictured twice.** The first picture is the one that was there before, pixel for pixel. For the second, a line is followed on through the part from every pixel, and the first surface on it is kept that an eye could ever see: one that faces the picture's own eye, can be seen from outside the part from somewhere up to 40 degrees to one side, and is on the outside of the whole model (a part is cut open at its joints, and through the cut you would see its own inside). Then the part is drawn again with everything in front of those places left out.
+- **Specks are dropped.** A patch counts only if, with its thin edges taken off, 3.3 square centimetres are left. A layer's picture is cut down to what it holds, so one stray pixel far off would make it big.
+- **It goes on the same two sheets**, beside the first layer's pictures, with a list of its own in `impostor.json` ("behind"). Nothing new to fetch but a taller sheet.
+- **The search looks in both.** A card's pixel already walks down a line through its picture looking for where it goes under the surface. It now asks the layer behind at every step too, the same way, and of two surfaces met in one step shows the higher. A layer behind can stand lower than the first ever does, so the search may go on down a few steps more for it alone.
+- **One more thing the search learned.** A line can pass under the brim's edge and come down on the crown just where the brim's picture ends and the crown's own begins. That was not counted as landing on anything, because the line was already "under" the picture. Now it is, in pictures that have a layer behind.
+- **Tried and left out.** Surfaces that face away from the picture's eye (the strip of a limb just round its edge): a few more pixels filled, a tenth more sticking out round the figure, and the pirate's sheet two thirds bigger where this way makes it a quarter bigger. A third layer: next to nothing in it on these three.
+- The sheets are in `<version>-impostor-<look>-layered/`, their joint pieces in `-layered-skinned/`. The pages read those first. A gallery older than this does not read them at all, and the sheets that were there are not touched.
+
+**What it fills** (`just impostor-layers`, `evidence/layers/layers-after.json`). The three dancers, six moments of the dance, drawn from the sheets one surface deep and from the layered ones, against the real model. Pixels of one figure in one picture, before to after. "Bare" is body the model has and the cards do not; "holes" are the bare pixels shut in by cards on every side; "opened" is what was covered before and is not now.
+
+| look | seen from | bare | holes | filled | opened | sticks out |
+|---|---|---|---|---|---|---|
+| Bold ink | crew camera | 110 to 92 | 11.9 to 9.1 | 18 | 0.2 | 793 to 804 |
+| Bold ink | 2 m from the head | 880 to 752 | 70 to 65 | 130 | 1.2 | 4,019 to 4,098 |
+| Bold ink | 1 m | 5,438 to 5,268 | 267 to 222 | 170 | 0 | 7,817 to 7,855 |
+| Pixels, both | crew camera | 12.4 to 11.5 | 0.6 to 0.6 | 0.9 | 0 | 316 to 318 |
+| Pixels, both | 2 m | 162 to 140 | 8.4 to 8.4 | 22 | 0 | 1,163 to 1,183 |
+| Pixels, both | 1 m | 1,231 to 1,206 | 39.6 to 36.1 | 25 | 0 | 2,020 to 2,024 |
+| Comic | crew camera | 126 to 114 | 44 to 44 | 12 | 0 | 2,632 to 2,637 |
+| Comic | 2 m | 626 to 535 | 160 to 166 | 90 | 0.2 | 9,683 to 9,728 |
+| Comic | 1 m | 3,376 to 3,229 | 381 to 330 | 147 | 0 | 19,490 to 19,501 |
+
+Nearly all of it is the pirate, and most of that his hat: round his head in bold ink, 48 bare pixels to 16 through the crew camera, 1,432 to 1,083 from 2 m, 11,230 to 10,856 from 1 m. Lincoln gains a little at his rolled sleeves and collar (17 pixels filled from 2 m). Roosevelt, in a singlet, gains nothing to speak of (3). A third layer was baked for the pirate and counted: the same numbers to the digit.
+
+Over the whole figure, with the eye further back (`just impostor-seams crew-candy-shop layers evidence/seams --deep 2`, `seams-layers.json` against `seams-layers-off.json`, 60 pictures; shut-in holes, then bare pixels between two cards):
+
+| look | crew camera | from 2 m | the walk, from 4.4 m |
+|---|---|---|---|
+| Bold ink | 12.4 to 9.8, 33 to 24 | 103 to 93, 299 to 268 | 78 to 28, 87 to 30 |
+| Pixels, both | 0.7 to 0.6, 3.9 to 3.1 | 13.5 to 13.6, 55 to 55 | 2.2 to 1.6, 3.5 to 2.8 |
+| Comic | 48 to 48, 78 to 74 | 292 to 286, 472 to 449 | 83 to 90, 115 to 98 |
+
+The walk in bold ink is where it shows most: an arm swinging past a hip, a thigh past the other, each uncovering what the picture never saw. What sticks out grew by under half a pixel in a hundred, and the line that is not there did not move.
+
+**Nothing slipped.** The first layer is the old sheet, picture for picture (the test holds the two lists against each other), and the pixel sheet keeps its colours: they are picked from the first layer alone. With `--layers off` the seam judge gives `seams-pieces.json` back to the digit.
+
+- **Faces** (`just impostor-faces`, `evidence/clear/faces-layers.json` against `faces-layers-off.json`, which is `faces-pieces.json` again to the digit; how much of a face is kept, crew camera, 2 m, 1 m): bold ink 0.742, 0.771, 0.745 to 0.743, 0.772, 0.749; "Pixels, both" 0.777, 0.818, 0.789 to 0.777, 0.819, 0.793.
+- **Knees and the other joints** (`just impostor-knees crew-candy-shop layers evidence/knees --sheets layered-skinned`, `joints-layers.json` against `joints-layers-off.json`, which is `joints-after.json` again): likeness within 0.01 for every kind of joint, look and distance (a knee from 1 m, 0.735 to 0.736 in bold ink and 0.761 to 0.762 in "Pixels, both"; the most any moved is an elbow from 1 m in "Pixels, both", 0.649 to 0.641); blots within a tenth of one in a hundred but an elbow's through the crew camera in bold ink, 8.5% to 8.8%. Bare pixels go down where one thing is inside another: an elbow from 1 m 228 to 192 in bold ink and 174 to 145 in "Pixels, both" (the pirate's cuffs), a shoulder 599 to 558 and 462 to 442.
+
+**What it costs.** Sheets, before to after (in memory; to fetch):
+
+| | bold ink | comic | "Pixels, both" | pictures with a layer behind, of 416 |
+|---|---|---|---|---|
+| Lincoln | 14.1 to 15.9 MB; 4.0 to 4.3 | 15.1 to 16.4; 4.2 to 4.5 | 5.0 to 5.2; 0.98 to 1.0 | 238 |
+| Roosevelt | 15.7 to 16.8; 4.0 to 4.2 | 17.0 to 17.9; 4.2 to 4.4 | 5.7 to 6.0; 1.08 to 1.1 | 144 |
+| the pirate | 25.6 to 32.7; 7.2 to 8.3 | 27.1 to 33.3; 7.7 to 8.7 | 9.6 to 11.6; 1.9 to 2.1 | 383 |
+
+A twelfth more for two of them and a quarter more for the pirate, who is all hat, cuffs and coat. A bake takes three to four times as long (the pirate in bold ink, 31 s to 114, with four bakes running at once): every direction is drawn twice, and a line is followed through the model for every pixel in between.
+
+In time, a card whose picture has no layer behind does what it did. One that has reads the data sheet once more a step, and only inside the layer's own small picture. With a dancer filling the picture on the watch page (`scripts/impostor/close_cost.py`, `evidence/layers/cost-close-mac.json`: 1080 by 608, every frame drawn as fast as it will go and waited for, the layers unread and read turn about, three goes each), ms a frame:
+
+| | through the crew camera | 2 m from the pirate's head | 1 m |
+|---|---|---|---|
+| Bold ink | 1.6 to 1.7 | 2.2 to 2.5 | 1.8 to 2.1 |
+| Pixels, both | 1.3 to 1.6 | 1.6 to 1.6 | 1.7 to 1.7 |
+
+(The clock ticks in tenths.) A tenth to three tenths of a millisecond in bold ink, less in "Pixels, both", which stays the cheaper of the two.
+
+On the tag field (`evidence/layers/cost-mac.json`, `cost-near-mac.json`: `face_cost.py` and `near_cost.py`, a hundred and a thousand Roosevelts, painted and detailed cards, all at once and with the search off far away, three goes each) nothing moved outside what one go differs from the next by: bold ink's detailed cards 6.3 to 6.6 ms and 9.3 to 7.3 from the phone test's eye, 8.1 to 8.4 and 10.4 to 9.3 with the eye among the runners; "Pixels, both" 4.9 to 4.3 and 7.3 to 7.0, then 5.8 to 6.2 and 8.7 to 6.7. Every setting drew a frame every 16.7 ms, and "Pixels, both" is under bold ink in all 16 settings after, where it was in 14 before (which says how much one go differs from the next). That is as it should be, because **cards drawn all at once do not read the layer behind**: that way of drawing hands every card's numbers from its corners to its pixels, and seven more would pass what a phone is sure to allow. Drawn one by one, which does read it, a hundred detailed Roosevelts cost 13.8 to 14.0 ms in bold ink and 13.1 to 11.5 in "Pixels, both" (`cost-each-mac.json`). No phone has run any of it.
+
+**What is still weak.**
+
+- **Close up the whole hat sits low.** From 1 m the cards' hat is a few centimetres smaller than the model's all round its top, 10,856 pixels of the pirate's head still bare in bold ink. That is not a missing layer. A card slides its pixels as if the eye were far off, and a brim 25 cm in front of the card is a tenth bigger to an eye 2 m away than the card makes it. Making the pixel's line fan out from the eye, as the eye's own does, would be the thing to try.
+- **A crowd does not get it.** Cards drawn all at once (the tag field's fast ways) show the first layer only.
+- **"Pixels, baked" has no layered sheet.** Its sheet was baked by an older recipe that cannot be baked again as it was, and a new one would change its colours. The painted Roosevelt of the tag field has none either: he wears nothing loose.
+- **Only what faces the picture's eye is kept.** The far side of a brim's edge, or the strip of a limb just round its outline, still shows as outline falling short.
+- **A patch under 3.3 square centimetres is dropped**, and the body of a pixel sheet (a pixel a centimetre) keeps little: its layers are nearly all in the head, which is pictured finer.
+- **The comic look's shut-in holes went up in two rows** (160 to 166 from 2 m, 83 to 90 in the walk) while its bare pixels went down: a gap half filled is shut in where it was open.
+- **The edge of a layer is not smoothed**: a pixel there takes the one sheet pixel it falls in.
+- **One layer behind, 26 directions.** What can only be seen from further round than 40 degrees is in neither picture.
+
+Stills (`evidence/layers/`): `hat-18-<crew|two|close>-<joe|pixel-both>.png` are the pirate's hat off the watch page, before, after, and the pixels that changed in red; `sides-<seconds>-<role>.png` every head through the crew camera, from 2 m and from 1 m, bold ink before and after, then "Pixels, both" before and after; `changed-*.png` the same for more of the figure; `after-<role>-<seconds>-<eye>-<look>.png` are the judge's own: the real model, the cards before, the cards after, and what was filled in green, what is still bare in blue. `scripts/impostor/clear_shots.py --square 0.7` takes the page's.
 
 ## A place from a world model
 

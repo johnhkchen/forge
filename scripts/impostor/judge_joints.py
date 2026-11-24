@@ -182,7 +182,8 @@ def main():
     began = time.time()
 
     # (any other name: cards with pieces baked under that name, bake_joints.py --name)
-    sheets = SHEETS.get(which) or {look: [n.replace("skinned", which) for n in names] for look, names in SHEETS["skinned"].items()}
+    # (a look with no cards of that name keeps the ones with pieces: "Pixels, baked" has none baked with layers, --sheets layered-skinned)
+    sheets = SHEETS.get(which) or {look: [n.replace("skinned", which) for n in names] + names for look, names in SHEETS["skinned"].items()}
     for role, part in cast["roles"].items():
         if only and role not in only:
             continue

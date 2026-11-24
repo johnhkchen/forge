@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150]
+        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150] [--layers 2] [--round-the-back]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor-<look>-joined/ (pages older than the mended
@@ -56,6 +56,18 @@ reads a texture at (smaller is flatter; a detailed mesh wants more than a painte
             for a face drawn on this model (pixel_face.py) its marks are drawn on top; --face none leaves them off.
     joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
             screen however small the figure), and the lines inside a part drawn into its picture
+
+--layers 2 pictures every part two surfaces deep, into <version>-impostor-<look>-layered/ (pixel art:
+-impostor-pixel-clear-layered/). A picture holds the first surface its eye met, and no more: seen from a little to
+one side, what was behind that surface is a hole (the crown of a hat behind its brim's edge, a wrist inside a
+cuff). So each direction is pictured again with the first surface taken away wherever something behind it could
+be seen from a little to one side (behind): something that faces the picture's own eye, can be seen from outside
+the part from some direction up to 40 degrees off, and is on the outside of the whole model (a model is thin
+shells, and most of what lies behind a surface is the inside of one). A layer's picture is cut down to what it
+holds and goes on the same two sheets; a view set's "behind" lists them as "cells" lists the first, which is
+pictured exactly as it is without --layers. --round-the-back also keeps what faces away from the picture's eye
+(the strip of a limb just round its edge): it filled a few more pixels, made a tenth more stick out round the
+figure and the sheet much bigger, and is not what the pages have. A third layer (--layers 3) found next to nothing on the three dancers.
 
 --bent pictures knees or elbows bent as well: for each, a card of its own at each of --bends degrees (the skin
 of its two parts round the joint, as the real model has it bent so far, in the frame of the bone above), listed
@@ -391,6 +403,175 @@ def spread(values, known, rounds):
     return values
 
 
+BEHIND_START_M = 0.004   # what is behind a surface is looked for from this far behind it ...
+BEHIND_APART_M = 0.006   # ... and one layer of it is at least this far behind the last
+BEHIND_HITS = 10         # ... among this many surfaces down a pixel's line at most
+BEHIND_TILTS = (20.0, 40.0)  # a surface behind another is kept only if it can be seen from outside the part from somewhere this far (degrees) round the direction pictured ...
+BEHIND_AROUND = 6        # ... this many ways round, for each
+BEHIND_OFF_M = 0.0015    # ... looking from this far off the surface
+BEHIND_OUT = 24          # ... and only if it is on the outside of the whole model: one of this many ways from it, all round, meets nothing
+BEHIND_LEAST_CM2 = 3.3   # a patch of a layer behind is kept only if, with its thin edges and specks taken off, this much of it is left (and never under 4 pixels): a layer's picture is cut down to what it holds, and one speck far off makes it big
+PEEL_MORE_M = 0.002      # picturing a layer, everything nearer than this in front of it is left out
+
+
+def tree_of(objects):
+    """Something to send lines through: a part's faces, as they lie in its bone's frame."""
+    points, faces = [], []
+    for obj in objects:
+        first = len(points)
+        points += [v.co.copy() for v in obj.data.vertices]
+        faces += [[first + i for i in poly.vertices] for poly in obj.data.polygons]
+    return BVHTree.FromPolygons(points, faces)
+
+
+def whole_tree(objects, posed):
+    """Every face of the model as it stands when it is cut, in the scene's own frame."""
+    points, faces = [], []
+    for obj in objects:
+        first = len(points)
+        points += [obj.matrix_world @ v.co for v in posed[obj.name].vertices]
+        faces += [[first + i for i in poly.vertices] for poly in posed[obj.name].polygons]
+    return BVHTree.FromPolygons(points, faces)
+
+
+def behind(tree, view, height, known, half, per_m, whole=None, out_to=None, backs=False):
+    """What lies behind a picture's surface that an eye a little to one side could see. A picture holds, for every
+    pixel, the first surface the line through it meets. A model is thin shells one inside another (a hat's brim in
+    front of its crown, a cuff round a wrist, a coat's skirt over a leg), and most of what a line meets after the
+    first is the inside of something, which nobody ever sees. So for each pixel the line is followed on through
+    the part (tree_of), and the first surface on it that can be seen from outside the part, from some direction
+    within BEHIND_TILTS of the one pictured, is the next layer. A part is cut open at its joints, and through the
+    cut its own inside can be seen: so the place must also be on the outside of the whole model (whole: whole_tree;
+    out_to: the matrix from the part's bone's frame to the model as it stood). And it must face the eye that
+    would see it. backs: surfaces that face away from the direction pictured count too (the strip of a limb just
+    round its edge, which an eye a little to one side sees); without, only what faces the picture's own eye and
+    is hidden from it by something in front. height: how high each pixel's surface stands
+    toward the eye (m, from the bone's head); known: where there is one; half: the picture is 2 * half pixels
+    square with the bone's head at its middle; per_m: its pixels a metre. Returns how high the next layer stands
+    at each pixel, and where there is one."""
+    d, r, u = Vector(view["d"]), Vector(view["r"]), Vector(view["u"])
+    cone = []
+    for tilt in BEHIND_TILTS:
+        for k in range(BEHIND_AROUND):
+            a = 2.0 * math.pi * (k + 0.5 * (tilt == BEHIND_TILTS[0])) / BEHIND_AROUND
+            cone.append((d * math.cos(math.radians(tilt)) + (r * math.cos(a) + u * math.sin(a)) * math.sin(math.radians(tilt))).normalized())
+    down = -d
+    turn = out_to.to_3x3() if out_to is not None else None
+    golden = math.pi * (3.0 - math.sqrt(5.0))
+    around = [Vector((math.cos(golden * k) * math.sqrt(1.0 - z * z), z, math.sin(golden * k) * math.sqrt(1.0 - z * z))) for k, z in ((k, 1.0 - 2.0 * (k + 0.5) / BEHIND_OUT) for k in range(BEHIND_OUT))]
+    out, found = np.zeros(height.shape, dtype=np.float32), np.zeros(height.shape, dtype=bool)
+    cast = tree.ray_cast
+    for j, i in zip(*np.nonzero(known)):
+        at = float(height[j, i]) - BEHIND_START_M
+        foot = r * ((i + 0.5 - half) / per_m) + u * ((j + 0.5 - half) / per_m)
+        for _ in range(BEHIND_HITS):
+            hit = cast(foot + d * at, down)
+            if hit[0] is None:
+                break
+            at -= hit[3]
+            if float(height[j, i]) - at >= BEHIND_APART_M:
+                spot = hit[0]
+                faces = hit[1]
+                if (backs or faces.dot(d) > 0.02) and any(faces.dot(way) > 0.02 and cast(spot + way * BEHIND_OFF_M, way)[0] is None for way in cone):
+                    stood = out_to @ spot if whole is not None else None
+                    if whole is None or any(whole.ray_cast(stood + way * BEHIND_OFF_M, way)[0] is None for way in around):
+                        out[j, i], found[j, i] = at, True
+                        break
+            at -= 1e-4
+    return out, found
+
+
+def patches(found, least):
+    """A layer's pixels without its specks and hairs: what is left of `found` when everything one pixel thin is
+    taken off (and put back round what stays), in patches of at least `least` pixels."""
+    core = found.copy()
+    core[1:] &= found[:-1]
+    core[:-1] &= found[1:]
+    core[:, 1:] &= found[:, :-1]
+    core[:, :-1] &= found[:, 1:]
+    core[0], core[-1], core[:, 0], core[:, -1] = False, False, False, False
+    keep, seen = np.zeros_like(found), np.zeros_like(found)
+    tall, wide = found.shape
+    for j, i in zip(*np.nonzero(core)):
+        if seen[j, i]:
+            continue
+        todo, patch = [(j, i)], []
+        seen[j, i] = True
+        while todo:
+            y, x = todo.pop()
+            patch.append((y, x))
+            for b, a in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= b < tall and 0 <= a < wide and core[b, a] and not seen[b, a]:
+                    seen[b, a] = True
+                    todo.append((b, a))
+        if len(patch) >= least:
+            ys, xs = zip(*patch)
+            keep[ys, xs] = True
+    grown = keep.copy()
+    grown[1:] |= keep[:-1]
+    grown[:-1] |= keep[1:]
+    grown[:, 1:] |= keep[:, :-1]
+    grown[:, :-1] |= keep[:, 1:]
+    return grown & found
+
+
+def peel_group(image):
+    """A node group every material is passed through while a layer behind the first is pictured: a place nearer
+    the eye than the picture `image` says (how high the layer stands there, in the render's own pixels) is not
+    drawn at all, so the nearest thing that is drawn is the layer. "On" 0 switches it off."""
+    group = bpy.data.node_groups.new("impostor peel", "ShaderNodeTree")
+    group.interface.new_socket(name="Shader", in_out="INPUT", socket_type="NodeSocketShader")
+    group.interface.new_socket(name="Shader", in_out="OUTPUT", socket_type="NodeSocketShader")
+    nodes, links = group.nodes, group.links
+    enter, leave = nodes.new("NodeGroupInput"), nodes.new("NodeGroupOutput")
+    where = nodes.new("ShaderNodeTexCoord")
+    read = nodes.new("ShaderNodeTexImage")
+    read.image, read.interpolation, read.extension = image, "Closest", "EXTEND"
+    links.new(where.outputs["Window"], read.inputs["Vector"])
+    eye = nodes.new("ShaderNodeCameraData")
+    high = nodes.new("ShaderNodeMath")
+    high.operation = "SUBTRACT"
+    high.inputs[0].default_value = EYE_AWAY
+    links.new(eye.outputs["View Z Depth"], high.inputs[1])
+    keep = nodes.new("ShaderNodeMath")
+    keep.operation = "LESS_THAN"
+    links.new(high.outputs[0], keep.inputs[0])
+    far = nodes.new("ShaderNodeMath")  # (a picture holds 0 to 1: a height is kept in it as a half and a quarter of itself)
+    far.operation = "MULTIPLY_ADD"
+    far.inputs[1].default_value, far.inputs[2].default_value = 4.0, -2.0
+    links.new(read.outputs["Color"], far.inputs[0])
+    links.new(far.outputs[0], keep.inputs[1])
+    on = nodes.new("ShaderNodeValue")
+    on.name = "On"
+    off = nodes.new("ShaderNodeMath")
+    off.operation = "SUBTRACT"
+    off.inputs[0].default_value = 1.0
+    links.new(on.outputs[0], off.inputs[1])
+    either = nodes.new("ShaderNodeMath")
+    either.operation = "MAXIMUM"
+    links.new(keep.outputs[0], either.inputs[0])
+    links.new(off.outputs[0], either.inputs[1])
+    clear, mix = nodes.new("ShaderNodeBsdfTransparent"), nodes.new("ShaderNodeMixShader")
+    links.new(either.outputs[0], mix.inputs[0])
+    links.new(clear.outputs[0], mix.inputs[1])
+    links.new(enter.outputs[0], mix.inputs[2])
+    links.new(mix.outputs[0], leave.inputs[0])
+    return group
+
+
+def peeled(mat, group):
+    """Pass a material through the peel group, just before its output."""
+    tree = mat.node_tree
+    out = next((n for n in tree.nodes if n.type == "OUTPUT_MATERIAL" and n.is_active_output), None)
+    if out is None or not out.inputs["Surface"].links or any(n.type == "GROUP" and n.node_tree == group for n in tree.nodes):
+        return
+    was = out.inputs["Surface"].links[0].from_socket
+    node = tree.nodes.new("ShaderNodeGroup")
+    node.node_tree = group
+    tree.links.new(was, node.inputs[0])
+    tree.links.new(node.outputs[0], out.inputs["Surface"])
+
+
 def pack(sizes):
     """Shelves: [(w, h)] to ([(x, y)], sheet width, sheet height). The width is picked to leave the sheet near square."""
     area = sum((w + GUTTER) * (h + GUTTER) for w, h in sizes)
@@ -424,6 +605,7 @@ def main():
     # pixel art: the line is one pixel of the sheet. bold ink: no line round the part at all (the page draws it)
     ink_m = float(flag("--ink-cm", str(100.0 / ppm) if look == "pixel" else "0" if look == "joe" else "1.4")) / 100.0
     colours = int(flag("--colours", "32" if look == "pixel" else "0"))
+    layers = max(1, int(flag("--layers", "1")))  # how many surfaces deep every picture goes: 1 is the first the eye meets and no more
     source = flag("--source", os.path.join(run, "profiles", profile + "-walk.glb"))
     # Pixel art: the head finer than the body, and a face drawn on purpose from the character's recipe.
     face = flag("--face", "auto" if look == "pixel" else "none")
@@ -445,7 +627,7 @@ def main():
     finer = {"head": head_px} if head_px != 1.0 else {}
     creases = flag("--creases", "head" if look == "pixel" else "none")       # which parts get their folds drawn in: head, none
     head_colours = int(flag("--head-colours", "16" if look == "pixel" else "0"))  # colours the head may have besides the sheet's own
-    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor-pixel-clear" if look == "pixel" else "impostor-%s-joined" % look)))))
+    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", (("impostor-pixel-clear" if look == "pixel" else "impostor-%s-joined" % look) + ("-layered" if layers > 1 else "")).replace("-joined-layered", "-layered"))))))
     os.makedirs(out, exist_ok=True)
     began = time.time()
 
@@ -461,6 +643,8 @@ def main():
     lowered = hang_arms(scene, rig) if "--rest-pose" not in args else {}
     graph = bpy.context.evaluated_depsgraph_get()
     posed = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in bodies}
+    model_tree = whole_tree(bodies, posed) if layers > 1 else None
+    out_to = {}  # for each part, the matrix from its bone's frame back to the model as it stands here
     whole_triangles = sum(len(p.vertices) - 2 for o in bodies for p in o.data.polygons)
 
     # The parts, each in its bone's own frame.
@@ -483,6 +667,7 @@ def main():
         reach = float(np.linalg.norm(points, axis=1).max()) + ink_m
         lo, hi = points.min(axis=0), points.max(axis=0)
         made[name] = objects
+        out_to[name] = into.inverted()
         parts.append({"name": name, "bone": bones[0], "bones": bones, **({"px_per_m": ppm * finer[name]} if name in finer else {}), "center": [round(float(c), 4) for c in (lo + hi) / 2.0],
                       "depth_m": round(reach + 0.01, 4), "reach_m": round(reach, 4),
                       "triangles": sum(len(p.vertices) - 2 for o in objects for p in o.data.polygons), "own_triangles": own[name]})
@@ -593,9 +778,18 @@ def main():
     part_objects = [o for objects in made.values() for o in objects]
     painted = {o.name: list(o.data.materials) for o in part_objects}
     tmp_colour, tmp_data = os.path.join(out, ".bake-colour.png"), os.path.join(out, ".bake-data.exr")
+    # Layers behind the first (--layers): what each needs to be pictured (behind, peel_group).
+    trees = {name: tree_of(objects) for name, objects in made.items()} if layers > 1 else {}
+    peel_at = bpy.data.images.new("impostor peel", wide, tall, float_buffer=True, is_data=True) if layers > 1 else None
+    if peel_at:
+        peel_at.use_half_precision = False  # (a half-size number is good to two millimetres here, and a layer is told from the one in front by that much)
+    peel = peel_group(peel_at) if layers > 1 else None
+    for mat in ([data_mat] + [m for mats in painted.values() for m in mats if m is not None]) if layers > 1 else []:
+        peeled(mat, peel)
+    last = {}  # the layer just pictured, for the one behind it: {part: (how high each pixel stands, where there is one)}
 
     card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "plays": flag("--plays", profile), "title": flag("--title", ""), "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
-            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, **({"bent": {"joints": bent}} if bent else {}), "line_marked": True, "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
+            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, **({"bent": {"joints": bent}} if bent else {}), "line_marked": True, "layers": layers, "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}
@@ -603,8 +797,21 @@ def main():
         views = impostor.views_of(set_name)
         pictures = []  # (part, view, colour, data)
         heads = []     # the head's pictures, kept as they stand to have the face drawn on: (view, colour, height, where the head is, where the bone's head is)
-        for vi, view in enumerate(views):
+        for vi, layer in ((vi, layer) for vi in range(len(views)) for layer in range(layers)):
+            view = views[vi]
             d, r, u = Vector(view["d"]), Vector(view["r"]), Vector(view["u"])
+            if peel:
+                # a layer behind the first: for every part, how high it stands at each pixel; nothing nearer is drawn
+                peel.nodes["On"].outputs[0].default_value = 1.0 if layer else 0.0
+                if layer:
+                    high = np.zeros((tall, wide, 4), dtype=np.float32)
+                    for p in parts:
+                        (sx, sy), hs, fine = spots[p["name"]], half[p["name"]], finer.get(p["name"], 1.0)
+                        at, found = behind(trees[p["name"]], view, *last[p["name"]], hs, ppm * fine, model_tree, out_to[p["name"]], "--round-the-back" in args)
+                        found = patches(found, max(4, int(round(BEHIND_LEAST_CM2 * 1e-4 * (ppm * fine) ** 2))))
+                        high[sy - hs:sy + hs, sx - hs:sx + hs, :3] = np.where(found, np.clip(0.5 + 0.25 * (at + PEEL_MORE_M) * fine, 0.0, 1.0), 0.0)[..., None]  # (all three colours: a node reads a picture's brightness)
+                    peel_at.pixels.foreach_set(high.ravel())
+                    peel_at.update()
             cam.matrix_world = Matrix(((r.x, u.x, d.x, d.x * EYE_AWAY), (r.y, u.y, d.y, d.y * EYE_AWAY), (r.z, u.z, d.z, d.z * EYE_AWAY), (0, 0, 0, 1)))
             for p in parts:
                 sx, sy = spots[p["name"]]
@@ -631,7 +838,7 @@ def main():
                 for i in range(len(obj.data.materials)):
                     obj.data.materials[i] = data_mat
             for shell in shells:
-                shell.show_render = True
+                shell.show_render = layer == 0  # a layer behind the first has no line round it
             if ink_group:
                 ink_group.nodes["Ink"].inputs["Material"].default_value = data_ink
                 retag(ink_group, part_objects)
@@ -654,7 +861,7 @@ def main():
                 # thin ink line when the card is drawn (it is kept where the cover is over a half). The colour
                 # under it is the smoothed render's, carried a pixel outward where that one had not reached.
                 there = dat[..., 3] > 0.5
-                if look == "pixel":
+                if look == "pixel" and layer == 0:
                     grown = there
                     for _ in range(max(1, int(round(fine)))):  # the line is as wide on a finer part as on the rest
                         grown = grown | np.roll(grown, 1, 0) | np.roll(grown, -1, 0) | np.roll(grown, 1, 1) | np.roll(grown, -1, 1)
@@ -664,8 +871,9 @@ def main():
                     there = there | ring
                 col[..., :3] = spread(col[..., :3], col[..., 3] > 0.5, 3)
                 col[..., 3] = there
+                last[p["name"]] = ((dat[..., 2] * 2.0 - 1.0).copy(), (dat[..., 3] > 0.5) & ~((dat[..., 0] < 0.02) & (dat[..., 1] < 0.02) & (dat[..., 2] < 0.02)))  # (not the line's pixels)
                 if not there.any():
-                    pictures.append((p, vi, None, None, (0, 0), (0.0, 0.0)))
+                    pictures.append((p, vi, None, None, (0, 0), (0.0, 0.0), layer))
                     continue
                 ys, xs = np.where(there)
                 x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
@@ -705,10 +913,10 @@ def main():
                     # small is a patch of skin; bold ink has always had them.
                     col[..., :3] = np.where(impostor.folds(dat[..., 2] * 2.0 - 1.0, normal, known & ~line)[..., None], col[..., :3] * CREASE, col[..., :3])
                 metres = (np.round(packed[..., 2][known] * 255.0) / 255.0 * 2.0 - 1.0) * p["depth_m"]
-                if marks and p["name"] == "head":
+                if marks and p["name"] == "head" and layer == 0:
                     heads.append((vi, col[y0:y1, x0:x1], (dat[..., 2] * 2.0 - 1.0)[y0:y1, x0:x1], (known & ~line)[y0:y1, x0:x1], (hs - x0, hs - y0)))
-                pictures.append((p, vi, col[y0:y1, x0:x1], packed[y0:y1, x0:x1], (hs - x0, hs - y0), (float(metres.min()), float(metres.max()))))
-            if vi % 8 == 0:
+                pictures.append((p, vi, col[y0:y1, x0:x1], packed[y0:y1, x0:x1], (hs - x0, hs - y0), (float(metres.min()), float(metres.max())), layer))
+            if vi % 8 == 0 and layer == 0:
                 print("IMPOSTOR views %s: %d of %d pictured" % (set_name, vi + 1, len(views)), flush=True)
         palette, keep = None, []
         if heads:
@@ -726,12 +934,13 @@ def main():
             print("IMPOSTOR face: drawn in %s" % ", ".join("%s %d" % (k, v) for k, v in drawn.items()), flush=True)
         if colours:
             # Pixel art keeps to a few colours: the ones this character is most made of. Every pixel takes the nearest.
-            seen = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None])
+            # (from the first layer's pictures alone: a sheet baked with layers behind has the colours it has without)
+            seen = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None and pic[6] == 0])
             palette = pixel_face.few_colours(seen[:: max(1, len(seen) // 200000)], colours, keep)
             if head_colours:
                 # ... and the head some more of its own, picked from its pictures alone and closer together: a face is
                 # a tenth of the figure, and left to the whole sheet's count it gets one skin and one shadow.
-                of_head = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None and pic[0]["name"] == "head"] or [seen[:0]])
+                of_head = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None and pic[6] == 0 and pic[0]["name"] == "head"] or [seen[:0]])
                 if len(of_head):
                     palette = pixel_face.few_colours(of_head[:: max(1, len(of_head) // 200000)], len(palette) + head_colours, list(palette), apart=10.0 / 255.0)
             drawn_as = pixel_face.folded(palette, (recipe or {}).get("same"))  # colours the recipe says are one thing
@@ -744,19 +953,24 @@ def main():
         where, sheet_w, sheet_h, used = pack(sizes)
         colour_sheet = np.zeros((sheet_h, sheet_w, 4), dtype=np.uint8)
         data_sheet = np.zeros((sheet_h, sheet_w, 3), dtype=np.uint8)
-        cells = {p["name"]: [None] * len(views) for p in parts}
-        for (p, vi, col, dat, anchor, heights), (x, y), (w, h) in zip(pictures, where, sizes):
+        first = {p["name"]: [None] * len(views) for p in parts}
+        # the layers behind the first: the same list for each, a picture cut down to what it holds
+        further = [{p["name"]: [None] * len(views) for p in parts} for _ in range(layers - 1)]
+        for (p, vi, col, dat, anchor, heights, layer), (x, y), (w, h) in zip(pictures, where, sizes):
+            cells = further[layer - 1] if layer else first
             if col is None:
                 cells[p["name"]][vi] = [0, 0, 0, 0, 0, 0, 0.0, 0.0]
                 continue
             colour_sheet[y:y + h, x:x + w] = np.round(np.clip(col, 0.0, 1.0) * 255.0)
             data_sheet[y:y + h, x:x + w] = np.round(np.clip(dat, 0.0, 1.0) * 255.0)
             cells[p["name"]][vi] = [int(x), int(y), int(w), int(h), int(anchor[0]), int(anchor[1]), round(heights[0], 4), round(heights[1], 4)]
+        cells = first
         names = ("views%s-color.png" % set_name, "views%s-data.png" % set_name)
         impostor.write_png(os.path.join(out, names[0]), colour_sheet)
         impostor.write_png(os.path.join(out, names[1]), data_sheet)
         card["sets"][set_name] = {
             "color": names[0], "data": names[1], "size": [sheet_w, sheet_h], "views": views, "cells": cells,
+            **({"behind": further, "behind_share": round(sum(w * h for pic, (w, h) in zip(pictures, sizes) if pic[6] and pic[2] is not None) / float(max(1, sum(w * h for pic, (w, h) in zip(pictures, sizes) if pic[2] is not None))), 3)} if further else {}),
             "pictures": len(pictures), "filled": round(used / float(sheet_w * sheet_h), 3),
             "bytes": {"color": os.path.getsize(os.path.join(out, names[0])), "data": os.path.getsize(os.path.join(out, names[1]))},
             # two sheets, four bytes a pixel each once a graphics card holds them
