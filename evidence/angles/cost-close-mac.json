@@ -11,139 +11,139 @@
    "high": 2.3
   },
   "joe|close|frontman|after": {
-   "ms": 2.9,
-   "low": 2.8,
-   "high": 3.1
+   "ms": 2.6,
+   "low": 2.6,
+   "high": 2.7
   },
   "joe|close|left|before": {
-   "ms": 1.8,
-   "low": 1.6,
+   "ms": 1.6,
+   "low": 1.5,
    "high": 1.9
   },
   "joe|close|left|after": {
-   "ms": 2,
-   "low": 1.9,
-   "high": 2
+   "ms": 1.9,
+   "low": 1.7,
+   "high": 1.9
   },
   "joe|close|right|before": {
-   "ms": 2.5,
-   "low": 2.1,
-   "high": 2.9
-  },
-  "joe|close|right|after": {
-   "ms": 4.1,
-   "low": 4,
-   "high": 4.5
-  },
-  "joe|crew|all|before": {
-   "ms": 1.9,
-   "low": 1.7,
-   "high": 2.2
-  },
-  "joe|crew|all|after": {
-   "ms": 1.8,
-   "low": 1.7,
-   "high": 2.1
-  },
-  "joe|two|frontman|before": {
    "ms": 2.1,
    "low": 2,
-   "high": 2.3
+   "high": 2.1
   },
-  "joe|two|frontman|after": {
-   "ms": 2.5,
-   "low": 2.4,
-   "high": 2.9
-  },
-  "joe|two|left|before": {
-   "ms": 2.3,
-   "low": 2.2,
-   "high": 2.6
-  },
-  "joe|two|left|after": {
-   "ms": 2.8,
-   "low": 2.8,
-   "high": 3
-  },
-  "joe|two|right|before": {
-   "ms": 2.7,
-   "low": 2.6,
-   "high": 3
-  },
-  "joe|two|right|after": {
-   "ms": 3.8,
+  "joe|close|right|after": {
+   "ms": 3.7,
    "low": 3.7,
-   "high": 4
+   "high": 3.8
   },
-  "pixel-both|close|frontman|before": {
-   "ms": 1.5,
-   "low": 1.4,
-   "high": 1.6
-  },
-  "pixel-both|close|frontman|after": {
-   "ms": 1.9,
-   "low": 1.8,
-   "high": 2.3
-  },
-  "pixel-both|close|left|before": {
-   "ms": 1.3,
-   "low": 1.2,
-   "high": 1.3
-  },
-  "pixel-both|close|left|after": {
-   "ms": 1.5,
-   "low": 1.3,
-   "high": 1.5
-  },
-  "pixel-both|close|right|before": {
-   "ms": 1.6,
-   "low": 1.6,
-   "high": 1.7
-  },
-  "pixel-both|close|right|after": {
-   "ms": 2.5,
-   "low": 2.5,
-   "high": 2.9
-  },
-  "pixel-both|crew|all|before": {
-   "ms": 1.6,
-   "low": 1.5,
-   "high": 1.6
-  },
-  "pixel-both|crew|all|after": {
-   "ms": 2.1,
-   "low": 1.9,
-   "high": 2.2
-  },
-  "pixel-both|two|frontman|before": {
-   "ms": 1.6,
-   "low": 1.4,
-   "high": 1.7
-  },
-  "pixel-both|two|frontman|after": {
+  "joe|crew|all|before": {
    "ms": 1.7,
    "low": 1.6,
    "high": 1.8
   },
-  "pixel-both|two|left|before": {
-   "ms": 1.6,
-   "low": 1.5,
+  "joe|crew|all|after": {
+   "ms": 2.3,
+   "low": 1.8,
+   "high": 2.4
+  },
+  "joe|two|frontman|before": {
+   "ms": 2.1,
+   "low": 2,
+   "high": 2.1
+  },
+  "joe|two|frontman|after": {
+   "ms": 2.3,
+   "low": 2.3,
+   "high": 2.4
+  },
+  "joe|two|left|before": {
+   "ms": 2.1,
+   "low": 2,
+   "high": 2.1
+  },
+  "joe|two|left|after": {
+   "ms": 2.7,
+   "low": 2.7,
+   "high": 2.8
+  },
+  "joe|two|right|before": {
+   "ms": 2.6,
+   "low": 2.6,
+   "high": 2.7
+  },
+  "joe|two|right|after": {
+   "ms": 3.7,
+   "low": 3.5,
+   "high": 3.8
+  },
+  "pixel-both|close|frontman|before": {
+   "ms": 1.7,
+   "low": 1.7,
    "high": 1.8
+  },
+  "pixel-both|close|frontman|after": {
+   "ms": 1.9,
+   "low": 1.8,
+   "high": 2.1
+  },
+  "pixel-both|close|left|before": {
+   "ms": 1.6,
+   "low": 1.2,
+   "high": 1.7
+  },
+  "pixel-both|close|left|after": {
+   "ms": 1.7,
+   "low": 1.6,
+   "high": 1.8
+  },
+  "pixel-both|close|right|before": {
+   "ms": 1.8,
+   "low": 1.8,
+   "high": 1.9
+  },
+  "pixel-both|close|right|after": {
+   "ms": 2.5,
+   "low": 2.4,
+   "high": 2.6
+  },
+  "pixel-both|crew|all|before": {
+   "ms": 1.6,
+   "low": 1.4,
+   "high": 1.8
+  },
+  "pixel-both|crew|all|after": {
+   "ms": 2,
+   "low": 1.9,
+   "high": 2.1
+  },
+  "pixel-both|two|frontman|before": {
+   "ms": 2.4,
+   "low": 2.1,
+   "high": 2.4
+  },
+  "pixel-both|two|frontman|after": {
+   "ms": 1.8,
+   "low": 1.6,
+   "high": 2.2
+  },
+  "pixel-both|two|left|before": {
+   "ms": 1.9,
+   "low": 1.6,
+   "high": 1.9
   },
   "pixel-both|two|left|after": {
    "ms": 1.8,
-   "low": 1.8,
+   "low": 1.7,
    "high": 2
   },
   "pixel-both|two|right|before": {
-   "ms": 1.8,
-   "low": 1.7,
-   "high": 1.8
+   "ms": 1.9,
+   "low": 1.8,
+   "high": 2.2
   },
   "pixel-both|two|right|after": {
    "ms": 2.2,
    "low": 2.1,
-   "high": 2.5
+   "high": 2.3
   }
  },
  "rows": [
@@ -153,9 +153,9 @@
    "look": "joe",
    "eye": "crew",
    "role": "all",
-   "middle": 1.7000000476837158,
-   "low": 1.399999976158142,
-   "high": 7.799999952316284
+   "middle": 1.699999988079071,
+   "low": 1.300000011920929,
+   "high": 5.199999988079071
   },
   {
    "round": 0,
@@ -163,289 +163,289 @@
    "look": "joe",
    "eye": "two",
    "role": "frontman",
+   "middle": 2.100000023841858,
+   "low": 1.600000023841858,
+   "high": 2.699999988079071
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "two",
+   "role": "left",
+   "middle": 2,
+   "low": 1.5999999642372131,
+   "high": 6.100000023841858
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "two",
+   "role": "right",
+   "middle": 2.699999988079071,
+   "low": 2.199999988079071,
+   "high": 4
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "close",
+   "role": "frontman",
+   "middle": 2.300000011920929,
+   "low": 1.600000023841858,
+   "high": 4.400000035762787
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "close",
+   "role": "left",
+   "middle": 1.5,
+   "low": 1.0999999642372131,
+   "high": 3.899999976158142
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "close",
+   "role": "right",
    "middle": 2.100000023841858,
    "low": 1.7999999523162842,
-   "high": 7.899999976158142
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "two",
-   "role": "left",
-   "middle": 2.200000047683716,
-   "low": 1.699999988079071,
-   "high": 7.400000035762787
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "two",
-   "role": "right",
-   "middle": 2.700000047683716,
-   "low": 2.300000011920929,
-   "high": 9
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "close",
-   "role": "frontman",
-   "middle": 2,
-   "low": 1.699999988079071,
-   "high": 5.099999964237213
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "close",
-   "role": "left",
-   "middle": 1.5999999642372131,
-   "low": 1.2000000476837158,
-   "high": 5.699999988079071
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "close",
-   "role": "right",
-   "middle": 2.100000023841858,
-   "low": 1.800000011920929,
-   "high": 4.800000011920929
+   "high": 7.199999988079071
   },
   {
    "round": 0,
    "gallery": "before",
    "look": "pixel-both",
-   "eye": "crew",
-   "role": "all",
-   "middle": 1.600000023841858,
-   "low": 1.199999988079071,
-   "high": 7
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "pixel-both",
-   "eye": "two",
-   "role": "frontman",
-   "middle": 1.600000023841858,
-   "low": 1.300000011920929,
-   "high": 9.699999988079071
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "pixel-both",
-   "eye": "two",
-   "role": "left",
-   "middle": 1.600000023841858,
-   "low": 1.300000011920929,
-   "high": 9.299999952316284
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "pixel-both",
-   "eye": "two",
-   "role": "right",
-   "middle": 1.699999988079071,
-   "low": 1.399999976158142,
-   "high": 7.800000011920929
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "pixel-both",
-   "eye": "close",
-   "role": "frontman",
-   "middle": 1.5,
-   "low": 1.2000000476837158,
-   "high": 7.800000011920929
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "pixel-both",
-   "eye": "close",
-   "role": "left",
-   "middle": 1.300000011920929,
-   "low": 1,
-   "high": 8
-  },
-  {
-   "round": 0,
-   "gallery": "before",
-   "look": "pixel-both",
-   "eye": "close",
-   "role": "right",
-   "middle": 1.699999988079071,
-   "low": 1.300000011920929,
-   "high": 5
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "joe",
    "eye": "crew",
    "role": "all",
    "middle": 1.800000011920929,
-   "low": 1.5,
-   "high": 6.599999964237213
+   "low": 1.4000000357627869,
+   "high": 4.299999952316284
   },
   {
    "round": 0,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "two",
-   "role": "frontman",
-   "middle": 2.5,
-   "low": 2.199999988079071,
-   "high": 6.800000011920929
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "two",
-   "role": "left",
-   "middle": 3,
-   "low": 2.399999976158142,
-   "high": 8.199999988079071
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "two",
-   "role": "right",
-   "middle": 4,
-   "low": 3.399999976158142,
-   "high": 12.899999976158142
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "close",
-   "role": "frontman",
-   "middle": 2.899999976158142,
-   "low": 2.5,
-   "high": 3.700000047683716
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "close",
-   "role": "left",
-   "middle": 2,
-   "low": 1.5999999642372131,
-   "high": 3.399999976158142
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "close",
-   "role": "right",
-   "middle": 4.099999964237213,
-   "low": 3.5,
-   "high": 5.300000011920929
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "pixel-both",
-   "eye": "crew",
-   "role": "all",
-   "middle": 2.100000023841858,
-   "low": 1.699999988079071,
-   "high": 5.799999952316284
-  },
-  {
-   "round": 0,
-   "gallery": "after",
+   "gallery": "before",
    "look": "pixel-both",
    "eye": "two",
    "role": "frontman",
-   "middle": 1.800000011920929,
-   "low": 1.399999976158142,
-   "high": 6.700000047683716
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "pixel-both",
-   "eye": "two",
-   "role": "left",
-   "middle": 1.800000011920929,
-   "low": 1.5,
-   "high": 4.600000023841858
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "pixel-both",
-   "eye": "two",
-   "role": "right",
-   "middle": 2.100000023841858,
-   "low": 1.899999976158142,
-   "high": 7.099999964237213
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "pixel-both",
-   "eye": "close",
-   "role": "frontman",
-   "middle": 1.899999976158142,
-   "low": 1.5,
-   "high": 7.099999964237213
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "pixel-both",
-   "eye": "close",
-   "role": "left",
-   "middle": 1.300000011920929,
-   "low": 1.199999988079071,
-   "high": 2.099999964237213
-  },
-  {
-   "round": 0,
-   "gallery": "after",
-   "look": "pixel-both",
-   "eye": "close",
-   "role": "right",
-   "middle": 2.5,
-   "low": 2.100000023841858,
-   "high": 4.199999988079071
-  },
-  {
-   "round": 1,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "crew",
-   "role": "all",
    "middle": 2.099999964237213,
    "low": 1.5999999642372131,
-   "high": 5.100000023841858
+   "high": 3.699999988079071
   },
   {
-   "round": 1,
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "left",
+   "middle": 1.899999976158142,
+   "low": 1.5,
+   "high": 3.400000035762787
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "right",
+   "middle": 1.9000000357627869,
+   "low": 1.5,
+   "high": 3.199999988079071
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "frontman",
+   "middle": 1.7000000476837158,
+   "low": 1.399999976158142,
+   "high": 3.5
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "left",
+   "middle": 1.600000023841858,
+   "low": 1.2999999523162842,
+   "high": 2.899999976158142
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "right",
+   "middle": 1.7999999523162842,
+   "low": 1.399999976158142,
+   "high": 3.5
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "crew",
+   "role": "all",
+   "middle": 2.300000011920929,
+   "low": 1.5,
+   "high": 3.800000011920929
+  },
+  {
+   "round": 0,
    "gallery": "after",
    "look": "joe",
    "eye": "two",
    "role": "frontman",
    "middle": 2.400000035762787,
    "low": 2.100000023841858,
-   "high": 4.400000035762787
+   "high": 3.799999952316284
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "two",
+   "role": "left",
+   "middle": 2.699999988079071,
+   "low": 2.299999952316284,
+   "high": 3.799999952316284
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "two",
+   "role": "right",
+   "middle": 3.699999988079071,
+   "low": 3.399999976158142,
+   "high": 4.800000011920929
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "close",
+   "role": "frontman",
+   "middle": 2.600000023841858,
+   "low": 2.399999976158142,
+   "high": 3.899999976158142
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "close",
+   "role": "left",
+   "middle": 1.9000000357627869,
+   "low": 1.5999999642372131,
+   "high": 3
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "close",
+   "role": "right",
+   "middle": 3.800000011920929,
+   "low": 3.5,
+   "high": 5
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "crew",
+   "role": "all",
+   "middle": 1.899999976158142,
+   "low": 1.5,
+   "high": 4.800000011920929
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "frontman",
+   "middle": 1.600000023841858,
+   "low": 1.399999976158142,
+   "high": 2.900000035762787
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "left",
+   "middle": 1.699999988079071,
+   "low": 1.5,
+   "high": 2.900000035762787
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "right",
+   "middle": 2.300000011920929,
+   "low": 1.899999976158142,
+   "high": 4.200000047683716
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "frontman",
+   "middle": 2.100000023841858,
+   "low": 1.699999988079071,
+   "high": 3.899999976158142
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "left",
+   "middle": 1.699999988079071,
+   "low": 1.399999976158142,
+   "high": 3.199999988079071
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "right",
+   "middle": 2.5,
+   "low": 2.199999988079071,
+   "high": 3.400000035762787
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "crew",
+   "role": "all",
+   "middle": 1.800000011920929,
+   "low": 1.5,
+   "high": 3
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "two",
+   "role": "frontman",
+   "middle": 2.300000011920929,
+   "low": 2,
+   "high": 7.800000011920929
   },
   {
    "round": 1,
@@ -454,8 +454,8 @@
    "eye": "two",
    "role": "left",
    "middle": 2.800000011920929,
-   "low": 2.399999976158142,
-   "high": 5
+   "low": 2.300000011920929,
+   "high": 8.099999964237213
   },
   {
    "round": 1,
@@ -463,9 +463,9 @@
    "look": "joe",
    "eye": "two",
    "role": "right",
-   "middle": 3.699999988079071,
-   "low": 3.300000011920929,
-   "high": 5.400000035762787
+   "middle": 3.800000011920929,
+   "low": 3.299999952316284,
+   "high": 5
   },
   {
    "round": 1,
@@ -473,9 +473,9 @@
    "look": "joe",
    "eye": "close",
    "role": "frontman",
-   "middle": 2.800000011920929,
+   "middle": 2.700000047683716,
    "low": 2.399999976158142,
-   "high": 4.199999988079071
+   "high": 5.699999988079071
   },
   {
    "round": 1,
@@ -483,9 +483,9 @@
    "look": "joe",
    "eye": "close",
    "role": "left",
-   "middle": 1.9000000357627869,
+   "middle": 1.899999976158142,
    "low": 1.5,
-   "high": 4.5
+   "high": 2.5
   },
   {
    "round": 1,
@@ -493,9 +493,9 @@
    "look": "joe",
    "eye": "close",
    "role": "right",
-   "middle": 4,
-   "low": 3.599999964237213,
-   "high": 5.100000023841858
+   "middle": 3.699999988079071,
+   "low": 3.399999976158142,
+   "high": 8.899999976158142
   },
   {
    "round": 1,
@@ -503,9 +503,9 @@
    "look": "pixel-both",
    "eye": "crew",
    "role": "all",
-   "middle": 2.199999988079071,
-   "low": 1.5,
-   "high": 7
+   "middle": 2.099999964237213,
+   "low": 1.699999988079071,
+   "high": 4.5
   },
   {
    "round": 1,
@@ -513,9 +513,9 @@
    "look": "pixel-both",
    "eye": "two",
    "role": "frontman",
-   "middle": 1.699999988079071,
+   "middle": 2.200000047683716,
    "low": 1.399999976158142,
-   "high": 6.5
+   "high": 4.199999988079071
   },
   {
    "round": 1,
@@ -523,39 +523,39 @@
    "look": "pixel-both",
    "eye": "two",
    "role": "left",
-   "middle": 1.800000011920929,
-   "low": 1.5,
+   "middle": 1.7999999523162842,
+   "low": 1.4000000357627869,
+   "high": 3.099999964237213
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "right",
+   "middle": 2.199999988079071,
+   "low": 1.800000011920929,
+   "high": 3.100000023841858
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "frontman",
+   "middle": 1.899999976158142,
+   "low": 1.5999999642372131,
    "high": 5
   },
   {
    "round": 1,
    "gallery": "after",
    "look": "pixel-both",
-   "eye": "two",
-   "role": "right",
-   "middle": 2.199999988079071,
-   "low": 1.899999976158142,
-   "high": 5.400000035762787
-  },
-  {
-   "round": 1,
-   "gallery": "after",
-   "look": "pixel-both",
-   "eye": "close",
-   "role": "frontman",
-   "middle": 1.800000011920929,
-   "low": 1.5,
-   "high": 6
-  },
-  {
-   "round": 1,
-   "gallery": "after",
-   "look": "pixel-both",
    "eye": "close",
    "role": "left",
-   "middle": 1.5,
+   "middle": 1.5999999642372131,
    "low": 1.199999988079071,
-   "high": 2.399999976158142
+   "high": 4
   },
   {
    "round": 1,
@@ -563,9 +563,9 @@
    "look": "pixel-both",
    "eye": "close",
    "role": "right",
-   "middle": 2.5,
-   "low": 2.299999952316284,
-   "high": 4.200000047683716
+   "middle": 2.600000023841858,
+   "low": 2.099999964237213,
+   "high": 5.900000035762787
   },
   {
    "round": 1,
@@ -573,9 +573,9 @@
    "look": "joe",
    "eye": "crew",
    "role": "all",
-   "middle": 1.899999976158142,
-   "low": 1.399999976158142,
-   "high": 5
+   "middle": 1.600000023841858,
+   "low": 1.300000011920929,
+   "high": 5.300000011920929
   },
   {
    "round": 1,
@@ -585,7 +585,7 @@
    "role": "frontman",
    "middle": 2,
    "low": 1.699999988079071,
-   "high": 5.300000011920929
+   "high": 6.199999988079071
   },
   {
    "round": 1,
@@ -593,9 +593,9 @@
    "look": "joe",
    "eye": "two",
    "role": "left",
-   "middle": 2.300000011920929,
-   "low": 1.800000011920929,
-   "high": 3.900000035762787
+   "middle": 2.100000023841858,
+   "low": 1.699999988079071,
+   "high": 4.600000023841858
   },
   {
    "round": 1,
@@ -603,9 +603,9 @@
    "look": "joe",
    "eye": "two",
    "role": "right",
-   "middle": 2.599999964237213,
+   "middle": 2.600000023841858,
    "low": 2.199999988079071,
-   "high": 4.900000035762787
+   "high": 5.699999988079071
   },
   {
    "round": 1,
@@ -614,7 +614,7 @@
    "eye": "close",
    "role": "frontman",
    "middle": 2.100000023841858,
-   "low": 1.5999999642372131,
+   "low": 1.600000023841858,
    "high": 4.099999964237213
   },
   {
@@ -623,9 +623,9 @@
    "look": "joe",
    "eye": "close",
    "role": "left",
-   "middle": 1.800000011920929,
-   "low": 1.5,
-   "high": 4.200000047683716
+   "middle": 1.5999999642372131,
+   "low": 1.0999999642372131,
+   "high": 3.5
   },
   {
    "round": 1,
@@ -633,9 +633,9 @@
    "look": "joe",
    "eye": "close",
    "role": "right",
-   "middle": 2.900000035762787,
-   "low": 2.399999976158142,
-   "high": 4.5
+   "middle": 2.099999964237213,
+   "low": 1.800000011920929,
+   "high": 6.599999964237213
   },
   {
    "round": 1,
@@ -644,8 +644,8 @@
    "eye": "crew",
    "role": "all",
    "middle": 1.600000023841858,
-   "low": 1.2999999523162842,
-   "high": 4.800000011920929
+   "low": 1,
+   "high": 4.799999952316284
   },
   {
    "round": 1,
@@ -653,9 +653,9 @@
    "look": "pixel-both",
    "eye": "two",
    "role": "frontman",
-   "middle": 1.7000000476837158,
-   "low": 1.300000011920929,
-   "high": 6.100000023841858
+   "middle": 2.399999976158142,
+   "low": 1.199999988079071,
+   "high": 8
   },
   {
    "round": 1,
@@ -663,9 +663,9 @@
    "look": "pixel-both",
    "eye": "two",
    "role": "left",
-   "middle": 1.800000011920929,
-   "low": 1.300000011920929,
-   "high": 5.600000023841858
+   "middle": 1.899999976158142,
+   "low": 1.199999988079071,
+   "high": 2.899999976158142
   },
   {
    "round": 1,
@@ -674,8 +674,8 @@
    "eye": "two",
    "role": "right",
    "middle": 1.800000011920929,
-   "low": 1.5,
-   "high": 6
+   "low": 1.399999976158142,
+   "high": 5.100000023841858
   },
   {
    "round": 1,
@@ -683,9 +683,9 @@
    "look": "pixel-both",
    "eye": "close",
    "role": "frontman",
-   "middle": 1.600000023841858,
+   "middle": 1.800000011920929,
    "low": 1.199999988079071,
-   "high": 6
+   "high": 4.5
   },
   {
    "round": 1,
@@ -695,7 +695,7 @@
    "role": "left",
    "middle": 1.199999988079071,
    "low": 1,
-   "high": 8.199999988079071
+   "high": 5.300000011920929
   },
   {
    "round": 1,
@@ -703,9 +703,9 @@
    "look": "pixel-both",
    "eye": "close",
    "role": "right",
-   "middle": 1.5999999642372131,
+   "middle": 1.800000011920929,
    "low": 1.300000011920929,
-   "high": 9
+   "high": 5.799999952316284
   },
   {
    "round": 2,
@@ -713,9 +713,9 @@
    "look": "joe",
    "eye": "crew",
    "role": "all",
-   "middle": 2.199999988079071,
-   "low": 1.5999999642372131,
-   "high": 3.800000011920929
+   "middle": 1.800000011920929,
+   "low": 1.399999976158142,
+   "high": 2.5
   },
   {
    "round": 2,
@@ -723,119 +723,119 @@
    "look": "joe",
    "eye": "two",
    "role": "frontman",
-   "middle": 2.300000011920929,
-   "low": 1.800000011920929,
-   "high": 4.800000011920929
-  },
-  {
-   "round": 2,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "two",
-   "role": "left",
-   "middle": 2.600000023841858,
-   "low": 2,
-   "high": 3.900000035762787
-  },
-  {
-   "round": 2,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "two",
-   "role": "right",
-   "middle": 3,
-   "low": 2.300000011920929,
-   "high": 6.099999964237213
-  },
-  {
-   "round": 2,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "close",
-   "role": "frontman",
-   "middle": 2.300000011920929,
+   "middle": 2.100000023841858,
    "low": 1.699999988079071,
-   "high": 5
-  },
-  {
-   "round": 2,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "close",
-   "role": "left",
-   "middle": 1.899999976158142,
-   "low": 1.300000011920929,
-   "high": 6.199999988079071
-  },
-  {
-   "round": 2,
-   "gallery": "before",
-   "look": "joe",
-   "eye": "close",
-   "role": "right",
-   "middle": 2.5,
-   "low": 1.899999976158142,
    "high": 5.800000011920929
   },
   {
    "round": 2,
    "gallery": "before",
-   "look": "pixel-both",
-   "eye": "crew",
-   "role": "all",
-   "middle": 1.5,
-   "low": 1.199999988079071,
-   "high": 4.200000047683716
-  },
-  {
-   "round": 2,
-   "gallery": "before",
-   "look": "pixel-both",
-   "eye": "two",
-   "role": "frontman",
-   "middle": 1.4000000357627869,
-   "low": 1.199999988079071,
-   "high": 4.400000035762787
-  },
-  {
-   "round": 2,
-   "gallery": "before",
-   "look": "pixel-both",
+   "look": "joe",
    "eye": "two",
    "role": "left",
-   "middle": 1.5,
-   "low": 1.199999988079071,
+   "middle": 2.100000023841858,
+   "low": 1.699999988079071,
+   "high": 7.899999976158142
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "two",
+   "role": "right",
+   "middle": 2.600000023841858,
+   "low": 2.199999988079071,
+   "high": 3.699999988079071
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "close",
+   "role": "frontman",
+   "middle": 2,
+   "low": 1.699999988079071,
    "high": 4.399999976158142
   },
   {
    "round": 2,
    "gallery": "before",
-   "look": "pixel-both",
-   "eye": "two",
+   "look": "joe",
+   "eye": "close",
+   "role": "left",
+   "middle": 1.9000000357627869,
+   "low": 1,
+   "high": 4.599999964237213
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "eye": "close",
    "role": "right",
-   "middle": 1.800000011920929,
-   "low": 1.399999976158142,
-   "high": 5
+   "middle": 2,
+   "low": 1.7999999523162842,
+   "high": 9.200000047683716
   },
   {
    "round": 2,
    "gallery": "before",
    "look": "pixel-both",
-   "eye": "close",
-   "role": "frontman",
-   "middle": 1.4000000357627869,
-   "low": 1.199999988079071,
+   "eye": "crew",
+   "role": "all",
+   "middle": 1.399999976158142,
+   "low": 1.0999999642372131,
    "high": 4.199999988079071
   },
   {
    "round": 2,
    "gallery": "before",
    "look": "pixel-both",
+   "eye": "two",
+   "role": "frontman",
+   "middle": 2.399999976158142,
+   "low": 1.199999988079071,
+   "high": 7.5
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "left",
+   "middle": 1.5999999642372131,
+   "low": 1.199999988079071,
+   "high": 4.899999976158142
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "two",
+   "role": "right",
+   "middle": 2.199999988079071,
+   "low": 1.5999999642372131,
+   "high": 4.900000035762787
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "eye": "close",
+   "role": "frontman",
+   "middle": 1.699999988079071,
+   "low": 1.399999976158142,
+   "high": 3.600000023841858
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
    "eye": "close",
    "role": "left",
-   "middle": 1.300000011920929,
-   "low": 1,
-   "high": 7
+   "middle": 1.699999988079071,
+   "low": 1.2999999523162842,
+   "high": 3.300000011920929
   },
   {
    "round": 2,
@@ -843,9 +843,9 @@
    "look": "pixel-both",
    "eye": "close",
    "role": "right",
-   "middle": 1.600000023841858,
-   "low": 1.2999999523162842,
-   "high": 8.5
+   "middle": 1.899999976158142,
+   "low": 1.399999976158142,
+   "high": 3.399999976158142
   },
   {
    "round": 2,
@@ -853,18 +853,8 @@
    "look": "joe",
    "eye": "crew",
    "role": "all",
-   "middle": 1.699999988079071,
-   "low": 1.4000000357627869,
-   "high": 2.699999988079071
-  },
-  {
-   "round": 2,
-   "gallery": "after",
-   "look": "joe",
-   "eye": "two",
-   "role": "frontman",
-   "middle": 2.900000035762787,
-   "low": 2.199999988079071,
+   "middle": 2.399999976158142,
+   "low": 1.800000011920929,
    "high": 4.900000035762787
   },
   {
@@ -872,10 +862,20 @@
    "gallery": "after",
    "look": "joe",
    "eye": "two",
+   "role": "frontman",
+   "middle": 2.300000011920929,
+   "low": 2,
+   "high": 3.199999988079071
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "eye": "two",
    "role": "left",
-   "middle": 2.800000011920929,
-   "low": 2.300000011920929,
-   "high": 4.100000023841858
+   "middle": 2.700000047683716,
+   "low": 2.299999952316284,
+   "high": 3.699999988079071
   },
   {
    "round": 2,
@@ -883,9 +883,9 @@
    "look": "joe",
    "eye": "two",
    "role": "right",
-   "middle": 3.800000011920929,
-   "low": 3.199999988079071,
-   "high": 8.099999964237213
+   "middle": 3.5,
+   "low": 3.200000047683716,
+   "high": 4.300000011920929
   },
   {
    "round": 2,
@@ -893,9 +893,9 @@
    "look": "joe",
    "eye": "close",
    "role": "frontman",
-   "middle": 3.099999964237213,
-   "low": 2.399999976158142,
-   "high": 6.100000023841858
+   "middle": 2.600000023841858,
+   "low": 2.300000011920929,
+   "high": 3.400000035762787
   },
   {
    "round": 2,
@@ -903,9 +903,9 @@
    "look": "joe",
    "eye": "close",
    "role": "left",
-   "middle": 2,
+   "middle": 1.699999988079071,
    "low": 1.5,
-   "high": 7.5
+   "high": 2.600000023841858
   },
   {
    "round": 2,
@@ -913,9 +913,9 @@
    "look": "joe",
    "eye": "close",
    "role": "right",
-   "middle": 4.5,
-   "low": 3.599999964237213,
-   "high": 6.900000035762787
+   "middle": 3.699999988079071,
+   "low": 3.5,
+   "high": 5.199999988079071
   },
   {
    "round": 2,
@@ -923,9 +923,9 @@
    "look": "pixel-both",
    "eye": "crew",
    "role": "all",
-   "middle": 1.899999976158142,
-   "low": 1.100000023841858,
-   "high": 7.600000023841858
+   "middle": 2,
+   "low": 1.699999988079071,
+   "high": 3.700000047683716
   },
   {
    "round": 2,
@@ -933,9 +933,9 @@
    "look": "pixel-both",
    "eye": "two",
    "role": "frontman",
-   "middle": 1.600000023841858,
-   "low": 1.399999976158142,
-   "high": 3.699999988079071
+   "middle": 1.800000011920929,
+   "low": 1.4000000357627869,
+   "high": 3.900000035762787
   },
   {
    "round": 2,
@@ -944,8 +944,8 @@
    "eye": "two",
    "role": "left",
    "middle": 2,
-   "low": 1.5,
-   "high": 5.100000023841858
+   "low": 1.699999988079071,
+   "high": 3
   },
   {
    "round": 2,
@@ -953,9 +953,9 @@
    "look": "pixel-both",
    "eye": "two",
    "role": "right",
-   "middle": 2.5,
-   "low": 1.9000000357627869,
-   "high": 5.400000035762787
+   "middle": 2.100000023841858,
+   "low": 1.899999976158142,
+   "high": 3.199999988079071
   },
   {
    "round": 2,
@@ -963,9 +963,9 @@
    "look": "pixel-both",
    "eye": "close",
    "role": "frontman",
-   "middle": 2.299999952316284,
-   "low": 1.699999988079071,
-   "high": 3.700000047683716
+   "middle": 1.800000011920929,
+   "low": 1.5999999642372131,
+   "high": 2.800000011920929
   },
   {
    "round": 2,
@@ -973,9 +973,9 @@
    "look": "pixel-both",
    "eye": "close",
    "role": "left",
-   "middle": 1.5,
-   "low": 1.199999988079071,
-   "high": 3.899999976158142
+   "middle": 1.7999999523162842,
+   "low": 1.5,
+   "high": 3.100000023841858
   },
   {
    "round": 2,
@@ -983,9 +983,9 @@
    "look": "pixel-both",
    "eye": "close",
    "role": "right",
-   "middle": 2.900000035762787,
-   "low": 2.300000011920929,
-   "high": 5.800000011920929
+   "middle": 2.400000035762787,
+   "low": 2.099999964237213,
+   "high": 4.100000023841858
   }
  ]
 }

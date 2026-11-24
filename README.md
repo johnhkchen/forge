@@ -682,7 +682,7 @@ The sheets are per character, not per copy: a hundred Roosevelts share one. But 
 - **Hands are open.** The fight curls his fingers with bones the cards do not have, so his fists are flat hands: 9 cm of fingers the real model does not show, 13.5 at worst, and the reason the fight's outline shares only 0.94. A second hand picture, shown when the fingers are curled, would fix it; it is not done.
 - **Swapping pictures.** In a walk seen from three-quarters, 28 swaps a second with 26 pictures a part, a frame with a swap changing about 3.5% of his pixels (a pixel-wide shimmer along a limb's edge, not a jump); more pictures swap oftener and no more gently. Without the depth the same swaps change 10%. The worst single frame is in the fight, as he goes down: half his pixels change at once when the chest and hips swap together. Seen dead side-on a walk swaps nothing at all. "Soften the swaps" on the page mixes the two pictures pixel by pixel near the changeover.
 - **Thin things in front of others** (his spectacles) smear when slid, and what a picture never saw (the top of his head from a high eye, with only 26) is a hole or a smear.
-- **Close up it is wrong.** The sliding is exact only from far off: from 4 m a point 30 cm off its card is drawn up to a degree out. Fine at town distance, not for a close-up.
+- **Close up it is wrong.** The sliding is exact only from far off: from 4 m a point 30 cm off its card is drawn up to a degree out. Fine at town distance, not for a close-up. (Mended since: "From more angles", below.)
 
 **The verdict.** Against plain low-poly 3D, for a town of this size: no. The mesh is already cheap (1,695 triangles), costs almost no memory, has no seams and a clean ink line, and the right half of the page shows it can be drawn the same comic way. Cards would start to pay only with thousands on screen, or with detailed models far heavier than ours. Against whole-body sprites in eight directions: yes, clearly. One walk at ten frames a second in eight directions is about 14 MB of pictures at this size (43 MB at the walk's full 30), close to what every motion he will ever have costs as cards, and it still cannot turn smoothly, stand behind a rope, or play the fight. So: keep the toons as meshes drawn the comic way; reach for cards if a crowd scene ever needs hundreds of the same few people, at 128 px a metre with the search off. (Measured since, under Tag below: even a thousand at once cost about the same either way on this Mac.)
 
@@ -1150,7 +1150,7 @@ On the tag field (`evidence/layers/cost-mac.json`, `cost-near-mac.json`: `face_c
 
 **What is still weak.**
 
-- **Close up the whole hat sits low.** From 1 m the cards' hat is a few centimetres smaller than the model's all round its top, 10,856 pixels of the pirate's head still bare in bold ink. That is not a missing layer. A card slides its pixels as if the eye were far off, and a brim 25 cm in front of the card is a tenth bigger to an eye 2 m away than the card makes it. Making the pixel's line fan out from the eye, as the eye's own does, would be the thing to try.
+- **Close up the whole hat sits low.** From 1 m the cards' hat is a few centimetres smaller than the model's all round its top, 10,856 pixels of the pirate's head still bare in bold ink. That is not a missing layer. A card slides its pixels as if the eye were far off, and a brim 25 cm in front of the card is a tenth bigger to an eye 2 m away than the card makes it. Making the pixel's line fan out from the eye, as the eye's own does, would be the thing to try. (Done, and it was the whole of it: "From more angles", below.)
 - **A crowd does not get it.** Cards drawn all at once (the tag field's fast ways) show the first layer only.
 - **"Pixels, baked" has no layered sheet.** Its sheet was baked by an older recipe that cannot be baked again as it was, and a new one would change its colours. The painted Roosevelt of the tag field has none either: he wears nothing loose.
 - **Only what faces the picture's eye is kept.** The far side of a brim's edge, or the strip of a limb just round its outline, still shows as outline falling short.
@@ -1160,6 +1160,88 @@ On the tag field (`evidence/layers/cost-mac.json`, `cost-near-mac.json`: `face_c
 - **One layer behind, 26 directions.** What can only be seen from further round than 40 degrees is in neither picture.
 
 Stills (`evidence/layers/`): `hat-18-<crew|two|close>-<joe|pixel-both>.png` are the pirate's hat off the watch page, before, after, and the pixels that changed in red; `sides-<seconds>-<role>.png` every head through the crew camera, from 2 m and from 1 m, bold ink before and after, then "Pixels, both" before and after; `changed-*.png` the same for more of the figure; `after-<role>-<seconds>-<eye>-<look>.png` are the judge's own: the real model, the cards before, the cards after, and what was filled in green, what is still bare in blue. `scripts/impostor/clear_shots.py --square 0.7` takes the page's.
+
+## From more angles
+
+After the layer behind, the pirate's hat was still wrong close up, and the thought was that the cards needed the model seen from more angles. Four things were built and counted. One of them mended the hat, and it was not more angles.
+
+```
+just gallery                                    # the pages now draw this way; add ?fan=off to an address to see them as they were
+just impostor-layers crew-candy-shop fan evidence/angles --before-how FAN=0      # the same sheets drawn both ways, counted, no browser
+#/watch/crew-candy-shop?head=dots               # (put ?head=dots before the #) every head as a cloud of dots, to look at
+```
+
+**What it was.** A card slid its pixels as if the eye were far away: every pixel of a card looked through the picture along the same line. A real eye's lines fan out. From 1 m, a brim 25 cm in front of its card should look a third bigger than the card drew it. So the whole hat sat low and small, and the model's hat stuck out round it: 10,856 pixels of the pirate's head bare in bold ink. Nothing was missing from the pictures. They were being read along the wrong lines.
+
+**What was done: a pixel's line fans out from the eye** (`gallery/impostor-math.js`: fan; `impostor.js`: CARD_FRAGMENT; `tag.js`: CARDS_VERTEX; `scripts/impostor/impostor.py`: fan, card_pixels). The eye's real line through a pixel is still a straight line through the picture, so it is the same search, with a start and a lean of its own for each pixel in place of one lean for the whole card. It costs three numbers a card (where on the card the eye stands square over, and how far off it is) and no more readings of the sheet. The card's corners are pushed out to make room, since what stands toward the eye shows bigger. No sheet was baked again: every sheet there is, layered or not, is drawn this way.
+
+**What it mends** (`just impostor-layers`, `evidence/angles/layers-fan.json`: the three dancers, six moments of the dance, the layered sheets drawn with straight lines and with the fan, against the real model; pixels of one figure in one picture, before to after).
+
+| look | seen from | bare | holes | sticks out | round the pirate's head: bare | ... sticks out |
+|---|---|---|---|---|---|---|
+| Bold ink | crew camera | 92 to 87 | 9.1 to 7.7 | 804 to 777 | 15.5 to 4.8 | 96 to 69 |
+| Bold ink | 2 m from the head | 752 to 318 | 65 to 38 | 4,098 to 3,520 | 1,083 to 39 | 1,825 to 743 |
+| Bold ink | 1 m | 5,268 to 485 | 222 to 108 | 7,855 to 6,058 | 10,856 to 458 | 9,387 to 3,019 |
+| Pixels, both | crew camera | 11.5 to 10.8 | 0.6 to 0.7 | 318 to 319 | 0.2 to 0 | 53 to 42 |
+| Pixels, both | 2 m | 140 to 62 | 8.4 to 4.6 | 1,183 to 1,094 | 181 to 14 | 514 to 265 |
+| Pixels, both | 1 m | 1,206 to 139 | 36 to 18 | 2,024 to 1,841 | 2,424 to 127 | 2,483 to 1,081 |
+| Comic | crew camera | 114 to 112 | 44 to 42 | 2,637 to 2,675 | 11.7 to 11.8 | 503 to 467 |
+| Comic | 2 m | 535 to 348 | 166 to 117 | 9,728 to 9,568 | 469 to 85 | 4,565 to 4,020 |
+| Comic | 1 m | 3,229 to 416 | 330 to 188 | 19,501 to 19,987 | 7,111 to 214 | 18,401 to 13,345 |
+
+From 1 m the bare pixels fall by nine tenths in every look, and for the pirate's hat by 24 in 25. Lincoln's whole figure from 1 m in bold ink goes 2,879 to 583 and Roosevelt's 662 to 273. Through the crew camera, which stands well back, the lines hardly fan and little changes, as it should. The layer behind bought 374 pixels of that head from 1 m; this bought 10,398.
+
+**More angles, counted, and set down.** All on the pirate, who has the most to gain, with the fan on, bold ink, three moments (`evidence/angles/layers-*.json`).
+
+- **More directions baked: 62 a part for 26** (`layers-ways62.json`). The sheet goes from 32.7 MB to 76.9 (8.3 MB to fetch becomes 19.8). From 1 m: bare 240 to 167, what sticks out 17,680 to 17,208 (three in a hundred less). From 2 m: bare 302 to 236. Not worth 44 MB a character.
+- **The layer behind gathered from many more eyes** (`bake_impostor.py --eyes 15,30,45,60 --eyes-round 12`: 48 eyes out to 60 degrees, where the pages' sheets have 12 out to 40; `layers-eyes48.json`). The sheet grows by a thirtieth and the counts do not move: 240 to 240 bare from 1 m, 302 to 302 from 2 m, 71.3 to 70.7 through the crew camera. The eye is never more than about 30 degrees off the picture it is shown, so what can only be seen from further round is never asked for.
+- **The next two directions drawn as well, behind the nearest, to fill what it never saw** (`impostor.py`: AROUND, which the pages do not do; `layers-around.json`, `around-right-18-close-joe.png`). Bare from 1 m 462 to 197, holes 209 to 142; but a tenth more sticks out (14,232 to 15,644), the second pictures speckle through the first on the face, and it is three cards drawn for one.
+- **The head as a cloud of dots** (`gallery/dots.js`, `impostor.py`: dots_of, draw_dots; `layers-dots.json`, `dots-right-18-close-joe.png`, the third column of `sides-18-<role>.png`). Every pixel of all 26 pictures of the head, and of the layer behind, is a place on its surface. They are gathered into one cloud, one dot kept for each 5 mm box (the one its picture saw most square-on), and each is drawn as a small flat disc lying on the surface. The pirate's head is 56,525 dots, 1.5 MB, where its pictures are 3.8 MB of his 32.7 MB sheet; Lincoln's 13,050; Roosevelt's 18,892. Counted against cards with the fan on: about the same. From 1 m, bare round the head 310 to 194 and sticking out 3,697 to 3,811; from 2 m, 49 to 60 and 824 to 800. To look at, in bold ink, it is the cleaner of the two close up: nothing swaps as the eye moves, and the hat loses the stipple and stepped edges a searched picture has. It loses the folds bold ink draws into each picture (they have to be left out, or one fold seen by 26 eyes is a scatter of black dots), so the face is softer. It is on the watch page for looking at (`?head=dots`), heads only, and is not what the pages draw.
+
+So the pictures already held the surface. What was wrong was how they were read, and with that right, a card finds nearly all the model has: from 1 m, 485 pixels of a figure of 160,000 are bare.
+
+**What else moved** (the three other judges, the layered sheets with the fan against the same sheets as they were counted before).
+
+- **Joins** (`just impostor-seams crew-candy-shop fan evidence/seams --deep 2`, `seams-fan.json` against `seams-layers.json`; 60 pictures, pixels in all): every count but two is down. Bare pixels between two cards in bold ink 1,459 to 1,320 through the crew camera, 16,103 to 10,627 from 2 m and 536 to 399 in the walk; shut-in holes 586 to 497, 5,578 to 3,388 and 505 to 417. "Pixels, both": bare between cards 188 to 183, 3,278 to 2,354 and 50 to 35. Line that is not there is down in all twelve rows (bold ink through the crew camera 0.44% of the figure to 0.42). The two that rose: shut-in holes in "Pixels, both" through the crew camera, 33 to 34 in 60 pictures, and what sticks out through the crew camera, up by one or two in a hundred in all four looks (bold ink 19,194 to 19,468) while it fell from 2 m and in the walk.
+- **Faces** (`just impostor-faces crew-candy-shop fan`, `faces-fan.json` against `faces-layers.json`; how much of a face is kept, crew camera, 2 m, 1 m): bold ink 0.743, 0.772, 0.749 to 0.759, 0.786, 0.785; "Pixels, both" 0.777, 0.819, 0.793 to 0.776, 0.823, 0.812. Likeness is up in all six.
+- **Knees and the other joints** (`just impostor-knees crew-candy-shop fan evidence/knees --sheets layered-skinned`, `joints-fan.json` against `joints-layers.json`). Through the crew camera every likeness is within 0.007 of what it was. From 1 m a knee reads better (0.736 to 0.780 in bold ink, 0.762 to 0.773 in "Pixels, both") and so does a hip (0.620 to 0.654; 0.626 to 0.626), and bare pixels fall at every joint (a shoulder 558 to 287, an elbow 192 to 131, a hip 556 to 321, a knee 476 to 328). **One thing slipped: an elbow from 1 m**, likeness 0.599 to 0.569 in bold ink and 0.641 to 0.590 in "Pixels, both" (from 2 m, 0.590 to 0.611 and 0.618 to 0.599), and blots are up a little from 1 m (a hip's 1.8% to 2.6%). Why was not found.
+- **The judge had a blind spot of its own**, found here: a card with one corner beside or behind the eye was left out whole, where the graphics card cuts it at the eye and draws the rest. With bigger cards that happened to a chest seen from 1 m off a shoulder (5,531 bare pixels counted where there are 287). It is mended in `impostor.py`. The counts of hats, joins and faces above were made before that, so if anything they count a little too much bare.
+
+**What it costs.** Nothing to fetch and nothing in memory: no sheet changed. In time, a card is bigger close up (its corners make room for what stands toward the eye) and its search a little longer, so there are more pixels to work out. All on this Mac, 1080 by 608, straight lines and the fan turn about, three goes each.
+
+With a dancer filling the picture on the watch page (`scripts/impostor/close_cost.py`, `evidence/angles/cost-close-mac.json`), ms a frame, Lincoln, Roosevelt, the pirate:
+
+| | through the crew camera (all three) | 2 m from the head | 1 m |
+|---|---|---|---|
+| Bold ink | 1.7 to 2.3 | 2.1, 2.1, 2.6 to 2.3, 2.7, 3.7 | 2.1, 1.6, 2.1 to 2.6, 1.9, 3.7 |
+| Pixels, both | 1.6 to 2.0 | 2.4, 1.9, 1.9 to 1.8, 1.8, 2.2 | 1.7, 1.6, 1.8 to 1.9, 1.7, 2.5 |
+
+A quarter to a half of a millisecond for most, and 1.6 more for the pirate from 1 m in bold ink, whose hat now fills the picture as the model's does. "Pixels, both" is the cheaper of the two in every one.
+
+On the tag field with the eye among the runners (`near_cost.py`, `cost-near-mac.json`), ms of work a frame for a hundred and a thousand Roosevelts, drawn all at once:
+
+| | bold ink | "Pixels, both" |
+|---|---|---|
+| painted cards | 3.7, 11.2 to 4.0, 11.7 | 1.9, 4.4 to 2.1, 4.4 |
+| painted cards, search off far away | 3.4, 7.0 to 3.6, 8.2 | 1.8, 3.5 to 2.1, 3.6 |
+| detailed cards | 3.5, 10.5 to 3.8, 11.4 | 2.1, 5.5 to 2.3, 5.3 |
+| detailed cards, search off far away | 3.2, 7.0 to 3.5, 8.0 | 2.2, 3.9 to 2.4, 4.3 |
+
+A third of a millisecond at a hundred and up to one at a thousand; "Pixels, both" is under bold ink in all eight. From the phone test's eye, which stands well back (`face_cost.py`, `cost-mac.json`), the Mac was busy with other work and one go differed from the next by up to 4 ms, so only the quickest go of each setting says anything: 3.1, 8.1 to 4.0, 8.4 for painted cards in bold ink and 1.7, 3.2 to 2.4, 3.7 in "Pixels, both"; 3.0, 7.5 to 3.9, 8.0 and 2.5, 4.1 to 2.6, 4.3 for detailed cards. By the middle go "Pixels, both" is under bold ink in all eight there too. Every setting drew a frame every 16.7 ms.
+
+The head as dots, against its card with the fan on (`cost-close-dots-mac.json`): the pirate from 1 m 3.8 to 3.4 ms in bold ink and 2.6 to 2.2 in "Pixels, both"; through the crew camera, where three heads are 88,000 dots that cover few pixels, 1.9 to 2.2 and 1.4 to 1.9. Cheaper where a head is big, dearer where it is small.
+
+**The tag field's all-at-once way carries the fan.** That way of drawing hands every card's numbers from its corners to its pixels, and a phone is sure to allow 60 of them. It had 54; the fan makes 57. The layer behind would need 7 more, which is why it is still not there; it could go in as a card of its own, which needs no more numbers, and that is not built.
+
+**What is still weak.**
+
+- **What sticks out is now the bigger miss**: from 1 m in bold ink 6,058 pixels a figure, against 485 bare. The dots have as much of it as the cards, so it is not the search: it is the pictures themselves against a model that bends (a rigid part where the model's skin stretches, a line a pixel wide all round).
+- **It costs more close up**, because the cards are bigger: up to 1.6 ms a frame for a hat that fills the picture.
+- **An elbow from 1 m reads a little worse** than it did, by the joint judge; nothing else slipped.
+- **A card's corners make more room than they need.** The room is worked out from the corners of the picture, not from what is in it, and every pixel of that room is searched before it is thrown away.
+- **The dots are an experiment.** One disc size whatever the distance, no folds, the watch page only, and in "Pixels, both" their light and shade come out unlike the cards' (not chased).
+- **A crowd still gets no layer behind**, and "Pixels, baked" still has no layered sheet.
+- No phone has run any of it.
 
 ## A place from a world model
 

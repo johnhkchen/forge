@@ -696,18 +696,22 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     hidden = [c for c in hidden if c[2] > 0] if relief else []
     quad = corners(card, deepest(cell, hidden), ppm, relief)
     spots, ahead = eye.to_pixels(quad)
-    if (ahead <= eye.near).any():
+    if (ahead <= eye.near).all():
         return None
     wide, tall = eye.size
     lo = np.maximum(np.floor(spots.min(axis=0)).astype(int), 0)
     hi = np.minimum(np.ceil(spots.max(axis=0)).astype(int), [wide, tall])
+    if (ahead <= eye.near).any():
+        # a corner of the card is beside or behind the eye (a big card, the eye close: a chest from 1 m off a shoulder).
+        # The graphics card cuts such a card off at the eye and draws the rest; so every pixel is looked at here
+        lo, hi = np.array([0, 0]), np.array([wide, tall])
     if (hi <= lo).any():
         return None
     xs, ys = np.meshgrid(np.arange(lo[0], hi[0]) + 0.5, np.arange(lo[1], hi[1]) + 0.5)
     ray_cam = np.stack([((xs - eye.shift[0]) / wide * 2 - 1) * eye.tan * wide / tall, ((ys - eye.shift[1]) / tall * 2 - 1) * eye.tan, -np.ones_like(xs)], axis=-1)
     ray = ray_cam @ eye.turn.T
     toward, head = card["toward"], card["head"]
-    along_ray = (toward @ (head - eye.at)) / (ray @ toward)
+    along_ray = (toward @ (head - eye.at)) / np.minimum(ray @ toward, -1e-9)  # (a line that never meets the card's sheet in front of the eye meets it far off, outside the picture)
     world = eye.at + ray * along_ray[..., None]
     reach = np.linalg.norm(eye.at - world, axis=-1)
     toward_eye = (eye.at - world) / reach[..., None]
