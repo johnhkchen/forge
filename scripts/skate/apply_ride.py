@@ -25,6 +25,12 @@ In a handplant the board is carried by the hand: on each of its frames the
 baked hand is found, and the board is put wherever keeps that hand on its
 spot on the coping (eased on from the lip and back onto it).
 
+Then he is kept out of the ramp. Off the surface (an air, a handplant) the
+baked body is looked at where the ride puts it, and if any of it is in the
+wood, board and rider are moved the short way out, the way the surface
+faces there; the push is evened out over the frames round it. A borrowed
+pose can hang a shoulder or a knee where our own poses never would.
+
 Into the out folder:
 
     <version>-ride.glb     the character, the board, the action "ride"
@@ -63,6 +69,9 @@ from pipe import Pipe  # noqa: E402
 
 VERSION_FILES = {"lowpoly": "lowpoly.glb", "midpoly": os.path.join("profiles", "midpoly.glb"), "painted": os.path.join("profiles", "painted.glb")}
 EVERY = 2  # the mesh is looked at on every this-many frames (and on every frame of a trick)
+PUSH_CLEAR = 0.004   # metres: he is moved until nothing of him is deeper in the ramp than this
+PUSH_ROUNDS = 6      # how many times a frame is moved and looked at again
+PUSH_EASE = 5        # a push comes on and goes off over this many frames
 
 
 def to_blender(p):
@@ -216,6 +225,79 @@ def hand_carries(rig, ride, ground):
     return out
 
 
+def kept_out(rig, mesh_board, ride, pipe, ground):
+    """Off the ramp, where a trick's pose would put part of him in it. On every frame he is not riding (an air, a
+    handplant, and the few frames each side) the baked body is looked at where the ride puts it; if any of it is
+    in the wood, the board and he with it are moved the short way out: along the way the surface faces there.
+    What is asked of each frame is evened out over the frames round it, so the push comes on and goes off.
+    While a hand is planted, that hand and forearm are left out: they are on the coping. Riding, nothing is
+    moved: the wheels belong on the surface. Changes the ride's frames; returns what it did.
+    Run before the ride is keyed (the rig's own space is then the board's frame)."""
+    scene = bpy.context.scene
+    rows, events = ride["frames_list"], ride["events"]
+    skinned = [o for o in scene.objects if o.type == "MESH" and o.find_armature() == rig and not o.hide_render]
+    carried_by = {}
+    for obj in skinned:  # which bone mostly carries each point
+        names = [g.name for g in obj.vertex_groups]
+        carried_by[obj.name] = [max(((g.weight, names[g.group]) for g in v.groups), default=(0.0, ""))[1] for v in obj.data.vertices]
+    free = [f for f, row in enumerate(rows) if row["kind"] in ("air", "plant")]
+    wanted = sorted({g for f in free for g in range(f - PUSH_EASE, f + PUSH_EASE + 1) if 0 <= g < len(rows)})
+    planted = {}
+    for e in events:
+        if e["did"] == "handplant":
+            for f in range(e["hand_on_from_frame"] - 3, e["hand_off_at_frame"] + 4):
+                planted[f] = {"hand_" + e["hand"], "forearm_" + e["hand"]}
+    need = {}
+    for f in wanted:
+        scene.frame_set(f)
+        deps = bpy.context.evaluated_depsgraph_get()
+        points = []
+        for obj in skinned:
+            shown = obj.evaluated_get(deps)
+            me = shown.to_mesh()
+            here = rig.matrix_world.inverted() @ shown.matrix_world
+            skip = planted.get(f, ())
+            owners = carried_by[obj.name]
+            for v in me.vertices:
+                if v.index < len(owners) and owners[v.index] in skip:
+                    continue
+                points.append(tuple(here @ v.co - ground))
+            shown.to_mesh_clear()
+        row, push = rows[f], Vector((0.0, 0.0, 0.0))
+        for again in range(PUSH_ROUNDS):
+            at = [row["at"][i] + push[i] for i in range(3)]
+            deepest, way = 0.0, None
+            for p in points:
+                x, y, z = ride_file.to_set(at, row["nose"], row["up"], p)
+                deep, out = pipe.way_out(x, y, z)
+                if deep > deepest:
+                    deepest, way = deep, out
+            if deepest <= PUSH_CLEAR:
+                break
+            push += Vector((way[0], way[1], 0.0)) * (deepest + PUSH_CLEAR)
+        need[f] = push
+    moved, most, most_at = {}, 0.0, None
+    for f in wanted:
+        if rows[f]["kind"] not in ("air", "plant"):
+            continue  # riding, the board stays on the surface
+        best = need[f]
+        for k in range(1, PUSH_EASE + 1):
+            share = 1.0 - k / (PUSH_EASE + 1.0)
+            share = share * share * (3.0 - 2.0 * share)
+            for g in (f - k, f + k):
+                if g in need and (need[g] * share).length > best.length:
+                    best = need[g] * share
+        if best.length > 1e-4:
+            moved[f] = best
+            if best.length > most:
+                most, most_at = best.length, f
+    for f, push in moved.items():
+        rows[f]["at"] = [round(rows[f]["at"][i] + push[i], 5) for i in range(3)]
+    scene.frame_set(0)
+    return {"frames_looked_at": len(wanted), "frames_moved": len(moved), "most_cm": round(100 * most, 1), "most_frame": most_at,
+            "deepest_before_cm": round(100 * max([n.length for n in need.values()] + [0.0]), 1)}
+
+
 def measure(rig, mesh_board, ride, pipe, ground, animation):
     """The baked file, looked at in the set: the wheels against the ramp, the feet against the deck, everything against the ramp's solid, the hands in the tricks."""
     scene = bpy.context.scene
@@ -357,10 +439,13 @@ def main():
         if moved > 1e-4:
             sys.exit("putting the ride bone above the hips moved the character by %.4f m: the bake no longer holds" % moved)
         record["handplants"] = hand_carries(rig, ride, ground)
+        record["kept_out_of_the_ramp"] = kept_out(rig, mesh_board, ride, pipe, ground)
         key_ride(rig, ride["frames_list"], ground)
         ride["measured"] = ride_file.measure(ride, pipe)
         record["measured"] = measure(rig, mesh_board, ride, pipe, ground, record["animation"])
         record["measured"]["handplant_board_moved"] = record["handplants"]
+        record["measured"]["moved_out_of_the_ramp"] = record["kept_out_of_the_ramp"]
+        record["measured"]["pose_from"] = [dict({k: v for k, v in e["pose_from_result"].items() if k != "said"}, **{"pass": e["pass"]}) for e in ride["events"] if e.get("pose_from_result")]
         measured_on[version] = record["measured"]
         flat = False
         made_as = os.path.join(run, "profiles", version + ".json")
@@ -376,6 +461,8 @@ def main():
         print("RIDE %s: wheels off the surface %.2f cm at most while riding (back wheels %.2f cm, kickturns included)" % (version, m["wheels_off_the_surface_cm"], m["back_wheels_off_the_surface_cm"]))
         print("RIDE %s: feet: %s; through the deck %.2f cm (%s)" % (version, json.dumps(m["feet"]), m["on_the_deck"]["through_the_deck_cm"], m["on_the_deck"]["lowest_part"]))
         print("RIDE %s: deepest in the ramp %.2f cm: %s" % (version, m["deepest_in_the_ramp_cm"], json.dumps(m["in_the_ramp"])))
+        k = m["moved_out_of_the_ramp"]
+        print("RIDE %s: moved out of the ramp on %d frames, %.1f cm at most (frame %s)" % (version, k["frames_moved"], k["most_cm"], k["most_frame"]))
         for row in m["grabs"]:
             print("RIDE %s: pass %d, the grabbing hand is %s cm from the board's edge" % (version, row["pass"], json.dumps(row["hand_from_the_edge_cm"])))
         for row in m["handplants"]:
