@@ -210,6 +210,7 @@ class ClipShot {
     index: int,
     first_frame: int,
     last_frame: int,
+    part_of_a_long_shot: bool?,
 }
 
 /// What is wrong with a beat made from a stretch of a clip. It reads videos/<clip>/: the clip must be there
@@ -220,12 +221,18 @@ function video_beat_problems(beat: ShotBeat) -> string[] {
         return [`beat "${beat.name}": a video beat names its clip (a folder in ${VIDEOS_DIR}/)`];
     }
     let from = beat.from_s
-        ?? return [`beat "${beat.name}": a video beat says which seconds of the clip it wants (from_s, to_s)`];
+        ?? return [
+            `beat "${beat.name}": a video beat says which seconds of the clip it wants (from_s, to_s)`,
+        ];
     let to = beat.to_s
-        ?? return [`beat "${beat.name}": a video beat says which seconds of the clip it wants (from_s, to_s)`];
+        ?? return [
+            `beat "${beat.name}": a video beat says which seconds of the clip it wants (from_s, to_s)`,
+        ];
     let problems: string[] = [];
     if (beat.moves || beat.prompt) {
-        problems.push(`beat "${beat.name}": a video beat has no moves and no prompt; the clip is its motion`);
+        problems.push(
+            `beat "${beat.name}": a video beat has no moves and no prompt; the clip is its motion`,
+        );
     }
     if (!beat.at && !beat.to && (beat.from_m == null || beat.to_m == null)) {
         problems.push(
@@ -247,41 +254,68 @@ function video_beat_problems(beat: ShotBeat) -> string[] {
     let shots = baml.json.decode<ClipShots>(baml.fs.read(cuts)).shots;
     let first = (from * MOTION_FPS).iround();
     let last = (to * MOTION_FPS).iround();
-    let holding = shots.filter((s) -> {
-        s.first_frame <= first && last <= s.last_frame
+    // The shots the stretch touches. More than one is fine only when they are pieces of one long shot
+    // (split for length, not cut), which the clip's motion joins without a seam.
+    let touched = shots.filter((s) -> {
+        s.first_frame <= last && first <= s.last_frame
     });
-    let found = holding.at(0);
-    if (found == null) {
+    let opening = touched.at(0);
+    let closing = touched.at(touched.length() - 1);
+    let covered = if (opening == null || closing == null) {
+        false
+    } else {
+        opening.first_frame <= first && last <= closing.last_frame
+    };
+    let cut_between = touched.length() > 1
+        && touched
+            .filter((s) -> {
+                !(s.part_of_a_long_shot ?? false)
+            })
+            .length()
+            > 0;
+    if (!covered || cut_between) {
         problems.push(
             `beat "${beat.name}": seconds ${from} to ${to} of "${clip}" are not inside one shot (a cut falls between them, or the clip is shorter)`,
         );
         return problems;
     }
-    let index = found.index;
     if let named: int = beat.shot {
-        if (named != index + 1) {
+        let only = if (touched.length() == 1) {
+            touched.at(0)
+        } else {
+            null
+        };
+        let in_named = if let one: ClipShot = only {
+            named == one.index + 1
+        } else {
+            false
+        };
+        if (!in_named) {
             problems.push(
-                `beat "${beat.name}": seconds ${from} to ${to} of "${clip}" are in shot ${index + 1}, not shot ${named}`,
+                `beat "${beat.name}": seconds ${from} to ${to} of "${clip}" are not all in shot ${named}`,
             );
         }
     }
-    let padded = if (index < 10) {
-        `00${index}`
-    } else if (index < 100) {
-        `0${index}`
-    } else {
-        `${index}`
-    };
-    let chosen = `${VIDEOS_DIR}/${clip}/motion/shot-${padded}.json`;
-    let own = if let who: int = beat.person {
-        baml.fs.exists(`${VIDEOS_DIR}/${clip}/motion/shot-${padded}-person-${who}.json`)
-    } else {
-        false
-    };
-    if (!own && !baml.fs.exists(chosen)) {
-        problems.push(
-            `beat "${beat.name}": shot ${index + 1} of "${clip}" has no motion yet (choose who to follow on its page, then just video ${clip})`,
-        );
+    for (let found in touched) {
+        let index = found.index;
+        let padded = if (index < 10) {
+            `00${index}`
+        } else if (index < 100) {
+            `0${index}`
+        } else {
+            `${index}`
+        };
+        let chosen = `${VIDEOS_DIR}/${clip}/motion/shot-${padded}.json`;
+        let own = if let who: int = beat.person {
+            baml.fs.exists(`${VIDEOS_DIR}/${clip}/motion/shot-${padded}-person-${who}.json`)
+        } else {
+            false
+        };
+        if (!own && !baml.fs.exists(chosen)) {
+            problems.push(
+                `beat "${beat.name}": shot ${index + 1} of "${clip}" has no motion yet (choose who to follow on its page, then just video ${clip})`,
+            );
+        }
     }
     problems
 }
@@ -359,7 +393,16 @@ function film(run: Run) -> void {
     let blender = baml.env.get("BLENDER") ?? BLENDER_APP;
     let out = baml.sys.run(
         blender,
-        args = ["-b", "--factory-startup", "--python-exit-code", "1", "-P", `${MOTION_SCRIPTS}/render_shot.py`, "--", run.dir],
+        args = [
+            "-b",
+            "--factory-startup",
+            "--python-exit-code",
+            "1",
+            "-P",
+            `${MOTION_SCRIPTS}/render_shot.py`,
+            "--",
+            run.dir,
+        ],
         timeout = baml.time.Duration.from_minutes(RENDER_TIMEOUT_MINUTES),
         capture_output = true,
     ) catch (e) {
@@ -472,8 +515,8 @@ function shoot(shot: string) -> string {
         }
     }
     // A beat from a video needs its clip's motion made first; say so here, in plain words, before anything is planned.
-    let from_clips = run.load<ShotList>("shotlist.json").beats
-        .filter((b) -> {
+    let from_clips = run.load<ShotList>("shotlist.json")
+        .beats.filter((b) -> {
             b.source == "video"
         })
         .flat_map((b) -> {
@@ -631,7 +674,10 @@ test "a beat can be a stretch of a clip, and is told what it lacks" {
     assert.equal(beat.source, "video");
     assert.equal(beat_frames(beat), 480);
     // The clip has to be there, with its cuts found, before a shot can use it.
-    assert.contains(video_beat_problems(beat).join("\n"), `there is no clip "no-such-clip" with its cuts found`);
+    assert.contains(
+        video_beat_problems(beat).join("\n"),
+        `there is no clip "no-such-clip" with its cuts found`,
+    );
     let shot = Choreograph@spec("a stage", TEST_BEATS).parse(TEST_REPLY);
     shot.beats = [shot.beats.at(0) ?? throw "no first beat", beat];
     assert.contains(shot_problems(shot).join("\n"), "no-such-clip");
