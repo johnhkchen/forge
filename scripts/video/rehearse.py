@@ -117,6 +117,7 @@ def rehearse(plan_file: str, folder: str, answer=None, log=print) -> dict:
         raise clip_file.Stop(f"there is no plan at {plan_file}")
     sk = Skeleton.load()
     os.makedirs(folder, exist_ok=True)
+    take = None
     if plan.get("segment"):
         log(run("segment.py", plan_file, folder).rstrip())
         take = clip_file.read(os.path.join(folder, "take.json"))
@@ -138,8 +139,14 @@ def rehearse(plan_file: str, folder: str, answer=None, log=print) -> dict:
                 form = piece.get("formation") or {}
                 log(f"REHEARSE {name or 'the shot'}, {piece['name']}: person {piece['person']} of {piece['clip']}, frames {piece['clip_frames'][0]}-{piece['clip_frames'][1]}; starts {piece['starts_from_its_mark_cm']} cm from its mark"
                     + (f" at {form['starts_at']}" if form else "") + f", ends {piece['ends_from_its_mark_cm']} cm from its mark" + (f" at {form['ends_at']}" if form else ""))
-        feet = made["checks"]["feet"]
-        log(f"REHEARSE {name or 'the shot'}: {made['checks']['frames']} frames; feet slide {max(f['slide_speed_cm_per_s'] for f in feet.values())} cm/s at most; asked of the pretend models: {made['asked'].count('text')} sentences, {made['asked'].count('inbetween')} poses and joins")
+                # Feet are only worth measuring in the part that is real: a pretend walk glides.
+                import checks
+
+                where = os.path.join(folder, take["roles"][name]["folder"]) if name else folder
+                real = clip_file.read(timeline.cache_path(where, piece["video"]))
+                slide = max(foot["slide_speed_cm_per_s"] for foot in checks.feet(sk, real, checks.world_positions(sk, real)).values())
+                log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet on the floor slide {slide} cm a second at most")
+        log(f"REHEARSE {name or 'the shot'}: {made['checks']['frames']} frames; asked of the pretend models: {made['asked'].count('text')} sentences, {made['asked'].count('inbetween')} poses and joins")
     if len(roles) > 1:
         out["together"] = together(sk, roles)
         near = out["together"]
