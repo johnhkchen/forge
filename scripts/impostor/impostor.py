@@ -188,7 +188,7 @@ def march_steps(card, cell, px_per_m):
 
 # ---------- cutting a character into parts ----------
 
-def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m, less=None, ball=0.9, ball_reach=1.0):
+def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m, less=None, ball=0.9, ball_reach=1.0, pulled=None):
     """Which part owns each face of a mesh, and which faces each part also takes from next door, so that a
     joint can bend without opening. The arithmetic of bake_impostor.py's cut, with no Blender in it.
 
@@ -202,6 +202,8 @@ def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m,
     lap      how far a part reaches into its neighbour, as a share of the radius of the ring where they meet
     smooth_m the pull is first evened out along the surface over about this far
     less     {(taker, giver): share} for a pair that should lap less than `lap`
+    pulled   P numbers, or None: a part also takes a neighbour's face when its own bones pull on that face by at
+             least its number (the skin under an arm goes up with the arm)
     ball     how big the ball in a joint is, as a share of the room there is for it
     ball_reach  the faces a ball is made of: the two parts' within this many ring radii of the ring
 
@@ -210,7 +212,8 @@ def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m,
     place on a coarse one, and the line between two parts then follows the coarse mesh's triangles: a fringe of
     splinters centimetres long, which comb apart as soon as the joint bends.) Then two parts that meet at a
     joint each take everything of the other's within reach of the ring where they meet: `lap` times the ring's
-    own radius, so a thigh laps further than a wrist. A lap closes the outside of a bend only up to a point
+    own radius, so a thigh laps further than a wrist; and any face its own bones still pull on a good deal
+    (`pulled`), which is how the skin under an arm goes up with the arm. A lap closes the outside of a bend only up to a point
     (two tubes of radius r that lap by L meet on the outside until the bend passes 2 atan(L / r)), and a long lap
     stands out as a spur when the joint bends only a little. So the lap is kept short and the joint gets a ball:
     the faces round the ring, pulled in onto a ball about the point the joint turns on, as big as fits inside
@@ -242,7 +245,8 @@ def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m,
         for _ in range(int(min(400, round(4.0 * (smooth_m / edge) ** 2)))):
             merged[rows] = 0.5 * merged[rows] + 0.5 * np.add.reduceat(merged[both[:, 1]], starts, axis=0) / many
     corners = weld[corners]
-    owner = (np.add.reduceat(merged[corners], begin, axis=0) / sides[:, None]).argmax(axis=1)
+    share = np.add.reduceat(merged[corners], begin, axis=0) / sides[:, None]
+    owner = share.argmax(axis=1)
     middle = np.add.reduceat(spot[corners], begin, axis=0) / sides[:, None]
     touched = np.zeros((len(first), parts), dtype=bool)  # which parts own a face at each point
     touched[corners, np.repeat(owner, sides)] = True
@@ -258,7 +262,10 @@ def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m,
         theirs = np.nonzero((owner == a) | (owner == b))[0]
         off = np.concatenate([np.linalg.norm(middle[theirs[i:i + 20000]][:, None, :] - some[None, :, :], axis=2).min(axis=1) for i in range(0, len(theirs), 20000)])
         for taker, giver in ((a, b), (b, a)):
-            lapped[taker, theirs[(owner[theirs] == giver) & (off <= radius * (less or {}).get((taker, giver), lap))]] = True
+            reach = off <= radius * (less or {}).get((taker, giver), lap)
+            if pulled is not None and (taker, giver) not in (less or {}):
+                reach = reach | (share[theirs, taker] >= pulled[taker])
+            lapped[taker, theirs[(owner[theirs] == giver) & reach]] = True
         if centre is not None and ball > 0:
             # as big as fits: inside the nearest of the ring, and inside the nearest skin of all
             room = min(float(np.percentile(np.linalg.norm(ring - centre, axis=1), 10)), float(np.percentile(np.linalg.norm(spot - centre, axis=1), 0.5)))
@@ -516,7 +523,8 @@ class Character:
 
 def card_pixels(character, part, view_index, card, eye, relief=True, line="shell"):
     """One card as the eye sees it: (x0, y0, colour HxWx3 as stored, cover HxW 0..1, normal HxWx3 in the bone's
-    frame, distance in front HxW), or None when it is off the picture. The page's fragment shader, slowly.
+    frame, distance in front HxW, HxW True where the pixel is the part's ink line), or None when it is off the
+    picture. The page's fragment shader, slowly.
     relief: slide each pixel by the picture's depth (False: the picture is laid flat on the card).
     line: what becomes of the ink line round the part, on a sheet that marks it (line_marked): "shell" stands it
     LINE_BACK_M behind the surface, "off" leaves it out (the line is then drawn on the finished picture)."""
@@ -602,6 +610,8 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         rgba = grab(np.floor(u).astype(int), np.floor(v).astype(int))
     # facing and depth: the one pixel it falls in
     normal = unpack_normal(data[..., :2])
+    # (a sheet from before the line was marked gave its line the picture's own direction for a facing, to the last digit)
+    inked = (normal @ np.asarray(character.views[view_index]["d"], dtype=np.float32)) > 0.99995
     if character.card.get("line_marked"):
         # The ink line is marked in the data sheet (both of its facing's numbers are 0). It faces the eye, and it
         # is a shell behind the surface: whatever of the figure is beside it, a hair nearer, covers it.
@@ -618,7 +628,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     point = world + to_eye / reach[..., None] * out[..., None]
     ahead = -((point - eye.at) @ eye.turn[:, 2])
     cover = np.where(inside, rgba[..., 3], 0.0)
-    return int(lo[0]), int(lo[1]), rgba[..., :3], cover, normal, ahead
+    return int(lo[0]), int(lo[1]), rgba[..., :3], cover, normal, ahead, inked & inside
 
 
 def tones(normal_bone, turn, eye, light=LIGHT, shade=SHADE, edges=EDGES):
@@ -630,7 +640,7 @@ def tones(normal_bone, turn, eye, light=LIGHT, shade=SHADE, edges=EDGES):
     return out
 
 
-def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, forced=None, line="shell", who=None, figure=0):
+def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, forced=None, line="shell", who=None, figure=0, lines=None):
     """The character as cards, in one pose, through one eye.
 
     pose    {bone name: 4x4 matrix in the world}
@@ -642,6 +652,7 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
     line    the ink line round each part: "shell" (behind the surface) or "off" (card_pixels)
     who     an HxW array of whole numbers to fill in: which card each pixel shows (1 + PARTS_A_FIGURE * figure +
             the part's place in the list; 0 where there is none), for the lines drawn on the finished picture
+    lines   an HxW array of True and False to fill in: where the picture shows a part's own ink line
 
     Returns (picture: rows from the bottom up, HxWx4 uint8; distance in front HxW, inf where empty;
     {part name: {"view", "next", "share", "off_deg"}})."""
@@ -669,7 +680,7 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
             got = card_pixels(character, part, view, card, eye, relief, line)
             if got is None:
                 continue
-            x0, y0, rgb, cover, normal, ahead = got
+            x0, y0, rgb, cover, normal, ahead, inked = got
             h, w = cover.shape
             keep = cover >= 0.5
             if portion is not None:
@@ -681,6 +692,8 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
             depth[y0:y0 + h, x0:x0 + w][keep] = ahead[keep]
             if who is not None:
                 who[y0:y0 + h, x0:x0 + w][keep] = 1 + PARTS_A_FIGURE * (figure % 15) + index % PARTS_A_FIGURE
+            if lines is not None:
+                lines[y0:y0 + h, x0:x0 + w][keep] = inked[keep]
     out = np.zeros((tall, wide, 4), dtype=np.uint8)
     out[..., :3] = np.round(to_screen(colour) * 255.0)
     out[..., 3] = np.where(np.isfinite(depth), 255, 0)

@@ -994,7 +994,7 @@ class Field {
     return {
       ready: Boolean(this.game && this.table), count: this.game?.count, way: this.state.way, look: this.state.look, model: this.state.model, shared: this.state.shared, views: this.state.views,
       frame_ms: mean(t.frame), slow_ms: slow(t.frame), fps: 1000 / Math.max(mean(t.frame), 1e-6), anim_ms: mean(t.anim), place_ms: mean(t.place), draw_ms: mean(t.draw), work_ms: mean(t.work),
-      work_slow_ms: slow(t.work), calls: this.info?.calls, triangles: this.info?.triangles, memory: this.table ? this.memory() : null, pixels: [size.x, size.y], tags: this.game?.tags, it: this.game?.it,
+      work_slow_ms: slow(t.work), calls: this.info?.calls, triangles: this.info?.triangles, memory: this.table && this.sheet ? this.memory() : null, pixels: [size.x, size.y], tags: this.game?.tags, it: this.game?.it,
       error: this.error || null,
     };
   }
@@ -1083,7 +1083,7 @@ export function tagPage({ run, sets, h, loader }) {
   const again = h("button", { class: "toggle clay-button clay-button--soft", type: "button", onclick: () => field.restart() }, "Start again");
 
   const show = () => {
-    if (!field?.game || !field.table) return;
+    if (!field?.game || !field.table || !field.sheet) return;
     const r = field.reading();
     facts.replaceChildren(
       fact("Frames a second", r.fps.toFixed(0), `${r.frame_ms.toFixed(1)} ms a frame, ${r.slow_ms.toFixed(1)} in the slow 5%`),

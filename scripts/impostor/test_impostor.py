@@ -24,8 +24,8 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             than its body, both eyes are in a good share of its pictures, and its head draws the size the
             plain pixel sheet's does
   joints    a limb whose two parts' weights meet in a fringe of splinters is cut along one clean ring, and
-            each part laps the other by the same share of the limb's radius all the way round; the joint gets a
-            ball as big as fits; two parts drawn
+            each part laps the other by the same share of the limb's radius all the way round, and further where
+            its own bones still pull; the joint gets a ball as big as fits; two parts drawn
             side by side, each with its own ink line all round it, show no line where they meet (the line is a
             shell behind the surface, and the part next door covers it) and keep it round the outside; with the
             line drawn on the finished picture instead, it is one pixel wide, wholly outside the figure, and
@@ -338,6 +338,11 @@ def test_joints():
     check("each part laps the other by 0.85 of the radius, all the way round, and takes nothing of its own", not (lapped[0] & (owner == 0)).any() and not (lapped[1] & (owner == 1)).any()
           and all(0.03 < r < 0.055 for pair in reach for r in pair), "%.1f to %.1f cm" % (100 * min(min(p) for p in reach), 100 * max(max(p) for p in reach)))
 
+    _, wider, _, _ = impostor.round_cut(points, pull, edges, corners, begin, sides, joint, 0.2, 0.02, pulled=[0.1, 2.0])
+    _, short, _, _ = impostor.round_cut(points, pull, edges, corners, begin, sides, joint, 0.2, 0.02)
+    reach = [float(middle[which[0]].max() - line) for which in (short, wider)]
+    check("a part also takes the faces next door that its own bones still pull on, and the other part, told not to, takes no more", bool((wider[0] | ~short[0]).all()) and reach[1] > reach[0] + 0.008 and bool((wider[1] == short[1]).all()),
+          "%.1f cm into its neighbour by the ring's rule, %.1f cm where its bones pull by a tenth" % (reach[0] * 100, reach[1] * 100))
     size, made = balls[(0, 1)]
     check("the joint's ball is as big as fits inside the limb there, and is made of the faces round the ring, both parts'", 0.03 < size < 0.04 and (owner[made] == 0).any() and (owner[made] == 1).any()
           and float(np.abs(middle[made] - line).max()) < 0.065, "%.1f cm across, faces within %.1f cm of the ring" % (200 * size, 100 * np.abs(middle[made] - line).max()))

@@ -11,8 +11,9 @@ impostor.py (the page's own arithmetic and its lines on the finished picture), i
 those cards were pictured from, posed by the same bones and drawn by toon.py in the same light with its own ink
 line. Then it counts, in pixels of the picture:
 
-    dark         card pixels as dark as ink, well inside the body, where the real model drawn the same way has
-                 nothing dark within 1.2 cm: a line the cards drew that is not there
+    line         pixels of ink line the cards show well inside the body (a part's own line from its sheet, or a
+                 line drawn on the finished picture) where the real model, drawn the same way with its own ink
+                 line, has nothing dark within 1.2 cm: a line that is not there
     see-through  body the real model has (a pixel in from its edge) and the cards do not. Much of that is the
                  outline falling a little short (the real model's skin stretches into a web at an armpit; the
                  cards' does not). So two smaller counts say what is a gap: "holes" are shut in on every side by
@@ -53,6 +54,7 @@ TOON = os.path.join(REPO, ".claude", "skills", "tidy-mesh", "scripts", "toon.py"
 SIZE = (1080, 608)
 SEAM_M = 0.12          # this close to a joint is "at a joint"
 CLOSE_M = 2.0
+DARK = 80              # the real model's picture is "dark" where no colour of a pixel is over this (its ink is 33)
 TO_BL = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))  # a .glb's y-up to Blender's z-up
 # name: (which sheet, how many screen pixels one of the picture's is, the lines drawn on the finished picture)
 LOOKS = {"comic": ("comic", 1, None), "pixel-baked": ("pixel", 1, None), "pixel-screen": ("comic", 2, "grid"), "pixel-both": ("pixel", 2, "grid"), "joe": ("joe", 1, "bold")}
@@ -99,7 +101,7 @@ class Real:
         posed = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in self.bodies}
         round_ = round_ or card.get("cut")  # sheets baked since the joints were mended say how they were cut
         if round_:
-            chosen, _, _ = bake_impostor.cut_round(self.bodies, rig, posed, round_["lap"], round_["smooth_m"], round_.get("ball", 0.0))
+            chosen, _, _ = bake_impostor.cut_round(self.bodies, rig, posed, round_["lap"], round_["smooth_m"], round_.get("ball", 0.0), round_.get("overlap", card["overlap"]), round_.get("trunk_overlap", card["trunk_overlap"]))
         else:
             chosen, _ = bake_impostor.cut(self.bodies, rig, card["overlap"], card["trunk_overlap"])
         white = bpy.data.materials.new("piece")
@@ -225,7 +227,7 @@ def outside(solid):
         out |= more
 
 
-def compare(real, body, cards, joints_px, per_px, k):
+def compare(real, body, cards, inked, joints_px, per_px, k):
     """What the cards show at the joints that the real model does not. real: the model with its ink line; body:
     where its own surface is. k: screen pixels to one of the picture's."""
     a, b = real[..., 3] > 127, cards[..., 3] > 127
@@ -234,9 +236,7 @@ def compare(real, body, cards, joints_px, per_px, k):
     for x, y in joints_px:
         zone |= (xs + 0.5 - x) ** 2 + (ys + 0.5 - y) ** 2 < (SEAM_M / per_px) ** 2
     reach = max(1, int(round(0.012 / per_px)))  # a line a centimetre from where the real model has one is the same line
-    cards_dark = b & (cards[..., :3].max(axis=-1) < 56)
-    real_dark = ~a | (real[..., :3].max(axis=-1) < 96)
-    dark = cards_dark & shrink(a, reach + 1) & ~grow(real_dark, reach)
+    dark = b & inked & shrink(a, reach + 1) & ~grow(~a | (real[..., :3].max(axis=-1) < DARK), reach)
     open_ = shrink(body, 1) & ~b
     hole = open_ & ~outside(b)
     out = b & ~grow(a, 1)
@@ -345,19 +345,25 @@ def main():
                         if k not in reals:
                             reals[k], bodies[k] = real.draw(eye, per_px if k > 1 else 0.014), real.body(eye)
 
-                        def cards_now():
+                        def cards_now(inked=None):
                             who = np.zeros((eye.size[1], eye.size[0]), dtype=np.int32)
                             marked = bool(card.get("line_marked"))
-                            picture, depth, _ = impostor.draw(character, pose, eye, line="off" if marked and lines else "shell", who=who)
+                            picture, depth, _ = impostor.draw(character, pose, eye, line="off" if marked and lines else "shell", who=who, lines=inked)
+                            drawn = None
                             if lines == "grid" and marked:
-                                picture = impostor.with_lines(picture, impostor.grid_line(depth, who, eye))
+                                drawn = impostor.grid_line(depth, who, eye)
                             elif lines == "bold":
-                                picture = impostor.with_lines(picture, impostor.bold_lines(depth, who if marked else None, eye) & (who > 0))
+                                drawn = impostor.bold_lines(depth, who if marked else None, eye) & (who > 0)
+                            if drawn is not None:
+                                picture = impostor.with_lines(picture, drawn)
+                                if inked is not None:
+                                    inked |= drawn
                             return picture
 
-                        cards = cards_now()
+                        inked = np.zeros((eye.size[1], eye.size[0]), dtype=bool)
+                        cards = cards_now(inked)
                         joints, _ = eye.to_pixels(np.array([pose[p["bone"]][:3, 3] for p in character.parts]))
-                        row, dark, open_, hole = compare(reals[k], bodies[k], cards, joints, per_px, k)
+                        row, dark, open_, hole = compare(reals[k], bodies[k], cards, inked, joints, per_px, k)
                         row.update({"role": role, "clip": clip, "seconds": round(t, 2), "eye": eye_name, "look": look, "m_per_px": round(per_px, 4)})
                         report["rows"].append(row)
                         name = "%s@%g:%s" % (role, t, eye_name)
@@ -392,7 +398,7 @@ def main():
         entry["worst_dark"], entry["worst_open"], entry["worst_crack"] = max(entry["worst_dark"], row["dark"]), max(entry["worst_open"], row["open"]), max(entry["worst_crack"], row["crack"])
     for key, e in table.items():
         e["dark_pct"], e["open_pct"], e["hole_pct"], e["crack_pct"] = (round(100.0 * e[k] / max(1, e["body"]), 3) for k in ("dark", "open", "hole", "crack"))
-        print("SEAMS %-28s %3d pictures: dark %5.1f px a picture (%.2f%% of the body, worst %d; %.1f at a joint), see-through %5.1f (%.2f%%, worst %d; %.1f at a joint; holes %.1f; between cards %.1f, %.2f%%, worst %d), sticks out %.1f" % (
+        print("SEAMS %-28s %3d pictures: line %5.1f px a picture (%.2f%% of the body, worst %d; %.1f at a joint), see-through %5.1f (%.2f%%, worst %d; %.1f at a joint; holes %.1f; between cards %.1f, %.2f%%, worst %d), sticks out %.1f" % (
             key, e["frames"], e["dark"] / e["frames"], e["dark_pct"], e["worst_dark"], e["dark_zone"] / e["frames"], e["open"] / e["frames"], e["open_pct"], e["worst_open"], e["open_zone"] / e["frames"], e["hole"] / e["frames"], e["crack"] / e["frames"], e["crack_pct"], e["worst_crack"], e["out"] / e["frames"]), flush=True)
     report["table"] = table
     causes = {}

@@ -23,9 +23,10 @@ between two parts is a clean ring and not a fringe. Then two parts that meet at 
 of the other's within reach of the ring where they meet (--lap times the ring's own radius), and the part
 below the joint carries a ball in it: the faces round the ring pulled in onto a ball about the joint, --ball
 of the room there is inside the body. A bend opens the outside of a joint; the ball is what shows through,
-and it never pokes out, where a lap long enough to close a bent knee would stand out as a spur. --lap 0
-cuts the old way instead: each part takes the faces next door that its bones pull on by at least --overlap
-(--trunk-overlap for the hips, spine, chest and head), with nothing evened out.
+and it never pokes out, where a lap long enough to close a bent knee would stand out as a spur. A part also
+takes the faces next door that its own bones still pull on by at least --overlap (--trunk-overlap for the hips,
+spine, chest and head): that is how the skin under an arm goes up with the arm. --lap 0 cuts the old way
+instead: only that last rule, with nothing evened out.
 
 The line round a part. Every part is pictured with its own ink line all the way round it, and the line's
 pixels are marked in the data sheet. Drawn at the surface's own depth such a line crosses the figure at every
@@ -183,7 +184,7 @@ def joints_of(rig):
     return out
 
 
-def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, head_lap=0.3):
+def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_overlap=0.04, head_lap=0.3):
     """The cut made fit for a joint to bend (impostor.py: round_cut has the account of it): {part name: [(object,
     [face indices], lapped over from next door?, the ball these faces are pulled onto or None)]}, how many
     triangles each part owns outright, and what each joint was given. The pull is evened out along the surface
@@ -224,7 +225,8 @@ def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, head_lap=0.3):
         sides.append(many)
     sides = np.concatenate(sides)
     owner, lapped, rings, balls = impostor.round_cut(np.concatenate(points), np.concatenate(pulls), np.concatenate(edges), np.concatenate(corners), np.concatenate(begin), sides,
-                                                     [(column[a], column[b], centre) for a, b, _, centre in joints], lap, smooth_m, {(column["chest"], column["head"]): head_lap}, ball)
+                                                     [(column[a], column[b], centre) for a, b, _, centre in joints], lap, smooth_m, {(column["chest"], column["head"]): head_lap}, ball,
+                                                     pulled=[trunk_overlap if name in TRUNK else overlap for name in names])
     out, own = {name: [] for name in names}, {name: 0 for name in names}
     for obj, start, many in spans:
         mine = owner[start:start + many]
@@ -412,7 +414,7 @@ def main():
 
     # The parts, each in its bone's own frame.
     if lap > 0:
-        chosen, own, joints = cut_round(bodies, rig, posed, lap, smooth_m, ball)
+        chosen, own, joints = cut_round(bodies, rig, posed, lap, smooth_m, ball, overlap, trunk_overlap)
     else:
         (chosen, own), joints = cut(bodies, rig, overlap, trunk_overlap), None
     parts, made = [], {}
