@@ -142,7 +142,7 @@ def rehearse(plan_file: str, folder: str, answer=None, log=print) -> dict:
                 # Feet are only worth measuring in the part that is real: a pretend walk glides.
                 feet = piece.get("feet") or {}
                 if feet.get("locked"):
-                    log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet held where they are down; while the model calls them down they slid {json.dumps(feet['slid_cm_per_s'])} cm a second, now {json.dumps(feet['slides_cm_per_s'])}"
+                    log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet held where they are down; while the model calls them down they slid {json.dumps(feet['slid_cm_per_s'])} cm a second, now {json.dumps(feet['slides_cm_per_s'])} (and {max(feet['slides_where_held_cm_per_s'].values())} at most where a foot is held)"
                         + (f"; hips up to {feet['from_its_place_in_the_group_cm_at_most']} cm from their place in the group" if "from_its_place_in_the_group_cm_at_most" in feet else ""))
                 elif feet:
                     log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet left as they are (not locked): they slide {json.dumps(feet['slid_cm_per_s'])} cm a second while down")

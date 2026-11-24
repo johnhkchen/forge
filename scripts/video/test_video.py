@@ -806,6 +806,7 @@ def test_feet_that_are_down_are_held_and_drift_becomes_steps():
     skating = gliding(0, 119)
     locked, report = footlock.lock(SK, skating)
     before, after = footlock.slide(SK, skating), footlock.slide(SK, locked)
+    assert report["slides_cm_per_s"] == after["cm_per_s"] == report["slides_where_held_cm_per_s"], "the model's contacts and the held stances are the same here"
     assert min(before["cm_per_s"].values()) > 15.0 and max(after["cm_per_s"].values()) < 0.3, (before, after)
     assert max(after["worst_stretch_cm"].values()) < 0.5 and report["frames_a_leg_could_not_reach"] == 0, (after, report)
     assert math.dist(locked["root"][0][::2], locked["root"][119][::2]) < 0.02, "nothing carried the hips anywhere"
@@ -820,6 +821,8 @@ def test_feet_that_are_down_are_held_and_drift_becomes_steps():
     stepping = gliding(0, 159, steps=True)
     locked, report = footlock.lock(SK, stepping)
     after = footlock.slide(SK, locked)
+    # The motion now says which feet are down as they were held: a held toe is 1, a foot let go is 0.
+    assert locked["contacts"][10] == [1.0, 1.0, 0.0, 0.0] and locked["contacts"][50][2:] == [1.0, 1.0] and set(c for row in locked["contacts"] for c in row) == {0.0, 1.0}
     assert max(after["cm_per_s"].values()) < 1.0 and report["feet"]["l"]["spots"] >= 2 and report["feet"]["r"]["spots"] >= 2, (after, report)
     world = [(SK.fk(stepping["root"][f], [tuple(stepping["rotations"][f][4 * j : 4 * j + 4]) for j in range(len(SK.joints))])) for f in range(160)]
     stances = footlock.stances(SK, stepping, world)

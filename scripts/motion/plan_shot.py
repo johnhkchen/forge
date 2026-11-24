@@ -375,7 +375,7 @@ def main() -> None:
                       f"{piece['handles'][0]} and {piece['handles'][1]} of them for the joins; ends {piece['ends_from_its_mark_cm']} cm from where the next beat starts{far}")
                 feet = piece.get("feet") or {}
                 if feet.get("locked"):
-                    print(f"PLAN {piece['name']}: feet held where they are down: they slid {max(feet['slid_cm_per_s'].values())} cm a second at most, now {max(feet['slides_cm_per_s'].values())}; "
+                    print(f"PLAN {piece['name']}: feet held where they are down: they slid {max(feet['slid_cm_per_s'].values())} cm a second at most, now {max(feet['slides_cm_per_s'].values())} by the model's own say of when they are down ({max(feet['slides_where_held_cm_per_s'].values())} where they are held); "
                           f"the hips moved up to {feet['hips_moved_cm_at_most']} cm and came down up to {feet['hips_lowered_cm_at_most']} cm for it")
         for seam in record["seams"]:
             print(f"PLAN seam {seam['from']} to {seam['to']}: MotionBricks fills frames {seam['tween_frames'][0]}-{seam['tween_frames'][1]}")

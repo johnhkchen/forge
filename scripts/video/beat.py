@@ -216,7 +216,7 @@ def crew(sk, beat: dict, before: int, after: int, videos: str = None) -> dict:
         if locking:
             in_formation = placed[p]
             placed[p], done = footlock.lock(sk, in_formation)
-            feet[p].update({"slides_cm_per_s": footlock.slide(sk, placed[p])["cm_per_s"], **done,
+            feet[p].update({**done,
                             "from_its_place_in_the_group_cm_at_most": round(100.0 * max(math.hypot(a[0] - b[0], a[2] - b[2]) for a, b in zip(placed[p]["root"], in_formation["root"])), 1)})
     CREWS[key] = {"placed": placed, "people": people, "frames": [first, last], "handles": [lead, tail], "reports": reports, "feet": feet, "notes": notes, "closest": formation.closest(sk, placed),
                   "places_in_the_group_m": {str(p): {"at_the_start": [round(c, 2) for c in where[p][lead]], "at_the_end": [round(c, 2) for c in where[p][len(where[p]) - 1 - tail]]} for p in people}}
@@ -280,7 +280,7 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
         feet = {"locked": footlock.wanted(beat.get("lock_feet")), "slid_cm_per_s": footlock.slide(sk, motion)["cm_per_s"]}
         if feet["locked"]:
             motion, done = footlock.lock(sk, motion)
-            feet.update({"slides_cm_per_s": footlock.slide(sk, motion)["cm_per_s"], **done})
+            feet.update(done)
     begins, ends = motion["root"][a], motion["root"][b]
     marks = [
         {

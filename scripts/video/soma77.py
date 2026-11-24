@@ -305,7 +305,7 @@ def build(folder: str, shot_dir: str, sk: Skeleton = None) -> dict:
     feet = {"locked": footlock.wanted(), "slid_cm_per_s": footlock.slide(sk, motion)["cm_per_s"]}
     if feet["locked"]:
         motion, done = footlock.lock(sk, motion)
-        feet.update({"slides_cm_per_s": footlock.slide(sk, motion)["cm_per_s"], **done})
+        feet.update(done)
     motion["segments"] = segments
     motion["made_by"] = {"model": "GEM-X body motion (native77), from a video", "clip": name, "joined": "the hips' place and facing carried across each cut; pose blended over a few frames"}
     for piece, segment in zip(used, segments):

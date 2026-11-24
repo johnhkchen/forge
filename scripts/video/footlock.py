@@ -27,7 +27,9 @@ by gliding: they step. So:
            it should: a foot comes down in a new place. Drift becomes steps.
 
 Nothing above the hips is touched, and frames with no foot down (a jump) are
-left as they were, eased into the stances either side.
+left as they were, eased into the stances either side. The motion's `contacts`
+come out saying what was held (1 for a held heel or toe, 0 otherwise), so the
+cast plants the same stances.
 
 Plain Python: no Blender, no numpy. Used by soma77.py (a clip's own shot) and
 beat.py (a stretch of a clip in a shot, a crew in formation), after the
@@ -285,8 +287,19 @@ def lock(sk: Skeleton, motion: dict) -> tuple:
             local[ankle] = qnorm(qmul(qconj(shin), foot_rot))
         out_root.append([round(motion["root"][f][0] + shift[0], 5), round(motion["root"][f][1] - drop[f], 5), round(motion["root"][f][2] + shift[2], 5)])
         out_rows.append([round(c, 6) for q in local for c in q])
-    locked = {**motion, "root": out_root, "rotations": out_rows}
+    # Which feet are down is now what was held, and the motion says so: whoever reads it next (the cast's own
+    # planting of feet, checks.py) holds the same stances, not the model's guess with a travelling foot in it.
+    down = [[0.0, 0.0, 0.0, 0.0] for _ in range(count)]
+    for tag, _, heel_col, toe_col in SIDES:
+        for stance in found[tag]:
+            for f in range(stance["first"], stance["last"] + 1):
+                flat = any(a <= f <= b for a, b in stance["flat"])
+                down[f][toe_col] = 1.0 if flat or stance["pivot"] == "toe" else 0.0
+                down[f][heel_col] = 1.0 if flat or stance["pivot"] == "heel" else 0.0
+    locked = {**motion, "root": out_root, "rotations": out_rows, "contacts": down}
     report = {
+        "slides_cm_per_s": slide(sk, {**locked, "contacts": motion["contacts"]})["cm_per_s"],  # by the model's own say of when a foot is down
+        "slides_where_held_cm_per_s": slide(sk, locked)["cm_per_s"],
         "feet": {tag: {k: feet[tag][k] for k in ("spots", "frames_down", "most_moved_cm", "called_down_but_moving_frames")} for tag in feet},
         "hips_moved_cm_at_most": round(100.0 * max(math.hypot(*s) for s in smooth), 1),
         "hips_lowered_cm_at_most": round(100.0 * max(drop), 1),
