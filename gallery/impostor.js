@@ -320,10 +320,12 @@ export function setBalls(quad, joints, center, world, camera, at, size = 1, zone
   const middle = [world[12] + world[0] * center[0] + world[4] * center[1] + world[8] * center[2], world[13] + world[1] * center[0] + world[5] * center[1] + world[9] * center[2],
     world[14] + world[2] * center[0] + world[6] * center[1] + world[10] * center[2]];
   for (let k = 0; k < FILL.aPart; k++) {
-    const joint = joints[k], p = joint && at(joint.bone);
+    const joint = joints[k];
+    let p = joint && at(joint.bone);
     if (!p) { u.balls.value[k].set(0, 0, 0, 0); u.ballTint.value[k].set(0, 0, 0, 0); u.zone.value[k].set(0, 0); continue; }
-    jointSpot.set(p[0], p[1], p[2]).applyMatrix4(camera.matrixWorldInverse);
     const tint = joint.tintAt(inBone(world, p));
+    if (zones && joint.zone > 0 && joint.about) p = at(joint.about) || p; // the neck's zone is a ball about the foot of the neck (impostor-math.js: partBalls)
+    jointSpot.set(p[0], p[1], p[2]).applyMatrix4(camera.matrixWorldInverse);
     u.balls.value[k].set(jointSpot.x, jointSpot.y, jointSpot.z, jointNumber(joint.radius * size, ballBack(p, middle, [eye.x, eye.y, eye.z]), zones && joint.zone > 0));
     u.zone.value[k].set(joint.zone * size, joint.core * size);
     u.ballTint.value[k].set(tint[0], tint[1], tint[2], joint.inner * size);
@@ -350,6 +352,11 @@ export function setHeadGrid(quad, screen, look, camera, at, part) {
 // it), from outside only: the inside of a sleeve or a trouser leg is never shown. `who` is the number of the card
 // below the joint, for the lines a look draws on the finished picture. inkM over 0, back faces: its ink shell,
 // for the looks that keep the line behind the surface.
+//
+// The neck has one too (a yoke: the neck, the collar and the tops of both shoulders; scripts/impostor/yoke.py).
+// The skeleton's neck bone and collar bones have no card of their own: their skin was the chest card's, and stayed
+// with the ribs when the head turned or an arm went up. That piece is drawn in a ball about the foot of the neck
+// (`about` in impostor.json), and only the chest's card steps aside there.
 export const JOINT_VERTEX = `
 #include <common>
 #include <skinning_pars_vertex>
@@ -454,7 +461,7 @@ export function skinMeshes(skin, bones, paint) {
     set(camera, look, card, figure = 0) {
       const told = cardLine(card, look);
       skin.pieces.forEach((piece, i) => {
-        const bone = bones[piece.joint.bone];
+        const bone = bones[piece.joint.about || piece.joint.bone]; // (the neck's piece is drawn in a ball about the foot of the neck)
         at.setFromMatrixPosition(bone.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
         const size = Math.cbrt(Math.abs(bone.matrixWorld.determinant()));
         made[i].forEach((mesh, shell) => {

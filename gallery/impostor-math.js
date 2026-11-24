@@ -171,12 +171,19 @@ export const ballBack = (jointAt, middle, eye) => (FILL.ballBackM * (1 - dot(uni
 // the model's outside skin and covers it; where the model is one thing inside another (an arm in a wide cuff, seen
 // down the cuff) the piece has nothing to show, and the card's picture of the inside thing is still there. A page
 // that is not drawing the pieces (a runner far off on the tag field) leaves the zones off.
+//
+// The neck's piece (a yoke: the neck, the collar and the tops of both shoulders) says three things more. `aside`:
+// the parts whose cards step aside (the chest's; the head's card stays whole and gets no zone). `about`: the bone
+// whose head the zone is a ball about, when that is not the joint's own (the foot of the neck, not the head's
+// joint): while the zone is on, the joint is told to that card as being there. `core_cm`: its own core (none).
 export function partBalls(card) {
   const out = card.parts.map(() => []);
-  const zones = new Map((card.skin?.joints || []).map((joint) => [joint.bone, joint.zone_cm / 100]));
+  const pieces = new Map((card.skin?.joints || []).map((joint) => [joint.bone, joint]));
   for (const joint of card.joints || []) for (const name of joint.between) {
     const p = card.parts.findIndex((part) => part.name === name);
-    if (p >= 0 && out[p].length < FILL.aPart) out[p].push({ bone: joint.bone, radius: (FILL.ball * joint.ring_cm) / 100, inner: (FILL.inner * joint.ball_cm) / 100, zone: zones.get(joint.bone) || 0, core: zones.has(joint.bone) ? (FILL.zoneCore * joint.ring_cm) / 100 : 0 });
+    const piece = pieces.get(joint.bone), aside = piece && (piece.aside || joint.between).includes(name);
+    if (p >= 0 && out[p].length < FILL.aPart) out[p].push({ bone: joint.bone, radius: (FILL.ball * joint.ring_cm) / 100, inner: (FILL.inner * joint.ball_cm) / 100, zone: aside ? piece.zone_cm / 100 : 0,
+      core: aside ? (piece.core_cm ?? FILL.zoneCore * joint.ring_cm) / 100 : 0, about: (aside && piece.about) || null });
   }
   return out;
 }

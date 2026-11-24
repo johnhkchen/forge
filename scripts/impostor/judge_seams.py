@@ -74,6 +74,7 @@ TO_BL = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))  # a .
 LOOKS = {"comic": ("comic", 1, None), "pixel-baked": ("pixel", 1, None), "pixel-screen": ("comic", 2, "grid"), "pixel-both": ("pixel", 2, "grid"), "joe": ("joe", 1, "bold")}
 PAPER = (250, 248, 245)
 PIECES = True          # read the cards that have a piece of the model in each big joint, when there are some (--joints cards: do not)
+NECKED = True          # ... and of those the ones with a piece for the neck and collar too (--joints knees: the ones without)
 
 
 def run_toon(**params):
@@ -96,7 +97,8 @@ def sheet_folder(profiles, model, sheet, which, look=""):
     names.append("%s-impostor" % model)
     cards = next(os.path.join(profiles, n) for n in names if os.path.isfile(os.path.join(profiles, n, "impostor.json")))
     # the same cards with a piece of the model for every big joint (bake_joints.py), when there are some and they are wanted
-    pieces = "%s-skinned" % (cards[:-len("-joined")] if cards.endswith("-joined") else cards)
+    stem = cards[:-len("-joined")] if cards.endswith("-joined") else cards
+    pieces = next((stem + tail for tail in (["-necked"] if NECKED else []) + ["-skinned"] if os.path.isfile(os.path.join(stem + tail, "impostor.json"))), stem + "-skinned")
     return pieces if which == "new" and PIECES and os.path.isfile(os.path.join(pieces, "impostor.json")) else cards
 
 
@@ -118,6 +120,8 @@ class Real:
         bake_impostor.hang_arms(scene, rig)
         graph = bpy.context.evaluated_depsgraph_get()
         posed = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in self.bodies}
+        # (kept for judge_joints.py: the skin as the cards pictured it, and each bone as it stood then)
+        self.hung, self.hung_bones = posed, {b.name: rig.matrix_world @ b.matrix for b in rig.pose.bones}
         round_ = round_ or card.get("cut")  # sheets baked since the joints were mended say how they were cut
         if not pieces:  # only the whole model is wanted (judge_faces.py): the cut is slow and not needed
             chosen = {name: [] for name, _ in bake_impostor.PARTS}
@@ -333,8 +337,8 @@ def main():
     out = os.path.abspath(flag("--out", "evidence/seams"))
     os.makedirs(out, exist_ok=True)
     tag, which, model = flag("--tag", ""), flag("--sheets", "new"), flag("--model", "detailed")
-    global PIECES
-    PIECES = flag("--joints", "pieces") != "cards"
+    global PIECES, NECKED
+    PIECES, NECKED = flag("--joints", "pieces") != "cards", flag("--joints", "pieces") != "knees"
     runs, shots = os.path.abspath(flag("--runs", os.path.join(REPO, "runs"))), os.path.abspath(flag("--shots", os.path.join(REPO, "shots")))
     take = os.path.join(shots, flag("--take", "crew-candy-shop"))
     times = [float(t) for t in flag("--times", "9,13.5,18,22.5,27,31.5,36,40.5,45,49.5").split(",") if t]

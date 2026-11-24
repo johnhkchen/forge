@@ -471,6 +471,8 @@ void main() {
     float joint = ballBone[part][k];
     balls[k] = vec4(0.0);
     if (joint < 0.0) continue;
+    // (a zone about another bone's head, the neck's about the foot of the neck: 2 and that bone, and while the zone is on the joint is told as being there)
+    if (ballZone[part][k] > 1.5 && distance(cameraPosition, vec3(runner.x, 1.0, runner.y)) < zoneFar) joint = ballZone[part][k] - 2.0;
     vec4 at = feet() * texelFetch(poseTex, ivec2(int(joint + 0.5) * 12 + 3, int(runner.w + 0.5)), 0);
     // the radius in whole millimetres, and after the point how far back this part stands the ball: nothing when
     // its own body is straight behind the ball as the eye sees it (impostor-math.js: ballBack)
@@ -1004,7 +1006,7 @@ class Field {
       ballBone[p * 4 + k] = bone;
       ballSize[p * 4 + k] = joint.radius;
       ballTints.set([tint[0], tint[1], tint[2], joint.inner], (p * 4 + k) * 4);
-      ballZone[p * 4 + k] = joined && joint.zone > 0 ? 1 : 0;
+      ballZone[p * 4 + k] = joined && joint.zone > 0 ? (joint.about && this.table.names.indexOf(joint.about) >= 0 ? 2 + this.table.names.indexOf(joint.about) : 1) : 0;
       zones.set([joint.zone, joint.core], (p * 4 + k) * 2);
     }));
     const paint = new THREE.ShaderMaterial({ vertexShader: CARDS_VERTEX, fragmentShader: CARDS_FRAGMENT, side: THREE.DoubleSide, uniforms: {
@@ -1071,7 +1073,7 @@ class Field {
       for (const shell of [false, true]) {
         const mesh = new THREE.Mesh(shape, new THREE.ShaderMaterial({ vertexShader: JOINTS_VERTEX, fragmentShader: JOINTS_FRAGMENT, side: shell ? THREE.BackSide : THREE.FrontSide, uniforms: {
           ...this.shade, poseTex: this.pose, keep: near, atlas: { value: skin.colour }, atlasData: { value: skin.data }, reach: { value: piece.joint.reach_cm / 100 }, inkM: { value: shell ? skin.inkM : 0 },
-          lineInk: { value: new THREE.Color(0x1c1721) }, jointBone: { value: names.indexOf(piece.joint.bone) }, partNumber: { value: piece.part % 16 }, ids: { value: 0 } } }));
+          lineInk: { value: new THREE.Color(0x1c1721) }, jointBone: { value: names.indexOf(piece.joint.about || piece.joint.bone) }, partNumber: { value: piece.part % 16 }, ids: { value: 0 } } }));
         mesh.frustumCulled = false;
         group.add(mesh);
         made.push(mesh);

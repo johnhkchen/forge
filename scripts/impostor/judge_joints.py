@@ -2,8 +2,8 @@
 models posed the same.
 
     Blender -b --factory-startup -P scripts/impostor/judge_joints.py -- --out <folder> [--tag before]
-        [--runs runs] [--shots shots] [--take crew-candy-shop] [--model detailed] [--sheets joined|skinned|bent]
-        [--at 38] [--deep 2] [--kinds knee,elbow,hip,shoulder] [--eyes crew,2,1] [--looks joe,pixel-both]
+        [--runs runs] [--shots shots] [--take crew-candy-shop] [--model detailed] [--sheets joined|skinned|necked|bent]
+        [--at 38] [--deep 2] [--kinds knee,elbow,hip,shoulder|neck|yoke] [--eyes crew,2,1] [--looks joe,pixel-both]
         [--only left] [--core 0.6] [--stills left@38:shin_l:1,...|asked] [--parts left@38:shin_l:1]
 
 judge_seams.py counts pixels the cards leave bare. A knee can have none bare and still not be a knee: a hollow
@@ -23,9 +23,21 @@ ring where its two parts meet and 6 cm more), over the real model's own body:
                differently from the comic way the model is drawn, so this is for one look before and after
     bare       pixels of the model's body the cards do not cover, in pixels of the screen
 
+--kinds may also name "neck" (the head's joint, as any other joint) and "yoke": the neck, the collar and both
+shoulders together, in one disc about the foot of the neck that reaches 4 cm past the further shoulder (the square
+round it from close by is 80 cm). The yoke is looked at where the dance asks most of it, --deep moments of each:
+"turn" (the head turned furthest against the chest), "raise" (an arm raised highest), "shrug" (a collar bone
+turned furthest against the chest) and "twist" (the chest turned furthest against the hips). Its rows have two
+things more. "over": pixels the cards cover and the model does not (what sticks out; every row has it). And
+the skin itself, measured on the model and not on a picture (Yoke, below): "held_cm" is how far a rigid card
+holds the skin of the neck and collar from where the model has it (and "held_worst_cm": 95 points of a hundred
+are nearer), "off_cm" the same for what is drawn there, which is the neck's piece when the cards have one
+(bake_joints.py). --stills yoke writes a still of every such moment from every eye.
+
 "shaft" rows are the same disc laid on the middle of a thigh or an upper arm, where nothing bends: what the
 cards score when nothing is wrong. --sheets says which baked cards to read: joined (as they were: rigid parts,
-a ball in each joint), skinned (those, with a piece of the real model bending in each big joint: bake_joints.py)
+a ball in each joint), skinned (those, with a piece of the real model bending in each big joint: bake_joints.py),
+necked (those, and a piece for the neck and collar too: what the pages read, and what is read unless told)
 or bent (joint cards pictured bent: bake_impostor.py --bent).
 
 Writes <out>/joints[-tag].json and, for --stills (role@seconds:bone:eye), <tag>-<role>-<seconds>-<bone>-<eye>.png:
@@ -56,16 +68,35 @@ OFF_M = 0.01         # the cards' picture may sit this far from the model's
 BLOT = 50.0          # darker than the model by this much (of 255) is a blot
 LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 PAPER = (250, 248, 245)
-KINDS = {"shin": "knee", "forearm": "elbow", "upper_arm": "shoulder", "thigh": "hip"}
+KINDS = {"shin": "knee", "forearm": "elbow", "upper_arm": "shoulder", "thigh": "hip", "head": "neck"}
 SHAFT = {"knee": "thigh", "elbow": "upper_arm"}  # where nothing bends: the middle of the part above
 STEPS = (30, 60, 90)
+YOKE_SQUARE_M = 0.8  # the square round the foot of the neck that holds the head, the collar and both shoulders
+YOKE_REACH_M = 0.04  # the yoke's disc reaches this far past the further shoulder
+YOKE_MOVES = ("turn", "raise", "shrug", "twist")
 SHEETS = {"joined": {"joe": ["joe-joined"], "pixel-both": ["pixel-clear", "pixel-joined"], "comic": ["comic-joined"], "pixel-baked": ["pixel-joined"]},
           "skinned": {"joe": ["joe-skinned"], "pixel-both": ["pixel-clear-skinned"], "comic": ["comic-skinned"], "pixel-baked": ["pixel-skinned"]},
+          "necked": {"joe": ["joe-necked", "joe-skinned"], "pixel-both": ["pixel-clear-necked", "pixel-clear-skinned"], "comic": ["comic-necked", "comic-skinned"], "pixel-baked": ["pixel-necked", "pixel-skinned"]},
           "bent": {"joe": ["joe-bent"], "pixel-both": ["pixel-bent"], "comic": ["comic-bent"], "pixel-baked": ["pixel-bent"]}}
 
 
 def kind_of(bone):
-    return KINDS.get(bone[:-2], "")
+    return KINDS.get(bone[:-2], "") or KINDS.get(bone, "")
+
+
+def turned(rest, pose, a, b):
+    """How far bone b is turned in bone a's frame from how it rests there, degrees."""
+    r = lambda m: np.asarray(m)[:3, :3] / np.cbrt(abs(np.linalg.det(np.asarray(m)[:3, :3])))
+    return math.degrees(impostor.angle_of((r(rest[a]).T @ r(rest[b])).T @ (r(pose[a]).T @ r(pose[b]))))
+
+
+def yoke_moves(rest, pose):
+    """What the neck and the shoulders are doing in a pose, each in degrees: "turn" (the head against the chest),
+    "raise" (the higher arm above level; an arm hanging is -90), "shrug" (the collar bone turned furthest against
+    the chest) and "twist" (the chest against the hips)."""
+    up = lambda side: math.degrees(math.asin(max(-1.0, min(1.0, float(impostor.unit(pose["forearm" + side][:3, 3] - pose["upper_arm" + side][:3, 3])[1])))))
+    return {"turn": turned(rest, pose, "chest", "head"), "raise": max(up("_l"), up("_r")),
+            "shrug": max(turned(rest, pose, "chest", "shoulder_l"), turned(rest, pose, "chest", "shoulder_r")), "twist": turned(rest, pose, "hips", "chest")}
 
 
 def luma(picture):
@@ -85,6 +116,97 @@ def soft(a, r):
 
 def blown(picture, times):
     return picture if times == 1 else np.repeat(np.repeat(picture, times, axis=0), times, axis=1)
+
+
+class Yoke:
+    """How far what is drawn of the neck, the collar and the shoulder tops stands from where the real model has
+    that skin, measured on the skin itself and not on a picture of it.
+
+    The skin is the real model's own points that the chest's card holds: inside a ball about the foot of the neck
+    (as big as bake_joints.py makes the neck piece's zone), outside the shoulders' zones. A card is rigid: it has
+    each of them where it was when the cards were pictured, carried by the chest bone alone. "held" is how far
+    that is from where the model has the same point now. "off" is the same for what is drawn there: the neck
+    piece's points when the cards have one (the chest's card has stepped aside), each against the point of the
+    model it lay on when the cards were pictured; with no piece, the rigid points, and "off" is "held"."""
+
+    def __init__(self, real, card):
+        import bpy
+        import bake_impostor
+        import yoke as arithmetic
+        from mathutils import Matrix
+        self.real, self.bpy, rig = real, bpy, real.rig
+        head = lambda bone: rig.matrix_world @ rig.data.bones[bone].head_local
+        foot = head("neck")
+        self.zone = arithmetic.zone(foot, [head(b) for b in ("upper_arm_l", "upper_arm_r")], head("chest"))
+        rings = {j["bone"]: j["ring_cm"] / 100.0 for j in card.get("joints") or []}
+        shoulders = [(head(b), 1.35 * rings[b]) for b in ("upper_arm_l", "upper_arm_r") if b in rings]
+        folds = bake_impostor.part_of_bone(rig)
+        self.picked = []  # per mesh: (the mesh, which of its points, where each was when the cards were pictured)
+        for obj in real.bodies:
+            groups = [folds.get(g.name) for g in obj.vertex_groups]
+            picked = []
+            for v in obj.data.vertices:
+                at = obj.matrix_world @ v.co
+                if (at - foot).length >= self.zone or any((at - c).length < z for c, z in shoulders):
+                    continue
+                pull = {}
+                for g in v.groups:
+                    pull[groups[g.group]] = pull.get(groups[g.group], 0.0) + g.weight
+                if pull and max(pull, key=pull.get) == "chest":
+                    picked.append(v.index)
+            hung = real.hung[obj.name]
+            self.picked.append((obj, np.array(picked, dtype=np.int64), np.array([obj.matrix_world @ hung.vertices[i].co for i in picked]).reshape(-1, 3)))
+        self.hung_chest = np.array(real.hung_bones["chest"])
+        # the skeleton as the cards were pictured, as a clip's frames have a pose (judge_seams.py: Real.pose, backwards)
+        to_glb = np.linalg.inv(np.array(Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))))
+        self.hung_frames = {name: to_glb @ np.array(world) @ np.linalg.inv(np.array(real.fit[name])) for name, world in real.hung_bones.items() if name in real.fit}
+        self.matched = {}
+
+    def stand(self):
+        """The real model's picked points as the pose has them now (Blender's world)."""
+        shells = [m for obj, _, _ in self.picked for m in obj.modifiers if m.type != "ARMATURE" and m.show_viewport]
+        for m in shells:  # (the comic way's ink shell is more points; only the skeleton's pull is wanted here)
+            m.show_viewport = False
+        graph = self.bpy.context.evaluated_depsgraph_get()
+        graph.update()
+        out = []
+        for obj, picked, _ in self.picked:
+            shown = obj.evaluated_get(graph)
+            me = shown.to_mesh()
+            co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+            me.vertices.foreach_get("co", co)
+            world = np.array(obj.matrix_world)
+            out.append(co.reshape(-1, 3)[picked].astype(np.float64) @ world[:3, :3].T + world[:3, 3])
+            shown.to_mesh_clear()
+        for m in shells:
+            m.show_viewport = True
+        return np.concatenate(out)
+
+    def measure(self, character):
+        """After real.pose(pose): {"held_cm", "held_worst_cm", "off_cm", "off_worst_cm" (worst: 95 of a hundred
+        points are nearer), "piece": whether the cards have a neck piece}."""
+        from mathutils import kdtree
+        rig, pose = self.real.rig, self.real.frames
+        now = np.array(rig.matrix_world @ rig.pose.bones["chest"].matrix) @ np.linalg.inv(self.hung_chest)
+        true = self.stand()
+        hung = np.concatenate([h for _, _, h in self.picked])
+        held = np.linalg.norm(hung @ now[:3, :3].T + now[:3, 3] - true, axis=1) * 100.0
+        skin = getattr(character, "skin", None)
+        piece = next((j["bone"] for j in skin.joints if j.get("kind") == "neck" and j["bone"] in skin.pieces), None) if skin else None
+        off = held
+        if piece:
+            to_bl = lambda at: np.stack([at[:, 0], -at[:, 2], at[:, 1]], axis=1)  # a .glb's y-up to Blender's z-up
+            if id(skin) not in self.matched:  # each of the piece's points against the model's point it lay on
+                tree = kdtree.KDTree(len(hung))
+                for i, p in enumerate(hung):
+                    tree.insert(p, i)
+                tree.balance()
+                found = [tree.find(p) for p in to_bl(skin.stood(piece, self.hung_frames)[0])]
+                self.matched[id(skin)] = (np.array([f[1] for f in found]), np.array([f[2] for f in found]) < 0.01)
+            match, close = self.matched[id(skin)]
+            off = np.linalg.norm(to_bl(skin.stood(piece, pose)[0]) - true[match], axis=1)[close] * 100.0
+        return {"held_cm": round(float(held.mean()), 2), "held_worst_cm": round(float(np.percentile(held, 95)), 2), "off_cm": round(float(off.mean()), 2),
+                "off_worst_cm": round(float(np.percentile(off, 95)), 2), "piece": bool(piece)}
 
 
 def judge(real, cards, disc, per_px):
@@ -113,7 +235,7 @@ def judge(real, cards, disc, per_px):
     both = region & (cards[..., 3] > 127)
     off = np.abs(real[..., :3].astype(np.float32) - cards[..., :3].astype(np.float32)).mean(axis=-1)
     return {"likeness": max(0.0, best), "blots": float((a[ys, xs] - b[ys, xs] > BLOT).mean()), "colour": float(off[both].mean()) if both.any() else None,
-            "bare": int((region & ~(cards[..., 3] > 127)).sum()), "ground": ground}
+            "bare": int((region & ~(cards[..., 3] > 127)).sum()), "over": int((disc & ~there & (cards[..., 3] > 127)).sum()), "ground": ground}
 
 
 def over_paper(picture):
@@ -121,8 +243,12 @@ def over_paper(picture):
     return np.round(picture[..., :3] * cover + np.array(PAPER, dtype=np.float32) * (1.0 - cover)).astype(np.uint8)
 
 
-def still(path, pictures, disc=None, tall=420):
-    """Pictures side by side, blown up whole to about `tall` pixels; the disc that was judged ringed on the first."""
+def still(path, pictures, disc=None, tall=420, crop=None):
+    """Pictures side by side, blown up whole to about `tall` pixels; the disc that was judged ringed on the first.
+    crop: (x0, y0, x1, y1) in the pictures' pixels, to show only that much of each."""
+    if crop is not None:
+        x0, y0, x1, y1 = crop
+        pictures, disc = [p[y0:y1, x0:x1] for p in pictures], None if disc is None else disc[y0:y1, x0:x1]
     times = max(1, tall // pictures[0].shape[0])
     cuts = []
     for n, picture in enumerate(pictures):
@@ -163,7 +289,7 @@ def main():
     flag = lambda name, default: args[args.index(name) + 1] if name in args else default
     out = os.path.abspath(flag("--out", "evidence/knees"))
     os.makedirs(out, exist_ok=True)
-    tag, model, which = flag("--tag", ""), flag("--model", "detailed"), flag("--sheets", "skinned")
+    tag, model, which = flag("--tag", ""), flag("--model", "detailed"), flag("--sheets", "necked")
     runs, shots = os.path.abspath(flag("--runs", os.path.join(REPO, "runs"))), os.path.abspath(flag("--shots", os.path.join(REPO, "shots")))
     take = os.path.join(shots, flag("--take", "crew-candy-shop"))
     at = [float(t) for t in flag("--at", "38").split(",") if t]
@@ -200,34 +326,50 @@ def main():
         rings = {j["bone"]: j["ring_cm"] / 100.0 for j in first.get("joints") or []}
         above = {j["bone"]: next(p["bone"] for p in first["parts"] if p["name"] == j["between"][1]) for j in first.get("joints") or []}
         # the moments, and the joints looked at in each: (seconds, [bones])
-        moments = [(t, [b for b in rings if kind_of(b) == "knee"]) for t in at]
+        moments = [(t, [b for b in rings if kind_of(b) == "knee"], "") for t in at if "knee" in kinds]
+        rest = motion.pose(None)
+        yoke = Yoke(real, first) if "yoke" in kinds else None
         if deep:
             looked = [(t, real.bends(motion.pose(t))) for t in np.arange(0.0, motion.seconds, 0.25)]
             for kind in kinds:
                 picked = []
-                for _, bone, t in sorted(((max((v, b) for b, v in bends.items() if kind_of(b) == kind) + (t,)) for t, bends in looked), reverse=True):
-                    if len(picked) < deep and all(abs(t - u) >= 1.0 for u, _ in picked):
-                        picked.append((float(t), [bone]))
+                for _, bone, t in sorted(((max((v, b) for b, v in bends.items() if kind_of(b) == kind) + (t,)) for t, bends in looked if any(kind_of(b) == kind for b in bends)), reverse=True):
+                    if len(picked) < deep and all(abs(t - u) >= 1.0 for u, _, _ in picked):
+                        picked.append((float(t), [bone], ""))
                 moments += picked
-        for t, bones in sorted(moments):
+            if "yoke" in kinds:  # the moments the neck and shoulders are asked most of: the head turned, an arm raised, a shrug, a twist
+                moves = [(t, yoke_moves(rest, motion.pose(t))) for t in np.arange(0.0, motion.seconds, 0.25)]
+                for why in YOKE_MOVES:
+                    picked = []
+                    for _, t in sorted(((m[why], t) for t, m in moves), reverse=True):
+                        if len(picked) < deep and all(abs(t - u) >= 1.0 for u, _, _ in picked):
+                            picked.append((float(t), ["neck"], why))
+                    moments += picked
+        for t, bones, why in sorted(moments):
             pose = motion.pose(t)
             real.pose(pose)
             bends = real.bends(pose)
             # every big joint is judged through the crew camera; the ones this moment is for from close by too
             spots = [(b, kind_of(b), pose[b][:3, 3], rings[b] + REACH_M) for b in rings if kind_of(b) in kinds]
             spots += [(above[b], "shaft", (pose[above[b]][:3, 3] + pose[b][:3, 3]) / 2.0, rings[b] + REACH_M) for b in rings if kind_of(b) in SHAFT and kind_of(b) in kinds]
+            if "yoke" in kinds:  # the head's foot, the collar and both shoulders in one disc about the foot of the neck
+                foot = pose["neck"][:3, 3]
+                spots.append(("neck", "yoke", foot, max(float(np.linalg.norm(pose[b][:3, 3] - foot)) for b in ("upper_arm_l", "upper_arm_r")) + YOKE_REACH_M))
+                bends = dict(bends, neck=yoke_moves(rest, pose).get(why, 0.0))
+                slip = yoke.measure(characters[looks[0]])
             for eye_name in eyes:
                 if eye_name == "crew":
                     views = [(impostor.Eye(np.array(crew["at"], dtype=float), np.array(crew["aim"], dtype=float), crew_fov, SIZE), spots, "")]
                 else:  # a square round the joint, as the screen shows it from that many metres
                     away = float(eye_name)
-                    side = int(round(SQUARE_M * SIZE[1] / (2.0 * away * math.tan(math.radians(SCREEN_FOV) / 2.0)) / 4.0)) * 4
                     views = []
                     for bone in bones:
-                        joint = pose[bone][:3, 3]
+                        square = YOKE_SQUARE_M if bone == "neck" else SQUARE_M
+                        side = int(round(square * SIZE[1] / (2.0 * away * math.tan(math.radians(SCREEN_FOV) / 2.0)) / 4.0)) * 4
+                        joint = pose[bone][:3, 3] + (np.array([0.0, 0.08, 0.0]) if bone == "neck" else 0.0)
                         toward = impostor.unit(np.array([crew["at"][0] - joint[0], 0.0, crew["at"][2] - joint[2]]))
-                        eye = impostor.Eye(joint + away * toward + np.array([0.0, 0.12 * away, 0.0]), joint, math.degrees(2.0 * math.atan(SQUARE_M / 2.0 / away)), (side, side))
-                        views.append((eye, [s for s in spots if s[0] in (bone, above[bone])], bone))
+                        eye = impostor.Eye(joint + away * toward + np.array([0.0, 0.12 * away, 0.0]), joint, math.degrees(2.0 * math.atan(square / 2.0 / away)), (side, side))
+                        views.append((eye, [s for s in spots if s[0] in (bone, above.get(bone)) or (bone == "neck" and s[1] in ("neck", "shoulder"))], bone))
                 for eye, judged, focus in views:
                     fine = impostor.Eye(eye.at, eye.aim, eye.fov_deg, (eye.size[0] * FINER, eye.size[1] * FINER))
                     truth = real.draw(fine, 0.0)
@@ -243,12 +385,17 @@ def main():
                             got = judge(truth, drawn[look], disc, per_px)
                             if got is None:
                                 continue
-                            got["bare"] = round(got["bare"] / float(FINER * FINER), 1)
+                            got["bare"], got["over"] = round(got["bare"] / float(FINER * FINER), 1), round(got["over"] / float(FINER * FINER), 1)
                             report["rows"].append(dict(got, role=role, seconds=round(t, 2), eye=eye_name, look=look, bone=bone, kind=kind, bend=round(bends.get(bone, 0.0), 1) if kind != "shaft" else 0.0,
-                                                       focus=bool(focus == bone or (eye_name == "crew" and bone in bones))))
+                                                       why=why if kind == "yoke" else "", **(slip if kind == "yoke" else {}), focus=bool(focus == bone or (eye_name == "crew" and bone in bones))))
                     name = "%s@%g:%s:%s" % (role, t, focus or "all", eye_name)
-                    if name in stills or ("asked" in stills and focus and eye_name == eyes[-1]):
-                        still(os.path.join(out, "%s-%s-%g-%s-%s.png" % (tag or which, role, t, focus or "all", eye_name)), [truth] + [drawn[look] for look in looks], discs.get((focus, kind_of(focus))) if focus else None)
+                    if name in stills or ("asked" in stills and focus and eye_name == eyes[-1]) or ("yoke" in stills and why and focus):
+                        still(os.path.join(out, "%s-%s-%g-%s-%s.png" % (tag or which, role, t, why or focus or "all", eye_name)), [truth] + [drawn[look] for look in looks], discs.get((focus, "yoke" if why else kind_of(focus))) if focus else None)
+                    if "yoke" in stills and why and not focus:  # through the crew camera: the same, cut out round the yoke
+                        centre, ahead = fine.to_pixels(pose["neck"][:3, 3])
+                        half = int(0.45 / (2.0 * float(ahead) * fine.tan / fine.size[1]))
+                        x0, y0 = int(np.clip(centre[0] - half, 0, fine.size[0] - 2 * half)), int(np.clip(centre[1] - half, 0, fine.size[1] - 2 * half))
+                        still(os.path.join(out, "%s-%s-%g-%s-%s.png" % (tag or which, role, t, why, eye_name)), [truth] + [drawn[look] for look in looks], discs.get(("neck", "yoke")), crop=(x0, y0, x0 + 2 * half, y0 + 2 * half))
                     if name in parts_of and focus:
                         lower = next(p["name"] for p in first["parts"] if p["bone"] == focus)
                         upper = next(p["name"] for p in first["parts"] if p["bone"] == above[focus])
@@ -262,23 +409,33 @@ def main():
     mean = lambda xs: round(float(np.mean(xs)), 3) if len(xs) else None
     for row in report["rows"]:
         step = "shaft" if row["kind"] == "shaft" else ["under 30", "30 to 60", "60 to 90", "90 and over"][sum(row["bend"] >= s for s in STEPS)]
-        keys = ["%s|%s|%s|%s" % (row["eye"], row["look"], row["kind"], step)]
-        if row["kind"] != "shaft":
-            keys.append("%s|%s|%s|all" % (row["eye"], row["look"], row["kind"]))
-            if row["bend"] >= 60:
-                keys.append("%s|%s|any|60 and over" % (row["eye"], row["look"]))
-        if row["focus"] and row["kind"] != "shaft":
-            keys.append("%s|%s|%s|asked" % (row["eye"], row["look"], row["kind"]))
+        if row["kind"] == "yoke":  # the neck and shoulders together: by what they were doing, not by how far one joint is bent
+            keys = ["%s|%s|yoke|%s" % (row["eye"], row["look"], row["why"] or "other"), "%s|%s|yoke|all" % (row["eye"], row["look"])]
+        else:
+            keys = ["%s|%s|%s|%s" % (row["eye"], row["look"], row["kind"], step)]
+            if row["kind"] != "shaft":
+                keys.append("%s|%s|%s|all" % (row["eye"], row["look"], row["kind"]))
+                if row["bend"] >= 60:
+                    keys.append("%s|%s|any|60 and over" % (row["eye"], row["look"]))
+            if row["focus"] and row["kind"] != "shaft":
+                keys.append("%s|%s|%s|asked" % (row["eye"], row["look"], row["kind"]))
         for key in keys:
-            e = table.setdefault(key, {"joints": 0, "likeness": [], "blots": [], "colour": [], "bare": []})
+            e = table.setdefault(key, {"joints": 0, "likeness": [], "blots": [], "colour": [], "bare": [], "over": []})
             e["joints"] += 1
-            for k in ("likeness", "blots", "colour", "bare"):
+            for k in ("likeness", "blots", "colour", "bare", "over"):
                 if row[k] is not None:
                     e[k].append(row[k])
+            for k in ("held_cm", "held_worst_cm", "off_cm", "off_worst_cm"):  # the yoke's skin itself (Yoke)
+                if k in row:
+                    e.setdefault(k, []).append(row[k])
     for key in sorted(table):
         e = table[key]
-        e.update(worst=round(float(min(e["likeness"])), 3), likeness=mean(e["likeness"]), blots=mean(e["blots"]), colour=mean(e["colour"]), bare=mean(e["bare"]))
-        print("JOINTS %-44s %3d joints: likeness %.3f (worst %.3f), blots %4.1f%%, colour off %4.1f, bare %5.1f px" % (key, e["joints"], e["likeness"], e["worst"], 100.0 * e["blots"], e["colour"] or 0.0, e["bare"]), flush=True)
+        e.update(worst=round(float(min(e["likeness"])), 3), likeness=mean(e["likeness"]), blots=mean(e["blots"]), colour=mean(e["colour"]), bare=mean(e["bare"]), over=mean(e["over"]))
+        skin = ""
+        if "off_cm" in e:
+            e.update({k: mean(e[k]) for k in ("held_cm", "held_worst_cm", "off_cm", "off_worst_cm")})
+            skin = "; the skin a rigid card would hold %.1f cm off (%.1f at worst), what is drawn %.1f cm (%.1f)" % (e["held_cm"], e["held_worst_cm"], e["off_cm"], e["off_worst_cm"])
+        print("JOINTS %-44s %3d joints: likeness %.3f (worst %.3f), blots %4.1f%%, colour off %4.1f, bare %5.1f px, over %5.1f px%s" % (key, e["joints"], e["likeness"], e["worst"], 100.0 * e["blots"], e["colour"] or 0.0, e["bare"], e["over"], skin), flush=True)
     report["table"] = table
     report["seconds"] = round(time.time() - began, 1)
     with open(os.path.join(out, "joints%s.json" % (tag and "-" + tag)), "w") as f:

@@ -50,6 +50,19 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             node). With RUNS_DIR holding cards with pieces (profiles/*-impostor-joe-skinned): every joint named
             has a piece that lies within reach of its joint at rest, and a frame of the walk drawn with the
             pieces covers what it covered without them
+  neck      the piece for the neck, the collar and the shoulder tops (yoke.py, bake_joints.py): how big its zone is;
+            a neck's pull evened out along it adds up to one at every point, keeps the head's own, and bends a nod
+            in a curve where the rig's own folds it at two creases; clothing gives half of what the neck pulls on
+            it to the chest; the rim's easing (tried, off) is none inside, all at the rim below, none up the neck or
+            beside the next piece; a point keeps its four strongest bones; a point whose pull is changed still
+            stands where it stood in the pictured pose; the zone is the chest's card's alone, a ball about the
+            foot of the neck, with no core, and the head's card has none; a card steps aside in a zone about
+            another bone, and a piece is drawn within reach of the bone it is about; the page gives the same
+            zones and bones, and reads "-necked" first, then "-skinned", and "-skinned" when asked for the knees
+            only (needs node). With RUNS_DIR holding a baked neck piece (profiles/*-impostor-joe-necked): it is
+            some hundreds of triangles within reach of the foot of the neck, the neck and head pull up it and
+            less at its foot, a turn of the neck carries the skin up the neck and leaves the collar below, and
+            a frame of the walk drawn with it covers what it covered without
   clear     a face kept clear in "Pixels, both": a head far off stays on the body's grid and a near one goes on a
             grid twice as fine, slid so the bone's head sits on a corner of a pixel; drawn that way a head is twice
             the pixels across, its line is still one big pixel wide and wholly outside it, and a body drawn
@@ -1065,10 +1078,191 @@ def test_skin(runs):
           "%d pixels with, %d without, %d lost" % (with_pieces.sum(), without.sum(), (without & ~with_pieces).sum()))
 
 
+def test_neck(runs):
+    import yoke
+    # how big the piece is
+    got = yoke.zone([0.0, 1.6, 0.0], [[0.17, 1.55, 0.0], [-0.2, 1.55, 0.0]], [0.0, 1.38, 0.0])
+    check("the neck piece's zone is a ball about the foot of the neck, most of the way to the nearer arm or down to the chest's joint, whichever is less",
+          abs(got - min(yoke.ARM * math.hypot(0.17, 0.05), yoke.CHEST * 0.22)) < 1e-9 and abs(yoke.zone([0, 0, 0], [[1, 0, 0]], [0, -0.1, 0]) - yoke.CHEST * 0.1) < 1e-9, "%.4f m" % got)
+
+    # a neck as a rig has it: a line of points a centimetre apart, each given to one bone alone
+    count = 25
+    height = np.arange(count) * 0.01
+    hard = np.zeros((count, 3))  # chest, neck, head
+    hard[height < 0.06, 0], hard[(height >= 0.06) & (height < 0.15), 1], hard[height >= 0.15, 2] = 1.0, 1.0, 1.0
+    edges = np.stack([np.arange(count - 1), np.arange(1, count)], axis=1)
+    rounds = yoke.rounds_for(0.03, 0.01)
+    even = yoke.spread_pull(hard, edges, hard[:, 2] > 0.99, rounds)
+    step = lambda pull: float(np.abs(np.diff(pull, axis=0)).max())
+    check("a neck's pull evened out along it: every point's still adds up to one, and the head's own points keep theirs", float(np.abs(even.sum(axis=1) - 1.0).max()) < 1e-9 and np.array_equal(even[height >= 0.15], hard[height >= 0.15]))
+    check("... and no point is pulled very differently from the next, where one bone's points used to stop and the next's begin", step(hard) == 1.0 and step(even) < 0.4, "the biggest step %.2f in %d rounds" % (step(even), rounds))
+    check("... the chest's pull going down steadily as the points go up", bool((np.diff(even[:, 0]) <= 1e-12).all()) and even[0, 0] > 0.8 and even[13, 0] < 0.1)
+    check("... with no evening out asked for, nothing changes", np.array_equal(yoke.spread_pull(hard, edges, hard[:, 2] > 0.99, yoke.rounds_for(0.0, 0.01)), hard))
+
+    # the head nods 50 degrees, the neck bone 30: how sharply the line of points folds
+    def folds(pull):
+        nod = lambda deg, at: np.block([[impostor.about([0.0, 0.0, 1.0], math.radians(deg)), (np.eye(3) - impostor.about([0.0, 0.0, 1.0], math.radians(deg))) @ np.array([[0.0], [at], [0.0]])], [np.zeros((1, 3)), np.ones((1, 1))]])
+        held = np.stack([np.eye(4), nod(30.0, 0.06), nod(30.0, 0.06) @ nod(20.0, 0.15)])
+        points = np.stack([np.zeros(count), height, np.zeros(count), np.ones(count)], axis=1)
+        stood = np.einsum("vb,bij,vj->vi", pull, held, points)[:, :3]
+        way = np.diff(stood, axis=0)
+        way /= np.linalg.norm(way, axis=1, keepdims=True)
+        return float(np.degrees(np.arccos(np.clip((way[1:] * way[:-1]).sum(axis=1), -1.0, 1.0))).max())
+    check("a nod then bends the neck in a curve, not at two creases", folds(hard) > 19.0 and folds(even) < 0.5 * folds(hard), "the sharpest fold %.1f degrees, %.1f as the rig has it" % (folds(even), folds(hard)))
+
+    # cloth
+    worn = height < 0.1
+    laid = yoke.lay_cloth(hard, worn, 1, 2, 0, 0.5)
+    check("clothing gives half of what the neck pulls on it to the chest, and skin keeps all of it", np.allclose(laid[(height >= 0.06) & worn], [0.5, 0.5, 0.0]) and np.array_equal(laid[~worn], hard[~worn]) and float(np.abs(laid.sum(axis=1) - 1.0).max()) < 1e-9)
+
+    # the rim (tried, and left off: bake_joints.py --rim)
+    spot = np.array([[0.0, -0.05, 0.0], [0.0, -0.1, 0.0], [0.0, 0.1, 0.0], [0.11, -0.02, 0.0]])
+    pull = np.tile([0.0, 0.6, 0.0, 0.4], (4, 1))  # chest, neck, head, a collar bone
+    eased, share = yoke.rim(pull, spot, [0.0, 0.0, 0.0], 0.1, [0, 1, 3], 0, others=[([0.2, 0.0, 0.0], 0.1)], up=[0.0, 1.0, 0.0])
+    check("easing a piece's pull to the chest bone at its rim: none well inside, all of it at the rim below, none up the neck, none beside the next piece",
+          share[0] == 0.0 and abs(share[1] - 1.0) < 1e-9 and np.allclose(eased[1], [1.0, 0.0, 0.0, 0.0]) and share[2] == 0.0 and share[3] < 1e-9 and np.array_equal(eased[2], pull[2]), str(np.round(share, 3)))
+    check("... and asked for none, none", np.array_equal(yoke.rim(pull, spot, [0, 0, 0], 0.1, [0, 1, 3], 0, share=0.0)[0], pull))
+
+    six = np.array([[0.3, 0.25, 0.2, 0.15, 0.06, 0.04]])
+    check("a point keeps its four strongest bones, adding up to one", np.allclose(yoke.most(six), np.array([[0.3, 0.25, 0.2, 0.15, 0.0, 0.0]]) / 0.9))
+
+    # a changed pull leaves a point where it was in the pose the cards were pictured in
+    rng = np.random.default_rng(3)
+    held = np.stack([np.eye(4)] * 4)
+    for b in range(1, 4):
+        held[b, :3, :3] = impostor.about(impostor.unit(rng.normal(size=3)), rng.uniform(0.1, 0.6))
+        held[b, :3, 3] = rng.normal(size=3) * 0.05
+    old, new = yoke.most(rng.uniform(size=(40, 4)) ** 3), yoke.most(rng.uniform(size=(40, 4)))
+    at = rng.normal(size=(40, 3)) * 0.2
+    again = yoke.rest_again(at, old, new, held)
+    stand = lambda points, pull: np.einsum("vb,bij,vj->vi", pull, held, np.concatenate([points, np.ones((40, 1))], axis=1))[:, :3]
+    worst = float(np.abs(stand(again, new) - stand(at, old)).max())
+    check("a point whose pull is changed is moved, as it rests, to stand in the pictured pose exactly where it stood", worst < 1e-9 and float(np.abs(again - at).max()) > 0.001, "worst %.2g m" % worst)
+
+    # what the cards are told of it
+    card = {"parts": [{"name": n} for n in ("chest", "head", "upper_arm_l")], "joints": [{"bone": "head", "between": ["head", "chest"], "ring_cm": 5.0, "ball_cm": 4.0}, {"bone": "upper_arm_l", "between": ["upper_arm_l", "chest"], "ring_cm": 9.0, "ball_cm": 5.0}],
+            "skin": {"joints": [{"bone": "head", "zone_cm": 16.0, "about": "neck", "aside": ["chest"], "core_cm": 0.0}, {"bone": "upper_arm_l", "zone_cm": 12.0}]}}
+    zones, abouts = impostor.part_zones(card), impostor.part_zones(card, about=True)
+    near = lambda got, want: len(got) == len(want) and all(abs(a - b) < 1e-9 for g, w in zip(got, want) for a, b in zip(g, w))
+    check("the neck piece's zone is the chest's card's alone, with no core; the head's card has none; a shoulder's is both its cards', as it was",
+          near(zones["chest"], [(0.16, 0.0), (0.12, impostor.ZONE_CORE * 0.09)]) and near(zones["head"], [(0.0, 0.0)]) and near(zones["upper_arm_l"], [(0.12, impostor.ZONE_CORE * 0.09)]), str(zones))
+    check("... and it is a ball about the foot of the neck, not the head's joint", abouts == {"chest": ["neck", None], "head": [None], "upper_arm_l": [None]}, str(abouts))
+    folder = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        ball(folder)
+        character = impostor.Character(folder)
+        eye = impostor.Eye([0.0, 0.0, 3.0], [0.0, 0.0, 0.0], 8.0, (120, 120))
+        far = np.eye(4)
+        far[:3, 3] = (0.0, 1.0, 0.0)
+        pose = {"b": np.eye(4), "j": far, "foot": np.eye(4)}
+        plain = impostor.draw(character, pose, eye)[0]
+        character.balls, character.zones, character.abouts = {"ball": [("j", 0.05, 0.0)]}, {"ball": [(0.2, 0.0)]}, {"ball": [None]}
+        check("a card whose joint is a metre off is drawn whole", np.array_equal(impostor.draw(character, pose, eye)[0], plain) and (plain[..., 3] > 0).sum() > 200)
+        character.abouts = {"ball": ["foot"]}
+        check("... and with its zone about another bone, one at its middle, steps aside altogether (no core)", int((impostor.draw(character, pose, eye)[0][..., 3] > 0).sum()) == 0)
+        skin = impostor.Skin.__new__(impostor.Skin)
+        skin.bones, skin.inverse = ["b"], np.eye(4)[None]
+        square = np.array([[-0.05, 0.95, 0.0], [0.05, 0.95, 0.0], [0.05, 1.05, 0.0], [-0.05, 1.05, 0.0], [-0.05, -0.05, 0.0], [0.05, -0.05, 0.0], [0.05, 0.05, 0.0], [-0.05, 0.05, 0.0]])
+        skin.pieces = {"j": (square, np.full((8, 2), 0.5), np.zeros((8, 4), dtype=np.int64), np.tile([1.0, 0.0, 0.0, 0.0], (8, 1)), np.array([[0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7]]))}
+        skin.colour, skin.facing = np.full((4, 4, 4), 0.8, dtype=np.float32), np.tile(np.array([0.0, 0.0, 1.0], dtype=np.float32), (4, 4, 1))
+        wide = impostor.Eye([0.0, 0.5, 6.0], [0.0, 0.5, 0.0], 16.0, (120, 120))
+        ys = (np.mgrid[0:120, 0:120][0] + 0.5 - 60) * wide.m_per_px([0.0, 0.5, 0.0]) + 0.5
+
+        def drawn(joint):
+            skin.joints = [joint]
+            colour, depth = np.zeros((120, 120, 3), dtype=np.float32), np.full((120, 120), np.inf, dtype=np.float32)
+            character.skin = skin
+            impostor.draw_skin(character, pose, wide, colour, depth)
+            character.skin = None
+            return ys[np.isfinite(depth)]
+        own, other = drawn({"bone": "j", "between": ["ball", "ball"], "part": "ball", "reach_cm": 12.0}), drawn({"bone": "j", "about": "foot", "between": ["ball", "ball"], "part": "ball", "reach_cm": 12.0})
+        check("a piece is drawn within reach of its joint, or of the bone it says it is about", len(own) > 20 and own.min() > 0.9 and len(other) > 20 and other.max() < 0.1, "%d pixels by the joint, %d by the other bone" % (len(own), len(other)))
+    finally:
+        shutil.rmtree(folder)
+
+    node = shutil.which("node")
+    if not node:
+        print("    skipped  the page's neck against impostor.py (no node here)")
+    else:
+        with open(os.path.join(REPO, "gallery", "looks.js")) as f:
+            looks = f.read()
+        shim = tempfile.mkdtemp(prefix="impostor-test-")
+        try:
+            with open(os.path.join(shim, "looks.mjs"), "w") as f:
+                f.write(looks.replace('import * as THREE from "three";', "const THREE = { Color: class {}, Vector2: class {}, Vector3: class {} };"))
+            script = """
+              import { partBalls } from %s;
+              import { bakedFor, lookOf } from %s;
+              const card = JSON.parse(await new Promise((done) => { let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => done(s)); }));
+              const folders = (names) => ({ cards: names.map((n) => ({ profile: "detailed", plays: "lowpoly", folder: "profiles/detailed-impostor" + n })) });
+              const all = folders(["", "-comic-joined", "-comic-skinned", "-comic-necked", "-joe-joined", "-joe-skinned", "-joe-necked", "-pixel-joined", "-pixel-skinned", "-pixel-necked", "-pixel-clear", "-pixel-clear-skinned", "-pixel-clear-necked"]);
+              const some = folders(["", "-comic-joined", "-comic-skinned", "-joe-joined", "-joe-skinned", "-joe-necked", "-pixel-joined", "-pixel-clear"]);
+              const picked = (run) => ["comic", "pixel-baked", "pixel-both", "joe"].map((id) => bakedFor(run, lookOf(id), "detailed").folder);
+              const first = picked(all), mixed = picked(some);
+              globalThis.location = { search: "?joints=knees" };
+              console.log(JSON.stringify({ balls: partBalls(card), first, mixed, knees: picked(all) }));
+            """ % (json.dumps("file://" + os.path.join(REPO, "gallery", "impostor-math.js")), json.dumps("file://" + os.path.join(shim, "looks.mjs")))
+            out = subprocess.run([node, "--input-type=module", "-e", script], input=json.dumps(card), capture_output=True, text=True)
+        finally:
+            shutil.rmtree(shim)
+        if out.returncode:
+            raise AssertionError("node could not run the page's neck:\n" + out.stderr[-800:])
+        js = json.loads(out.stdout)
+        check("the page gives every part the same zones, and the same bone each is about", [[(round(b["zone"], 9), round(b["core"], 9), b["about"]) for b in balls] for balls in js["balls"]]
+              == [[(round(z, 9), round(c, 9), a) for (z, c), a in zip(zones[part["name"]], abouts[part["name"]])] for part in card["parts"]], str(js["balls"]))
+        tail = lambda names: [n.split("-impostor")[1] for n in names]
+        check("... reads the cards that have a neck piece first of all, each look its own", tail(js["first"]) == ["-comic-necked", "-pixel-necked", "-pixel-clear-necked", "-joe-necked"], str(tail(js["first"])))
+        check("... the ones with knees only where there are no others, and the plain cards where there are neither", tail(js["mixed"]) == ["-comic-skinned", "-pixel-joined", "-pixel-clear", "-joe-necked"], str(tail(js["mixed"])))
+        check("... and asked for the knees only (?joints=knees), those", tail(js["knees"]) == ["-comic-skinned", "-pixel-skinned", "-pixel-clear-skinned", "-joe-skinned"], str(tail(js["knees"])))
+
+    found = [f for f in sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-joe-necked", "impostor.json"))) if '"kind": "neck"' in open(f).read()]
+    if not found:
+        print("    skipped  a baked neck piece (no profiles/*-impostor-joe-necked with one under %s)" % runs)
+        return
+    folder = os.path.dirname(found[0])
+    character = impostor.Character(folder)
+    skin, said = character.skin, next(j for j in character.card["skin"]["joints"] if j.get("kind") == "neck")
+    rest = impostor.Glb(os.path.join(os.path.dirname(folder), character.card["source"])).pose(None)
+    points, _, bones, pull, tris = skin.pieces[said["bone"]]
+    foot, top = rest[said["about"]][:3, 3], rest[said["bone"]][:3, 3]
+    at = skin.stood(said["bone"], rest)[0]
+    far = np.linalg.norm(at - foot, axis=1)
+    check("a baked neck piece: some hundreds of triangles, a ball about the foot of the neck, the chest's card alone stepping aside",
+          said["about"] == "neck" and said["aside"] == ["chest"] and said["part"] == "chest" and 200 <= len(tris) <= 2400 and float((far < said["reach_cm"] / 100.0 + 0.06).mean()) > 0.97, "%d triangles, %.0f%% of its points within reach and 6 cm more" % (len(tris), 100 * (far < said["reach_cm"] / 100.0 + 0.06).mean()))
+    share = lambda name: ((bones == skin.bones.index(name)) * pull).sum(axis=1) if name in skin.bones else np.zeros(len(points))
+    up = (at - foot) @ impostor.unit(top - foot) / float(np.linalg.norm(top - foot))  # 0 at the foot of the neck, 1 at the head's joint
+    column = np.linalg.norm((at - foot) - np.outer(up, top - foot), axis=1) < 0.09
+    low, high = column & (up < 0.1), column & (up > 0.35)
+    check("... pulled by the neck and head up the neck, and a good deal less by them at its foot, where the chest and the collar bones take over",
+          low.sum() > 5 and high.sum() > 5 and float((share("neck") + share("head"))[high].mean()) > 0.7 and float((share("neck") + share("head"))[low].mean()) < float((share("neck") + share("head"))[high].mean()) - 0.15,
+          "neck and head pull %.2f up the neck (%d points), %.2f at its foot (%d)" % ((share("neck") + share("head"))[high].mean(), high.sum(), (share("neck") + share("head"))[low].mean(), low.sum()))
+    turned = dict(rest)
+    spin = np.eye(4)
+    spin[:3, :3] = impostor.about(impostor.unit(top - foot), math.radians(40.0))
+    for name in ("neck", "head"):
+        there = np.eye(4)
+        there[:3, 3] = foot
+        turned[name] = there @ spin @ np.linalg.inv(there) @ rest[name]
+    moved = np.linalg.norm(skin.stood(said["bone"], turned)[0] - at, axis=1)
+    rim_low = (far > 0.8 * said["zone_cm"] / 100.0) & (up < -0.2)
+    check("... a turn of the neck carries the skin up the neck and leaves the collar below nearly where it was", float(moved[high].mean()) > 0.015 and float(moved[rim_low].mean()) < 0.5 * float(moved[high].mean()),
+          "%.1f cm up the neck, %.1f cm at the rim below" % (100 * moved[high].mean(), 100 * moved[rim_low].mean()))
+    walk = impostor.Glb(os.path.join(os.path.dirname(folder), "%s-walk.glb" % character.card["plays"]))
+    pose = walk.pose(walk.seconds * 0.3)
+    eye = impostor.Eye(pose["hips"][:3, 3] + np.array([1.6, 0.3, 3.2]), pose["hips"][:3, 3], 30.0, (300, 400))
+    with_pieces = impostor.draw(character, pose, eye)[0][..., 3] > 0
+    character.skin, zones, abouts = None, character.zones, character.abouts
+    character.zones, character.abouts = {}, {}
+    without = impostor.draw(character, pose, eye)[0][..., 3] > 0
+    character.skin, character.zones, character.abouts = skin, zones, abouts
+    check("... and a frame of the walk drawn with it covers what it covered without", abs(with_pieces.sum() / float(without.sum()) - 1.0) < 0.03 and (without & ~with_pieces).sum() < 0.03 * without.sum(),
+          "%d pixels with, %d without, %d lost" % (with_pieces.sum(), without.sum(), (without & ~with_pieces).sum()))
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("skin", lambda: test_skin(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
+             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("skin", lambda: test_skin(runs)), ("neck", lambda: test_neck(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
     failed = 0
     for name, case in cases:
         print(name)

@@ -1,9 +1,11 @@
 """Gives a character's flat cards real joints: a small piece of the model itself, with its skeleton's pull, for
-every knee, elbow, hip and shoulder.
+every knee, elbow, hip and shoulder, and one for the neck, the collar and the tops of both shoulders.
 
     Blender -b --factory-startup -P scripts/impostor/bake_joints.py -- <run> <profile>
-        [--from joe-joined,pixel-clear,pixel-joined,comic-joined] [--name skinned] [--triangles 320] [--atlas 512]
-        [--zone knee=1.6,elbow=1.7,hip=1.25,shoulder=1.35] [--margin 0.2] [--kinds knee,elbow,hip,shoulder] [--torn 0.4] [--missed 0.5] [--leave forearm_l,...]
+        [--from joe-joined,pixel-clear,pixel-joined,comic-joined] [--name necked] [--triangles 320] [--atlas 512]
+        [--zone knee=1.6,elbow=1.7,hip=1.25,shoulder=1.35,neck=1] [--margin 0.2] [--kinds knee,elbow,hip,shoulder,neck]
+        [--torn 0.4] [--missed 0.5] [--leave forearm_l,...]
+        [--even 0.03] [--cloth 0.5] [--pull worked|rig] [--neck-triangles 1] [--rim 0]
 
 A card is a picture of a rigid piece of the model, taken as it stood. Bend a knee far and look at it end on, and
 the two pictures that meet there show what they never should: the open end of the thigh and the open top of the
@@ -41,6 +43,20 @@ play (impostor.json: "plays"), each triangle cut in four until there are enough,
 laid onto the detailed surface: the first of it met coming in from outside. The pull on a point is the tidy
 mesh's, which is where the detailed mesh's own came from (rig_detailed.py).
 
+The neck's piece (--kinds neck; yoke.py has its arithmetic and why there is one). The skeleton has a neck bone
+and two collar bones, and no card rides any of them: their skin is in the chest's card, which rides the chest
+bone alone, so a turned head and a raised arm leave the neck and the shoulder tops behind. The piece is that skin:
+what the chest's card holds inside a ball about the foot of the neck, most of the way to the nearer arm's joint
+(the shoulders' own pieces keep their zones), stopping where the head's own skin begins. In impostor.json it is
+the joint "head" with "kind": "neck" and three things the others do not have: "about" (the bone its zone is a
+ball about: "neck"), "aside" (the one card that steps aside there: the chest's; the head's stays whole) and
+"core_cm" (what that card keeps in the zone: nothing). It is laid on the model with the head's own faces left
+out, so that it does not climb a beard or a hat brim. Its pull is the rig's, worked over: evened out along the
+surface over --even metres (a rig gives each point of a neck to one bone alone, and the skin folds where two
+bones' points meet), and, where the tidy version has clothing as a mesh of its own, --cloth of what the neck and
+head pull on the clothing given to the chest (a collar lies on the shoulders). --pull rig leaves the rig's own.
+--rim eases a piece's pull over to the chest bone toward its rim; it scored worse and is off.
+
 A joint is left to its cards when too much of its piece would not lie down (--torn: the share of it in triangles
 pulled out to shards, where the two meshes are too unlike: a rolled sleeve), or misses too much of the model
 there (--missed), or is named in --leave or, for this character, in scripts/impostor/joints.json.
@@ -67,6 +83,7 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import impostor  # noqa: E402
 import bake_impostor  # noqa: E402
+import yoke  # noqa: E402
 
 KINDS = {"shin": "knee", "forearm": "elbow", "upper_arm": "shoulder", "thigh": "hip"}
 SEEN_M = 0.012      # a place on a piece is in a card's picture when the picture's surface is this near it
@@ -78,10 +95,14 @@ TORN_STRETCH = 2.5  # a triangle with an edge pulled out to this many times its 
 MISSED_M = 0.015    # the model's surface this far from a piece is not covered by it
 SCRAP = 0.03        # an island of a piece with less than this share of the piece's area is a scrap
 PAD_PX = 6          # the colour round every patch of the atlas is carried this far outward
+YOKE_FULL = 1       # the neck piece may have this many times a joint's triangles (three times as many, 1,300 to 1,700, scored the same: judge_joints.py)
+HEADS = 0.5         # the neck piece leaves out a triangle the head pulls on more than this, on average over its corners
+OVERLAP_M = 0.01    # the neck piece leaves out what lies this far inside a shoulder's zone: the shoulder's piece is there
 
 
 def kind_of(bone):
-    return KINDS.get(bone[:-2], "")
+    return "neck" if bone == "head" else KINDS.get(bone[:-2], "")
+
 
 
 def rasterise(uv, size):
@@ -148,13 +169,15 @@ def main():
     flag = lambda name, default: args[args.index(name) + 1] if name in args else default
     run, profile = os.path.abspath(args[0]), args[1]
     sources = flag("--from", "joe-joined,pixel-clear,pixel-joined,comic-joined").split(",")
-    name, target, size = flag("--name", "skinned"), int(flag("--triangles", "320")), int(flag("--atlas", "512"))
-    zones = dict((k, float(v)) for k, v in (pair.split("=") for pair in flag("--zone", "knee=1.6,elbow=1.7,hip=1.25,shoulder=1.35").split(",")))
+    name, target, size = flag("--name", "necked"), int(flag("--triangles", "320")), int(flag("--atlas", "512"))
+    zones = dict((k, float(v)) for k, v in (pair.split("=") for pair in flag("--zone", "knee=1.6,elbow=1.7,hip=1.25,shoulder=1.35,neck=1").split(",")))
+    even_m, cloth, rim = float(flag("--even", str(yoke.EVEN_M))), float(flag("--cloth", str(yoke.CLOTH))), float(flag("--rim", "0"))
+    rework = flag("--pull", "worked") != "rig"  # --pull rig: every piece keeps the rig's own pull, as the knees do
     leave = set(flag("--leave", "").split(","))  # joints to leave to their cards whatever the bake finds (judge_joints.py says which do better so)
     with open(os.path.join(HERE, "joints.json")) as f:  # ... and the ones written down for this character
         leave |= set(json.load(f).get(re.sub(r"^\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-", "", os.path.basename(run)), {}).get("leave", []))
     max_torn, max_missed = float(flag("--torn", "0.4")), float(flag("--missed", "0.5"))
-    margin, kinds = float(flag("--margin", "0.2")), flag("--kinds", "knee,elbow,hip,shoulder").split(",")
+    margin, kinds = float(flag("--margin", "0.2")), flag("--kinds", "knee,elbow,hip,shoulder,neck").split(",")
     profiles = os.path.join(run, "profiles")
     sources = [s for s in sources if os.path.isfile(os.path.join(profiles, "%s-impostor-%s" % (profile, s), "impostor.json"))]  # the cards there are
     folders = [os.path.join(profiles, "%s-impostor-%s" % (profile, s)) for s in sources]
@@ -172,12 +195,18 @@ def main():
     folds = bake_impostor.part_of_bone(rig)
     bone_of = {n: bones[0] for n, bones in bake_impostor.PARTS}
     # The pictured model as it rests, to lay the pieces on.
-    points, faces = [], []
+    points, faces, below = [], [], []
     for obj in bodies:
         first = len(points)
         points += [obj.matrix_world @ v.co for v in obj.data.vertices]
         faces += [[first + i for i in poly.vertices] for poly in obj.data.polygons]
+        # (the same without the head's own faces, for the neck's piece to be laid on: a beard, a jaw or a hat brim
+        # hangs over a collar, and is the head's card's to show)
+        heads = [folds.get(g.name) == "head" for g in obj.vertex_groups]
+        headed = np.array([sum(g.weight for g in v.groups if heads[g.group]) > 0.5 * (sum(g.weight for g in v.groups) or 1.0) for v in obj.data.vertices])
+        below += [[first + i for i in poly.vertices] for poly in obj.data.polygons if not headed[list(poly.vertices)].all()]
     skin = BVHTree.FromPolygons(points, faces)
+    skin_below = BVHTree.FromPolygons(points, below) if below else skin
     # What the pieces are cut from: a tidy mesh with this skeleton. A detailed mesh is not one (a third of a million
     # triangles that fold through each other: cutting it down stalls), so its pieces are cut from the rigged version
     # whose clips the cards play, each face cut in four until there are enough, and laid onto the detailed surface.
@@ -191,13 +220,28 @@ def main():
         extra, tidy = [], bodies
 
     joints, made = [], []
+    head_of = lambda bone: rig.matrix_world @ rig.data.bones[bone].head_local
+    wanted = []
     for j in card["joints"]:
         kind = kind_of(j["bone"])
         if kind not in kinds or kind not in zones or j["bone"] in leave:
             continue
         ring = j["ring_cm"] / 100.0
-        zone = max(zones[kind] * ring, LEAST_M.get(kind, 0.0))
-        centre = rig.matrix_world @ rig.data.bones[j["bone"]].head_local
+        if kind == "neck":
+            # The neck's piece is the whole yoke: the neck, the collar and the top of both shoulders, in a ball about the
+            # foot of the neck. That is what the neck's and the collar bones pull on, and the chest's card held still.
+            if any(b not in rig.data.bones for b in ("neck", "chest", "upper_arm_l", "upper_arm_r")):
+                continue
+            centre = head_of("neck")
+            zone = yoke.zone(centre, [head_of(b) for b in ("upper_arm_l", "upper_arm_r")], head_of("chest"), zones[kind])
+        else:
+            zone, centre = max(zones[kind] * ring, LEAST_M.get(kind, 0.0)), head_of(j["bone"])
+        wanted.append((j, kind, ring, zone, centre))
+    wanted.sort(key=lambda w: w[1] == "neck")  # the neck's last: it leaves the shoulders' zones to their own pieces
+    shoulders = [(centre, zone) for _, kind, _, zone, centre in wanted if kind == "shoulder"]
+    for j, kind, ring, zone, centre in wanted:
+        full = int(target * (float(flag("--neck-triangles", str(YOKE_FULL))) if kind == "neck" else 1))  # (--neck-triangles: how many times a joint's the neck piece may have)
+        taken = lambda at: any((at - c).length < z - OVERLAP_M for c, z in shoulders)  # inside a shoulder's zone: its piece is there
         pieces = []
         for obj in tidy:
             groups = [folds.get(g.name) for g in obj.vertex_groups]
@@ -212,7 +256,11 @@ def main():
                         if groups[g.group] == j["between"][n] or (n == 1 and groups[g.group] in trunk):
                             pull[v.index, n] += g.weight / total
             near = np.array([(obj.matrix_world @ v.co - centre).length < zone + margin * ring for v in obj.data.vertices])
-            keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and pull[list(p.vertices)].sum(axis=1).mean() >= 0.2}
+            if kind == "neck":  # the trunk's side only (the head is its card's, whole), and not what a shoulder's piece has
+                free = np.array([not taken(obj.matrix_world @ v.co) for v in obj.data.vertices])
+                keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and pull[list(p.vertices), 1].mean() >= 0.2 and free[list(p.vertices)].any()}
+            else:
+                keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and pull[list(p.vertices)].sum(axis=1).mean() >= 0.2}
             if not keep:
                 continue
             data = obj.data.copy()
@@ -222,8 +270,10 @@ def main():
             bm.from_mesh(data)
             bm.faces.ensure_lookup_table()
             tell = bm.faces.layers.int.new("lower")  # which of the joint's two parts a face is more of: the one below it, or the one above
+            worn = bm.faces.layers.int.new("gear")   # whether it is clothing that comes off (a mesh of its own in the tidy version), not the body
             for f in bm.faces:
                 f[tell] = 1 if f.index in keep and keep[f.index][0] >= keep[f.index][1] else 0
+                f[worn] = 1 if obj.name.lower().startswith("gear") else 0
             bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in keep], context="FACES")
             bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)  # a .glb's mesh is split along every seam of its texture
             bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -232,7 +282,7 @@ def main():
             continue
         before = sum(len(bm.faces) for _, _, bm in pieces)
         cuts = 0
-        while wrap and before * 4 ** (cuts + 1) <= target * 4:
+        while wrap and before * 4 ** (cuts + 1) <= full * 4:
             cuts += 1
         objects = []
         for obj, data, bm in pieces:
@@ -242,6 +292,14 @@ def main():
             # what lies wholly outside the zone and the little more the piece is drawn in is not needed
             reach = zone + LAP_M + 0.01
             bmesh.ops.delete(bm, geom=[f for f in bm.faces if all((obj.matrix_world @ v.co - centre).length > reach for v in f.verts)], context="FACES")
+            if kind == "neck":
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(taken(obj.matrix_world @ v.co) for v in f.verts)], context="FACES")
+                # and what is more the head's than the neck's is the head's card's: a tidy mesh's long triangles reach from
+                # the neck well up behind the jaw, and what is left there swings out from under the hair when the head nods
+                pulls = bm.verts.layers.deform.verify()
+                heads = {i for i, g in enumerate(obj.vertex_groups) if folds.get(g.name) == "head"}
+                share = lambda v: sum(w for g, w in v[pulls].items() if g in heads) / (sum(v[pulls].values()) or 1.0)
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if sum(share(v) for v in f.verts) / len(f.verts) > HEADS], context="FACES")
             bm.to_mesh(data)
             bm.free()
             new = bpy.data.objects.new("joint %s" % j["bone"], data)
@@ -251,9 +309,9 @@ def main():
                 new.vertex_groups.new(name=g.name)
             objects.append(new)
         count = sum(len(o.data.polygons) for o in objects)
-        if count > target * 4:  # a tidy mesh with more than enough there: cut down, the pull carried along
+        if count > full * 4:  # a tidy mesh with more than enough there: cut down, the pull carried along
             for o in objects:
-                o.modifiers.new("fewer", "DECIMATE").ratio = target / float(count)
+                o.modifiers.new("fewer", "DECIMATE").ratio = full / float(count)
             graph = bpy.context.evaluated_depsgraph_get()
             for o in objects:
                 fewer = bpy.data.meshes.new_from_object(o.evaluated_get(graph), preserve_all_data_layers=True, depsgraph=graph)
@@ -266,6 +324,10 @@ def main():
             for poly in o.data.polygons:
                 poly.use_smooth = True
         joints.append({"bone": j["bone"], "kind": kind, "between": j["between"], "ring_cm": j["ring_cm"], "zone_cm": round(zone * 100, 1), "reach_cm": round((zone + LAP_M) * 100, 1), "triangles": sum(len(o.data.polygons) for o in objects), "cut_from": before})
+        if kind == "neck":
+            # about: the bone whose head the zone and the piece are a ball about (not the joint's own, the head's);
+            # aside: the one card that steps aside there (the head's stays whole); core_cm: and keeps nothing in it
+            joints[-1].update(about="neck", aside=[j["between"][1]], core_cm=0.0)
         made += objects
         print("JOINTS %s (%s): a zone of %.1f cm; %d triangles of the tidy mesh there, made %d" % (j["bone"], kind, zone * 100, before, joints[-1]["triangles"]), flush=True)
     for obj in extra:
@@ -305,8 +367,11 @@ def main():
         lost = []
         was = {v.index: v.co.copy() for v in bm.verts}
         faced = {f.index: f.normal.copy() for f in bm.faces}
+        necks = {s for s, m in enumerate(me.materials) if any(j["kind"] == "neck" and m.name == "joint %s" % j["bone"] for j in joints)}
+        every = skin
         for v in bm.verts:
             at, out = whole.matrix_world @ v.co, (turn @ v.normal).normalized()
+            skin = skin_below if v.link_faces and v.link_faces[0].material_index in necks else every
             hit, facing, _, far = skin.ray_cast(at + out * WRAP_M, -out, 2.0 * WRAP_M)
             if hit is None or facing.dot(out) <= 0.0:
                 hit, facing, _, far = skin.find_nearest(at, WRAP_M)
@@ -321,7 +386,7 @@ def main():
         # triangle land on different layers and the triangle is pulled out into a shard, or turned over. A joint with
         # too much of its piece torn like that is better left to its cards.
         bm.normal_update()
-        torn, whole_area = {}, {}
+        torn, whole_area, shards = {}, {}, set()
         for f in bm.faces:
             slot = me.materials[f.material_index].name
             stretch = max((e.calc_length() + 1e-9) / ((was[e.verts[0].index] - was[e.verts[1].index]).length + 1e-9) for e in f.edges)
@@ -329,6 +394,10 @@ def main():
             whole_area[slot] = whole_area.get(slot, 0.0) + area
             if stretch > TORN_STRETCH or f.normal.dot(faced[f.index]) < 0.2:
                 torn[slot] = torn.get(slot, 0.0) + area
+                if f.material_index in necks:  # a collar's edge, a strap: left where the tidy mesh has it, not pulled to a shard
+                    shards.update(f.verts)
+        for v in shards:
+            v.co = was[v.index]
         for j in joints:
             j["torn"] = round(torn.get("joint %s" % j["bone"], 0.0) / max(1e-9, whole_area.get("joint %s" % j["bone"], 0.0)), 3)
         # And does it cover what is there? A piece is one skin. Where the model is one thing inside another with air
@@ -336,14 +405,14 @@ def main():
         # zone, of the joint's two parts, lies further than MISSED_M from the piece.
         laid = BVHTree.FromBMesh(bm)
         for j in joints:
-            centre, zone = rig.matrix_world @ rig.data.bones[j["bone"]].head_local, j["zone_cm"] / 100.0
+            centre, zone = head_of(j.get("about", j["bone"])), j["zone_cm"] / 100.0
             total = missed = 0.0
             for obj in bodies:
-                groups = [folds.get(g.name) in j["between"] for g in obj.vertex_groups]
+                groups = [folds.get(g.name) in j.get("aside", j["between"]) for g in obj.vertex_groups]
                 near = {}
                 for poly in obj.data.polygons:
                     at = obj.matrix_world @ poly.center
-                    if (at - centre).length >= zone:
+                    if (at - centre).length >= zone or (j["kind"] == "neck" and any((at - c).length < z for c, z in shoulders)):
                         continue
                     for v in poly.vertices:
                         if v not in near:
@@ -388,6 +457,79 @@ def main():
         bm.free()
         me.update()
     print("JOINTS one mesh: %d points, %d triangles" % (len(me.vertices), len(me.polygons)), flush=True)
+
+    # The pull on the neck's piece, worked over (the other joints keep the rig's own; yoke.py has the arithmetic).
+    #   - A neck is not a hinge. The rig gives each point of it to one bone alone (a collar bone, the neck, the
+    #     head), so the skin folds where two bones' points meet. The piece's pull is evened out along its surface
+    #     (--even metres), the head's own points kept, so a turn or a nod is shared all the way down.
+    #   - Cloth is not skin. A collar lies on the shoulders and the neck turns inside it. Where the tidy version
+    #     has clothing as a mesh of its own, its points give --cloth of what the neck and head pull on them to
+    #     the chest.
+    #   - Tried and left off (--rim 0.3 turns it on, for the shoulders' pieces too): easing a piece's pull over to
+    #     the chest bone toward its rim, so that it meets the chest's card without a step. It took the collar
+    #     bone's lift out of the skin round a shoulder, and judge_joints.py scored a raised arm and a shrug worse.
+    reworked = [j for j in joints if j["kind"] == "neck" or (rim > 0 and j["kind"] == "shoulder")] if rework else []
+    if reworked:
+        bones_of = [g.name for g in whole.vertex_groups]
+        column = {name: i for i, name in enumerate(bones_of)}
+        pull = np.zeros((len(me.vertices), len(bones_of)))
+        for v in me.vertices:
+            for g in v.groups:
+                pull[v.index, g.group] = g.weight
+        pull[:, [i for i, b in enumerate(bones_of) if b not in rig.pose.bones]] = 0.0  # (a group that is no bone of this skeleton pulls nothing)
+        pull /= np.maximum(pull.sum(axis=1, keepdims=True), 1e-9)
+        was_pull = pull.copy()
+        slot_of, worn_at = np.full(len(me.vertices), -1), np.zeros(len(me.vertices), dtype=bool)
+        worn = np.zeros(len(me.polygons), dtype=np.int32)
+        me.attributes["gear"].data.foreach_get("value", worn)
+        for p in me.polygons:
+            slot_of[list(p.vertices)] = p.material_index
+            if worn[p.index]:
+                worn_at[list(p.vertices)] = True
+        spot = np.array([whole.matrix_world @ v.co for v in me.vertices])
+        edges = np.array([list(e.vertices) for e in me.edges], dtype=np.int64).reshape(-1, 2)
+        slots = {m.name[len("joint "):]: s for s, m in enumerate(me.materials)}
+        mine_of = [column[b] for b in ("chest", "shoulder_l", "shoulder_r", "neck") if b in column]  # the bones the chest's card stands for
+        neck = next((j for j in joints if j["kind"] == "neck"), None)
+        for j in reworked:
+            mine = slot_of == slots[j["bone"]]
+            if not mine.any():
+                continue
+            centre, zone = np.array(head_of(j.get("about", j["bone"]))), j["zone_cm"] / 100.0
+            if j["kind"] == "neck":
+                pull = yoke.lay_cloth(pull, mine & worn_at, column["neck"], column["head"], column["chest"], cloth)
+                own = edges[mine[edges[:, 0]] & mine[edges[:, 1]]]
+                length = float(np.linalg.norm(spot[own[:, 0]] - spot[own[:, 1]], axis=1).mean()) if len(own) else 1.0
+                rounds = yoke.rounds_for(even_m, length)
+                pull[mine] = yoke.spread_pull(pull, own, ~mine | (was_pull[:, column["head"]] > 0.99), rounds)[mine]
+                j.update(even_cm=round(even_m * 100, 1), even_rounds=rounds, cloth=cloth, cloth_points=int((mine & worn_at).sum()))
+                others, up = shoulders, np.array(head_of(j["bone"])) - centre
+            else:
+                others, up = [(np.array(head_of(neck["about"])), neck["zone_cm"] / 100.0)] if neck else [], None
+            if rim > 0:
+                eased = yoke.rim(pull, spot, centre, zone, mine_of, column["chest"], [(np.array(c), z) for c, z in others], up, rim)[0]
+                pull[mine] = eased[mine]
+                j["rim"] = rim
+        changed = np.nonzero(np.abs(pull - was_pull).max(axis=1) > 1e-6)[0]
+        pull = yoke.most(pull)
+        # The cards were pictured with the arms hanging, the collar bones with them, and the skeleton stands so now. A
+        # point whose pull has changed is moved, as it rests, to where the new pull puts it exactly where the old
+        # one did in that pose: so the piece is the pictured surface there, and only differs as the bones leave it.
+        held = np.array([np.array(rig.pose.bones[b].matrix @ rig.data.bones[b].matrix_local.inverted()) if b in rig.pose.bones else np.eye(4) for b in bones_of])
+        to_rig = np.array(rig.matrix_world.inverted() @ whole.matrix_world)
+        back = np.linalg.inv(to_rig)
+        if len(changed):
+            at_rest = np.array([list(me.vertices[i].co) for i in changed])
+            again = yoke.rest_again(at_rest @ to_rig[:3, :3].T + to_rig[:3, 3], was_pull[changed], pull[changed], held)
+            again = again @ back[:3, :3].T + back[:3, 3]
+        for n, i in enumerate(changed):
+            me.vertices[i].co = again[n].tolist()
+            for g in whole.vertex_groups:
+                g.remove([int(i)])
+            for b in np.nonzero(pull[i] > 1e-4)[0]:
+                whole.vertex_groups[int(b)].add([int(i)], float(pull[i, b]), "REPLACE")
+        me.update()
+        print("JOINTS the pull on %s worked over: %d points changed" % (", ".join(j["bone"] for j in reworked), len(changed)), flush=True)
     arm = whole.modifiers.new("skeleton", "ARMATURE")
     arm.object = rig
     whole.parent = rig
@@ -422,7 +564,7 @@ def main():
     rest_turn = {part: rest[bone][:3, :3] / np.cbrt(abs(np.linalg.det(rest[bone][:3, :3]))) for part, bone in bone_of.items() if bone in rest}
 
     for j in joints:
-        j["part"] = j["between"][0]
+        j["part"] = j.get("aside", j["between"])[0]
     triangles = int(len(tris))
     out_folders = []
     for folder, source_name in zip(folders, sources):

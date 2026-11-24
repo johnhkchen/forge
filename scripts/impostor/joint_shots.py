@@ -4,7 +4,7 @@ after it), taken by a headless Chrome: does a bent knee, elbow or neck read as s
     python3 scripts/impostor/joint_shots.py before=http://localhost:8030/ after=http://localhost:8044/
         [--take crew-candy-shop] [--out evidence/joints] [--looks joe,pixel-both]
         [--joints knee=1:shin_l@16.25,hip=2:thigh_r@42.25,elbow=0:forearm_r@37.5,neck=2:head@21.5,shoulder=0:upper_arm_r@15.75]
-        [--eyes crew,2,1] [--stage 42.25] [--crop 300,150,840,540]
+        [--eyes crew,2,1] [--stage 42.25] [--crop 300,150,840,540] [--square 0.55]
 
 Both galleries must be running. Each of --joints is a name, which of the cast (counted from 0), the bone whose
 head is the joint, and the second of the take to stop at (judge_seams.py --deep finds where a joint is bent
@@ -19,6 +19,9 @@ joint is cut out of it and blown up, and the squares are laid out, one row an ey
 
 A gallery's address may end "?joints=cards": the same gallery with the pieces of the real model left out of the
 joints (gallery/impostor.js: skinFor), which is the cards as they were before bake_joints.py.
+"?joints=knees" is the same gallery with the pieces as they were before the neck had one (gallery/looks.js:
+bakedFor). --square is how many metres across the square cut out round a joint is (the neck and both shoulders
+together want 0.8, about the bone "neck").
 
 A picture is the page's own, pixel for pixel (read off its canvas). Needs numpy to cut and lay out: this file
 runs itself again in Blender's own Python when this Python has none. Prints SHOTS lines.
@@ -108,6 +111,8 @@ def main():
         bone, at = rest.split("@")
         joints.append((name, int(who), bone, at))
     stage = flag("--stage", "")
+    global SQUARE_M
+    SQUARE_M = float(flag("--square", str(SQUARE_M)))
     crop = [int(v) for v in flag("--crop", "").split(",")] if flag("--crop", "") else None
     os.makedirs(out, exist_ok=True)
     cut, stages = {}, {}

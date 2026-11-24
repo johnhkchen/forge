@@ -591,7 +591,7 @@ class Character:
         self.cells = sheet["cells"]
         lit = np.round(self.colour * 255.0)
         self.balls, self.tints, self.pixel = part_balls(self.card), getattr(self, "tints", {}), lambda x, y: lit[y, x]
-        self.zones = part_zones(self.card)
+        self.zones, self.abouts = part_zones(self.card), part_zones(self.card, about=True)
         if self.card.get("skin") and not hasattr(self, "skin"):
             self.skin = Skin(self.folder, self.card["skin"])
 
@@ -848,7 +848,7 @@ def part_balls(card):
     return {name: balls[:BALLS_A_PART] for name, balls in out.items()}
 
 
-def part_zones(card):
+def part_zones(card, about=False):
     """{part name: [(the radius of the zone, the radius of its core) of each of the part's joints, in the order
     part_balls lists them (m at the bone's own size); 0 for a joint with none]}. A zone is a ball about a joint
     that has a piece of the real model in it (bake_joints.py; "skin" in impostor.json): the piece, which bends as
@@ -856,12 +856,22 @@ def part_zones(card):
     shows only what lies near its own bone's line (the core: ZONE_CORE of the ring where the two parts meet), and
     that stands ZONE_BACK_M further back: the piece is the model's outside skin and covers it; where the model
     is one thing inside another (an arm in a wide cuff, seen down the cuff) the piece has nothing to show and
-    the card's picture of the inside thing is still there."""
-    zone = {j["bone"]: j["zone_cm"] / 100.0 for j in (card.get("skin") or card.get("bent") or {}).get("joints", [])}
+    the card's picture of the inside thing is still there.
+
+    The neck's piece says three things more (bake_joints.py: a yoke of neck, collar and shoulder tops). "aside":
+    the parts whose cards step aside (the chest's; the head's card stays whole, and has no zone). "about": the
+    bone whose head the zone is a ball about, when that is not the joint's own (the foot of the neck, not the
+    head's joint): with about=True this gives, in place of each pair, that bone's name or None, and the part's
+    joint is then told to its card as being there (joint_balls). "core_cm": its own core (none)."""
+    said = {j["bone"]: j for j in (card.get("skin") or card.get("bent") or {}).get("joints", [])}
     out = {}
     for joint in card.get("joints") or []:
         for name in joint["between"]:
-            out.setdefault(name, []).append((zone.get(joint["bone"], 0.0), ZONE_CORE * joint["ring_cm"] / 100.0 if joint["bone"] in zone else 0.0))
+            piece = said.get(joint["bone"])
+            if piece is None or name not in piece.get("aside", joint["between"]):
+                out.setdefault(name, []).append(None if about else (0.0, 0.0))
+            else:
+                out.setdefault(name, []).append(piece.get("about") if about else (piece["zone_cm"] / 100.0, piece.get("core_cm", ZONE_CORE * joint["ring_cm"]) / 100.0))
     return {name: zones[:BALLS_A_PART] for name, zones in out.items()}
 
 
@@ -890,6 +900,9 @@ def joint_balls(character, part, bone, pose, eye_at):
         key = (character.set_name, part["name"], name)
         if key not in character.tints:
             character.tints[key] = np.asarray(own_tint(character.card, character.sheet, part, tint_place((turn / size).T @ (at - bone[:3, 3]) / size, part["center"], ring), TINT_REACH * inner, character.pixel), dtype=np.float32)
+        about = next((a for (n, _, _), a in zip(character.balls.get(part["name"], []), getattr(character, "abouts", {}).get(part["name"], [])) if n == name), None)
+        if zone[0] > 0.0 and about in pose:  # a zone about another bone's head: the joint is told as being there
+            at = np.asarray(pose[about], dtype=np.float64)[:3, 3]
         out.append((at, ring * size, inner * size, character.tints[key], ball_back(at, middle, eye_at), (zone[0] * size, zone[1] * size)))
     return out
 
@@ -1065,7 +1078,7 @@ def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=Non
             continue
         at, turns = skin.stood(joint["bone"], pose)
         _, uv, _, _, tris = skin.pieces[joint["bone"]]
-        bone = np.asarray(pose[joint["bone"]], dtype=np.float64)
+        bone = np.asarray(pose[joint.get("about", joint["bone"])], dtype=np.float64)  # (the neck's piece is a ball about the foot of the neck)
         centre, reach = bone[:3, 3], joint["reach_cm"] / 100.0 * float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))
         spots, ahead = eye.to_pixels(at)
         number = 1 + PARTS_A_FIGURE * (figure % 15) + names.index(joint["part"]) % PARTS_A_FIGURE

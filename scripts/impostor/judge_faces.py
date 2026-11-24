@@ -266,7 +266,9 @@ def main():
         folder = lambda name: os.path.join(profiles, "%s-%s" % (model, name))
         if "--joints" not in args or flag("--joints", "") != "cards":  # the cards with a piece of the model in each big joint, when there are some
             plain = folder
-            pieces = lambda name: "%s-skinned" % (plain(name)[:-len("-joined")] if name.endswith("-joined") else plain(name))
+            stem = lambda name: plain(name)[:-len("-joined")] if name.endswith("-joined") else plain(name)
+            tails = ([] if flag("--joints", "") == "knees" else ["-necked"]) + ["-skinned"]  # (the ones with a piece for the neck too, first; --joints knees: without)
+            pieces = lambda name: next((stem(name) + t for t in tails if os.path.isfile(os.path.join(stem(name) + t, "impostor.json"))), stem(name) + "-skinned")
             folder = lambda name: pieces(name) if os.path.isfile(os.path.join(pieces(name), "impostor.json")) else plain(name)
         joe = impostor.Character(folder("impostor-joe-joined"))
         comic = impostor.Character(folder("impostor-comic-joined")) if why else None
