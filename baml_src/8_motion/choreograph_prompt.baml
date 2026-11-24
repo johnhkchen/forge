@@ -170,7 +170,8 @@ class ShotBeat {
     // videos/, which of its shots (from 1; left out, the one the seconds fall
     // in), which seconds of the clip, whose motion if several people's were
     // made, whether the dancer's drift over the stretch is kept or taken out,
-    // and false for `handles` to let the joins eat into the stretch itself.
+    // false for `handles` to let the joins eat into the stretch itself, and
+    // false for `lock_feet` to leave the feet sliding as the video's motion has them.
     clip: string?,
     shot: int?,
     from_s: float?,
@@ -178,6 +179,7 @@ class ShotBeat {
     person: int?,
     drift: ("keep" | "flatten")?,
     handles: bool?,
+    lock_feet: bool?,
     formation: VideoFormation?,
 }
 

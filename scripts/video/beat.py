@@ -18,6 +18,10 @@ A shot list's beat can say `"source": "video"`:
               (`just video <name> "" <shot>:<person>` makes another's)
     drift     "keep" (default) or "flatten", see below
     handles   false to give the joins the beat's own first and last frames
+    lock_feet false to leave the feet as the video's motion has them. By
+              default a foot that is down is held on its spot and the body
+              carried by it, so drift shows as steps, not as skating
+              (footlock.py)
 
 Where it stands is the shot's business, not the video's, as with a beat from
 a sentence. On a standing set the beat is `at` a mark (it stands on it, facing
@@ -76,6 +80,7 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(REPO, "scripts", "motion"))
 import clip as clip_file  # noqa: E402
+import footlock  # noqa: E402
 import soma77  # noqa: E402
 
 FPS = 30
@@ -192,7 +197,8 @@ def crew(sk, beat: dict, before: int, after: int, videos: str = None) -> dict:
     one = wants[people[0]]
     lead, tail = handles_for(beat, one, before, after)
     first, last = one["first"] - lead, one["last"] + tail
-    key = timeline.digest({"clip": one["clip"], "frames": [first, last], "form": form, "files": {str(p): [os.path.getmtime(f) for f in wants[p]["files"]] for p in people}})
+    locking = footlock.wanted(beat.get("lock_feet"))
+    key = timeline.digest({"clip": one["clip"], "frames": [first, last], "form": form, "lock": locking, "files": {str(p): [os.path.getmtime(f) for f in wants[p]["files"]] for p in people}})
     if key in CREWS:
         return CREWS[key]
     motions, sizes, reports, seen = {}, {}, {}, {}
@@ -203,7 +209,16 @@ def crew(sk, beat: dict, before: int, after: int, videos: str = None) -> dict:
         seen[p] = report["camera_root"][first - base : last - base + 1] if report.get("camera_root") else None
     where, notes = formation.measure(one["folder"], people, first, last, motions, sizes, sk, camera=seen if all(seen.values()) else None)
     placed = formation.stand(sk, motions, where, sizes, tuple(form["origin"]), float(form.get("heading") or 0.0), float(form.get("spread") or 1.0))
-    CREWS[key] = {"placed": placed, "people": people, "frames": [first, last], "handles": [lead, tail], "reports": reports, "notes": notes, "closest": formation.closest(sk, placed),
+    feet = {}
+    for p in people:
+        # Held to a place in the group, a body is nudged all the time. With its feet locked the nudging waits for a step.
+        feet[p] = {"locked": locking, "slid_cm_per_s": footlock.slide(sk, placed[p])["cm_per_s"]}
+        if locking:
+            in_formation = placed[p]
+            placed[p], done = footlock.lock(sk, in_formation)
+            feet[p].update({**done,
+                            "from_its_place_in_the_group_cm_at_most": round(100.0 * max(math.hypot(a[0] - b[0], a[2] - b[2]) for a, b in zip(placed[p]["root"], in_formation["root"])), 1)})
+    CREWS[key] = {"placed": placed, "people": people, "frames": [first, last], "handles": [lead, tail], "reports": reports, "feet": feet, "notes": notes, "closest": formation.closest(sk, placed),
                   "places_in_the_group_m": {str(p): {"at_the_start": [round(c, 2) for c in where[p][lead]], "at_the_end": [round(c, 2) for c in where[p][len(where[p]) - 1 - tail]]} for p in people}}
     return CREWS[key]
 
@@ -222,7 +237,7 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
     drift = beat.get("drift") or "keep"
     if drift not in ("keep", "flatten"):
         raise ValueError(f"beat \"{beat['name']}\": drift is keep or flatten")
-    eased, turn, group = (0.0, 0.0), 0.0, None
+    eased, turn, group, feet = (0.0, 0.0), 0.0, None, None
     if beat.get("formation"):
         # One of a crew: everyone is set down together, each where the picture had them in the group.
         if beat.get("person") is None or int(beat["person"]) not in [int(p) for p in beat["formation"].get("people") or []]:
@@ -233,6 +248,7 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
         placed = group["placed"][int(beat["person"])]
         motion = {**placed, "root": [list(r) for r in placed["root"]], "rotations": [list(r) for r in placed["rotations"]], "contacts": [list(c) for c in placed["contacts"]]}
         report = group["reports"][int(beat["person"])]
+        feet = group["feet"][int(beat["person"])]
         count = len(motion["root"]) - 1
         a, b = lead, count - tail
     else:
@@ -261,6 +277,10 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
                 share = min(1.0, max(0.0, (f - a) / float(max(1, b - a))))
                 root[0], root[2] = round(root[0] + off[0] * share, 5), round(root[2] + off[1] * share, 5)
             eased = off
+        feet = {"locked": footlock.wanted(beat.get("lock_feet")), "slid_cm_per_s": footlock.slide(sk, motion)["cm_per_s"]}
+        if feet["locked"]:
+            motion, done = footlock.lock(sk, motion)
+            feet.update(done)
     begins, ends = motion["root"][a], motion["root"][b]
     marks = [
         {
@@ -294,6 +314,7 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
             "starts_from_its_mark_cm": round(100.0 * math.hypot(begins[0] - x0, begins[2] - z0), 1),
             "ends_from_its_mark_cm": round(100.0 * math.hypot(ends[0] - x1, ends[2] - z1), 1),
             "ours_vs_gemx_cm": report["ours_vs_gemx_cm"],
+            "feet": feet,
             "video": timeline.digest({"root": motion["root"], "rotations": motion["rotations"], "contacts": motion["contacts"]}),
         }
     )
