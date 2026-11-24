@@ -1,0 +1,108 @@
+{
+ "format": "forge-skateboard/1",
+ "about": "A skateboard, in its own frame: x toward the nose, y toward the heel side, z up, 0 at the middle of the top of the deck. Metres.",
+ "glb": "world/props/skateboard.glb",
+ "long_m": 0.81,
+ "wide_m": 0.21,
+ "deck_top_m": 0.115,
+ "wheelbase_m": 0.44,
+ "feet": {
+  "front": [
+   0.215,
+   0.0,
+   0.0
+  ],
+  "back": [
+   -0.255,
+   0.0,
+   0.0
+  ],
+  "about": "the middle of each foot: the front one over the front bolts, the back one just behind the back bolts, on the tail"
+ },
+ "bolts": [
+  [
+   0.247,
+   0.021,
+   0.0
+  ],
+  [
+   0.247,
+   -0.021,
+   0.0
+  ],
+  [
+   0.193,
+   0.021,
+   0.0
+  ],
+  [
+   0.193,
+   -0.021,
+   0.0
+  ],
+  [
+   -0.193,
+   0.021,
+   0.0
+  ],
+  [
+   -0.193,
+   -0.021,
+   0.0
+  ],
+  [
+   -0.247,
+   0.021,
+   0.0
+  ],
+  [
+   -0.247,
+   -0.021,
+   0.0
+  ]
+ ],
+ "wheels_touch": [
+  [
+   0.22,
+   -0.085,
+   -0.115
+  ],
+  [
+   0.22,
+   0.085,
+   -0.115
+  ],
+  [
+   -0.22,
+   -0.085,
+   -0.115
+  ],
+  [
+   -0.22,
+   0.085,
+   -0.115
+  ]
+ ],
+ "grabs": {
+  "toe_edge": [
+   0.0,
+   -0.105,
+   0.0
+  ],
+  "heel_edge": [
+   0.0,
+   0.105,
+   0.0
+  ],
+  "nose": [
+   0.34500000000000003,
+   0.0,
+   0.0291
+  ],
+  "tail": [
+   -0.34500000000000003,
+   0.0,
+   0.0291
+  ]
+ }
+}
