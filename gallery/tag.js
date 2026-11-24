@@ -24,7 +24,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density, FILL, inBone } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setBalls, sheetBalls } from "./impostor.js";
+import { CARD_VERTEX, CARD_FRAGMENT, JOINT_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setBalls, sheetBalls, skinFor } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, FINE_FROM, withoutHeads } from "./looks.js";
 
 // name: where its poses come from.
@@ -75,6 +75,7 @@ const WAYS = [
 ];
 const NEAR_M = 9;          // "meshes near, cards far": a runner nearer the eye than this is a mesh
 const FAR_M = 12;         // "search off far away": past this a card's picture is laid flat
+const JOINTS_M = 8;       // cards drawn all at once: a runner nearer than this has a piece of the real model in each big joint (bake_joints.py); further off his joints are the cards' own
 const STEP = 1 / 60;      // the game's own clock
 const SKY = 0xcfdde6;
 
@@ -408,6 +409,8 @@ uniform float fineTimes;
 uniform int headPart;
 uniform vec4 ballBone[20];   // each part's joints, for the filling of a bent joint: the bones whose heads they are (under 0: none)
 uniform vec4 ballSize[20];   // ... and the radius each is filled within
+uniform vec4 ballZone[20];   // ... and whether it has a zone (a piece of the model is drawn there for a runner near enough)
+uniform float zoneFar;       // how near that is (m); 0: no pieces are being drawn
 flat out vec4 balls[4];
 flat out int partOf;
 flat out float keepDark;
@@ -472,6 +475,7 @@ void main() {
     // the radius in whole millimetres, and after the point how far back this part stands the ball: nothing when
     // its own body is straight behind the ball as the eye sees it (impostor-math.js: ballBack)
     balls[k] = vec4((viewMatrix * at).xyz, floor(ballSize[part][k] * 1000.0) + 0.25 * (1.0 - dot(normalize(middle - at.xyz), normalize(at.xyz - cameraPosition))));
+    if (ballZone[part][k] > 0.5 && distance(cameraPosition, vec3(runner.x, 1.0, runner.y)) < zoneFar) balls[k].w = -balls[k].w; // his pieces are drawn: the zone is on (impostor-math.js: jointNumber)
   }
   cell = texelFetch(cellTex, ivec2(best * 2, part), 0);
   vec4 more = texelFetch(cellTex, ivec2(best * 2 + 1, part), 0);
@@ -505,7 +509,43 @@ void main() {
 const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who", "float keepDark", "vec4 balls[4]"]
   .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT)
   // every part's balls come in one list: each ball's colour, and the radius of the ball itself
-  .replace("uniform vec4 ballTint[4];\n#define TINT(k) ballTint[k]", "uniform vec4 ballTints[80];\nflat in int partOf;\n#define TINT(k) ballTints[partOf * 4 + k]");
+  .replace("uniform vec4 ballTint[4];\n#define TINT(k) ballTint[k]", "uniform vec4 ballTints[80];\nflat in int partOf;\n#define TINT(k) ballTints[partOf * 4 + k]")
+  .replace("uniform vec2 zone[4];\n#define ZONE(k) zone[k]", "uniform vec2 zones[80];\n#define ZONE(k) zones[partOf * 4 + k]");
+
+// Every near runner's joint pieces in one draw a joint: each point moved by its bones' rows of the table, as the
+// meshes are, and painted as the cards page paints a piece (impostor.js: JOINT_FRAGMENT).
+const JOINTS_VERTEX = `${RUNNER}
+uniform float inkM;
+uniform int jointBone;      // the bone whose head is the joint
+uniform float partNumber;   // which of a runner's cards the piece says it is
+uniform float ids;
+attribute float figure;     // which runner this is (only the near ones are handed over)
+attribute vec4 skinIndex;
+attribute vec4 skinWeight;
+varying vec2 vAtlas;
+varying vec3 vView;
+varying vec3 vTurnX;
+varying vec3 vTurnY;
+varying vec3 vTurnZ;
+flat out vec3 jointAt;
+flat out float who;
+void main() {
+  if (putAway()) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  vAtlas = vec2(uv.x, 1.0 - uv.y);
+  mat4 moved = skinWeight.x * fromTable(int(skinIndex.x) * 12 + 4, runner.w) + skinWeight.y * fromTable(int(skinIndex.y) * 12 + 4, runner.w)
+             + skinWeight.z * fromTable(int(skinIndex.z) * 12 + 4, runner.w) + skinWeight.w * fromTable(int(skinIndex.w) * 12 + 4, runner.w);
+  mat4 whole = feet() * moved;
+  mat3 turn = mat3(viewMatrix) * mat3(whole);
+  vTurnX = turn[0];
+  vTurnY = turn[1];
+  vTurnZ = turn[2];
+  vec4 seen = viewMatrix * whole * vec4(position + normalize(normal) * inkM, 1.0);
+  vView = seen.xyz;
+  jointAt = (viewMatrix * feet() * texelFetch(poseTex, ivec2(jointBone * 12 + 3, int(runner.w + 0.5)), 0)).xyz;
+  who = ids > 0.5 ? (1.0 + float(int(figure + 0.5) % 15) * 16.0 + partNumber) / 255.0 : 1.0;
+  gl_Position = projectionMatrix * seen;
+}`;
+const JOINTS_FRAGMENT = JOINT_FRAGMENT.replace("uniform vec3 jointAt;", "flat in vec3 jointAt;").replace("uniform float who;", "flat in float who;");
 
 // Every runner's meshes in one draw a piece: each point is moved by its bones' rows of the table.
 const MESHES_VERTEX = `${RUNNER}
@@ -650,6 +690,8 @@ class Field {
       const card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
       this.cardFolder = folder;
       this.card = card;
+      this.skin?.dispose();
+      this.skin = await skinFor(folder, card, this.loader); // a piece of the model for each big joint, when the cards have them
       this.sheets = {};
       this.shade ||= paintOf(card.light);
       await this.useViews(card.default_views);
@@ -951,7 +993,8 @@ class Field {
     shape.setAttribute("runner", spots);
     shape.instanceCount = n * parts.length;
     const pad = (list, fill) => [...list, ...Array.from({ length: 20 - list.length }, () => fill())];
-    const ballBone = new Float32Array(80).fill(-1), ballSize = new Float32Array(80), ballTints = new Float32Array(320);
+    const ballBone = new Float32Array(80).fill(-1), ballSize = new Float32Array(80), ballTints = new Float32Array(320), ballZone = new Float32Array(80), zones = new Float32Array(160);
+    const joined = this.jointsAtOnce(group, keep);
     // each ball's colour is looked up with the joints where the first pose of the table has them
     const first = (bone) => this.table.data.subarray(bone * COLUMNS * 4, bone * COLUMNS * 4 + 16);
     sheetBalls(card, sheet).forEach((joints, p) => joints.forEach((joint, k) => {
@@ -961,6 +1004,8 @@ class Field {
       ballBone[p * 4 + k] = bone;
       ballSize[p * 4 + k] = joint.radius;
       ballTints.set([tint[0], tint[1], tint[2], joint.inner], (p * 4 + k) * 4);
+      ballZone[p * 4 + k] = joined && joint.zone > 0 ? 1 : 0;
+      zones.set([joint.zone, joint.core], (p * 4 + k) * 2);
     }));
     const paint = new THREE.ShaderMaterial({ vertexShader: CARDS_VERTEX, fragmentShader: CARDS_FRAGMENT, side: THREE.DoubleSide, uniforms: {
       ...this.shade, poseTex: this.pose, keep, cellTex: { value: sheet.cellTex }, colourMap: { value: sheet.colour }, dataMap: { value: sheet.data },
@@ -970,6 +1015,7 @@ class Field {
       centers: { value: pad(parts.map((part) => new THREE.Vector3(...part.center)), () => new THREE.Vector3()) },
       depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
       fine: { value: pad(parts.map((part) => density(card, part)), () => 0) }, ballBone: { value: ballBone }, ballSize: { value: ballSize }, ballTints: { value: ballTints },
+      ballZone: { value: ballZone }, zones: { value: zones }, zoneFar: { value: joined ? JOINTS_M : 0 },
       sheetSize: { value: new THREE.Vector2(...sheet.size) }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
       wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ids: { value: 0 },
       headPass: this.screen.told.headPass, fineSize: { value: new THREE.Vector2() }, fineFrom: { value: FINE_FROM }, fineTimes: { value: 1 }, headPart: { value: parts.findIndex((part) => part.name === "head") } } });
@@ -989,8 +1035,69 @@ class Field {
         paint.uniforms.poseTex.value = from.tex;
         for (let i = 0; i < n; i++) for (let p = 0; p < parts.length; p++) from.runner(i, spots.array, (i * parts.length + p) * 4);
         spots.needsUpdate = true;
+        joined?.place(from, told);
       },
-      dispose: () => { shape.dispose(); paint.dispose(); },
+      dispose: () => { shape.dispose(); paint.dispose(); joined?.dispose(); },
+    };
+  }
+
+  // The pieces of the model in the big joints of every runner near the eye, a draw a joint (and one more for its
+  // ink shell, in a look that keeps the line behind the surface). Null when the cards have no pieces, or the
+  // table lacks a bone they need. `keep` is which runners the cards themselves are drawn for. Only the near
+  // runners are handed to the graphics card at all (with shared poses, where the page knows where each one is):
+  // a piece is some hundreds of triangles, and a thousand runners' worth is what the cards were there to save.
+  jointsAtOnce(group, keep) {
+    const { skin, card } = this;
+    const names = this.table.names;
+    if (!skin || skin.pieces.some((piece) => piece.bones.some((name) => names.indexOf(name) < 0))) return null;
+    const n = this.game.count;
+    const spots = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4), figures = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
+    spots.setUsage(THREE.DynamicDrawUsage);
+    figures.setUsage(THREE.DynamicDrawUsage);
+    const near = { value: new THREE.Vector2(keep.value.x, Math.min(keep.value.y, JOINTS_M)) };
+    const made = [], shapes = [], one = new Float32Array(4);
+    for (const piece of skin.pieces) {
+      const shape = new THREE.InstancedBufferGeometry();
+      for (const name of ["position", "normal", "uv", "skinWeight"]) shape.setAttribute(name, piece.geometry.attributes[name]);
+      // the piece counts its bones its own way: here they are the table's rows
+      const was = piece.geometry.attributes.skinIndex, bones = new Float32Array(was.count * 4);
+      for (let i = 0; i < was.count * 4; i++) bones[i] = names.indexOf(piece.bones[was.array[i]]);
+      shape.setAttribute("skinIndex", new THREE.BufferAttribute(bones, 4));
+      shape.setIndex(piece.geometry.index);
+      shape.setAttribute("runner", spots);
+      shape.setAttribute("figure", figures);
+      shape.instanceCount = n;
+      shapes.push(shape);
+      for (const shell of [false, true]) {
+        const mesh = new THREE.Mesh(shape, new THREE.ShaderMaterial({ vertexShader: JOINTS_VERTEX, fragmentShader: JOINTS_FRAGMENT, side: shell ? THREE.BackSide : THREE.FrontSide, uniforms: {
+          ...this.shade, poseTex: this.pose, keep: near, atlas: { value: skin.colour }, atlasData: { value: skin.data }, reach: { value: piece.joint.reach_cm / 100 }, inkM: { value: shell ? skin.inkM : 0 },
+          lineInk: { value: new THREE.Color(0x1c1721) }, jointBone: { value: names.indexOf(piece.joint.bone) }, partNumber: { value: piece.part % 16 }, ids: { value: 0 } } }));
+        mesh.frustumCulled = false;
+        group.add(mesh);
+        made.push(mesh);
+      }
+    }
+    return {
+      place: (from, told) => {
+        made.forEach((mesh, k) => {
+          mesh.material.uniforms.poseTex.value = from.tex;
+          mesh.material.uniforms.ids.value = told.ids ? 1 : 0;
+          if (k % 2) mesh.visible = told.line > 0 && skin.inkM > 0;
+        });
+        const eye = this.camera.position, sorted = this.sharing();
+        let count = 0;
+        for (let i = 0; i < n; i++) {
+          from.runner(i, one, 0);
+          const gone = Math.hypot(eye.x - one[0], eye.y - 1, eye.z - one[1]); // as the shaders measure it (RUNNER: putAway)
+          if (sorted && (gone < near.value.x || gone >= near.value.y)) continue;
+          spots.array.set(one, count * 4);
+          figures.array[count++] = i;
+        }
+        for (const shape of shapes) shape.instanceCount = count;
+        spots.needsUpdate = figures.needsUpdate = true;
+        this.jointsDrawn = { runners: count, triangles: count * skin.pieces.reduce((sum, piece) => sum + piece.geometry.index.count / 3, 0) };
+      },
+      dispose: () => made.forEach((mesh, k) => { mesh.material.dispose(); if (k % 2 === 0) mesh.geometry.dispose(); }),
     };
   }
 

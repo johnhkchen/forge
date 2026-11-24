@@ -41,6 +41,15 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             filled from the nearer and gets no line, and one between parts that do not meet, a wide one, and a
             pixel that is in front are left alone; the page has the same numbers, the same table of parts that
             meet, and finds the same colour for a ball (needs node)
+  skin      a piece of the real model in a big joint (bake_joints.py): inside the joint's zone a card keeps only what
+            is near its own bone's line, stood 3 cm back, and outside the zone, or with the zone off, it is as it
+            was; a piece (a tube pulled by two bones) is drawn only within its reach of the joint, from outside
+            only (never its far wall), says it is the card below the joint,
+            and bends where the bone bends it; the page has the same numbers, gives every part the same zones,
+            turns a joint's number negative when its zone is on, and reads the "-skinned" folder first (needs
+            node). With RUNS_DIR holding cards with pieces (profiles/*-impostor-joe-skinned): every joint named
+            has a piece that lies within reach of its joint at rest, and a frame of the walk drawn with the
+            pieces covers what it covered without them
   clear     a face kept clear in "Pixels, both": a head far off stays on the body's grid and a near one goes on a
             grid twice as fine, slid so the bone's head sits on a corner of a pixel; drawn that way a head is twice
             the pixels across, its line is still one big pixel wide and wholly outside it, and a body drawn
@@ -857,7 +866,7 @@ def test_fill():
         page = f.read()
     with open(os.path.join(REPO, "gallery", "looks.js")) as f:
         looks = f.read()
-    check("the page has the same numbers for the filling", "export const FILL = { ball: %s, backM: %g, inner: %g, tintReach: %g, tintIn: %g, ballBackM: %g, aPart: %d };" % (
+    check("the page has the same numbers for the filling", "export const FILL = { ball: %s, backM: %g, inner: %g, tintReach: %g, tintIn: %g, ballBackM: %g, aPart: %d, zoneCore:" % (
         ("%.1f" % impostor.FILL_BALL), impostor.FILL_BACK_M, impostor.FILL_INNER, impostor.TINT_REACH, impostor.TINT_IN, impostor.BALL_BACK_M, impostor.BALLS_A_PART) in page
         and "export const CRACK = { behindM: %g, apartM: %g };" % (impostor.CRACK_BEHIND_M, impostor.CRACK_APART_M) in looks)
     node = shutil.which("node")
@@ -912,10 +921,154 @@ def test_fill():
     check("... and looks for it in the same place, with the joint where the bone has it and the ball stood back as far", worst < 1e-9, "worst %.2g" % worst)
 
 
+def test_skin(runs):
+    folder = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        radius = ball(folder)
+        character = impostor.Character(folder)
+        bone, joint = np.eye(4), np.eye(4)
+        eye = impostor.Eye([0.0, 0.0, 3.0], [0.0, 0.0, 0.0], 8.0, (240, 240))
+        per_px = eye.m_per_px([0.0, 0.0, 0.0])
+        ys, xs = np.mgrid[0:240, 0:240]
+        x, y = (xs + 0.5 - 120) * per_px, (ys + 0.5 - 120) * per_px
+        pose = {"b": bone, "j": joint}
+        plain, plain_depth, _ = impostor.draw(character, pose, eye)
+        # a joint at the ball's middle whose zone holds all of it: only what is near the bone's line (y) is kept
+        character.balls, character.zones = {"ball": [("j", 0.05, 0.0)]}, {"ball": [(0.2, 0.03)]}
+        zoned, zoned_depth, _ = impostor.draw(character, pose, eye)
+        kept = zoned[..., 3] > 0
+        # ... which on a ball is its two ends: the surface within 3 cm of the line is that near its poles
+        ends = (plain[..., 3] > 0) & (np.abs(y) > math.sqrt(radius ** 2 - 0.03 ** 2) + 0.6 * per_px)
+        check("inside a joint's zone a card keeps only what is near its own bone's line", ends.sum() > 20 and (kept & ends).sum() >= 0.9 * ends.sum() and (kept & (np.abs(y) < math.sqrt(radius ** 2 - 0.03 ** 2) - 2 * per_px)).sum() == 0,
+              "%d pixels kept, the two ends are %d" % (kept.sum(), ends.sum()))
+        back = (zoned_depth - plain_depth)[kept & ends]
+        check("... stood %g cm further back" % (impostor.ZONE_BACK_M * 100), float(np.abs(back - impostor.ZONE_BACK_M).max()) < 0.004, "%.3f to %.3f m" % (back.min(), back.max()))
+        character.zones = {"ball": [(0.0, 0.0)]}
+        check("with the zone off the card is as it was", np.array_equal(impostor.draw(character, pose, eye)[0], plain))
+        joint_far = np.eye(4)
+        joint_far[:3, 3] = (0.0, 1.0, 0.0)
+        character.zones = {"ball": [(0.2, 0.03)]}
+        check("... and so is a card outside the zone", np.array_equal(impostor.draw(character, {"b": bone, "j": joint_far}, eye)[0], plain))
+        character.balls, character.zones = {}, {}
+
+        # a piece: a tube 5 cm thick along y, pulled by bone "lo" below y = 0 and bone "j" above it
+        around, rings = 24, 41
+        angle = np.arange(around) * 2 * math.pi / around
+        points = np.array([[0.05 * math.cos(a), -0.2 + 0.4 * r / (rings - 1), 0.05 * math.sin(a)] for r in range(rings) for a in angle])
+        tris = []
+        for r in range(rings - 1):
+            for a in range(around):
+                p, q = r * around + a, r * around + (a + 1) % around
+                tris += [[p, p + around, q], [q, p + around, q + around]]  # counted so each faces outward
+        upper = np.clip(points[:, 1] / 0.04 * 0.5 + 0.5, 0.0, 1.0)
+        skin = impostor.Skin.__new__(impostor.Skin)
+        skin.bones, skin.inverse = ["lo", "j"], np.stack([np.eye(4), np.eye(4)])
+        skin.pieces = {"j": (points, np.full((len(points), 2), 0.5), np.tile([0, 1, 0, 0], (len(points), 1)), np.stack([1.0 - upper, upper, 0 * upper, 0 * upper], axis=1), np.array(tris))}
+        skin.colour = np.full((4, 4, 4), 0.8, dtype=np.float32)
+        skin.facing = np.tile(np.array([0.0, 0.0, 1.0], dtype=np.float32), (4, 4, 1))
+        skin.joints = [{"bone": "j", "between": ["ball", "ball"], "part": "ball", "reach_cm": 12.0}]
+        character.skin = skin
+
+        def piece(pose, flip=False):
+            colour, depth, who = np.zeros((240, 240, 3), dtype=np.float32), np.full((240, 240), np.inf, dtype=np.float32), np.zeros((240, 240), dtype=np.int32)
+            if flip:
+                skin.pieces["j"] = skin.pieces["j"][:4] + (np.array(tris)[:, ::-1],)
+            impostor.draw_skin(character, pose, eye, colour, depth, who)
+            skin.pieces["j"] = skin.pieces["j"][:4] + (np.array(tris),)
+            return depth, who
+
+        rest = {"b": bone, "lo": np.eye(4), "j": np.eye(4)}
+        depth, who = piece(rest)
+        there = np.isfinite(depth)
+        tall = (np.abs(y[there]).max() + per_px) if there.any() else 0.0
+        check("a piece is drawn only within its reach of the joint", there.any() and abs(tall - math.sqrt(0.12 ** 2 - 0.05 ** 2)) < 0.012 and abs(np.abs(x[there]).max() - 0.05) < 0.004, "it reaches %.3f m up and down" % tall)
+        check("... from outside only: its near wall, never its far one", float(depth[there].max()) < 3.0 and abs(float(depth[120, 120]) - 2.95) < 0.004, "%.3f to %.3f m off" % (depth[there].min(), depth[there].max()))
+        inside_out = piece(rest, flip=True)[0]
+        check("... and turned inside out, only the wall that then faces the eye, the far one", float(inside_out[np.isfinite(inside_out)].min()) > 3.0)
+        check("it says it is the card below the joint", set(np.unique(who)) == {0, 1})
+        bent = np.eye(4)
+        bent[:3, :3] = impostor.about([0.0, 0.0, 1.0], math.radians(90.0))
+        at, _ = skin.stood("j", {"lo": np.eye(4), "j": bent})
+        top, low = points[:, 1] > 0.05, points[:, 1] < -0.05
+        check("the bone above bends its end of the piece, and the other end stays", float(np.abs(at[top] - points[top] @ bent[:3, :3].T).max()) < 1e-9 and float(np.abs(at[low] - points[low]).max()) < 1e-9)
+        character.skin = None
+    finally:
+        shutil.rmtree(folder)
+
+    card = {"parts": [{"name": n} for n in ("thigh_l", "shin_l", "foot_l")], "joints": [{"bone": "shin_l", "between": ["shin_l", "thigh_l"], "ring_cm": 7.0, "ball_cm": 4.0}, {"bone": "foot_l", "between": ["foot_l", "shin_l"], "ring_cm": 5.0, "ball_cm": 3.0}],
+            "skin": {"joints": [{"bone": "shin_l", "zone_cm": 11.2}]}}
+    zones = impostor.part_zones(card)
+    near = lambda got, want: len(got) == len(want) and all(abs(a - b) < 1e-9 for g, w in zip(got, want) for a, b in zip(g, w))
+    check("a part's joints with a piece have a zone and a core, and the others none", near(zones["shin_l"], [(0.112, impostor.ZONE_CORE * 0.07), (0.0, 0.0)]) and near(zones["foot_l"], [(0.0, 0.0)]) and near(zones["thigh_l"], [(0.112, impostor.ZONE_CORE * 0.07)]))
+    node = shutil.which("node")
+    if not node:
+        print("    skipped  the page's zones against impostor.py (no node here)")
+    else:
+        with open(os.path.join(REPO, "gallery", "looks.js")) as f:
+            looks = f.read()
+        shim = tempfile.mkdtemp(prefix="impostor-test-")
+        try:
+            with open(os.path.join(shim, "looks.mjs"), "w") as f:
+                f.write(looks.replace('import * as THREE from "three";', "const THREE = { Color: class {}, Vector2: class {}, Vector3: class {} };"))
+            script = """
+              import { partBalls, jointNumber, FILL } from %s;
+              import { bakedFor, lookOf } from %s;
+              const card = JSON.parse(await new Promise((done) => { let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => done(s)); }));
+              const folders = (names) => ({ cards: names.map((n) => ({ profile: "detailed", plays: "lowpoly", folder: "profiles/detailed-impostor" + n })) });
+              const all = folders(["", "-comic-joined", "-comic-skinned", "-joe-joined", "-joe-skinned", "-pixel-joined", "-pixel-skinned", "-pixel-clear", "-pixel-clear-skinned"]);
+              const old = folders(["", "-comic-joined", "-joe-joined", "-pixel-joined", "-pixel-clear"]);
+              console.log(JSON.stringify({ balls: partBalls(card), on: jointNumber(0.07, 0.004, true), off: jointNumber(0.07, 0.004, false), fill: FILL,
+                picked: ["comic", "pixel-baked", "pixel-screen", "pixel-both", "joe"].map((id) => bakedFor(all, lookOf(id), "detailed").folder),
+                before: ["comic", "pixel-baked", "pixel-both", "joe"].map((id) => bakedFor(old, lookOf(id), "detailed").folder) }));
+            """ % (json.dumps("file://" + os.path.join(REPO, "gallery", "impostor-math.js")), json.dumps("file://" + os.path.join(shim, "looks.mjs")))
+            out = subprocess.run([node, "--input-type=module", "-e", script], input=json.dumps(card), capture_output=True, text=True)
+        finally:
+            shutil.rmtree(shim)
+        if out.returncode:
+            raise AssertionError("node could not run the page's zones:\n" + out.stderr[-800:])
+        js = json.loads(out.stdout)
+        check("the page gives every part the same zones", [[(round(b["zone"], 9), round(b["core"], 9)) for b in balls] for balls in js["balls"]] == [[(round(z, 9), round(c, 9)) for z, c in zones.get(part["name"], [])] for part in card["parts"]])
+        check("... has the same numbers for a zone's core and how far back it stands", js["fill"]["zoneCore"] == impostor.ZONE_CORE and js["fill"]["zoneBackM"] == impostor.ZONE_BACK_M)
+        check("... turns a joint's number negative when its zone is on, and leaves the number itself alone", js["on"] == -js["off"] and js["off"] > 0 and math.floor(js["off"]) == 70)
+        tail = lambda names: [n.split("-impostor")[1] for n in names]
+        check("... reads the cards that have pieces first, each look its own", tail(js["picked"]) == ["-comic-skinned", "-pixel-skinned", "-comic-skinned", "-pixel-clear-skinned", "-joe-skinned"], str(tail(js["picked"])))
+        check("... and the cards it read before when there are none with pieces", tail(js["before"]) == ["-comic-joined", "-pixel-joined", "-pixel-clear", "-joe-joined"], str(tail(js["before"])))
+
+    found = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-joe-skinned", "impostor.json")))
+    if not found:
+        print("    skipped  baked pieces (no profiles/*-impostor-joe-skinned under %s)" % runs)
+        return
+    folder = os.path.dirname(found[0])
+    character = impostor.Character(folder)
+    skin, said = character.skin, character.card["skin"]
+    check("cards with pieces: every joint named has a piece, a few hundred triangles each", all(j["bone"] in skin.pieces and 60 <= len(skin.pieces[j["bone"]][4]) <= 1400 for j in said["joints"]) and len(said["joints"]) >= 4,
+          ", ".join("%s %d" % (j["bone"], len(skin.pieces.get(j["bone"], ((), (), (), (), ()))[4])) for j in said["joints"]))
+    walk = impostor.Glb(os.path.join(os.path.dirname(folder), "%s-walk.glb" % character.card["plays"]))
+    rest = impostor.Glb(os.path.join(os.path.dirname(folder), character.card["source"])).pose(None)
+    worst = 0.0
+    for j in said["joints"]:
+        at, _ = skin.stood(j["bone"], rest)
+        tris = skin.pieces[j["bone"]][4]
+        middle = at[tris].mean(axis=1)
+        worst = max(worst, float(np.linalg.norm(middle - rest[j["bone"]][:3, 3], axis=1).min()) - j["reach_cm"] / 100.0)
+        check_ok = float((np.linalg.norm(at[tris] - rest[j["bone"]][:3, 3], axis=2).min(axis=1) < j["reach_cm"] / 100.0 + 0.011).mean())
+        worst = max(worst, 1.0 - check_ok)
+    check("... every one lying within reach of its joint as the model rests", worst < 0.02, "worst %.3f" % worst)
+    pose = walk.pose(walk.seconds * 0.3)
+    eye = impostor.Eye(pose["hips"][:3, 3] + np.array([1.6, 0.3, 3.2]), pose["hips"][:3, 3], 30.0, (300, 400))
+    with_pieces = impostor.draw(character, pose, eye)[0][..., 3] > 0
+    character.skin, zones = None, character.zones
+    character.zones = {}
+    without = impostor.draw(character, pose, eye)[0][..., 3] > 0
+    character.skin, character.zones = skin, zones
+    check("... and a frame of the walk drawn with them covers what it covered without", abs(with_pieces.sum() / float(without.sum()) - 1.0) < 0.03 and (without & ~with_pieces).sum() < 0.03 * without.sum(),
+          "%d pixels with, %d without, %d lost" % (with_pieces.sum(), without.sum(), (without & ~with_pieces).sum()))
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
+             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("skin", lambda: test_skin(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
     failed = 0
     for name, case in cases:
         print(name)

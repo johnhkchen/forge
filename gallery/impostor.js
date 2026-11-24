@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density, FILL, partBalls, ownTint, tintPlace, inBone, ballBack } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, density, FILL, partBalls, ownTint, tintPlace, inBone, ballBack, jointNumber } from "./impostor-math.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
@@ -58,6 +58,10 @@ void main() {
 //     inside of its far wall, and the ball stops the hollow. Skin is nearer than the ball everywhere else. Where
 //     the picture has no surface at all no ball is drawn (beside a thin arm in a wide sleeve it would be a knob). The two parts that meet there each draw it
 //     in their own colour; the one whose body is behind the ball, as the eye sees it, is the one that shows.
+//   - A joint with a piece of the real model in it (a knee, an elbow, a hip, a shoulder: JOINT_VERTEX, below) has a
+//     zone, ZONE(k): its radius and its core's. It is on when the joint's fourth number is under 0. Inside the zone
+//     the card shows only what is within the core's radius of its own bone's line, stood zoneBackM further back
+//     (impostor-math.js: partBalls): the piece is what is there.
 //
 // The ink line round the part is marked in the data sheet (both of the facing's numbers are 0) and painted here.
 // `line` says what becomes of it (looks.js: cardLine): over 0, it stands that many metres behind the surface, so
@@ -95,6 +99,9 @@ uniform float keepDark;
 uniform vec4 balls[4];
 uniform vec4 ballTint[4];
 #define TINT(k) ballTint[k]
+uniform vec2 zone[4];
+#define ZONE(k) zone[k]
+uniform float zoneBackM;
 uniform float fillBackM;
 uniform float ballBackM;
 varying vec2 vSheet;
@@ -107,7 +114,7 @@ bool inBall(vec2 p, float h) {
   vec3 here = vView + normalize(-vView) * outAt(p, h);
   for (int k = 0; k < 4; k++) {
     vec3 off = here - balls[k].xyz;
-    float ring = floor(balls[k].w) / 1000.0;
+    float ring = floor(abs(balls[k].w)) / 1000.0;
     if (dot(off, off) < ring * ring) return true;
   }
   return false;
@@ -196,14 +203,28 @@ void main() {
     if (colour.a < 0.5) ok = false;
   }
   if (!ok) discard;
-  // the ball in a joint: the nearest one the eye's own line through this pixel meets, if it meets it before the surface
   float out_ = outAt(xy, height - (inked ? line : 0.0));
+  // inside a joint's zone the piece of the model there is what shows: the card keeps only what is near its own
+  // bone's line, and stands that back
+  float surfaceOut = out_;
+  vec3 here = vView + normalize(-vView) * out_;
+  for (int k = 0; k < 4; k++) {
+    if (balls[k].w >= 0.0) continue;
+    vec3 off = here - balls[k].xyz;
+    vec2 z = ZONE(k);
+    float far2 = dot(off, off);
+    if (far2 >= z.x * z.x) continue;
+    float along = dot(off, normalize(facingToEye[1]));
+    if (far2 - along * along > z.y * z.y) discard;
+    out_ = surfaceOut - zoneBackM;
+  }
+  // the ball in a joint: the nearest one the eye's own line through this pixel meets, if it meets it before the surface
   vec3 ray = normalize(vView);
-  float nearest = length(vView) - out_;
+  float nearest = length(vView) - surfaceOut;
   int ball = -1;
   float stoodBack = 0.0;
   for (int k = 0; k < 4; k++) {
-    float inner = TINT(k).a, along = dot(ray, balls[k].xyz), back_ = fract(balls[k].w) * 2.0 * ballBackM;
+    float inner = TINT(k).a, along = dot(ray, balls[k].xyz), back_ = fract(abs(balls[k].w)) * 2.0 * ballBackM;
     float root = along * along - dot(balls[k].xyz, balls[k].xyz) + inner * inner;
     if (inner <= 0.0 || root < 0.0) continue;
     float far = along - sqrt(root) + back_;
@@ -248,7 +269,8 @@ void main() {
 }`;
 // What every card's shader needs about the sheet's ink line, to go in with a material's other uniforms.
 export const lineUniforms = () => ({ line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 },
-  balls: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, ballTint: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, fillBackM: { value: FILL.backM }, ballBackM: { value: FILL.ballBackM } });
+  balls: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, ballTint: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, fillBackM: { value: FILL.backM }, ballBackM: { value: FILL.ballBackM },
+  zone: { value: [0, 1, 2, 3].map(() => new THREE.Vector2()) }, zoneBackM: { value: FILL.zoneBackM } });
 // For every part of a baked character, its joints for the filling (impostor-math.js: partBalls), each with
 // tintAt(where the joint is in the part's bone's frame): the colour the part gives that joint's ball, looked up in
 // the colour sheet the first time it is asked for and kept, as light adds up (the way the shader has every other
@@ -290,17 +312,20 @@ export function sheetBalls(card, sheet) {
 // the part's list from sheetBalls; `center` the part's middle in its bone's frame; `world` the part's bone;
 // `at(bone)` gives where a bone's head is in the world now, or nothing if the skeleton has no such bone; `size` is
 // how big the bone is drawn (1: as it was pictured).
+// `zones` is whether the pieces of the model are being drawn in the joints that have one (skinFor, below): then
+// the cards step aside in those joints' zones.
 const jointSpot = new THREE.Vector3();
-export function setBalls(quad, joints, center, world, camera, at, size = 1) {
+export function setBalls(quad, joints, center, world, camera, at, size = 1, zones = false) {
   const u = quad.material.uniforms, eye = camera.position;
   const middle = [world[12] + world[0] * center[0] + world[4] * center[1] + world[8] * center[2], world[13] + world[1] * center[0] + world[5] * center[1] + world[9] * center[2],
     world[14] + world[2] * center[0] + world[6] * center[1] + world[10] * center[2]];
   for (let k = 0; k < FILL.aPart; k++) {
     const joint = joints[k], p = joint && at(joint.bone);
-    if (!p) { u.balls.value[k].set(0, 0, 0, 0); u.ballTint.value[k].set(0, 0, 0, 0); continue; }
-    const tint = joint.tintAt(inBone(world, p));
+    if (!p) { u.balls.value[k].set(0, 0, 0, 0); u.ballTint.value[k].set(0, 0, 0, 0); u.zone.value[k].set(0, 0); continue; }
     jointSpot.set(p[0], p[1], p[2]).applyMatrix4(camera.matrixWorldInverse);
-    u.balls.value[k].set(jointSpot.x, jointSpot.y, jointSpot.z, Math.floor(joint.radius * size * 1000) + (0.5 * ballBack(p, middle, [eye.x, eye.y, eye.z])) / FILL.ballBackM);
+    const tint = joint.tintAt(inBone(world, p));
+    u.balls.value[k].set(jointSpot.x, jointSpot.y, jointSpot.z, jointNumber(joint.radius * size, ballBack(p, middle, [eye.x, eye.y, eye.z]), zones && joint.zone > 0));
+    u.zone.value[k].set(joint.zone * size, joint.core * size);
     u.ballTint.value[k].set(tint[0], tint[1], tint[2], joint.inner * size);
   }
 }
@@ -313,6 +338,136 @@ export function setHeadGrid(quad, screen, look, camera, at, part) {
   u.fineHead.value = slid ? 1 : 0;
   u.keepDark.value = slid ? 1 : 0;
   if (slid) u.nudge.value.set(slid[0], slid[1]);
+}
+
+// A piece of the real model in a joint (scripts/impostor/bake_joints.py). The cards are pictures of rigid parts,
+// and a knee bent far, seen end on, is in none of them: the cloth pulled over it only exists when the model bends.
+// So round every big joint the cards step aside and the model's own surface is drawn, pulled by the skeleton as
+// the whole model would be: a few hundred triangles a joint. It is painted as the cards are: its colour is the
+// cards' own, looked up from their sheets into one small picture (atlas), and so is which way its surface faces
+// (atlasData: as the model has it at rest, folded as the sheets fold theirs), turned here as the bones have
+// turned it. It is drawn inside the joint's zone and a little past it (`reach`, about `jointAt`, as the eye has
+// it), from outside only: the inside of a sleeve or a trouser leg is never shown. `who` is the number of the card
+// below the joint, for the lines a look draws on the finished picture. inkM over 0, back faces: its ink shell,
+// for the looks that keep the line behind the surface.
+export const JOINT_VERTEX = `
+#include <common>
+#include <skinning_pars_vertex>
+uniform float inkM;
+varying vec2 vAtlas;
+varying vec3 vView;
+varying vec3 vTurnX;
+varying vec3 vTurnY;
+varying vec3 vTurnZ;
+void main() {
+  vAtlas = vec2(uv.x, 1.0 - uv.y);
+  #include <skinbase_vertex>
+  #include <begin_vertex>
+  transformed += normalize(normal) * inkM;
+  #include <skinning_vertex>
+  mat3 turn = mat3(viewMatrix) * mat3(skinWeight.x * boneMatX + skinWeight.y * boneMatY + skinWeight.z * boneMatZ + skinWeight.w * boneMatW);
+  vTurnX = turn[0];
+  vTurnY = turn[1];
+  vTurnZ = turn[2];
+  vec4 seen = modelViewMatrix * vec4(transformed, 1.0);
+  vView = seen.xyz;
+  gl_Position = projectionMatrix * seen;
+}`;
+export const JOINT_FRAGMENT = `
+uniform sampler2D atlas;
+uniform sampler2D atlasData;
+uniform vec3 jointAt;
+uniform float reach;
+uniform float who;
+uniform float inkM;
+uniform vec3 lineInk;
+uniform vec3 light;
+uniform vec3 shadeMid;
+uniform vec3 shadeDark;
+uniform vec2 edges;
+uniform float punch;
+uniform float rim;
+varying vec2 vAtlas;
+varying vec3 vView;
+varying vec3 vTurnX;
+varying vec3 vTurnY;
+varying vec3 vTurnZ;
+vec3 unfold(vec2 e) {
+  e = e * 2.0 - 1.0;
+  vec3 n = vec3(e, 1.0 - abs(e.x) - abs(e.y));
+  float t = clamp(-n.z, 0.0, 1.0);
+  n.x += n.x >= 0.0 ? -t : t;
+  n.y += n.y >= 0.0 ? -t : t;
+  return normalize(n);
+}
+void main() {
+  vec3 off = vView - jointAt;
+  if (dot(off, off) > reach * reach) discard;
+  if (inkM > 0.0) {
+    gl_FragColor = vec4(lineInk, who);
+  } else {
+    vec3 colour = texture2D(atlas, vAtlas).rgb;
+    vec3 seen = normalize(mat3(vTurnX, vTurnY, vTurnZ) * unfold(texture2D(atlasData, vAtlas).xy));
+    float facing = dot(seen, light);
+    vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
+    vec3 paint = mix(vec3(dot(colour, vec3(0.2126, 0.7152, 0.0722))), colour, punch);
+    gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), who);
+  }
+  #include <colorspace_fragment>
+}`;
+// The pieces a baked character has for its joints, fetched: null when it has none. `loader` reads a .glb.
+// "?joints=cards" in the page's address leaves them out, and the joints are then the cards' own as they were: for
+// a picture of before and after, or to time what the pieces cost.
+export async function skinFor(folder, card, loader) {
+  if (!card.skin || new URLSearchParams(globalThis.location?.search || "").get("joints") === "cards") return null;
+  const [gltf, colour, data] = await Promise.all([loader.loadAsync(`${folder}/${card.skin.file}`), picture(`${folder}/${card.skin.color}`, true, card.nearest), picture(`${folder}/${card.skin.data}`, false)]);
+  const pieces = [];
+  gltf.scene.traverse((o) => {
+    const joint = o.isSkinnedMesh && card.skin.joints.find((j) => `joint ${j.bone}` === o.material.name);
+    if (joint) pieces.push({ joint, geometry: o.geometry, bones: o.skeleton.bones.map((b) => b.name), inverses: o.skeleton.boneInverses, part: card.parts.findIndex((p) => p.name === joint.part) });
+  });
+  return { pieces, colour, data, inkM: card.ink_m || 0, dispose: () => { colour.dispose(); data.dispose(); pieces.forEach((p) => p.geometry.dispose()); } };
+}
+// The pieces as meshes riding a skeleton: `bones` is { name: bone } (the one the cards ride); `paint` the page's
+// paint uniforms. Returns null if the skeleton lacks a bone the pieces need, else { group, set, dispose }.
+// set(camera, look, card, figure) is for every frame: where each joint is as the eye has it, each piece's number,
+// and whether its ink shell shows.
+export function skinMeshes(skin, bones, paint) {
+  if (!skin || skin.pieces.some((piece) => piece.bones.some((name) => !bones[name]))) return null;
+  const group = new THREE.Group();
+  const made = skin.pieces.map((piece) => {
+    const skeleton = new THREE.Skeleton(piece.bones.map((name) => bones[name]), piece.inverses);
+    return [0, 1].map((shell) => {
+      const material = new THREE.ShaderMaterial({ vertexShader: JOINT_VERTEX, fragmentShader: JOINT_FRAGMENT, side: shell ? THREE.BackSide : THREE.FrontSide, uniforms: {
+        atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, who: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 },
+        lineInk: { value: new THREE.Color(0x1c1721) }, ...paint } });
+      const mesh = new THREE.SkinnedMesh(piece.geometry, material);
+      mesh.bind(skeleton, new THREE.Matrix4());
+      mesh.frustumCulled = false;
+      group.add(mesh);
+      return mesh;
+    });
+  });
+  const at = new THREE.Vector3();
+  return {
+    group,
+    set(camera, look, card, figure = 0) {
+      const told = cardLine(card, look);
+      skin.pieces.forEach((piece, i) => {
+        const bone = bones[piece.joint.bone];
+        at.setFromMatrixPosition(bone.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+        const size = Math.cbrt(Math.abs(bone.matrixWorld.determinant()));
+        made[i].forEach((mesh, shell) => {
+          const u = mesh.material.uniforms;
+          u.jointAt.value.copy(at);
+          u.reach.value = (piece.joint.reach_cm / 100) * size;
+          u.who.value = told.ids ? cardNumber(figure, piece.part) : 1;
+          if (shell) mesh.visible = told.line > 0 && skin.inkM > 0;
+        });
+      });
+    },
+    dispose: () => made.flat().forEach((mesh) => { mesh.material.dispose(); mesh.skeleton.dispose(); }),
+  };
 }
 
 // The real model the comic way (toon.py's paint, near enough): the texture read small and soft, its light-to-dark
@@ -466,6 +621,10 @@ class CardViewer {
     this.cards.clear();
     this.edges.clear();
     const { card, sheet } = this;
+    // the pieces of the model in the big joints, riding the skeleton of the clip that is playing
+    this.joined?.dispose();
+    this.joined = this.bones ? skinMeshes(this.skin, this.bones, this.paint) : null;
+    if (this.joined) this.cards.add(this.joined.group);
     const line = new THREE.LineBasicMaterial({ color: 0x44679b, depthTest: false });
     const joints = sheetBalls(card, sheet);
     this.parts = card.parts.map((part, p) => {
@@ -547,6 +706,7 @@ class CardViewer {
     if (this.clip) this.mixer.clipAction(this.clip).play();
     this.held = {};
     this.follow = null;
+    if (this.sheet) this.buildCards(); // the joints' pieces ride this clip's skeleton
     this.onFacts?.();
   }
 
@@ -591,10 +751,11 @@ class CardViewer {
         u.facingToEye.value.setFromMatrix4(toEye).multiplyScalar(1 / where.size);
         u.share.value = pick.share;
         u.mix_.value = mixing ? n + 1 : 0;
-        setBalls(quad, part.joints, part.center, world, camera, this.jointAt, where.size);
+        setBalls(quad, part.joints, part.center, world, camera, this.jointAt, where.size, Boolean(this.joined));
         if (part.name === "head") setHeadGrid(quad, this.screen, this.look, camera, where.head, this.el.classList.contains("stacked") ? { w: 1, h: 0.5 } : { w: 0.5, h: 1 });
       });
     }
+    this.joined?.set(camera, this.look, card);
     return swapped;
   }
 
@@ -648,6 +809,8 @@ class CardViewer {
     if (folder !== this.folder || !this.card) {
       this.folder = folder;
       this.card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
+      this.skin?.dispose();
+      this.skin = await skinFor(folder, this.card, this.loader);
       for (const sheet of Object.values(this.sheets)) { sheet.colour.dispose(); sheet.data.dispose(); }
       this.sheets = {};
       this.paint ||= paintOf(this.card.light);
@@ -678,6 +841,8 @@ class CardViewer {
     this.resize.disconnect();
     this.controls.dispose();
     for (const sheet of Object.values(this.sheets)) { sheet.colour.dispose(); sheet.data.dispose(); }
+    this.joined?.dispose();
+    this.skin?.dispose();
     this.screen.dispose();
     this.renderer.dispose();
     delete window.forgeCards;

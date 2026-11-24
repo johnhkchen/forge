@@ -694,7 +694,7 @@ The flat cards timed against meshes, as a crowd: a field of Roosevelts playing t
 
 - **The game.** One is "it" (a red ring under him and an arrow over his head) and goes for the nearest runner he may tag. Runners within a few metres bolt, each a little to his own side, dodge when he is close, and stop to catch their breath when they are winded, which is when they get caught. A tag is a tag move for one and a tagged move for the other; the new "it" counts a second before he sets off, and the man who tagged him can't be tagged straight back. It is worked out from a seed in fixed steps, so every way of drawing it sees the same field.
 - **The moves come from a table** at the top of `gallery/tag.js`: a name, a `.glb`, which frames, and whether it loops. They are cut from one shot, `shots/tag-moves/painted-tag.glb` (run, dodge, tag, tagged, catching breath, laugh, sprint). A move that travels is brought to the middle, turned to face ahead, and has its travel taken out; `loop: "find"` looks for the cleanest loop inside its frames and measures how fast it covers ground. If the shot is not there, each move falls back on the plain run and walk.
-- **Five ways to draw them.** Meshes one by one (every runner his own skinned meshes and ink shell); meshes all at once (one draw a piece for the whole field, the bones read from a picture); cards one by one (the cards page as it is); cards all at once (every card of every runner in one draw: the graphics card picks each card's picture and places it); and that with the search by depth switched off past 12 m.
+- **Five ways to draw them.** Meshes one by one (every runner his own skinned meshes and ink shell); meshes all at once (one draw a piece for the whole field, the bones read from a picture); cards one by one (the cards page as it is); cards all at once (every card of every runner in one draw: the graphics card picks each card's picture and places it); and that with the search by depth switched off past 12 m. Drawn all at once, a runner within 8 m of the eye also gets a piece of the real model in each big joint ("A knee that bends", below).
 - **Skeletons are timed apart**, and can be shared: every move is sampled once, thirty poses a second, into a table the graphics card reads, and a runner is then a place, a heading and a row of it. Or each runner works his own skeleton out every frame. Both are offered to every way of drawing.
 - **Measure all** runs every count and way for a few seconds each and shows a table to read or copy; **Measure the looks** does the same for every look. The big number is the work in one frame (skeletons, placing, drawing, and waiting for the graphics card to finish), because frames a second can't go past what the screen shows.
 
@@ -936,7 +936,7 @@ Roosevelt's painted cards in the tag field's own moves (run, dodge, tag, catchin
 One go differed from the next by two to four milliseconds on this run, more than most of these differences. What stands above that: a thousand in bold ink with the search on cost one to two milliseconds more (the test for a joint runs at every step of a search that finds nothing), and "Pixels, both" up to one. "Pixels, both" is still the cheaper at every setting. Every setting drew a frame every 16.7 ms. Meshes cost no more (three goes each, `cost-meshes-mac.json`): painted meshes in bold ink 4.6 to 3.4 and 7.3 to 7.1, low-poly 3.0 to 2.9 and 5.9 to 5.3; drawn small, 3.3 to 3.4 and 9.0 to 7.9, low-poly 2.9 to 2.9 and 8.2 to 6.4. No phone has run it; the card's shader now hands seventeen more numbers from each corner to each pixel, which is inside what every phone must allow but nearer the edge of it than before.
 
 **What is still weak.**
-- **A hollow is plugged, not skinned.** The ball is one flat colour. Where the real knee has a stripe of trouser running over it, the cards have a plain disc with the part's own rim round it, and bold ink draws that rim.
+- **A hollow is plugged, not skinned.** The ball is one flat colour. Where the real knee has a stripe of trouser running over it, the cards have a plain disc with the part's own rim round it, and bold ink draws that rim. (Mended since for knees, elbows, hips and shoulders: "A knee that bends", below.)
 - **The web of skin is still missing** under a raised arm and between spread legs: that is outline, not a hole, and no filling reaches it.
 - **Past the ring nothing is filled.** A gap that opens further from the joint than the ring where its parts meet stays open. Those three worst hips went to 0 and 4, 0 and 1, 0 and 13; the pirate's hip at 66 degrees, 53.75 s in, went only from 465 and 548 to 280 and 401.
 - **Comic and "Pixels, baked" get the first two only.** They have no finished picture to fill cracks on.
@@ -945,6 +945,130 @@ One go differed from the next by two to four milliseconds on this run, more than
 - The judge counts bare pixels and lines. It does not count a hollow, so the ball's worth is in the stills, not the table.
 
 Stills (`evidence/joints/`, taken by `just joint-shots`, main's gallery beside this one): `knee-<look>.png`, `elbow-<look>.png`, `neck-<look>.png`, `hip-<look>.png`, `shoulder-<look>.png` are a square round the joint at the moment it is bent furthest, down the page through the crew camera, from 2 m and from 1 m, before on the left and after on the right; `stage-<seconds>-<look>-before.png` and `-after.png` the whole stage. `evidence/seams/bent-after-*.png` are the judge's own: cards, the real model, and the cards with bare pixels marked blue.
+
+## A knee that bends
+
+In a deep squat with the knees toward you, every knee was a dark ringed socket, not a knee. A plugged hollow is not skin. Now every knee, elbow, hip and shoulder has a small piece of the model itself in it, bending as the model bends, and the cards step aside there.
+
+```
+just impostor-joints runs/<character> detailed      # the pieces, for cards already baked: ten seconds
+just impostor-knees crew-candy-shop after           # does a bent joint read as the joint it is? counted, no browser
+just joint-shots "8045/?joints=cards" 8045/ crew-candy-shop evidence/knees   # stills, the cards alone and with the pieces
+```
+
+**What it was** (`evidence/knees/before-frontman-38-shin_l-1-joe-parts.png`: the real knee, the cards, the thigh's card alone, the shin's card alone).
+
+- **A card is a picture of a rigid piece, taken as it stood.** Squat facing the eye and you look along the thigh at its cut end, and down into the top of the shin. Neither picture ever saw that from outside. What they hold there is the inside of the trouser leg, the lap each part borrows from the other, and the ball.
+- **The dark rings are those insides**, with bold ink's line, or the pixel look's, drawn round each of them.
+- **The cloth pulled over a bent kneecap is in no picture.** It only exists when the model bends. No fill colour makes it.
+
+**How it is measured.** `just impostor-seams` counts bare pixels, and a plugged socket has none. So `just impostor-knees` (`scripts/impostor/judge_joints.py`) compares what is drawn. It stands the real model in the take's own poses, draws it twice as fine as the screen, draws the cards from the same eye, and in a disc about each joint says:
+
+- **likeness**: how well the cards' light and dark follows the model's. 1 is the same shapes in the same places, 0 is nothing in common;
+- **blots**: how much of the disc is a good deal darker than the model (a ring, a hollow, a scratch);
+- **bare**: pixels of the model's body the cards leave uncovered.
+
+It looks at the moment of the squat (38 seconds in, both knees of all three dancers) and at the two moments of the dance where each kind of joint is bent furthest, through the set's crew camera, from 2 m and from 1 m. The same disc laid on the middle of a thigh or an upper arm, where nothing bends, says what cards score when nothing is wrong: 0.4 to 0.6 (the disc reaches the joints at either end, so it moved too: 0.42 to 0.60 from 1 m in bold ink).
+
+**Two ways were tried.**
+
+| | knees, likeness from 1 m | through the crew camera | blots, from 1 m | what it adds |
+|---|---|---|---|---|
+| the cards as they were | 0.36, 0.39 | 0.47, 0.45 | 16%, 11% | |
+| a card of its own for each knee and elbow, pictured bent at 0, 45, 90, 120 and 150 degrees | 0.46, 0.51 | 0.64, 0.66 | 10%, 6% | sheets half as big again: bold ink 14.1 to 20.8 MB, 15.7 to 24.4, 25.6 to 42.6 in memory; pixel art 5.0 to 6.9, 5.7 to 8.5, 9.6 to 14.5 |
+| **a piece of the real model in the joint** | 0.73, 0.76 | 0.72, 0.66 | 2%, 2% | 4,000 to 4,700 triangles a dancer and 2 MB in memory, for every big joint |
+
+(Each cell is bold ink, then "Pixels, both".) The bent pictures do read as a knee (`evidence/knees/tried-bent-cards-lincoln-knee.png`). But a knee is seldom at one of the five bends, so the picture is turned to fit and sits a centimetre or two out at each end; they cost the most memory; and they only suit a joint that bends one way, which a hip and a shoulder do not. The pieces won on every count and are what is kept. `bake_impostor.py --bent knee,elbow` still bakes the other, for anyone who wants to look again.
+
+**What was done** (`scripts/impostor/bake_joints.py`; `gallery/impostor.js`: JOINT_VERTEX, skinMeshes).
+
+- **A piece for each big joint.** The model's own surface round the joint, a few hundred triangles, with the skeleton's pull on every point, so it bends exactly as the whole model would. A detailed mesh cannot be cut down directly (a third of a million triangles that fold through each other), so its pieces are cut from the tidy low-poly version the cast already uses, each triangle cut in four, and every point laid onto the detailed surface. In the dance they sit half a millimetre from the real model at a typical point.
+- **Painted with the cards' own colours.** Every place on a piece takes the colour its cards show there, from the picture that sees it most squarely, and which way the surface faces from the same place. So a piece is in the look its cards are in (the pixel sheet's few colours, bold ink's tones) and there is no change of colour where they meet. One 512 by 512 picture for colour and one for facing, a look.
+- **The cards step aside.** Round each joint is a zone, a ball 1.25 to 1.7 times as wide as the ring where the two parts meet. Inside it a card shows nothing of its outside: no cut end, no lap, no rim. The piece is drawn in the zone and a centimetre and a half past it, under the cards' edge.
+- **Never the inside.** A piece is only drawn from outside. A face turned away from the eye is left out, so the inside of a sleeve or a trouser leg cannot show, and nothing draws a line round it.
+- **One thing inside another is still the cards'.** A piece is one skin, the outside one. Look down a wide cuff or into a boot top and what you should see is the arm or the leg inside it, which the piece has not got. So inside a zone a card keeps what lies close to its own bone's line (within 0.6 of the ring), stood 3 cm back: the piece covers it everywhere but there.
+- **A joint whose piece would not lie down is left alone.** Where the tidy mesh and the detailed one disagree too much (Lincoln's right elbow, under a rolled sleeve) the bake says so and that joint keeps its cards, ball and all. `--leave` does the same by hand, and `scripts/impostor/joints.json` keeps it for a character: the pirate's two elbows are in there. Each is inside a wide cuff, the piece was the cuff's outside, and from 1 m, bent far, it showed as a blade across his forearm, whatever the judge's likeness said.
+- The pieces go in `<version>-impostor-<look>-skinned/` beside the cards, which are not baked again: the new folder reads the old sheets where they are. The pages read it first; a gallery older than this does not read it at all. Add `?joints=cards` to a page's address to see the cards without the pieces.
+- **On the tag field** only runners within 8 m of the eye get pieces, and only those are handed to the graphics card. Further off a joint is the cards' own, as before.
+
+**What it is now** (`evidence/knees/joints-before.json`, `joints-after.json`). Likeness, then blots, the joints each moment was picked for; before to after:
+
+| look | joint | likeness, crew camera | from 2 m | from 1 m | blots, crew camera | from 1 m | bare pixels, from 1 m |
+|---|---|---|---|---|---|---|---|
+| Bold ink | knee | 0.47 to 0.72 | 0.40 to 0.73 | 0.36 to 0.73 | 14% to 4% | 16% to 2% | 1,082 to 475 |
+| Bold ink | elbow | 0.52 to 0.58 | 0.48 to 0.59 | 0.49 to 0.60 | 9% to 6% | 7% to 3% | 165 to 228 |
+| Bold ink | hip | 0.31 to 0.48 | 0.33 to 0.55 | 0.35 to 0.55 | 10% to 5% | 8% to 2% | 104 to 489 |
+| Bold ink | shoulder | 0.52 to 0.57 | 0.53 to 0.57 | 0.46 to 0.55 | 11% to 8% | 8% to 4% | 400 to 658 |
+| Pixels, both | knee | 0.45 to 0.66 | 0.43 to 0.74 | 0.39 to 0.76 | 11% to 6% | 11% to 2% | 1,131 to 280 |
+| Pixels, both | elbow | 0.44 to 0.50 | 0.51 to 0.62 | 0.56 to 0.65 | 9% to 9% | 4% to 2% | 236 to 174 |
+| Pixels, both | hip | 0.36 to 0.52 | 0.42 to 0.61 | 0.45 to 0.64 | 9% to 5% | 6% to 2% | 462 to 267 |
+| Pixels, both | shoulder | 0.49 to 0.55 | 0.55 to 0.62 | 0.51 to 0.60 | 9% to 8% | 4% to 2% | 469 to 452 |
+| Comic | knee | 0.46 to 0.80 | 0.38 to 0.79 | 0.39 to 0.79 | 13% to 3% | 15% to 2% | 639 to 442 |
+| Comic | elbow | 0.44 to 0.58 | 0.40 to 0.54 | 0.45 to 0.55 | 10% to 6% | 11% to 6% | 4 to 150 |
+| Comic | hip | 0.24 to 0.45 | 0.24 to 0.47 | 0.24 to 0.43 | 10% to 4% | 9% to 3% | 84 to 466 |
+| Comic | shoulder | 0.52 to 0.62 | 0.54 to 0.62 | 0.50 to 0.61 | 9% to 5% | 10% to 5% | 184 to 561 |
+| Pixels, baked | knee | 0.45 to 0.74 | 0.37 to 0.74 | 0.35 to 0.74 | 11% to 3% | 14% to 2% | 705 to 398 |
+| Pixels, baked | elbow | 0.36 to 0.57 | 0.37 to 0.53 | 0.41 to 0.56 | 10% to 5% | 10% to 4% | 39 to 177 |
+| Pixels, baked | hip | 0.40 to 0.58 | 0.39 to 0.58 | 0.40 to 0.57 | 8% to 3% | 7% to 3% | 55 to 449 |
+| Pixels, baked | shoulder | 0.49 to 0.59 | 0.53 to 0.62 | 0.49 to 0.58 | 8% to 5% | 6% to 4% | 198 to 479 |
+
+Twelve knees and six of each of the others, the three dancers together. Every joint in the dance bent 60 degrees or more, whichever it is: 0.46 to 0.57 through the crew camera and 0.42 to 0.62 from 1 m in bold ink; 0.45 to 0.56 and 0.48 to 0.67 in "Pixels, both". The worst single knee from 1 m was 0.00 in every look and is 0.39 in bold ink and 0.64 in "Pixels, both". A knee now scores above the middle of a thigh. The bare pixels do not all go the right way: a hip, a shoulder and an elbow leave more of the model uncovered from 1 m than they did in most looks, because the lap that used to overshoot there, and happened to cover it, is gone.
+
+**The faces did not slip** (`just impostor-faces`, `evidence/clear/faces-pieces.json` against `faces-filled.json`; all three dancers, how much of a face is kept, through the crew camera, from 2 m and from 1 m): bold ink 0.742, 0.771 and 0.745, each the same to the third place; "Pixels, both" 0.777, 0.818 and 0.789, the same.
+
+**The seams, look by look** (`just impostor-seams crew-candy-shop pieces evidence/seams --deep 2`, `seams-pieces.json` against `seams-bent-after.json`; pixels of one figure in one picture, 60 pictures; the first of each pair through the crew camera, the second from 2 m):
+
+| look | bare and shut in by cards | | bare between two cards | | sticks out | | line that is not there, % | |
+|---|---|---|---|---|---|---|---|---|
+| Bold ink | 12.7 to 12.4 | 88 to 103 | 34 to 33 | 272 to 299 | 457 to 319 | 3,170 to 2,188 | 0.63 to 0.44 | 0.51 to 0.30 |
+| Pixels, both | 1.2 to 0.7 | 23 to 14 | 4.2 to 3.9 | 78 to 55 | 185 to 137 | 1,580 to 1,141 | 1.50 to 1.20 | 0.84 to 0.63 |
+| Comic | 32 to 48 | 120 to 292 | 64 to 78 | 259 to 472 | 635 to 464 | 4,646 to 3,408 | 0.91 to 0.92 | 0.67 to 0.76 |
+| Pixels, baked | 29 to 28 | 117 to 163 | 59 to 61 | 291 to 380 | 815 to 594 | 5,598 to 4,083 | 0.69 to 1.06 | 0.64 to 1.10 |
+
+What sticks out is down by a quarter to a third in every look: the laps and spurs at the joints are what the cards no longer draw. "Pixels, both" is better on every count, and bold ink has less line and holds its holes through the crew camera, with about a tenth more from 2 m. The comic look and "Pixels, baked" count worse for holes, and that is a real slip in the count: they have no finished picture to fill a crack on, and where a piece meets its cards a crack a pixel wide is a hole. Part of it is the judge's own: it does not draw a piece's ink shell, which the page does, and it shows a slit across the top of Roosevelt's thighs that the page's picture of the same moment does not have (`evidence/knees/slit-judge-roosevelt-18-comic.png`, `slit-page-roosevelt-18-comic.png`). The two looks the watch page opens in, and bold ink, are the ones that held.
+
+**What it costs.** The cards' sheets are not baked again, so they weigh what they did. A character's pieces are one file and two pictures 512 by 512:
+
+| | triangles | joints | to fetch, bold ink | pixel art | in memory |
+|---|---|---|---|---|---|
+| Lincoln | 4,031 | 7 | 0.63 MB | 0.38 MB | 2.1 MB |
+| Roosevelt | 4,741 | 8 | 0.56 MB | 0.37 MB | 2.1 MB |
+| the pirate | 4,195 | 6 | 0.75 MB | 0.46 MB | 2.1 MB |
+| Roosevelt's painted model (the tag field's) | 2,489 | 8 | 0.41 MB | 0.23 MB | 2.1 MB |
+
+That is 200 to 1,000 triangles a joint, every one pulled by its bones each frame, where a dancer's cards are 32 triangles and no pulling. Baked with half as many (`--triangles 160`: 2,000 to 2,400 a dancer) a knee's likeness from 1 m is 0.70 where it is 0.74 in bold ink, and 0.75 for 0.76 in "Pixels, both", with half as many pixels again left bare (`joints-tried-half-the-triangles.json`). For three dancers the fuller ones were kept.
+
+On the tag field on this Mac (1080 by 608, poses shared, the gallery as it was and as it is turn about, three goes each), ms of work a frame for a hundred and a thousand Roosevelts, before to after:
+
+| | bold ink | "Pixels, both" |
+|---|---|---|
+| from the phone test's eye, well back (nobody within 8 m: no pieces drawn) | | |
+| painted cards | 7.1 to 7.8, 9.6 to 8.6 | 4.7 to 6.8, 7.3 to 7.4 |
+| painted cards, search off far away | 4.0 to 4.4, 6.5 to 7.4 | 3.2 to 4.8, 5.6 to 6.0 |
+| detailed cards | 6.4 to 7.7, 9.4 to 8.5 | 4.5 to 5.8, 8.1 to 8.7 |
+| detailed cards, search off far away | 3.9 to 5.5, 5.9 to 7.0 | 2.9 to 4.8, 5.9 to 6.2 |
+| with the eye among the runners (50 of the hundred and 74 of the thousand get pieces) | | |
+| painted cards (124,000 and 184,000 triangles of pieces) | 4.9 to 7.8, 8.0 to 9.3 | 2.2 to 3.5, 4.8 to 7.1 |
+| painted cards, search off far away | 4.7 to 4.6, 5.5 to 7.1 | 2.3 to 4.0, 3.2 to 5.7 |
+| detailed cards (237,000 and 351,000 triangles) | 4.3 to 7.0, 7.3 to 9.4 | 2.4 to 4.7, 5.0 to 6.9 |
+| detailed cards, search off far away | 3.3 to 5.9, 5.5 to 7.5 | 2.4 to 4.6, 3.9 to 6.1 |
+
+(`evidence/knees/cost-mac.json`, taken by `face_cost.py`; `cost-near-mac.json`, by `scripts/impostor/near_cost.py`.) One go differed from the next by two to four milliseconds (the judges were running on the same machine while the eye was among the runners), and from the phone test's eye the two galleries draw the same thing, so the first four rows are what one go differs from another by. With the eye among the runners the pieces cost one and a half to three milliseconds a frame. Every setting still drew a frame every 16.7 ms. "Pixels, both" is cheaper than bold ink at every setting with the eye among the runners; from well back two of the eight settings read the other way round by a few tenths of a millisecond, inside what one go differs from the next by. Meshes are untouched. No phone has run it, and a phone is where it will show: earlier tests found a phone held back by triangles and by pulling points about, and seventy runners' pieces are a few hundred thousand of each. The two knobs are how near a runner must be (`JOINTS_M` in `gallery/tag.js`, 8 m) and `--triangles`.
+
+**What is still weak.**
+
+- **A piece is plainer than its cards close up.** It has a few hundred flat triangles under the cards' colours, so from 1 m a trouser cuff has a stepped edge, and the fine folds are painted, not shaped.
+- **Where a piece meets its cards there can be a step of a few millimetres**, and a speck or two of the old picture's edge. The line a look draws on the finished picture mostly hides it.
+- **Layered clothes are half and half.** The pirate's boot tops are real cups in his model. The piece is their outside and the cards are what is inside, and from some angles the join between the two shows. The boot tops themselves are his, not a seam.
+- **Lincoln's right elbow and both of the pirate's have no piece** and bend as they did.
+- **Hips and shoulders gain least**, and leave more bare. They were less wrong to begin with; the web of skin under a raised arm is drawn now only as far as the zone reaches; and from 1 m a few hundred more pixels of the model go uncovered round a hip or a shoulder than did.
+- **Bent as far as it goes, a piece folds as the model's skin does.** Behind the pirate's knee at 147 degrees a fin of folded skin and a few specks stand out from 1 m (`knee-pirate-deep-joe.png`). A speck of the same kind shows beside his thigh in the squat.
+- **The comic look and "Pixels, baked" count more holes than they did** (the table above), and get no line across a piece's own folds, only its outline. Nothing fills a crack for them. A wider overlap between a piece and its cards, or the crack filling the other looks have, would be the next thing to try.
+- **Wrists, ankles, the neck and the waist have no pieces.** They bend less, and a hand or a head is most of a zone.
+- **The judge's likeness is light and dark, not a person looking.** It ranks these pictures the way the eye does. It would not notice a knee that is right and ugly.
+- No phone has run it.
+
+Stills (`evidence/knees/`, taken by `just joint-shots`, the cards alone on the left and with the pieces on the right): `stage-38-<look>.png` is the squat through the crew camera; `knee-<who>-left-<look>.png`, `-right-` and `-deep-` are a square round each knee, down the page through the crew camera, from 2 m and from 1 m; `elbow-`, `hip-` and `shoulder-` the same for the other joints. `before-*` and `after-*` are the judge's own: the real model, then the cards in each look.
 
 ## A place from a world model
 
@@ -993,7 +1117,7 @@ The world's files are read from `world/marble/` beside the gallery; from another
 
 A take that has been cast can be played in the browser, on its set: `#/watch/<take>` ("Watch ... as pixel cards" on the set's page). `gallery/watch.js` stands the set up, brings every role's file on, and plays them from one clock, with Play, a bar to wind it back and forth, the set's own cameras or a free eye, Cards or Meshes, and the looks. Each of the cast whose run has baked cards is drawn as cards riding the skeleton his cast file carries; one with none stays a mesh. A fight's two are stood on their marks as the film stands them.
 
-For the candy-shop routine all three (Lincoln, Roosevelt, the pirate) have cards pictured from their detailed meshes (`just impostor-detailed <run> lowpoly`: the detailed mesh on the low-poly skeleton the cast uses, 96 pixels a metre as pixel art and 192 in the comic look). Their joints have been cut again since ("Where two cards meet", above). The cast's skeletons are the low-poly walk files' own to the last digit for Lincoln and Roosevelt and to a tenth of a millimetre for the pirate; Roosevelt's cards, cut on his painted skeleton, are half a millimetre off, and were kept. The detailed mesh lies 0.8 cm from the low-poly one at a typical point on Lincoln, 1.0 on Roosevelt and 2.2 on the pirate, whose coat and hat are the loosest fit. Stills, cards against meshes from the crew camera and close on each: `evidence/watch/`. All three have a face drawn for the pixel look (Looks, above): stills before and after, at the crew camera and from 1.3 m, cards and meshes, in `evidence/faces/`. Since then "Pixels, both" draws their heads on a finer grid from sheets of their own ("Faces as clear as bold ink", under Looks): `evidence/clear/`.
+For the candy-shop routine all three (Lincoln, Roosevelt, the pirate) have cards pictured from their detailed meshes (`just impostor-detailed <run> lowpoly`: the detailed mesh on the low-poly skeleton the cast uses, 96 pixels a metre as pixel art and 192 in the comic look). Their joints have been cut again since ("Where two cards meet", above). The cast's skeletons are the low-poly walk files' own to the last digit for Lincoln and Roosevelt and to a tenth of a millimetre for the pirate; Roosevelt's cards, cut on his painted skeleton, are half a millimetre off, and were kept. The detailed mesh lies 0.8 cm from the low-poly one at a typical point on Lincoln, 1.0 on Roosevelt and 2.2 on the pirate, whose coat and hat are the loosest fit. Stills, cards against meshes from the crew camera and close on each: `evidence/watch/`. All three have a face drawn for the pixel look (Looks, above): stills before and after, at the crew camera and from 1.3 m, cards and meshes, in `evidence/faces/`. Since then "Pixels, both" draws their heads on a finer grid from sheets of their own ("Faces as clear as bold ink", under Looks): `evidence/clear/`. And every knee, elbow, hip and shoulder is a piece of the real model that bends, not two pictures meeting ("A knee that bends", above): `evidence/knees/`.
 
 ## Comics
 

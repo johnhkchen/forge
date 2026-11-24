@@ -91,11 +91,14 @@ export function modelsOf(run) {
 // metre with its folds drawn in, for the finer grid its head is drawn on.
 // Sheets baked since the joints were mended are in "...-impostor-<look>-joined" (the comic one too) and are
 // read first; the older ones stay where they were for pages older than this.
+// The same cards with a piece of the real model for every big joint (scripts/impostor/bake_joints.py) are in the
+// folder of that name with "-skinned" for "-joined" (or added), and are read first of all.
 export function bakedFor(run, look, model) {
   const mine = run.cards.filter((c) => c.profile === (model || modelsOf(run)[0].id));
   const ends = (tail) => mine.find((c) => c.folder.endsWith(tail));
   const plain = ends("-impostor-comic-joined") || ends("-impostor") || mine[0];
-  return (look.first && ends(`-impostor-${look.first}`)) || (look.sheet && (ends(`-impostor-${look.sheet}-joined`) || ends(`-impostor-${look.sheet}-faces`) || ends(`-impostor-${look.sheet}`))) || plain;
+  const cards = (look.first && ends(`-impostor-${look.first}`)) || (look.sheet && (ends(`-impostor-${look.sheet}-joined`) || ends(`-impostor-${look.sheet}-faces`) || ends(`-impostor-${look.sheet}`))) || plain;
+  return (cards && mine.find((c) => c.folder === `${cards.folder.replace(/-joined$/, "")}-skinned`)) || cards;
 }
 
 const FULL_VERTEX = `

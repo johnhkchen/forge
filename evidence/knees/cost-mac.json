@@ -1,0 +1,1995 @@
+{
+ "about": "The tag field (joe, pixel-both), 1080 by 608, poses shared, headless Chrome on this Mac's GPU: the gallery before this work and after, turn about, 3 goes each; work is the middle go's ms in a frame",
+ "galleries": {
+  "before": "http://localhost:8046/",
+  "after": "http://localhost:8045/"
+ },
+ "table": {
+  "joe|painted|card-batch|100|before": {
+   "work": 7.099999964237213,
+   "low": 4.399999976158142,
+   "high": 7.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.462499998509884,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|painted|card-batch|100|after": {
+   "work": 7.800000011920929,
+   "low": 4.699999988079071,
+   "high": 9.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.037500001490116,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|painted|card-batch|1000|before": {
+   "work": 9.600000023841858,
+   "low": 8.5,
+   "high": 10.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.375,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|painted|card-batch|1000|after": {
+   "work": 8.600000023841858,
+   "low": 8.399999976158142,
+   "high": 12.599999964237213,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.875000022351742,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|painted|card-far|100|before": {
+   "work": 4,
+   "low": 3,
+   "high": 5.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.512500002980232,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|painted|card-far|100|after": {
+   "work": 4.399999976158142,
+   "low": 3.400000035762787,
+   "high": 5.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.81249999254942,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|painted|card-far|1000|before": {
+   "work": 6.5,
+   "low": 6.099999964237213,
+   "high": 6.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.299999989569187,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|painted|card-far|1000|after": {
+   "work": 7.399999976158142,
+   "low": 5.699999988079071,
+   "high": 7.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.837499991059303,
+   "sheet": [
+    1024,
+    2048
+   ]
+  },
+  "joe|detailed|card-batch|100|before": {
+   "work": 6.399999976158142,
+   "low": 4.799999952316284,
+   "high": 8.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.350000001490116,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "joe|detailed|card-batch|100|after": {
+   "work": 7.699999988079071,
+   "low": 5.200000047683716,
+   "high": 9.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.92500000447035,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "joe|detailed|card-batch|1000|before": {
+   "work": 9.399999976158142,
+   "low": 8.300000011920929,
+   "high": 11.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.55000001192093,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "joe|detailed|card-batch|1000|after": {
+   "work": 8.5,
+   "low": 8.099999964237213,
+   "high": 12.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.88749999552965,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "joe|detailed|card-far|100|before": {
+   "work": 3.899999976158142,
+   "low": 3,
+   "high": 5.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.23750000447035,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "joe|detailed|card-far|100|after": {
+   "work": 5.5,
+   "low": 3.300000011920929,
+   "high": 5.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.362499997019768,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "joe|detailed|card-far|1000|before": {
+   "work": 5.900000035762787,
+   "low": 5,
+   "high": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.287500008940697,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "joe|detailed|card-far|1000|after": {
+   "work": 7,
+   "low": 6,
+   "high": 7.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.3125,
+   "sheet": [
+    1024,
+    1916
+   ]
+  },
+  "pixel-both|painted|card-batch|100|before": {
+   "work": 4.699999988079071,
+   "low": 3.199999988079071,
+   "high": 6.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.11250000447035,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|painted|card-batch|100|after": {
+   "work": 6.799999952316284,
+   "low": 3.699999988079071,
+   "high": 7.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.099999994039536,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|painted|card-batch|1000|before": {
+   "work": 7.299999952316284,
+   "low": 6.5,
+   "high": 9.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.912500016391277,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|painted|card-batch|1000|after": {
+   "work": 7.400000035762787,
+   "low": 6.400000035762787,
+   "high": 8,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.25,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|painted|card-far|100|before": {
+   "work": 3.199999988079071,
+   "low": 2.800000011920929,
+   "high": 3.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.287500008940697,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|painted|card-far|100|after": {
+   "work": 4.799999952316284,
+   "low": 3,
+   "high": 5.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.462499998509884,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|painted|card-far|1000|before": {
+   "work": 5.599999964237213,
+   "low": 5,
+   "high": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.36250000447035,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|painted|card-far|1000|after": {
+   "work": 6,
+   "low": 5.5,
+   "high": 7.100000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.50000001490116,
+   "sheet": [
+    512,
+    604
+   ]
+  },
+  "pixel-both|detailed|card-batch|100|before": {
+   "work": 4.5,
+   "low": 3.399999976158142,
+   "high": 5.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.412499979138374,
+   "sheet": [
+    1024,
+    700
+   ]
+  },
+  "pixel-both|detailed|card-batch|100|after": {
+   "work": 5.800000011920929,
+   "low": 3.700000047683716,
+   "high": 7.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.487499997019768,
+   "sheet": [
+    1024,
+    700
+   ]
+  },
+  "pixel-both|detailed|card-batch|1000|before": {
+   "work": 8.100000023841858,
+   "low": 7.399999976158142,
+   "high": 11.100000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.450000002980232,
+   "sheet": [
+    1024,
+    700
+   ]
+  },
+  "pixel-both|detailed|card-batch|1000|after": {
+   "work": 8.699999988079071,
+   "low": 7,
+   "high": 10.900000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.13749999552965,
+   "sheet": [
+    1024,
+    700
+   ]
+  },
+  "pixel-both|detailed|card-far|100|before": {
+   "work": 2.899999976158142,
+   "low": 2.899999976158142,
+   "high": 3.400000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.299999989569187,
+   "sheet": [
+    1024,
+    700
+   ]
+  },
+  "pixel-both|detailed|card-far|100|after": {
+   "work": 4.800000011920929,
+   "low": 3.199999988079071,
+   "high": 5.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.17500000447035,
+   "sheet": [
+    1024,
+    700
+   ]
+  },
+  "pixel-both|detailed|card-far|1000|before": {
+   "work": 5.900000035762787,
+   "low": 5.5,
+   "high": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.424999997019768,
+   "sheet": [
+    1024,
+    700
+   ]
+  },
+  "pixel-both|detailed|card-far|1000|after": {
+   "work": 6.199999988079071,
+   "low": 5.300000011920929,
+   "high": 7.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.337500013411045,
+   "sheet": [
+    1024,
+    700
+   ]
+  }
+ },
+ "rows": [
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 7.099999964237213,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.137500002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 10.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.225000001490116,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 4,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.30000000447035,
+   "frames": 157,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.00000000745058,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 6.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.025000013411045,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 11.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.037500008940697,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.412500008940697,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.18750000745058,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.162500001490116,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 9.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.012500010430813,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.30000001192093,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.19999999552965,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.274999998509884,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 11.100000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.900000005960464,
+   "frames": 157,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.400000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.850000016391277,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.875,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 9.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.162500008940697,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.350000016391277,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 4.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.12500000745058,
+   "frames": 157,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 7.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.86250000447035,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 9.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.80000001192093,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.099999964237213,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.92500001192093,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 5.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.825000002980232,
+   "frames": 157,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 7.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.887500010430813,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 7.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.80000001192093,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.400000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.81250001490116,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 4.799999952316284,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.087499998509884,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 7.100000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.212499991059303,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 5.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.075000002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.13749999552965,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 4.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.850000001490116,
+   "frames": 157,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 7.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.06250000745058,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.0625,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.17500000447035,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 10.900000035762787,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.01249998807907,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.700000047683716,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.487499997019768,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.50000001490116,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 3,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.462499998509884,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.25,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.099999994039536,
+   "frames": 157,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 7,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.274999998509884,
+   "frames": 157,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.137500002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 12.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.212499998509884,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 5.200000047683716,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.80000001192093,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 7.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.837499998509884,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.400000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.900000005960464,
+   "frames": 157,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 12.599999964237213,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.887500017881393,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.962500005960464,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.912499986588955,
+   "frames": 157,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.299999989569187,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.450000002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.412499979138374,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.225000001490116,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.199999988079071,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.100000001490116,
+   "frames": 157,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.299999952316284,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.912500016391277,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.11250000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.287500008940697,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.23750000447035,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 9.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.55000001192093,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4.799999952316284,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.350000001490116,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6.099999964237213,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.299999989569187,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 3,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.512500002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 9.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.375,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.462499998509884,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 7.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.36250001192093,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.587499991059303,
+   "frames": 157,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 5.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.287499994039536,
+   "frames": 157,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.825000010430813,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 8.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.92500000447035,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.850000008940697,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 5.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.887500002980232,
+   "frames": 157,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.900000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.825000010430813,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-joined"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 6.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.80000001192093,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 6.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.912500008940697,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.287500008940697,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.599999964237213,
+   "frame": 16.599999964237213,
+   "frame_slow": 18.36250000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 5.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.274999991059303,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.100000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.274999983608723,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.162499994039536,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.900000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.424999997019768,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 7.800000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.037500001490116,
+   "frames": 157,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.875000022351742,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 5.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.81249999254942,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.837499991059303,
+   "frames": 156,
+   "sheet": [
+    1024,
+    2048
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 7.699999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.92500000447035,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.88749999552965,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 5.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.362499997019768,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "joe",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 6,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.3125,
+   "frames": 156,
+   "sheet": [
+    1024,
+    1916
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-joe-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 6.799999952316284,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.07499999552965,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 6.400000035762787,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.92500000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 5.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.86250000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.849999994039536,
+   "frames": 156,
+   "sheet": [
+    512,
+    604
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 7.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.837500020861626,
+   "frames": 157,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.825000002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 5.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 16.850000008940697,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "look": "pixel-both",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.300000011920929,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.337500013411045,
+   "frames": 156,
+   "sheet": [
+    1024,
+    700
+   ],
+   "folder": "runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/detailed-impostor-pixel-clear-skinned"
+  }
+ ]
+}

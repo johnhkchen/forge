@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined]
+        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor-<look>-joined/ (pages older than the mended
@@ -57,6 +57,13 @@ reads a texture at (smaller is flatter; a detailed mesh wants more than a painte
     joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
             screen however small the figure), and the lines inside a part drawn into its picture
 
+--bent pictures knees or elbows bent as well: for each, a card of its own at each of --bends degrees (the skin
+of its two parts round the joint, as the real model has it bent so far, in the frame of the bone above), listed
+under "bent" in impostor.json. impostor.py draws the one nearest to how far the joint is bent now, turned about
+the joint by half of what is left over. It was tried against a piece of the model in every joint (bake_joints.py)
+and lost (README: "A knee that bends"): the sheets grow by half, a joint is seldom at one of the bends, and a
+hip or a shoulder does not bend one way. The pages do not draw it; give it a --name of its own.
+
 Prints IMPOSTOR lines and one RESULT {json}. Never touches an open Blender.
 """
 
@@ -69,7 +76,7 @@ import time
 import bpy
 import bmesh
 import numpy as np
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Quaternion, Vector
 from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -119,6 +126,39 @@ def hang_arms(scene, rig):
             lowered[b.name] = round(math.degrees(2.0 * math.acos(min(1.0, abs(b.rotation_quaternion[0])))), 1)
     bpy.context.view_layer.update()
     return lowered
+
+
+BENT_KINDS = {"shin": "knee", "forearm": "elbow"}  # the joints that can be pictured bent: the ones that bend one way
+BENT_ZONE = {"knee": 1.6, "elbow": 1.7}            # a joint's zone, as bake_joints.py has it: this many times the ring where its two parts meet
+BENT_LAP_M = 0.015
+
+
+def hinges(scene, rig, bones):
+    """Which way each of some bones bends, found in the file's own clip: {bone: the axis it turns about, in its own
+    frame, turning the way it bends}. The moment of the clip where the bone is turned furthest from where it is on
+    average says so. Call before hang_arms, which puts the clip away."""
+    action = rig.animation_data.action if rig.animation_data else None
+    first, last = (int(action.frame_range[0]), int(action.frame_range[1])) if action else (0, 0)
+    seen = {b: [] for b in bones if b in rig.pose.bones}
+    for f in range(first, last + 1):
+        scene.frame_set(f)
+        for b in seen:
+            pb = rig.pose.bones[b]
+            seen[b].append(pb.rotation_quaternion.copy() if pb.rotation_mode == "QUATERNION" else pb.rotation_euler.to_quaternion())
+    out = {}
+    for b, turns in seen.items():
+        total = np.zeros(4)
+        for q in turns:
+            total += np.array(q[:]) if np.array(q[:]) @ (total if total.any() else np.array(q[:])) >= 0 else -np.array(q[:])
+        mean = Quaternion(tuple(total / max(np.linalg.norm(total), 1e-9)))
+        # a knee and an elbow are straightest at one end of what the clip does and bent at the other: the axis is
+        # that of the turn from the straightest moment to the most bent
+        along = lambda q: abs((rig.pose.bones[b].parent.bone.matrix_local.to_3x3().inverted() @ rig.pose.bones[b].bone.matrix_local.to_3x3() @ q.to_matrix() @ Vector((0, 1, 0))).normalized().y)
+        straight, bent = max(turns, key=along), min(turns, key=along)
+        delta = straight.inverted() @ bent
+        axis, angle = delta.to_axis_angle()
+        out[b] = (tuple(axis) if angle >= 0 else tuple(-axis), tuple(straight), math.degrees(abs(angle)))
+    return out
 
 
 def run_toon(**params):
@@ -415,6 +455,9 @@ def main():
     rig = next(o for o in scene.objects if o.type == "ARMATURE")
     bodies = [o for o in scene.objects if o.type == "MESH" and o.find_armature() and not o.get("under")]
     rest = impostor.Glb(source).pose(None)
+    bent_kinds = [k for k in flag("--bent", "").split(",") if k]  # joints pictured bent as well: knee, elbow
+    bends = [float(b) for b in flag("--bends", "0,45,90,120,150").split(",")]
+    hinge = hinges(scene, rig, [bones[0] for name, bones in PARTS if BENT_KINDS.get(name[:-2]) in bent_kinds]) if bent_kinds else {}
     lowered = hang_arms(scene, rig) if "--rest-pose" not in args else {}
     graph = bpy.context.evaluated_depsgraph_get()
     posed = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in bodies}
@@ -443,6 +486,57 @@ def main():
         parts.append({"name": name, "bone": bones[0], "bones": bones, **({"px_per_m": ppm * finer[name]} if name in finer else {}), "center": [round(float(c), 4) for c in (lo + hi) / 2.0],
                       "depth_m": round(reach + 0.01, 4), "reach_m": round(reach, 4),
                       "triangles": sum(len(p.vertices) - 2 for o in objects for p in o.data.polygons), "own_triangles": own[name]})
+    # Joints pictured bent (--bent). A joint's own card: the skin of its two parts round the joint, as the real model
+    # has it with the joint bent so far, pictured as any part is, in the frame of the bone above. One card for
+    # each of --bends degrees. The page shows the one nearest to how far the joint is bent now, and the two parts'
+    # own cards show nothing within the joint's zone.
+    bent = []
+    if hinge and joints:
+        first = dict(PARTS)
+        owned = {name: {obj.name: set(faces) for obj, faces, borrowed, *onto in chosen[name] if not borrowed} for name in chosen}
+        held = {b: rig.pose.bones[b].rotation_quaternion.copy() for b in hinge}
+        turn = lambda bone: np.array(rig.pose.bones[bone].matrix.to_3x3().normalized())
+        cut_turns = {b: turn(rig.pose.bones[b].parent.name).T @ turn(b) for b in hinge}  # the part below in the frame of the part above, as the parts were cut
+        for degrees in bends:
+            for b, (axis, _, _) in hinge.items():
+                rig.pose.bones[b].rotation_quaternion = held[b] @ Quaternion(axis, math.radians(degrees))
+            bpy.context.view_layer.update()
+            graph = bpy.context.evaluated_depsgraph_get()
+            now = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in bodies}
+            for j in joints:
+                if j["bone"] not in hinge or first[j["between"][1]][0] not in rest:
+                    continue
+                kind = BENT_KINDS[j["bone"][:-2]]
+                upper = first[j["between"][1]][0]
+                zone = BENT_ZONE[kind] * j["ring_cm"] / 100.0
+                centre = np.array((rig.matrix_world @ rig.pose.bones[j["bone"]].head)[:])
+                moved = rig.pose.bones[upper].matrix @ rig.data.bones[upper].matrix_local.inverted()
+                into = Matrix(np.linalg.inv(rest[upper]).tolist()) @ TO_GLB @ moved.inverted()
+                objects = []
+                for obj in bodies:
+                    mine = owned[j["between"][0]].get(obj.name, set()) | owned[j["between"][1]].get(obj.name, set())
+                    at = np.empty(len(now[obj.name].vertices) * 3, dtype=np.float32)
+                    now[obj.name].vertices.foreach_get("co", at)
+                    near = np.linalg.norm(at.reshape(-1, 3) @ np.array(obj.matrix_world.to_3x3()).T + np.array(obj.matrix_world.translation[:]) - centre, axis=1) < zone + BENT_LAP_M + 0.02
+                    faces = [p.index for p in obj.data.polygons if p.index in mine and any(near[v] for v in p.vertices)]
+                    if faces:
+                        objects.append(piece(obj, now[obj.name], faces, into))
+                        objects[-1]["lap"] = True  # no line round a joint's card: its edge is inside the figure
+                if not objects:
+                    continue
+                name = "%s@%g" % (j["bone"], degrees)
+                points = np.array([v.co[:] for o in objects for v in o.data.vertices])
+                reach = float(np.linalg.norm(points, axis=1).max())
+                lo, hi = points.min(axis=0), points.max(axis=0)
+                made[name] = objects
+                parts.append({"name": name, "bone": upper, "bones": [upper], "joint": j["bone"], "bend": degrees, "center": [round(float(c), 4) for c in (lo + hi) / 2.0],
+                              "depth_m": round(reach + 0.01, 4), "reach_m": round(reach, 4), "triangles": sum(len(p.vertices) - 2 for o in objects for p in o.data.polygons), "own_triangles": 0})
+                if degrees == bends[0]:
+                    bent.append({"bone": j["bone"], "upper": upper, "kind": kind, "between": j["between"], "axis": [round(a, 5) for a in hinge[j["bone"]][0]], "bends": bends, "part": j["between"][0],
+                                 "cut_turn": [[round(float(c), 6) for c in row] for row in cut_turns[j["bone"]]], "zone_cm": round(zone * 100, 1), "reach_cm": round((zone + BENT_LAP_M) * 100, 1)})
+        for b in hinge:
+            rig.pose.bones[b].rotation_quaternion = held[b]
+        print("IMPOSTOR bent: %s, each at %s degrees" % (", ".join(j["bone"] for j in bent), ", ".join("%g" % b for b in bends)), flush=True)
     for obj in list(scene.objects):
         if obj.type in ("MESH", "ARMATURE", "EMPTY") and not obj.name.startswith("part: "):
             bpy.data.objects.remove(obj)
@@ -501,7 +595,7 @@ def main():
     tmp_colour, tmp_data = os.path.join(out, ".bake-colour.png"), os.path.join(out, ".bake-data.exr")
 
     card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "plays": flag("--plays", profile), "title": flag("--title", ""), "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
-            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, "line_marked": True, "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
+            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, **({"bent": {"joints": bent}} if bent else {}), "line_marked": True, "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}

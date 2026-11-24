@@ -4,7 +4,7 @@ after it), taken by a headless Chrome: does a bent knee, elbow or neck read as s
     python3 scripts/impostor/joint_shots.py before=http://localhost:8030/ after=http://localhost:8044/
         [--take crew-candy-shop] [--out evidence/joints] [--looks joe,pixel-both]
         [--joints knee=1:shin_l@16.25,hip=2:thigh_r@42.25,elbow=0:forearm_r@37.5,neck=2:head@21.5,shoulder=0:upper_arm_r@15.75]
-        [--eyes crew,2,1] [--stage 42.25]
+        [--eyes crew,2,1] [--stage 42.25] [--crop 300,150,840,540]
 
 Both galleries must be running. Each of --joints is a name, which of the cast (counted from 0), the bone whose
 head is the joint, and the second of the take to stop at (judge_seams.py --deep finds where a joint is bent
@@ -14,6 +14,11 @@ joint is cut out of it and blown up, and the squares are laid out, one row an ey
 
     <joint>-<look>.png                 down: the eyes; across: the galleries, in the order given
     stage-<seconds>-<look>-<name>.png  --stage: the whole stage through the crew camera at that second, each gallery
+    stage-<seconds>-<look>.png         --crop left,top,right,bottom (pixels of that picture): that part of each
+                                       gallery's stage, twice the size, side by side in the order given
+
+A gallery's address may end "?joints=cards": the same gallery with the pieces of the real model left out of the
+joints (gallery/impostor.js: skinFor), which is the cards as they were before bake_joints.py.
 
 A picture is the page's own, pixel for pixel (read off its canvas). Needs numpy to cut and lay out: this file
 runs itself again in Blender's own Python when this Python has none. Prints SHOTS lines.
@@ -103,8 +108,9 @@ def main():
         bone, at = rest.split("@")
         joints.append((name, int(who), bone, at))
     stage = flag("--stage", "")
+    crop = [int(v) for v in flag("--crop", "").split(",")] if flag("--crop", "") else None
     os.makedirs(out, exist_ok=True)
-    cut = {}
+    cut, stages = {}, {}
     for gallery, base in galleries:
         page = test_walkabout.Page(base, gpu=True)
         try:
@@ -126,12 +132,23 @@ def main():
                     path = os.path.join(out, "stage-%s-%s-%s.png" % (stage, look, gallery))
                     with open(path, "wb") as f:
                         f.write(base64.b64decode(page.value(GRAB).split(",", 1)[1]))
+                    stages[(look, gallery)] = path
                     print("SHOTS %s" % path, flush=True)
             errors = page.value("window.forgeWatch.state().error")
             if errors:
                 print("SHOTS %s said: %s" % (gallery, errors))
         finally:
             page.close()
+    if stage and crop:
+        for look in looks:
+            cells = []
+            for gallery, _ in galleries:
+                whole = impostor.read_png(stages[(look, gallery)])[::-1][..., :3]
+                part = whole[crop[1]:crop[3], crop[0]:crop[2]]
+                cells += [np.repeat(np.repeat(part, 2, axis=0), 2, axis=1), np.full((part.shape[0] * 2, 12, 3), 255, dtype=np.uint8)]
+            path = os.path.join(out, "stage-%s-%s.png" % (stage, look))
+            impostor.write_png(path, np.concatenate(cells[:-1], axis=1)[::-1])
+            print("SHOTS %s (across: %s)" % (path, ", ".join(g for g, _ in galleries)), flush=True)
     for name, _, _, at in joints:
         for look in looks:
             rows = []

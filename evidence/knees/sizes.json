@@ -1,0 +1,1750 @@
+{
+ "stocky-pirate-deckhand": {
+  "detailed-impostor-comic-joined": {
+   "sheet": [
+    2048,
+    1656
+   ],
+   "sheet_memory_mb": 27.13,
+   "sheet_bytes": {
+    "color": 3841722,
+    "data": 3834450
+   }
+  },
+  "detailed-impostor-comic-lean": {
+   "sheet": [
+    2048,
+    1656
+   ],
+   "sheet_memory_mb": 27.13,
+   "sheet_bytes": {
+    "color": 3841722,
+    "data": 3834450
+   },
+   "pieces": {
+    "triangles": 2392,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 159228,
+     "color": 286612,
+     "data": 276859
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     207,
+     19.0
+    ],
+    [
+     "forearm_l",
+     285,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     235,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     209,
+     19.3
+    ],
+    [
+     "forearm_r",
+     281,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     251,
+     16.8
+    ]
+   ]
+  },
+  "detailed-impostor-comic-skinned": {
+   "sheet": [
+    2048,
+    1656
+   ],
+   "sheet_memory_mb": 27.13,
+   "sheet_bytes": {
+    "color": 3841722,
+    "data": 3834450
+   },
+   "pieces": {
+    "triangles": 6282,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 330516,
+     "color": 287451,
+     "data": 277147
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     714,
+     19.0
+    ],
+    [
+     "forearm_l",
+     1033,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     888,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     721,
+     19.3
+    ],
+    [
+     "forearm_r",
+     1026,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     976,
+     16.8
+    ]
+   ]
+  },
+  "detailed-impostor-joe-bent": {
+   "sheet": [
+    2048,
+    2600
+   ],
+   "sheet_memory_mb": 42.6,
+   "sheet_bytes": {
+    "color": 6225180,
+    "data": 6616737
+   }
+  },
+  "detailed-impostor-joe-joined": {
+   "sheet": [
+    2048,
+    1564
+   ],
+   "sheet_memory_mb": 25.62,
+   "sheet_bytes": {
+    "color": 3478957,
+    "data": 3728152
+   }
+  },
+  "detailed-impostor-joe-lean": {
+   "sheet": [
+    2048,
+    1564
+   ],
+   "sheet_memory_mb": 25.62,
+   "sheet_bytes": {
+    "color": 3478957,
+    "data": 3728152
+   },
+   "pieces": {
+    "triangles": 2392,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 159228,
+     "color": 280335,
+     "data": 274657
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     207,
+     19.0
+    ],
+    [
+     "forearm_l",
+     285,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     235,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     209,
+     19.3
+    ],
+    [
+     "forearm_r",
+     281,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     251,
+     16.8
+    ]
+   ]
+  },
+  "detailed-impostor-joe-skinned": {
+   "sheet": [
+    2048,
+    1564
+   ],
+   "sheet_memory_mb": 25.62,
+   "sheet_bytes": {
+    "color": 3478957,
+    "data": 3728152
+   },
+   "pieces": {
+    "triangles": 6282,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 330516,
+     "color": 281629,
+     "data": 275272
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     714,
+     19.0
+    ],
+    [
+     "forearm_l",
+     1033,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     888,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     721,
+     19.3
+    ],
+    [
+     "forearm_r",
+     1026,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     976,
+     16.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-bent": {
+   "sheet": [
+    1024,
+    1772
+   ],
+   "sheet_memory_mb": 14.52,
+   "sheet_bytes": {
+    "color": 620121,
+    "data": 2480514
+   }
+  },
+  "detailed-impostor-pixel-clear": {
+   "sheet": [
+    1024,
+    1172
+   ],
+   "sheet_memory_mb": 9.6,
+   "sheet_bytes": {
+    "color": 387009,
+    "data": 1519456
+   }
+  },
+  "detailed-impostor-pixel-clear-lean": {
+   "sheet": [
+    1024,
+    1172
+   ],
+   "sheet_memory_mb": 9.6,
+   "sheet_bytes": {
+    "color": 387009,
+    "data": 1519456
+   },
+   "pieces": {
+    "triangles": 2392,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 159228,
+     "color": 54603,
+     "data": 187960
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     207,
+     19.0
+    ],
+    [
+     "forearm_l",
+     285,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     235,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     209,
+     19.3
+    ],
+    [
+     "forearm_r",
+     281,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     251,
+     16.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-clear-skinned": {
+   "sheet": [
+    1024,
+    1172
+   ],
+   "sheet_memory_mb": 9.6,
+   "sheet_bytes": {
+    "color": 387009,
+    "data": 1519456
+   },
+   "pieces": {
+    "triangles": 6282,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 330516,
+     "color": 55789,
+     "data": 189180
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     714,
+     19.0
+    ],
+    [
+     "forearm_l",
+     1033,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     888,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     721,
+     19.3
+    ],
+    [
+     "forearm_r",
+     1026,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     976,
+     16.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-joined": {
+   "sheet": [
+    1024,
+    1172
+   ],
+   "sheet_memory_mb": 9.6,
+   "sheet_bytes": {
+    "color": 333100,
+    "data": 1519456
+   }
+  },
+  "detailed-impostor-pixel-lean": {
+   "sheet": [
+    1024,
+    1172
+   ],
+   "sheet_memory_mb": 9.6,
+   "sheet_bytes": {
+    "color": 333100,
+    "data": 1519456
+   },
+   "pieces": {
+    "triangles": 2392,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 159228,
+     "color": 48921,
+     "data": 187960
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     207,
+     19.0
+    ],
+    [
+     "forearm_l",
+     285,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     235,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     209,
+     19.3
+    ],
+    [
+     "forearm_r",
+     281,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     251,
+     16.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-skinned": {
+   "sheet": [
+    1024,
+    1172
+   ],
+   "sheet_memory_mb": 9.6,
+   "sheet_bytes": {
+    "color": 333100,
+    "data": 1519456
+   },
+   "pieces": {
+    "triangles": 6282,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 330516,
+     "color": 49532,
+     "data": 189180
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     714,
+     19.0
+    ],
+    [
+     "forearm_l",
+     1033,
+     17.3
+    ],
+    [
+     "thigh_l",
+     480,
+     26.1
+    ],
+    [
+     "shin_l",
+     888,
+     15.7
+    ],
+    [
+     "upper_arm_r",
+     721,
+     19.3
+    ],
+    [
+     "forearm_r",
+     1026,
+     17.5
+    ],
+    [
+     "thigh_r",
+     444,
+     24.4
+    ],
+    [
+     "shin_r",
+     976,
+     16.8
+    ]
+   ]
+  }
+ },
+ "young-lincoln-frontier-wrestler": {
+  "detailed-impostor-comic-joined": {
+   "sheet": [
+    1024,
+    1844
+   ],
+   "sheet_memory_mb": 15.11,
+   "sheet_bytes": {
+    "color": 2020766,
+    "data": 2215633
+   }
+  },
+  "detailed-impostor-comic-lean": {
+   "sheet": [
+    1024,
+    1844
+   ],
+   "sheet_memory_mb": 15.11,
+   "sheet_bytes": {
+    "color": 2020766,
+    "data": 2215633
+   },
+   "pieces": {
+    "triangles": 1997,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 121232,
+     "color": 212487,
+     "data": 257143
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     250,
+     13.2
+    ],
+    [
+     "shin_l",
+     166,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     242,
+     13.1
+    ],
+    [
+     "shin_r",
+     166,
+     11.0
+    ]
+   ]
+  },
+  "detailed-impostor-comic-skinned": {
+   "sheet": [
+    1024,
+    1844
+   ],
+   "sheet_memory_mb": 15.11,
+   "sheet_bytes": {
+    "color": 2020766,
+    "data": 2215633
+   },
+   "pieces": {
+    "triangles": 4145,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 207988,
+     "color": 211596,
+     "data": 253012
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     863,
+     13.2
+    ],
+    [
+     "shin_l",
+     630,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     857,
+     13.1
+    ],
+    [
+     "shin_r",
+     622,
+     11.0
+    ]
+   ]
+  },
+  "detailed-impostor-joe-bent": {
+   "sheet": [
+    2048,
+    1272
+   ],
+   "sheet_memory_mb": 20.84,
+   "sheet_bytes": {
+    "color": 2720150,
+    "data": 3264784
+   }
+  },
+  "detailed-impostor-joe-joined": {
+   "sheet": [
+    1024,
+    1724
+   ],
+   "sheet_memory_mb": 14.12,
+   "sheet_bytes": {
+    "color": 1846923,
+    "data": 2194222
+   }
+  },
+  "detailed-impostor-joe-lean": {
+   "sheet": [
+    1024,
+    1724
+   ],
+   "sheet_memory_mb": 14.12,
+   "sheet_bytes": {
+    "color": 1846923,
+    "data": 2194222
+   },
+   "pieces": {
+    "triangles": 1997,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 121232,
+     "color": 210013,
+     "data": 255732
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     250,
+     13.2
+    ],
+    [
+     "shin_l",
+     166,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     242,
+     13.1
+    ],
+    [
+     "shin_r",
+     166,
+     11.0
+    ]
+   ]
+  },
+  "detailed-impostor-joe-skinned": {
+   "sheet": [
+    1024,
+    1724
+   ],
+   "sheet_memory_mb": 14.12,
+   "sheet_bytes": {
+    "color": 1846923,
+    "data": 2194222
+   },
+   "pieces": {
+    "triangles": 4145,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 207988,
+     "color": 208618,
+     "data": 251891
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     863,
+     13.2
+    ],
+    [
+     "shin_l",
+     630,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     857,
+     13.1
+    ],
+    [
+     "shin_r",
+     622,
+     11.0
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-bent": {
+   "sheet": [
+    1024,
+    848
+   ],
+   "sheet_memory_mb": 6.95,
+   "sheet_bytes": {
+    "color": 220948,
+    "data": 1184533
+   }
+  },
+  "detailed-impostor-pixel-clear": {
+   "sheet": [
+    1024,
+    612
+   ],
+   "sheet_memory_mb": 5.01,
+   "sheet_bytes": {
+    "color": 162041,
+    "data": 820909
+   }
+  },
+  "detailed-impostor-pixel-clear-lean": {
+   "sheet": [
+    1024,
+    612
+   ],
+   "sheet_memory_mb": 5.01,
+   "sheet_bytes": {
+    "color": 162041,
+    "data": 820909
+   },
+   "pieces": {
+    "triangles": 1997,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 121232,
+     "color": 31035,
+     "data": 164209
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     250,
+     13.2
+    ],
+    [
+     "shin_l",
+     166,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     242,
+     13.1
+    ],
+    [
+     "shin_r",
+     166,
+     11.0
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-clear-skinned": {
+   "sheet": [
+    1024,
+    612
+   ],
+   "sheet_memory_mb": 5.01,
+   "sheet_bytes": {
+    "color": 162041,
+    "data": 820909
+   },
+   "pieces": {
+    "triangles": 4145,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 207988,
+     "color": 32489,
+     "data": 164451
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     863,
+     13.2
+    ],
+    [
+     "shin_l",
+     630,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     857,
+     13.1
+    ],
+    [
+     "shin_r",
+     622,
+     11.0
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-joined": {
+   "sheet": [
+    1024,
+    612
+   ],
+   "sheet_memory_mb": 5.01,
+   "sheet_bytes": {
+    "color": 155252,
+    "data": 820909
+   }
+  },
+  "detailed-impostor-pixel-lean": {
+   "sheet": [
+    1024,
+    612
+   ],
+   "sheet_memory_mb": 5.01,
+   "sheet_bytes": {
+    "color": 155252,
+    "data": 820909
+   },
+   "pieces": {
+    "triangles": 1997,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 121232,
+     "color": 35865,
+     "data": 164209
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     250,
+     13.2
+    ],
+    [
+     "shin_l",
+     166,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     242,
+     13.1
+    ],
+    [
+     "shin_r",
+     166,
+     11.0
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-skinned": {
+   "sheet": [
+    1024,
+    612
+   ],
+   "sheet_memory_mb": 5.01,
+   "sheet_bytes": {
+    "color": 155252,
+    "data": 820909
+   },
+   "pieces": {
+    "triangles": 4145,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 207988,
+     "color": 36674,
+     "data": 164451
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     426,
+     12.0
+    ],
+    [
+     "forearm_l",
+     326,
+     8.0
+    ],
+    [
+     "thigh_l",
+     863,
+     13.2
+    ],
+    [
+     "shin_l",
+     630,
+     11.4
+    ],
+    [
+     "upper_arm_r",
+     421,
+     12.2
+    ],
+    [
+     "thigh_r",
+     857,
+     13.1
+    ],
+    [
+     "shin_r",
+     622,
+     11.0
+    ]
+   ]
+  }
+ },
+ "roosevelt-wrestler-1890s": {
+  "detailed-impostor-comic-joined": {
+   "sheet": [
+    2048,
+    1040
+   ],
+   "sheet_memory_mb": 17.04,
+   "sheet_bytes": {
+    "color": 1898281,
+    "data": 2335630
+   }
+  },
+  "detailed-impostor-comic-lean": {
+   "sheet": [
+    2048,
+    1040
+   ],
+   "sheet_memory_mb": 17.04,
+   "sheet_bytes": {
+    "color": 1898281,
+    "data": 2335630
+   },
+   "pieces": {
+    "triangles": 2316,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 127980,
+     "color": 148792,
+     "data": 208256
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     216,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     203,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     223,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     202,
+     11.8
+    ]
+   ]
+  },
+  "detailed-impostor-comic-skinned": {
+   "sheet": [
+    2048,
+    1040
+   ],
+   "sheet_memory_mb": 17.04,
+   "sheet_bytes": {
+    "color": 1898281,
+    "data": 2335630
+   },
+   "pieces": {
+    "triangles": 4741,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 214108,
+     "color": 145556,
+     "data": 202845
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     836,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     789,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     858,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     786,
+     11.8
+    ]
+   ]
+  },
+  "detailed-impostor-joe-bent": {
+   "sheet": [
+    2048,
+    1488
+   ],
+   "sheet_memory_mb": 24.38,
+   "sheet_bytes": {
+    "color": 2959972,
+    "data": 3667739
+   }
+  },
+  "detailed-impostor-joe-joined": {
+   "sheet": [
+    1024,
+    1916
+   ],
+   "sheet_memory_mb": 15.7,
+   "sheet_bytes": {
+    "color": 1756487,
+    "data": 2243778
+   }
+  },
+  "detailed-impostor-joe-lean": {
+   "sheet": [
+    1024,
+    1916
+   ],
+   "sheet_memory_mb": 15.7,
+   "sheet_bytes": {
+    "color": 1756487,
+    "data": 2243778
+   },
+   "pieces": {
+    "triangles": 2316,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 127980,
+     "color": 146310,
+     "data": 206043
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     216,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     203,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     223,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     202,
+     11.8
+    ]
+   ]
+  },
+  "detailed-impostor-joe-skinned": {
+   "sheet": [
+    1024,
+    1916
+   ],
+   "sheet_memory_mb": 15.7,
+   "sheet_bytes": {
+    "color": 1756487,
+    "data": 2243778
+   },
+   "pieces": {
+    "triangles": 4741,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 214108,
+     "color": 143319,
+     "data": 200952
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     836,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     789,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     858,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     786,
+     11.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-bent": {
+   "sheet": [
+    1024,
+    1032
+   ],
+   "sheet_memory_mb": 8.45,
+   "sheet_bytes": {
+    "color": 316940,
+    "data": 1380710
+   }
+  },
+  "detailed-impostor-pixel-clear": {
+   "sheet": [
+    1024,
+    700
+   ],
+   "sheet_memory_mb": 5.73,
+   "sheet_bytes": {
+    "color": 190186,
+    "data": 888724
+   }
+  },
+  "detailed-impostor-pixel-clear-lean": {
+   "sheet": [
+    1024,
+    700
+   ],
+   "sheet_memory_mb": 5.73,
+   "sheet_bytes": {
+    "color": 190186,
+    "data": 888724
+   },
+   "pieces": {
+    "triangles": 2316,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 127980,
+     "color": 26777,
+     "data": 130584
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     216,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     203,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     223,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     202,
+     11.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-clear-skinned": {
+   "sheet": [
+    1024,
+    700
+   ],
+   "sheet_memory_mb": 5.73,
+   "sheet_bytes": {
+    "color": 190186,
+    "data": 888724
+   },
+   "pieces": {
+    "triangles": 4741,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 214108,
+     "color": 27262,
+     "data": 127899
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     836,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     789,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     858,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     786,
+     11.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-joined": {
+   "sheet": [
+    1024,
+    700
+   ],
+   "sheet_memory_mb": 5.73,
+   "sheet_bytes": {
+    "color": 162398,
+    "data": 888724
+   }
+  },
+  "detailed-impostor-pixel-lean": {
+   "sheet": [
+    1024,
+    700
+   ],
+   "sheet_memory_mb": 5.73,
+   "sheet_bytes": {
+    "color": 162398,
+    "data": 888724
+   },
+   "pieces": {
+    "triangles": 2316,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 127980,
+     "color": 22879,
+     "data": 130584
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     216,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     203,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     223,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     202,
+     11.8
+    ]
+   ]
+  },
+  "detailed-impostor-pixel-skinned": {
+   "sheet": [
+    1024,
+    700
+   ],
+   "sheet_memory_mb": 5.73,
+   "sheet_bytes": {
+    "color": 162398,
+    "data": 888724
+   },
+   "pieces": {
+    "triangles": 4741,
+    "size": [
+     512,
+     512
+    ],
+    "memory_mb": 2.1,
+    "bytes": {
+     "file": 214108,
+     "color": 23446,
+     "data": 127899
+    }
+   },
+   "joints": [
+    [
+     "upper_arm_l",
+     387,
+     14.2
+    ],
+    [
+     "forearm_l",
+     836,
+     11.7
+    ],
+    [
+     "thigh_l",
+     351,
+     17.8
+    ],
+    [
+     "shin_l",
+     789,
+     12.0
+    ],
+    [
+     "upper_arm_r",
+     374,
+     14.0
+    ],
+    [
+     "forearm_r",
+     858,
+     11.9
+    ],
+    [
+     "thigh_r",
+     360,
+     17.9
+    ],
+    [
+     "shin_r",
+     786,
+     11.8
+    ]
+   ]
+  }
+ }
+}

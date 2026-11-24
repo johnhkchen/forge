@@ -116,7 +116,8 @@ export function corners(card, cell, pxPerM, relief = true) {
 //     the joint (FILL.ball of the radius of the ring where the two parts meet): the limb goes on into the next
 //     part there. FILL.backM: how far behind its place such a pixel stands, so anything truly there covers it.
 // FILL.aPart: a part meets at most this many others. scripts/impostor/impostor.py has the same numbers.
-export const FILL = { ball: 1.0, backM: 0.02, inner: 0.8, tintReach: 0.6, tintIn: 0.8, ballBackM: 0.01, aPart: 4 };
+// FILL.zoneCore and FILL.zoneBackM are for a joint that has a piece of the real model in it (partBalls, below).
+export const FILL = { ball: 1.0, backM: 0.02, inner: 0.8, tintReach: 0.6, tintIn: 0.8, ballBackM: 0.01, aPart: 4, zoneCore: 0.6, zoneBackM: 0.03 };
 
 // The colour a part gives the ball of one of its joints: the middle colour (each of red, green and blue by itself)
 // of what the part's own pictures show round a place on it (`at`, in the bone's frame, metres; reachM round it),
@@ -159,16 +160,31 @@ export function inBone(bone, at) {
 export const ballBack = (jointAt, middle, eye) => (FILL.ballBackM * (1 - dot(unit(sub(middle, jointAt)), unit(sub(jointAt, eye))))) / 2;
 
 // For every part of a baked character, in order, the joints it has: [{ bone: the bone whose head is the joint,
-// radius: within which a see-through pixel is filled, inner: of the ball in it (metres at the bone's own size) }].
-// A sheet baked before the joints were mended says nothing of them: no balls.
+// radius: within which a see-through pixel is filled, inner: of the ball in it, zone: of the joint's zone and core:
+// of the zone's core, both 0 when it has none (metres at the bone's own size) }]. A sheet baked before the joints
+// were mended says nothing of them: no balls.
+//
+// A zone is a ball about a joint that has a piece of the real model in it (scripts/impostor/bake_joints.py; "skin"
+// in impostor.json): a knee, an elbow, a hip, a shoulder. While that piece is being drawn, the cards of the joint's
+// two parts step aside there. Inside the zone a card shows only what lies near its own bone's line (the core:
+// FILL.zoneCore of the ring where the two parts meet), and that stands FILL.zoneBackM further back. The piece is
+// the model's outside skin and covers it; where the model is one thing inside another (an arm in a wide cuff, seen
+// down the cuff) the piece has nothing to show, and the card's picture of the inside thing is still there. A page
+// that is not drawing the pieces (a runner far off on the tag field) leaves the zones off.
 export function partBalls(card) {
   const out = card.parts.map(() => []);
+  const zones = new Map((card.skin?.joints || []).map((joint) => [joint.bone, joint.zone_cm / 100]));
   for (const joint of card.joints || []) for (const name of joint.between) {
     const p = card.parts.findIndex((part) => part.name === name);
-    if (p >= 0 && out[p].length < FILL.aPart) out[p].push({ bone: joint.bone, radius: (FILL.ball * joint.ring_cm) / 100, inner: (FILL.inner * joint.ball_cm) / 100 });
+    if (p >= 0 && out[p].length < FILL.aPart) out[p].push({ bone: joint.bone, radius: (FILL.ball * joint.ring_cm) / 100, inner: (FILL.inner * joint.ball_cm) / 100, zone: zones.get(joint.bone) || 0, core: zones.has(joint.bone) ? (FILL.zoneCore * joint.ring_cm) / 100 : 0 });
   }
   return out;
 }
+
+// What a card's shader is told of one of its joints in its fourth number: the radius it is filled within in whole
+// millimetres and, after the point, how far back this part stands the ball (0 to a half of FILL.ballBackM: none to
+// all); the whole number made negative when the joint's zone is on (the piece of the model there is being drawn).
+export const jointNumber = (radius, back, zoneOn) => (Math.floor(radius * 1000) + (0.5 * back) / FILL.ballBackM) * (zoneOn ? -1 : 1);
 
 // How many steps the search down a pixel's line takes: enough that none is longer than march.px of the picture.
 export function marchSteps(card, cell, pxPerM, march) {

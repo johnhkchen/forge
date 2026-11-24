@@ -4,7 +4,7 @@
         [--runs runs] [--shots shots] [--take crew-candy-shop] [--model detailed] [--sheets old|new]
         [--times 9,13.5,18,...] [--walk 6] [--eyes crew,close] [--looks comic,pixel-baked,pixel-both,joe]
         [--why] [--stills left@24:close,right@31.5:crew] [--deep 2] [--clip tag=tag-moves/painted-tag.glb] [--only left]
-        [--fill off|ball+joint+screen]
+        [--fill off|ball+joint+screen] [--joints cards]
 
 For every one of the take's cast, at each of --times seconds of it (and at --walk moments of his own walk),
 through the set's crew camera and from 2 m off, it draws the character twice from the same eye: as cards, by
@@ -35,6 +35,9 @@ count what each is worth; off is the cards as they were before any of it.
 the parts as rigid pieces of the real model riding the bones (no pictures at all: what the cut alone leaves
 open); the search by depth in steps a quarter the length; the test that drops a pixel found far under the
 surface left out; the outline taken from the data sheet alone (no cover test on the colour).
+
+--joints cards reads the cards without the pieces of the real model that bake_joints.py puts in the big joints
+(<model>-impostor-<look>-skinned, read first when they are there), to count what the pieces change.
 
 --sheets old reads the sheets as they were baked before the joints were mended (<model>-impostor,
 -impostor-pixel-faces) and draws them as the page then did (a search by depth that gave up on the side of
@@ -70,6 +73,7 @@ TO_BL = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))  # a .
 # name: (which sheet, how many screen pixels one of the picture's is, the lines drawn on the finished picture)
 LOOKS = {"comic": ("comic", 1, None), "pixel-baked": ("pixel", 1, None), "pixel-screen": ("comic", 2, "grid"), "pixel-both": ("pixel", 2, "grid"), "joe": ("joe", 1, "bold")}
 PAPER = (250, 248, 245)
+PIECES = True          # read the cards that have a piece of the model in each big joint, when there are some (--joints cards: do not)
 
 
 def run_toon(**params):
@@ -90,7 +94,10 @@ def sheet_folder(profiles, model, sheet, which, look=""):
         names += ["%s-impostor-%s-faces" % (model, sheet), "%s-impostor-%s" % (model, sheet)]
     names += ["%s-impostor-comic-joined" % model] if which == "new" else []
     names.append("%s-impostor" % model)
-    return next(os.path.join(profiles, n) for n in names if os.path.isfile(os.path.join(profiles, n, "impostor.json")))
+    cards = next(os.path.join(profiles, n) for n in names if os.path.isfile(os.path.join(profiles, n, "impostor.json")))
+    # the same cards with a piece of the model for every big joint (bake_joints.py), when there are some and they are wanted
+    pieces = "%s-skinned" % (cards[:-len("-joined")] if cards.endswith("-joined") else cards)
+    return pieces if which == "new" and PIECES and os.path.isfile(os.path.join(pieces, "impostor.json")) else cards
 
 
 class Real:
@@ -326,6 +333,8 @@ def main():
     out = os.path.abspath(flag("--out", "evidence/seams"))
     os.makedirs(out, exist_ok=True)
     tag, which, model = flag("--tag", ""), flag("--sheets", "new"), flag("--model", "detailed")
+    global PIECES
+    PIECES = flag("--joints", "pieces") != "cards"
     runs, shots = os.path.abspath(flag("--runs", os.path.join(REPO, "runs"))), os.path.abspath(flag("--shots", os.path.join(REPO, "shots")))
     take = os.path.join(shots, flag("--take", "crew-candy-shop"))
     times = [float(t) for t in flag("--times", "9,13.5,18,22.5,27,31.5,36,40.5,45,49.5").split(",") if t]
@@ -422,7 +431,7 @@ def main():
                         # "Pixels, both" with a sheet baked for it draws the head on a grid twice as fine, so its picture
                         # is twice the size. To count in the same pixels as before it is brought back to big pixels: one
                         # is covered when half of it or more is, and inked when half of it or more is.
-                        fine = impostor.FINE if look == "pixel-both" and which == "new" and character.folder.endswith("-pixel-clear") else 1
+                        fine = impostor.FINE if look == "pixel-both" and which == "new" and "-pixel-clear" in os.path.basename(character.folder) else 1
                         if k not in reals:
                             reals[k], bodies[k] = real.draw(eye, per_px if k > 1 else 0.014), real.body(eye)
 

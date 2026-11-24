@@ -1,0 +1,77 @@
+{
+ "about": "the tag field, cards drawn all at once, the phone test's eye: runners near enough (8 m) to get pieces of the model in their joints, and those pieces' triangles, at four moments of the game",
+ "seen": {
+  "painted|100": [
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   }
+  ],
+  "painted|1000": [
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   }
+  ],
+  "detailed|100": [
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   }
+  ],
+  "detailed|1000": [
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   },
+   {
+    "runners": 0,
+    "triangles": 0
+   }
+  ]
+ }
+}

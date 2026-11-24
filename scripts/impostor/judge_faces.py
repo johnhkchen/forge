@@ -264,6 +264,10 @@ def main():
             print("FACES %s has no recipe to say where his features are: left out" % role, flush=True)
             continue
         folder = lambda name: os.path.join(profiles, "%s-%s" % (model, name))
+        if "--joints" not in args or flag("--joints", "") != "cards":  # the cards with a piece of the model in each big joint, when there are some
+            plain = folder
+            pieces = lambda name: "%s-skinned" % (plain(name)[:-len("-joined")] if name.endswith("-joined") else plain(name))
+            folder = lambda name: pieces(name) if os.path.isfile(os.path.join(pieces(name), "impostor.json")) else plain(name)
         joe = impostor.Character(folder("impostor-joe-joined"))
         comic = impostor.Character(folder("impostor-comic-joined")) if why else None
         named = flag("--sheet", "")

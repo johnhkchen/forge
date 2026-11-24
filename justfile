@@ -230,6 +230,15 @@ impostor-detailed run from="painted":
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --look pixel --px 96 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --look joe --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_joints.py -- "{{run}}" detailed 2>&1 | grep -E '^JOINTS .*skinned|^JOINTS left|Error|Traceback'
+
+# Give a character's flat cards real joints: for every knee, elbow, hip and shoulder a small piece of the model itself, with its skeleton's pull, drawn where the cards step aside (the cards must be baked first: `just impostor` or `just impostor-detailed`). Writes <version>-impostor-<look>-skinned/ beside each set of cards, which the pages read first; the cards' own sheets are left alone. more: bake_joints.py's flags (--triangles 320, --zone knee=1.6,..., --leave forearm_l to leave a joint to its cards). Ten seconds; never touches the open Blender
+impostor-joints run version="detailed" *more:
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_joints.py -- "{{run}}" "{{version}}" {{more}} 2>&1 | grep -E '^JOINTS|^RESULT \{"folders|Error|Traceback'
+
+# Does a bent joint read as the joint it is? A take's cast drawn as cards, joint by joint, against the real models posed the same: how well the light and dark there follows the model's (likeness), how much is a dark blot the model has not got, how far the colour is off, and pixels left bare; bold ink and "Pixels, both", through the set's crew camera, from 2 m and from 1 m. Writes joints[-tag].json into out. more: judge_joints.py's flags (--sheets joined for the cards without the pieces in their joints; --at 38 --deep 2 for which moments; --stills asked for pictures)
+impostor-knees take="crew-candy-shop" tag="after" out="evidence/knees" *more:
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_joints.py -- --take "{{take}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^JOINTS .*\||^RESULT \{"out|Error|Traceback'
 
 # Stills of a take's faces on the watch page (pixel cards, and meshes drawn small), from the set's camera and close on each, and how many pixels each face gets, into out as <tag>-*.png and <tag>-faces.json (the gallery must be running on that port; needs Chrome)
 face-shots take="crew-candy-shop" tag="after" port="8028" out="evidence/faces" at="12":
@@ -251,9 +260,9 @@ impostor-judge run version="painted" out="evidence/impostor" *more:
 impostor-seams take="crew-candy-shop" tag="after" out="evidence/seams" *more:
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_seams.py -- --take "{{take}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^SEAMS [a-z]+\||^BENT|^WHY|^RESULT \{"out|Error|Traceback'
 
-# Stills of a take's bent joints from two galleries side by side (say, main's and a branch's): a square round each joint through the set's camera, from 2 m and from 1 m, into out as <joint>-<look>.png (both galleries must be running; needs Chrome). more: joint_shots.py's flags (--joints knee=1:shin_l@16.25,... --looks joe,pixel-both --stage 42.25)
-joint-shots before="8030" after="8028" take="crew-candy-shop" out="evidence/joints" *more:
-    python3 scripts/impostor/joint_shots.py "before=http://localhost:{{before}}/" "after=http://localhost:{{after}}/" --take "{{take}}" --out "{{out}}" {{more}} | grep -E '^SHOTS|Error|Traceback'
+# Stills of a take's bent joints from two galleries side by side (say, main's and a branch's): a square round each joint through the set's camera, from 2 m and from 1 m, into out as <joint>-<look>.png (both galleries must be running; needs Chrome). A gallery is its port and a slash; "8045/?joints=cards" is that gallery with the pieces of the real model left out of the joints, so one gallery can be its own before. more: joint_shots.py's flags (--joints knee=1:shin_l@16.25,... --looks joe,pixel-both --stage 42.25)
+joint-shots before="8030/" after="8028/" take="crew-candy-shop" out="evidence/joints" *more:
+    python3 scripts/impostor/joint_shots.py "before=http://localhost:{{before}}" "after=http://localhost:{{after}}" --take "{{take}}" --out "{{out}}" {{more}} | grep -E '^SHOTS|Error|Traceback'
 
 # Stills of a take's joints on the watch page: the stage from the set's camera, close on each of the cast, and closer still on an elbow and a knee, as cards in every look, and the stage as meshes, into out as <tag>-*.png (the gallery must be running on that port; needs Chrome)
 seam-shots take="crew-candy-shop" tag="after" port="8028" out="evidence/seams" at="24":

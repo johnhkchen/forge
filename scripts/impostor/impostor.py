@@ -48,6 +48,8 @@ FILL_INNER = 0.8     # the ball in a joint is this share of the ball the bake fo
 TINT_REACH = 0.6     # the colour a part gives a joint's ball is looked for this share of the ball's radius round a place ...
 TINT_IN = 0.8        # ... this share of the joint's ring radius in from the joint, toward the middle of the part: its own skin, past what it borrows from next door
 BALL_BACK_M = 0.01   # two parts both draw the ball of the joint between them, each in its own colour: the one whose body is not behind the ball, as the eye sees it, stands its ball back by up to this
+ZONE_CORE = 0.6      # inside a joint's zone a card still shows what lies within this share of the ring's radius of its own bone's line (an arm inside a wide cuff): the piece of the model there is one skin, the outside one
+ZONE_BACK_M = 0.03   # ... standing this far back, so the piece covers it wherever the piece is
 BALLS_A_PART = 4     # a part meets at most this many others (a chest: the spine, the head and two arms)
 BLEND_DEG = 7.0      # two views are mixed when the eye is within this of the line between them
 HOLD_DEG = 2.5       # a view is kept until another is nearer by this much (stops flicker on the line)
@@ -426,6 +428,26 @@ def read_png(path):
 
 # ---------- a .glb's skeleton and how it moves, read straight from the file ----------
 
+def about(axis, angle):
+    """The turn by an angle (radians) about an axis: 3x3."""
+    x, y, z = unit(axis)
+    c, s_ = math.cos(angle), math.sin(angle)
+    k = np.array([[0.0, -z, y], [z, 0.0, -x], [-y, x, 0.0]])
+    return np.eye(3) + s_ * k + (1.0 - c) * (k @ k)
+
+
+def angle_of(turn):
+    """How far a 3x3 turn turns, radians."""
+    return math.acos(max(-1.0, min(1.0, (float(np.trace(turn)) - 1.0) / 2.0)))
+
+
+def axis_angle(turn):
+    """A 3x3 turn as (the axis it turns about, how far in radians)."""
+    angle = angle_of(turn)
+    axis = np.array([turn[2, 1] - turn[1, 2], turn[0, 2] - turn[2, 0], turn[1, 0] - turn[0, 1]])
+    return (unit(axis) if np.linalg.norm(axis) > 1e-9 else np.array([0.0, 1.0, 0.0])), angle
+
+
 def quat_matrix(q):
     x, y, z, w = q
     return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
@@ -569,9 +591,12 @@ class Character:
         self.cells = sheet["cells"]
         lit = np.round(self.colour * 255.0)
         self.balls, self.tints, self.pixel = part_balls(self.card), getattr(self, "tints", {}), lambda x, y: lit[y, x]
+        self.zones = part_zones(self.card)
+        if self.card.get("skin") and not hasattr(self, "skin"):
+            self.skin = Skin(self.folder, self.card["skin"])
 
 
-def card_pixels(character, part, view_index, card, eye, relief=True, line="shell", keep_dark=False, balls=None):
+def card_pixels(character, part, view_index, card, eye, relief=True, line="shell", keep_dark=False, balls=None, within=None):
     """One card as the eye sees it: (x0, y0, colour HxWx3 as stored, cover HxW 0..1, normal HxWx3 in the bone's
     frame, distance in front HxW, HxW True where the pixel is the part's ink line), or None when it is off the
     picture. The page's fragment shader, slowly.
@@ -582,7 +607,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     the sheet's), a pixel takes the darkest of what it covers when that is a good deal darker than its middle: an
     eye or a brow one sheet pixel wide is kept, where reading only the middle would drop it on every other frame.
     balls: this part's joints where they are now (joint_balls): a see-through pixel near one is filled, and each
-    has a ball in it."""
+    has a ball in it, or a zone (the last number of each: joint_balls) inside which the card shows nothing."""
     cell = character.cells[part["name"]][view_index]
     x0, y0, w, h, ax, ay, low, high = cell
     if w <= 0 or h <= 0:
@@ -638,7 +663,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
                 # under the surface, and inside a joint's ball: the first such place on the line is kept for the filling
                 here = world + toward_eye * ((spot[..., 0] * card["deep"][0] + spot[..., 1] * card["deep"][1] + at * card["deep"][2]) * card["size"])[..., None]
                 inside_ball = np.zeros(xs.shape, dtype=bool)
-                for centre, ring, _, _, _ in round_:
+                for centre, ring, _, _, _, _ in round_:
                     inside_ball |= ((here - centre) ** 2).sum(axis=-1) < ring * ring
                 first = under & ~found & ~walled & inside_ball
                 wall_at[first] = at
@@ -731,6 +756,19 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"]
     point = world + toward_eye * out[..., None]
     ahead = -((point - eye.at) @ eye.turn[:, 2])
+    if within is not None:  # a joint's own card (pictured bent) shows only what is in its zone and a little past it
+        inside = inside & (((point - within[0]) ** 2).sum(axis=-1) < within[1] * within[1])
+    stood_back = np.zeros(out.shape)
+    for centre, _, _, _, _, (zone, core) in balls:  # inside a joint's zone the piece of the model there is what shows (part_zones)
+        if zone > 0.0:
+            off = point - centre
+            far2 = (off ** 2).sum(axis=-1)
+            within_zone = far2 < zone * zone
+            along = off @ card["turn"][:, 1]
+            inside = inside & ~(within_zone & (far2 - along * along > core * core))
+            stood_back = np.maximum(stood_back, np.where(within_zone, ZONE_BACK_M, 0.0))
+    if stood_back.any():
+        ahead = -((world + toward_eye * (out - stood_back)[..., None] - eye.at) @ eye.turn[:, 2])
     cover = np.where(inside, rgba[..., 3], 0.0)
     inked = inked & inside
     rgb = rgba[..., :3]
@@ -742,9 +780,9 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         # looking in at the open end of the part, at the inside of its far wall, and the ball stops the hollow.
         # Skin is nearer than the ball everywhere else, and covers it. Where the picture has no surface at all
         # the ball is not drawn: beside a thin arm in a wide sleeve there is nothing, and a ball would be a knob.
-        surface = np.where(cover >= 0.5, reach - out, np.inf)  # how far along the eye's line the picture's surface is
+        surface = np.where(cover >= 0.5, reach - out, np.inf)  # (where the surface is, not where a zone stands it back to)  # how far along the eye's line the picture's surface is
         nearest, colour, facing = surface.copy(), np.zeros(rgb.shape, dtype=np.float32), np.zeros(rgb.shape, dtype=np.float64)
-        for centre, _, inner, tint, back in balls:
+        for centre, _, inner, tint, back, _ in balls:
             off = centre - eye.at
             along = -(toward_eye @ off)                       # the eye's line runs from the eye away through the pixel
             under_root = along * along - off @ off + inner * inner
@@ -810,6 +848,23 @@ def part_balls(card):
     return {name: balls[:BALLS_A_PART] for name, balls in out.items()}
 
 
+def part_zones(card):
+    """{part name: [(the radius of the zone, the radius of its core) of each of the part's joints, in the order
+    part_balls lists them (m at the bone's own size); 0 for a joint with none]}. A zone is a ball about a joint
+    that has a piece of the real model in it (bake_joints.py; "skin" in impostor.json): the piece, which bends as
+    the model does, is drawn there, and the cards of the joint's two parts step aside. Inside the zone a card
+    shows only what lies near its own bone's line (the core: ZONE_CORE of the ring where the two parts meet), and
+    that stands ZONE_BACK_M further back: the piece is the model's outside skin and covers it; where the model
+    is one thing inside another (an arm in a wide cuff, seen down the cuff) the piece has nothing to show and
+    the card's picture of the inside thing is still there."""
+    zone = {j["bone"]: j["zone_cm"] / 100.0 for j in (card.get("skin") or card.get("bent") or {}).get("joints", [])}
+    out = {}
+    for joint in card.get("joints") or []:
+        for name in joint["between"]:
+            out.setdefault(name, []).append((zone.get(joint["bone"], 0.0), ZONE_CORE * joint["ring_cm"] / 100.0 if joint["bone"] in zone else 0.0))
+    return {name: zones[:BALLS_A_PART] for name, zones in out.items()}
+
+
 def ball_back(joint_at, middle, eye_at):
     """How far back a part stands the ball of one of its joints (m): nothing when the part's own body is straight
     behind the ball as the eye sees it (the eye is looking in at that part's open end, and the ball is that part's
@@ -828,14 +883,14 @@ def joint_balls(character, part, bone, pose, eye_at):
     size = float(np.cbrt(abs(np.linalg.det(turn))))
     middle = bone[:3, 3] + turn @ np.asarray(part["center"], dtype=np.float64)
     out = []
-    for name, ring, inner in character.balls.get(part["name"], []):
+    for (name, ring, inner), zone in zip(character.balls.get(part["name"], []), character.zones.get(part["name"], [])):
         if name not in pose:
             continue
         at = np.asarray(pose[name], dtype=np.float64)[:3, 3]
         key = (character.set_name, part["name"], name)
         if key not in character.tints:
             character.tints[key] = np.asarray(own_tint(character.card, character.sheet, part, tint_place((turn / size).T @ (at - bone[:3, 3]) / size, part["center"], ring), TINT_REACH * inner, character.pixel), dtype=np.float32)
-        out.append((at, ring * size, inner * size, character.tints[key], ball_back(at, middle, eye_at)))
+        out.append((at, ring * size, inner * size, character.tints[key], ball_back(at, middle, eye_at), (zone[0] * size, zone[1] * size)))
     return out
 
 
@@ -897,11 +952,32 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
     depth = np.full((tall, wide), np.inf, dtype=np.float32)
     said = {}
     pattern = np.tile(BAYER, (tall // 4 + 1, wide // 4 + 1))[:tall, :wide]
-    for index, part in enumerate(character.parts):
-        name = part["name"]
-        if only is not None and name not in only:
+    names = [p["name"] for p in character.parts]
+    bent = []
+    for joint in (character.card.get("bent") or {}).get("joints", []):
+        # A joint pictured bent: the card of the bend nearest to how far the joint is bent now, riding the bone above,
+        # turned about the joint by half of what is left over, so it is out by half of that at each of its two ends.
+        if only is not None and not (set(joint["between"]) & set(only)):
             continue
-        bone = pose[part["bone"]]
+        a, b = np.asarray(pose[joint["upper"]], dtype=np.float64), np.asarray(pose[joint["bone"]], dtype=np.float64)
+        size = float(np.cbrt(abs(np.linalg.det(a[:3, :3]))))
+        ra, rb = a[:3, :3] / size, b[:3, :3] / float(np.cbrt(abs(np.linalg.det(b[:3, :3]))))
+        cut = np.asarray(joint["cut_turn"], dtype=np.float64)
+        now = cut.T @ (ra.T @ rb)
+        turns = [about(joint["axis"], math.radians(d)) for d in joint["bends"]]
+        k = int(np.argmin([angle_of(t.T @ now) for t in turns]))
+        baked = ra @ cut @ turns[k]
+        axis, left = axis_angle(baked @ (turns[k].T @ now) @ baked.T)
+        ride = np.eye(4)
+        ride[:3, :3] = about(axis, left / 2.0)
+        ride[:3, 3] = b[:3, 3] - ride[:3, :3] @ b[:3, 3]
+        part = next(p for p in character.parts if p["name"] == "%s@%g" % (joint["bone"], joint["bends"][k]))
+        bent.append((names.index(joint["part"]), part, ride @ a, (b[:3, 3], joint["reach_cm"] / 100.0 * size)))
+    for index, part, bone, within in [(i, p, None, None) for i, p in enumerate(character.parts) if "joint" not in p] + bent:
+        name = part["name"]
+        if bone is None and only is not None and name not in only:
+            continue
+        bone = pose[part["bone"]] if bone is None else bone
         v = eye_in_bone(bone, part["center"], eye.at)
         first, second, share = choose(character.dirs, v, None if held is None else held.get(name))
         if forced and name in forced:
@@ -913,7 +989,7 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
         showing = [(first, None)] if not blend or share >= 1.0 else [(first, share), (second, share)]
         for n, (view, portion) in enumerate(showing):
             card = place(character.views[view], bone, part["center"], eye.at)
-            got = card_pixels(character, part, view, card, eye, relief, line, keep_dark and name == "head", joint_balls(character, part, bone, pose, eye.at))
+            got = card_pixels(character, part, view, card, eye, relief, "off" if within else line, keep_dark and name == "head", [] if within else joint_balls(character, part, bone, pose, eye.at), within)
             if got is None:
                 continue
             x0, y0, rgb, cover, normal, ahead, inked = got
@@ -932,10 +1008,96 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
                 who[y0:y0 + h, x0:x0 + w][keep] = 1 + PARTS_A_FIGURE * (figure % 15) + index % PARTS_A_FIGURE
             if lines is not None:
                 lines[y0:y0 + h, x0:x0 + w][keep] = inked[keep]
+    if getattr(character, "skin", None) is not None:
+        draw_skin(character, pose, eye, colour, depth, who, figure, paint, only)
     out = np.zeros((tall, wide, 4), dtype=np.uint8)
     out[..., :3] = np.round(to_screen(colour) * 255.0)
     out[..., 3] = np.where(np.isfinite(depth), 255, 0)
     return out, depth, said
+
+
+# ---------- a piece of the real model in each big joint (bake_joints.py) ----------
+
+class Skin:
+    """The pieces of the model that are drawn in a character's big joints: joints.glb (points, where each is on the
+    atlas, the bones that pull on it and how much; a material a joint) and its two pictures (colour; which way the
+    surface faces, as the model has it at rest)."""
+
+    def __init__(self, folder, said):
+        glb = Glb(os.path.join(folder, said["file"]))
+        doc = glb.doc
+        skin = doc["skins"][0]
+        self.bones = [doc["nodes"][n].get("name", "") for n in skin["joints"]]
+        self.inverse = glb.numbers(skin["inverseBindMatrices"]).astype(np.float64).reshape(-1, 4, 4).transpose(0, 2, 1)
+        self.pieces = {}  # the bone whose head is the joint: (points Vx3, uv Vx2 (v upward), bones Vx4, pull Vx4, triangles Tx3)
+        for prim in doc["meshes"][0]["primitives"]:
+            a = prim["attributes"]
+            uv = glb.numbers(a["TEXCOORD_0"]).astype(np.float64)
+            pull = glb.numbers(a["WEIGHTS_0"]).astype(np.float64)
+            self.pieces[doc["materials"][prim["material"]]["name"][len("joint "):]] = (
+                glb.numbers(a["POSITION"]).astype(np.float64), np.stack([uv[:, 0], 1.0 - uv[:, 1]], axis=1), glb.numbers(a["JOINTS_0"]).astype(np.int64),
+                pull / np.maximum(pull.sum(axis=1, keepdims=True), 1e-9), glb.numbers(prim["indices"]).astype(np.int64).reshape(-1, 3))
+        self.colour = read_png(os.path.join(folder, said["color"])).astype(np.float32) / 255.0
+        self.facing = unpack_normal(read_png(os.path.join(folder, said["data"])).astype(np.float32)[..., :2] / 255.0)
+        self.joints = said["joints"]
+
+    def stood(self, bone, pose):
+        """One joint's piece as a pose has it: (points Vx3 in the world, each point's turn Vx3x3)."""
+        points, _, bones, pull, _ = self.pieces[bone]
+        each = np.stack([np.asarray(pose[name], dtype=np.float64) @ inv for name, inv in zip(self.bones, self.inverse)])
+        blend = (each[bones] * pull[..., None, None]).sum(axis=1)
+        return (blend[:, :3, :3] @ points[..., None])[..., 0] + blend[:, :3, 3], blend[:, :3, :3]
+
+
+def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=None, only=None):
+    """The pieces of the model in a character's big joints, drawn into a picture of its cards (colour: light as it
+    adds up; depth: distance in front; who: which card each pixel shows, or None). A piece is the model's own
+    surface, bending as the skeleton pulls on it; it is seen from outside only (a face turned away from the eye is
+    left out, so the inside of a sleeve or a trouser leg never shows), in the colours its cards have there, lit by
+    the facing the cards have there, turned as the bones have turned it. A piece's pixels say they are the part
+    below the joint. The page does the same (gallery/impostor.js: JOINT_VERTEX, JOINT_FRAGMENT)."""
+    skin = character.skin
+    wide, tall = eye.size
+    size = skin.colour.shape[0]
+    names = [p["name"] for p in character.parts]
+    for joint in skin.joints:
+        if joint["bone"] not in skin.pieces or (only is not None and not (set(joint["between"]) & set(only))):
+            continue
+        at, turns = skin.stood(joint["bone"], pose)
+        _, uv, _, _, tris = skin.pieces[joint["bone"]]
+        bone = np.asarray(pose[joint["bone"]], dtype=np.float64)
+        centre, reach = bone[:3, 3], joint["reach_cm"] / 100.0 * float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))
+        spots, ahead = eye.to_pixels(at)
+        number = 1 + PARTS_A_FIGURE * (figure % 15) + names.index(joint["part"]) % PARTS_A_FIGURE
+        for t in tris:
+            (x0, y0), (x1, y1), (x2, y2) = spots[t]
+            area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)
+            if area <= 1e-9 or (ahead[t] <= eye.near).any():  # turned away from the eye, or behind it
+                continue
+            lo_x, hi_x = max(0, int(math.floor(min(x0, x1, x2)))), min(wide, int(math.ceil(max(x0, x1, x2))))
+            lo_y, hi_y = max(0, int(math.floor(min(y0, y1, y2)))), min(tall, int(math.ceil(max(y0, y1, y2))))
+            if hi_x <= lo_x or hi_y <= lo_y:
+                continue
+            xs, ys = np.meshgrid(np.arange(lo_x, hi_x) + 0.5, np.arange(lo_y, hi_y) + 0.5)
+            w0 = ((x1 - xs) * (y2 - ys) - (x2 - xs) * (y1 - ys)) / area
+            w1 = ((x2 - xs) * (y0 - ys) - (x0 - xs) * (y2 - ys)) / area
+            w = np.stack([w0, w1, 1.0 - w0 - w1], axis=-1)
+            far = w @ ahead[t]
+            keep = (w >= 0.0).all(axis=-1) & (far < depth[lo_y:hi_y, lo_x:hi_x])
+            keep &= (((w @ at[t] - centre) ** 2).sum(axis=-1) < reach * reach)  # a piece is drawn in its zone and a little past it
+            if not keep.any():
+                continue
+            w = w[keep]
+            place = w @ uv[t]
+            iy, ix = np.clip(np.floor(place[:, 1] * size).astype(int), 0, size - 1), np.clip(np.floor(place[:, 0] * size).astype(int), 0, size - 1)
+            normal = np.einsum("nk,kij,nj->ni", w, turns[t], skin.facing[iy, ix].astype(np.float64))
+            normal /= np.maximum(np.linalg.norm(normal, axis=1, keepdims=True), 1e-9)
+            rgb = skin.colour[iy, ix, :3]
+            lit = to_linear(rgb) * tones(normal, np.eye(3), eye) if paint is None else painted(rgb, normal, np.eye(3), eye, paint)
+            colour[lo_y:hi_y, lo_x:hi_x][keep] = lit
+            depth[lo_y:hi_y, lo_x:hi_x][keep] = far[keep]
+            if who is not None:
+                who[lo_y:hi_y, lo_x:hi_x][keep] = number
 
 
 # ---------- lines drawn on the finished picture (gallery/looks.js does the same on the graphics card) ----------

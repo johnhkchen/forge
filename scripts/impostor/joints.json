@@ -1,0 +1,4 @@
+{
+ "about": "Joints that bake_joints.py leaves to their cards whatever it finds, by character (a run's name without its date). The pirate's elbows are inside wide cuffs: a piece is the cuff's outside skin, and from close by, bent far, it showed as a blade across his forearm.",
+ "stocky-pirate-deckhand": {"leave": ["forearm_l", "forearm_r"]}
+}

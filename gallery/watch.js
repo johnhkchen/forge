@@ -4,12 +4,14 @@
 // take played into its skeleton. This page stands the set up, brings every role on, and plays them together from
 // one clock, so it can be paused and wound back and forth. Each character whose run has baked cards
 // (scripts/impostor/bake_impostor.py) can be drawn as cards riding the same skeleton: one card a bone, as on the
-// cards page. The eye can be any of the set's own cameras, or free.
+// cards page, and in every knee, elbow, hip and shoulder a piece of the real model that bends as the skeleton
+// pulls it (scripts/impostor/bake_joints.py), when the cards have them. The eye can be any of the set's own
+// cameras, or free.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, sheetBalls } from "./impostor.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, sheetBalls, skinFor, skinMeshes } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, withoutHeads } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
 
@@ -221,9 +223,11 @@ class TakeViewer {
       actor.folder = folder;
       const card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
       const sheet = card.sets[card.default_views];
-      const [colour, data] = await Promise.all([picture(`${folder}/${sheet.color}`, true, card.nearest), picture(`${folder}/${sheet.data}`, false)]);
+      const [colour, data, skin] = await Promise.all([picture(`${folder}/${sheet.color}`, true, card.nearest), picture(`${folder}/${sheet.data}`, false), skinFor(folder, card, this.loader)]);
       actor.sheet?.colour.dispose();
       actor.sheet?.data.dispose();
+      actor.joined?.dispose();
+      actor.skin?.dispose();
       Object.assign(actor, { card, sheet: { ...sheet, colour, data, dirs: sheet.views.map((v) => v.d) }, held: {} });
       actor.joints = sheetBalls(card, actor.sheet);
       actor.jointAt = (name) => { const e = actor.bones[name]?.matrixWorld.elements; return e && [e[12], e[13], e[14]]; };
@@ -243,6 +247,10 @@ class TakeViewer {
         actor.cards.add(quad);
         return quad;
       });
+      // the pieces of the model in the big joints, riding the same skeleton
+      actor.skin = skin;
+      actor.joined = skinMeshes(skin, actor.bones, this.paint);
+      if (actor.joined) actor.cards.add(actor.joined.group);
       line();
     }
   }
@@ -281,9 +289,10 @@ class TakeViewer {
       u.size.value = where.size;
       u.steps.value = marchSteps(where, cell, density(card, part), card.march);
       u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, bone.matrixWorld)).multiplyScalar(1 / where.size);
-      setBalls(quad, actor.joints[p], part.center, world, this.camera, actor.jointAt, where.size);
+      setBalls(quad, actor.joints[p], part.center, world, this.camera, actor.jointAt, where.size, Boolean(actor.joined));
       if (part.name === "head") setHeadGrid(quad, this.screen, this.look, this.camera, where.head);
     });
+    actor.joined?.set(this.camera, this.look, card, this.cast.indexOf(actor));
   }
 
   tick() {
@@ -315,14 +324,14 @@ class TakeViewer {
 
   report() {
     return { ready: this.cast.length === this.take.roles.length && this.cast.every((c) => c.mixer), take: this.take.id, time: this.time, length: this.length, look: this.look.id, eye: this.state.eye || "free",
-      cards: this.state.cards, cast: this.cast.map((c) => ({ role: c.role.role, run: c.run?.id || null, cards: c.folder || null, quads: c.quads.length, meshes: c.meshes.length, face: c.face ? { marks: c.face.geometry.index.count / 6, dropped: c.face.userData.dropped } : null })), error: this.error || null };
+      cards: this.state.cards, cast: this.cast.map((c) => ({ role: c.role.role, run: c.run?.id || null, cards: c.folder || null, quads: c.quads.length, joints: c.joined ? c.skin.pieces.length : 0, meshes: c.meshes.length, face: c.face ? { marks: c.face.geometry.index.count / 6, dropped: c.face.userData.dropped } : null })), error: this.error || null };
   }
 
   dispose() {
     cancelAnimationFrame(this.frame);
     this.resize.disconnect();
     this.controls.dispose();
-    for (const actor of this.cast) { actor.sheet?.colour.dispose(); actor.sheet?.data.dispose(); }
+    for (const actor of this.cast) { actor.sheet?.colour.dispose(); actor.sheet?.data.dispose(); actor.joined?.dispose(); actor.skin?.dispose(); }
     this.screen.dispose();
     this.renderer.dispose();
     delete window.forgeWatch;

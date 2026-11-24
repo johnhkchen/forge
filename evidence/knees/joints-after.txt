@@ -1,0 +1,265 @@
+JOINTS 1|comic|any|60 and over                       36 joints: likeness 0.604 (worst 0.032), blots  4.4%, colour off 11.2, bare 413.1 px
+JOINTS 1|comic|elbow|90 and over                      6 joints: likeness 0.552 (worst 0.278), blots  5.9%, colour off 11.6, bare 149.5 px
+JOINTS 1|comic|elbow|all                              6 joints: likeness 0.552 (worst 0.278), blots  5.9%, colour off 11.6, bare 149.5 px
+JOINTS 1|comic|elbow|asked                            6 joints: likeness 0.552 (worst 0.278), blots  5.9%, colour off 11.6, bare 149.5 px
+JOINTS 1|comic|hip|30 to 60                           8 joints: likeness 0.584 (worst 0.258), blots  0.7%, colour off  6.6, bare 1041.9 px
+JOINTS 1|comic|hip|60 to 90                           6 joints: likeness 0.285 (worst 0.032), blots  3.3%, colour off  7.0, bare 194.1 px
+JOINTS 1|comic|hip|90 and over                        4 joints: likeness 0.744 (worst 0.664), blots  4.3%, colour off 14.2, bare 767.3 px
+JOINTS 1|comic|hip|all                               18 joints: likeness 0.520 (worst 0.032), blots  2.4%, colour off  8.4, bare 698.3 px
+JOINTS 1|comic|hip|asked                              6 joints: likeness 0.427 (worst 0.032), blots  3.1%, colour off  9.3, bare 466.5 px
+JOINTS 1|comic|knee|30 to 60                          2 joints: likeness 0.942 (worst 0.930), blots  1.0%, colour off  5.2, bare 487.2 px
+JOINTS 1|comic|knee|60 to 90                          4 joints: likeness 0.765 (worst 0.473), blots  1.3%, colour off  6.7, bare 446.3 px
+JOINTS 1|comic|knee|90 and over                       6 joints: likeness 0.755 (worst 0.560), blots  2.9%, colour off  9.0, bare 423.6 px
+JOINTS 1|comic|knee|all                              12 joints: likeness 0.789 (worst 0.473), blots  2.1%, colour off  7.6, bare 441.8 px
+JOINTS 1|comic|knee|asked                            12 joints: likeness 0.789 (worst 0.473), blots  2.1%, colour off  7.6, bare 441.8 px
+JOINTS 1|comic|shaft|shaft                           30 joints: likeness 0.553 (worst 0.081), blots  5.5%, colour off 12.1, bare 401.7 px
+JOINTS 1|comic|shoulder|30 to 60                      2 joints: likeness 0.428 (worst 0.366), blots 14.2%, colour off 23.7, bare  92.0 px
+JOINTS 1|comic|shoulder|60 to 90                      3 joints: likeness 0.608 (worst 0.463), blots 10.0%, colour off 19.2, bare 582.9 px
+JOINTS 1|comic|shoulder|90 and over                   7 joints: likeness 0.618 (worst 0.408), blots  4.8%, colour off 13.5, bare 523.4 px
+JOINTS 1|comic|shoulder|all                          12 joints: likeness 0.584 (worst 0.366), blots  7.7%, colour off 16.6, bare 466.4 px
+JOINTS 1|comic|shoulder|asked                         6 joints: likeness 0.611 (worst 0.408), blots  5.2%, colour off 13.7, bare 561.2 px
+JOINTS 1|joe|any|60 and over                         36 joints: likeness 0.619 (worst 0.000), blots  3.4%, colour off 22.0, bare 478.5 px
+JOINTS 1|joe|elbow|90 and over                        6 joints: likeness 0.597 (worst 0.000), blots  3.1%, colour off 25.0, bare 228.5 px
+JOINTS 1|joe|elbow|all                                6 joints: likeness 0.597 (worst 0.000), blots  3.1%, colour off 25.0, bare 228.5 px
+JOINTS 1|joe|elbow|asked                              6 joints: likeness 0.597 (worst 0.000), blots  3.1%, colour off 25.0, bare 228.5 px
+JOINTS 1|joe|hip|30 to 60                             8 joints: likeness 0.642 (worst 0.426), blots  0.8%, colour off 16.4, bare 729.5 px
+JOINTS 1|joe|hip|60 to 90                             6 joints: likeness 0.533 (worst 0.274), blots  1.6%, colour off 16.0, bare 143.1 px
+JOINTS 1|joe|hip|90 and over                          4 joints: likeness 0.706 (worst 0.651), blots  4.0%, colour off 22.5, bare 853.4 px
+JOINTS 1|joe|hip|all                                 18 joints: likeness 0.620 (worst 0.274), blots  1.8%, colour off 17.7, bare 561.6 px
+JOINTS 1|joe|hip|asked                                6 joints: likeness 0.553 (worst 0.274), blots  2.3%, colour off 18.0, bare 489.4 px
+JOINTS 1|joe|knee|30 to 60                            2 joints: likeness 0.905 (worst 0.877), blots  0.6%, colour off 10.9, bare 585.4 px
+JOINTS 1|joe|knee|60 to 90                            4 joints: likeness 0.682 (worst 0.387), blots  1.6%, colour off 17.8, bare 556.6 px
+JOINTS 1|joe|knee|90 and over                         6 joints: likeness 0.713 (worst 0.582), blots  2.3%, colour off 20.1, bare 383.3 px
+JOINTS 1|joe|knee|all                                12 joints: likeness 0.735 (worst 0.387), blots  1.8%, colour off 17.8, bare 474.8 px
+JOINTS 1|joe|knee|asked                              12 joints: likeness 0.735 (worst 0.387), blots  1.8%, colour off 17.8, bare 474.8 px
+JOINTS 1|joe|shaft|shaft                             30 joints: likeness 0.597 (worst 0.000), blots  2.8%, colour off 20.5, bare 517.0 px
+JOINTS 1|joe|shoulder|30 to 60                        2 joints: likeness 0.315 (worst 0.081), blots  9.2%, colour off 36.1, bare  64.2 px
+JOINTS 1|joe|shoulder|60 to 90                        3 joints: likeness 0.602 (worst 0.443), blots 10.2%, colour off 28.8, bare 869.2 px
+JOINTS 1|joe|shoulder|90 and over                     7 joints: likeness 0.550 (worst 0.038), blots  3.6%, colour off 25.5, bare 635.5 px
+JOINTS 1|joe|shoulder|all                            12 joints: likeness 0.524 (worst 0.038), blots  6.2%, colour off 28.1, bare 598.7 px
+JOINTS 1|joe|shoulder|asked                           6 joints: likeness 0.546 (worst 0.038), blots  4.0%, colour off 25.5, bare 658.2 px
+JOINTS 1|pixel-baked|any|60 and over                 36 joints: likeness 0.625 (worst 0.140), blots  3.5%, colour off 19.6, bare 352.2 px
+JOINTS 1|pixel-baked|elbow|90 and over                6 joints: likeness 0.560 (worst 0.359), blots  3.8%, colour off 19.1, bare 177.2 px
+JOINTS 1|pixel-baked|elbow|all                        6 joints: likeness 0.560 (worst 0.359), blots  3.8%, colour off 19.1, bare 177.2 px
+JOINTS 1|pixel-baked|elbow|asked                      6 joints: likeness 0.560 (worst 0.359), blots  3.8%, colour off 19.1, bare 177.2 px
+JOINTS 1|pixel-baked|hip|30 to 60                     8 joints: likeness 0.614 (worst 0.382), blots  0.8%, colour off 16.3, bare 579.9 px
+JOINTS 1|pixel-baked|hip|60 to 90                     6 joints: likeness 0.520 (worst 0.140), blots  1.9%, colour off 15.6, bare 100.5 px
+JOINTS 1|pixel-baked|hip|90 and over                  4 joints: likeness 0.675 (worst 0.569), blots  4.4%, colour off 23.0, bare 747.6 px
+JOINTS 1|pixel-baked|hip|all                         18 joints: likeness 0.596 (worst 0.140), blots  2.0%, colour off 17.6, bare 457.4 px
+JOINTS 1|pixel-baked|hip|asked                        6 joints: likeness 0.573 (worst 0.192), blots  2.6%, colour off 16.3, bare 449.4 px
+JOINTS 1|pixel-baked|knee|30 to 60                    2 joints: likeness 0.837 (worst 0.798), blots  1.0%, colour off 22.2, bare 536.6 px
+JOINTS 1|pixel-baked|knee|60 to 90                    4 joints: likeness 0.756 (worst 0.609), blots  0.9%, colour off 16.8, bare 436.3 px
+JOINTS 1|pixel-baked|knee|90 and over                 6 joints: likeness 0.703 (worst 0.592), blots  3.3%, colour off 20.0, bare 326.4 px
+JOINTS 1|pixel-baked|knee|all                        12 joints: likeness 0.743 (worst 0.592), blots  2.1%, colour off 19.3, bare 398.1 px
+JOINTS 1|pixel-baked|knee|asked                      12 joints: likeness 0.743 (worst 0.592), blots  2.1%, colour off 19.3, bare 398.1 px
+JOINTS 1|pixel-baked|shaft|shaft                     30 joints: likeness 0.554 (worst 0.000), blots  3.2%, colour off 19.6, bare 297.4 px
+JOINTS 1|pixel-baked|shoulder|30 to 60                2 joints: likeness 0.443 (worst 0.381), blots  8.6%, colour off 27.0, bare  49.5 px
+JOINTS 1|pixel-baked|shoulder|60 to 90                3 joints: likeness 0.651 (worst 0.568), blots  7.5%, colour off 24.8, bare 380.9 px
+JOINTS 1|pixel-baked|shoulder|90 and over             7 joints: likeness 0.588 (worst 0.384), blots  3.9%, colour off 20.7, bare 453.6 px
+JOINTS 1|pixel-baked|shoulder|all                    12 joints: likeness 0.579 (worst 0.381), blots  5.6%, colour off 22.8, bare 368.1 px
+JOINTS 1|pixel-baked|shoulder|asked                   6 joints: likeness 0.581 (worst 0.384), blots  4.2%, colour off 21.2, bare 478.6 px
+JOINTS 1|pixel-both|any|60 and over                  36 joints: likeness 0.673 (worst 0.311), blots  2.2%, colour off 19.1, bare 335.5 px
+JOINTS 1|pixel-both|elbow|90 and over                 6 joints: likeness 0.649 (worst 0.479), blots  1.9%, colour off 18.8, bare 174.2 px
+JOINTS 1|pixel-both|elbow|all                         6 joints: likeness 0.649 (worst 0.479), blots  1.9%, colour off 18.8, bare 174.2 px
+JOINTS 1|pixel-both|elbow|asked                       6 joints: likeness 0.649 (worst 0.479), blots  1.9%, colour off 18.8, bare 174.2 px
+JOINTS 1|pixel-both|hip|30 to 60                      8 joints: likeness 0.588 (worst 0.379), blots  0.8%, colour off 14.8, bare 487.0 px
+JOINTS 1|pixel-both|hip|60 to 90                      6 joints: likeness 0.623 (worst 0.311), blots  0.7%, colour off 14.8, bare 174.4 px
+JOINTS 1|pixel-both|hip|90 and over                   4 joints: likeness 0.706 (worst 0.632), blots  3.6%, colour off 22.4, bare 428.4 px
+JOINTS 1|pixel-both|hip|all                          18 joints: likeness 0.626 (worst 0.311), blots  1.4%, colour off 16.5, bare 369.8 px
+JOINTS 1|pixel-both|hip|asked                         6 joints: likeness 0.638 (worst 0.311), blots  1.9%, colour off 17.1, bare 267.1 px
+JOINTS 1|pixel-both|knee|30 to 60                     2 joints: likeness 0.835 (worst 0.789), blots  1.1%, colour off 20.1, bare 296.9 px
+JOINTS 1|pixel-both|knee|60 to 90                     4 joints: likeness 0.769 (worst 0.638), blots  0.8%, colour off 15.9, bare 290.7 px
+JOINTS 1|pixel-both|knee|90 and over                  6 joints: likeness 0.731 (worst 0.695), blots  2.3%, colour off 18.7, bare 266.5 px
+JOINTS 1|pixel-both|knee|all                         12 joints: likeness 0.761 (worst 0.638), blots  1.6%, colour off 18.0, bare 279.6 px
+JOINTS 1|pixel-both|knee|asked                       12 joints: likeness 0.761 (worst 0.638), blots  1.6%, colour off 18.0, bare 279.6 px
+JOINTS 1|pixel-both|shaft|shaft                      30 joints: likeness 0.615 (worst 0.261), blots  1.3%, colour off 18.0, bare 492.4 px
+JOINTS 1|pixel-both|shoulder|30 to 60                 2 joints: likeness 0.608 (worst 0.529), blots  3.0%, colour off 24.3, bare  16.6 px
+JOINTS 1|pixel-both|shoulder|60 to 90                 3 joints: likeness 0.671 (worst 0.517), blots  5.5%, colour off 24.0, bare 852.2 px
+JOINTS 1|pixel-both|shoulder|90 and over              7 joints: likeness 0.614 (worst 0.396), blots  2.3%, colour off 21.3, bare 421.7 px
+JOINTS 1|pixel-both|shoulder|all                     12 joints: likeness 0.627 (worst 0.396), blots  3.2%, colour off 22.4, bare 461.8 px
+JOINTS 1|pixel-both|shoulder|asked                    6 joints: likeness 0.605 (worst 0.396), blots  2.5%, colour off 21.9, bare 452.2 px
+JOINTS 2|comic|any|60 and over                       36 joints: likeness 0.610 (worst 0.031), blots  5.1%, colour off 11.5, bare  82.1 px
+JOINTS 2|comic|elbow|90 and over                      6 joints: likeness 0.544 (worst 0.289), blots  6.6%, colour off 12.2, bare  24.1 px
+JOINTS 2|comic|elbow|all                              6 joints: likeness 0.544 (worst 0.289), blots  6.6%, colour off 12.2, bare  24.1 px
+JOINTS 2|comic|elbow|asked                            6 joints: likeness 0.544 (worst 0.289), blots  6.6%, colour off 12.2, bare  24.1 px
+JOINTS 2|comic|hip|30 to 60                           8 joints: likeness 0.577 (worst 0.108), blots  2.0%, colour off  8.4, bare 161.3 px
+JOINTS 2|comic|hip|60 to 90                           6 joints: likeness 0.320 (worst 0.031), blots  3.1%, colour off  7.6, bare  37.8 px
+JOINTS 2|comic|hip|90 and over                        4 joints: likeness 0.738 (worst 0.700), blots  5.7%, colour off 14.8, bare 154.0 px
+JOINTS 2|comic|hip|all                               18 joints: likeness 0.527 (worst 0.031), blots  3.2%, colour off  9.6, bare 118.5 px
+JOINTS 2|comic|hip|asked                              6 joints: likeness 0.470 (worst 0.177), blots  3.9%, colour off  9.4, bare  83.7 px
+JOINTS 2|comic|knee|30 to 60                          2 joints: likeness 0.950 (worst 0.946), blots  1.0%, colour off  5.1, bare 102.9 px
+JOINTS 2|comic|knee|60 to 90                          4 joints: likeness 0.800 (worst 0.585), blots  2.2%, colour off  6.3, bare  78.8 px
+JOINTS 2|comic|knee|90 and over                       6 joints: likeness 0.737 (worst 0.544), blots  4.1%, colour off  9.6, bare  96.1 px
+JOINTS 2|comic|knee|all                              12 joints: likeness 0.793 (worst 0.544), blots  2.9%, colour off  7.8, bare  91.5 px
+JOINTS 2|comic|knee|asked                            12 joints: likeness 0.793 (worst 0.544), blots  2.9%, colour off  7.8, bare  91.5 px
+JOINTS 2|comic|shaft|shaft                           30 joints: likeness 0.508 (worst 0.072), blots  6.6%, colour off 12.3, bare  63.6 px
+JOINTS 2|comic|shoulder|30 to 60                      2 joints: likeness 0.569 (worst 0.465), blots 12.0%, colour off 20.9, bare   0.5 px
+JOINTS 2|comic|shoulder|60 to 90                      3 joints: likeness 0.612 (worst 0.479), blots 10.5%, colour off 19.0, bare 104.1 px
+JOINTS 2|comic|shoulder|90 and over                   7 joints: likeness 0.625 (worst 0.412), blots  5.1%, colour off 13.9, bare 108.9 px
+JOINTS 2|comic|shoulder|all                          12 joints: likeness 0.613 (worst 0.412), blots  7.6%, colour off 16.4, bare  89.7 px
+JOINTS 2|comic|shoulder|asked                         6 joints: likeness 0.619 (worst 0.412), blots  5.5%, colour off 14.0, bare 121.0 px
+JOINTS 2|joe|any|60 and over                         36 joints: likeness 0.617 (worst 0.026), blots  4.6%, colour off 22.9, bare  90.3 px
+JOINTS 2|joe|elbow|90 and over                        6 joints: likeness 0.592 (worst 0.026), blots  4.2%, colour off 25.5, bare  32.5 px
+JOINTS 2|joe|elbow|all                                6 joints: likeness 0.592 (worst 0.026), blots  4.2%, colour off 25.5, bare  32.5 px
+JOINTS 2|joe|elbow|asked                              6 joints: likeness 0.592 (worst 0.026), blots  4.2%, colour off 25.5, bare  32.5 px
+JOINTS 2|joe|hip|30 to 60                             8 joints: likeness 0.689 (worst 0.436), blots  1.1%, colour off 17.7, bare 108.8 px
+JOINTS 2|joe|hip|60 to 90                             6 joints: likeness 0.527 (worst 0.282), blots  1.7%, colour off 16.0, bare  47.8 px
+JOINTS 2|joe|hip|90 and over                          4 joints: likeness 0.695 (worst 0.654), blots  5.6%, colour off 23.9, bare 162.1 px
+JOINTS 2|joe|hip|all                                 18 joints: likeness 0.636 (worst 0.282), blots  2.3%, colour off 18.5, bare 100.3 px
+JOINTS 2|joe|hip|asked                                6 joints: likeness 0.550 (worst 0.282), blots  3.3%, colour off 18.7, bare  95.1 px
+JOINTS 2|joe|knee|30 to 60                            2 joints: likeness 0.931 (worst 0.919), blots  0.4%, colour off 11.3, bare 114.5 px
+JOINTS 2|joe|knee|60 to 90                            4 joints: likeness 0.714 (worst 0.393), blots  2.4%, colour off 18.2, bare  96.2 px
+JOINTS 2|joe|knee|90 and over                         6 joints: likeness 0.681 (worst 0.569), blots  3.4%, colour off 21.9, bare  84.4 px
+JOINTS 2|joe|knee|all                                12 joints: likeness 0.733 (worst 0.393), blots  2.6%, colour off 18.9, bare  93.4 px
+JOINTS 2|joe|knee|asked                              12 joints: likeness 0.733 (worst 0.393), blots  2.6%, colour off 18.9, bare  93.4 px
+JOINTS 2|joe|shaft|shaft                             30 joints: likeness 0.625 (worst 0.189), blots  4.3%, colour off 21.0, bare  84.0 px
+JOINTS 2|joe|shoulder|30 to 60                        2 joints: likeness 0.484 (worst 0.397), blots 10.9%, colour off 32.6, bare   1.0 px
+JOINTS 2|joe|shoulder|60 to 90                        3 joints: likeness 0.612 (worst 0.497), blots 11.4%, colour off 29.6, bare 147.1 px
+JOINTS 2|joe|shoulder|90 and over                     7 joints: likeness 0.565 (worst 0.339), blots  6.3%, colour off 26.9, bare 112.5 px
+JOINTS 2|joe|shoulder|all                            12 joints: likeness 0.563 (worst 0.339), blots  8.4%, colour off 28.5, bare 102.5 px
+JOINTS 2|joe|shoulder|asked                           6 joints: likeness 0.567 (worst 0.339), blots  6.8%, colour off 26.8, bare 122.7 px
+JOINTS 2|pixel-baked|any|60 and over                 36 joints: likeness 0.622 (worst 0.051), blots  4.0%, colour off 19.7, bare  69.4 px
+JOINTS 2|pixel-baked|elbow|90 and over                6 joints: likeness 0.531 (worst 0.334), blots  5.3%, colour off 20.1, bare  26.0 px
+JOINTS 2|pixel-baked|elbow|all                        6 joints: likeness 0.531 (worst 0.334), blots  5.3%, colour off 20.1, bare  26.0 px
+JOINTS 2|pixel-baked|elbow|asked                      6 joints: likeness 0.531 (worst 0.334), blots  5.3%, colour off 20.1, bare  26.0 px
+JOINTS 2|pixel-baked|hip|30 to 60                     8 joints: likeness 0.532 (worst 0.000), blots  2.2%, colour off 17.5, bare  69.9 px
+JOINTS 2|pixel-baked|hip|60 to 90                     6 joints: likeness 0.525 (worst 0.051), blots  1.8%, colour off 16.0, bare  22.8 px
+JOINTS 2|pixel-baked|hip|90 and over                  4 joints: likeness 0.658 (worst 0.594), blots  5.6%, colour off 22.5, bare 126.3 px
+JOINTS 2|pixel-baked|hip|all                         18 joints: likeness 0.558 (worst 0.000), blots  2.8%, colour off 18.1, bare  66.8 px
+JOINTS 2|pixel-baked|hip|asked                        6 joints: likeness 0.585 (worst 0.282), blots  3.2%, colour off 16.0, bare  72.6 px
+JOINTS 2|pixel-baked|knee|30 to 60                    2 joints: likeness 0.852 (worst 0.810), blots  0.9%, colour off 22.0, bare 110.5 px
+JOINTS 2|pixel-baked|knee|60 to 90                    4 joints: likeness 0.780 (worst 0.623), blots  1.3%, colour off 16.4, bare  83.2 px
+JOINTS 2|pixel-baked|knee|90 and over                 6 joints: likeness 0.685 (worst 0.587), blots  4.3%, colour off 20.8, bare  67.4 px
+JOINTS 2|pixel-baked|knee|all                        12 joints: likeness 0.745 (worst 0.587), blots  2.7%, colour off 19.5, bare  79.9 px
+JOINTS 2|pixel-baked|knee|asked                      12 joints: likeness 0.745 (worst 0.587), blots  2.7%, colour off 19.5, bare  79.9 px
+JOINTS 2|pixel-baked|shaft|shaft                     30 joints: likeness 0.537 (worst 0.000), blots  3.9%, colour off 19.6, bare  40.7 px
+JOINTS 2|pixel-baked|shoulder|30 to 60                2 joints: likeness 0.522 (worst 0.459), blots  8.1%, colour off 25.2, bare   2.0 px
+JOINTS 2|pixel-baked|shoulder|60 to 90                3 joints: likeness 0.624 (worst 0.531), blots  8.3%, colour off 24.3, bare 104.0 px
+JOINTS 2|pixel-baked|shoulder|90 and over             7 joints: likeness 0.618 (worst 0.413), blots  3.3%, colour off 20.0, bare  93.0 px
+JOINTS 2|pixel-baked|shoulder|all                    12 joints: likeness 0.604 (worst 0.413), blots  5.3%, colour off 22.0, bare  80.6 px
+JOINTS 2|pixel-baked|shoulder|asked                   6 joints: likeness 0.619 (worst 0.413), blots  3.3%, colour off 20.4, bare 101.5 px
+JOINTS 2|pixel-both|any|60 and over                  36 joints: likeness 0.661 (worst 0.269), blots  4.2%, colour off 19.6, bare  35.6 px
+JOINTS 2|pixel-both|elbow|90 and over                 6 joints: likeness 0.620 (worst 0.451), blots  5.5%, colour off 19.8, bare   9.3 px
+JOINTS 2|pixel-both|elbow|all                         6 joints: likeness 0.620 (worst 0.451), blots  5.5%, colour off 19.8, bare   9.3 px
+JOINTS 2|pixel-both|elbow|asked                       6 joints: likeness 0.620 (worst 0.451), blots  5.5%, colour off 19.8, bare   9.3 px
+JOINTS 2|pixel-both|hip|30 to 60                      8 joints: likeness 0.546 (worst 0.039), blots  1.4%, colour off 14.7, bare  43.1 px
+JOINTS 2|pixel-both|hip|60 to 90                      6 joints: likeness 0.623 (worst 0.269), blots  1.4%, colour off 15.0, bare  35.7 px
+JOINTS 2|pixel-both|hip|90 and over                   4 joints: likeness 0.672 (worst 0.628), blots  6.0%, colour off 23.0, bare  43.0 px
+JOINTS 2|pixel-both|hip|all                          18 joints: likeness 0.600 (worst 0.039), blots  2.4%, colour off 16.6, bare  40.6 px
+JOINTS 2|pixel-both|hip|asked                         6 joints: likeness 0.609 (worst 0.269), blots  3.2%, colour off 17.4, bare  23.9 px
+JOINTS 2|pixel-both|knee|30 to 60                     2 joints: likeness 0.846 (worst 0.804), blots  2.1%, colour off 20.1, bare  28.4 px
+JOINTS 2|pixel-both|knee|60 to 90                     4 joints: likeness 0.766 (worst 0.575), blots  2.4%, colour off 15.8, bare  19.5 px
+JOINTS 2|pixel-both|knee|90 and over                  6 joints: likeness 0.692 (worst 0.516), blots  4.4%, colour off 19.4, bare  43.8 px
+JOINTS 2|pixel-both|knee|all                         12 joints: likeness 0.742 (worst 0.516), blots  3.4%, colour off 18.3, bare  33.1 px
+JOINTS 2|pixel-both|knee|asked                       12 joints: likeness 0.742 (worst 0.516), blots  3.4%, colour off 18.3, bare  33.1 px
+JOINTS 2|pixel-both|shaft|shaft                      30 joints: likeness 0.604 (worst 0.236), blots  2.9%, colour off 18.5, bare  55.2 px
+JOINTS 2|pixel-both|shoulder|30 to 60                 2 joints: likeness 0.634 (worst 0.604), blots  5.0%, colour off 24.3, bare   0.0 px
+JOINTS 2|pixel-both|shoulder|60 to 90                 3 joints: likeness 0.683 (worst 0.570), blots  7.5%, colour off 24.3, bare  74.7 px
+JOINTS 2|pixel-both|shoulder|90 and over              7 joints: likeness 0.628 (worst 0.426), blots  3.8%, colour off 21.9, bare  39.4 px
+JOINTS 2|pixel-both|shoulder|all                     12 joints: likeness 0.643 (worst 0.426), blots  4.9%, colour off 22.9, bare  41.7 px
+JOINTS 2|pixel-both|shoulder|asked                    6 joints: likeness 0.622 (worst 0.426), blots  3.9%, colour off 22.5, bare  44.8 px
+JOINTS crew|comic|any|60 and over                    95 joints: likeness 0.609 (worst 0.000), blots  6.1%, colour off 12.1, bare  18.0 px
+JOINTS crew|comic|elbow|30 to 60                      5 joints: likeness 0.641 (worst 0.000), blots  9.7%, colour off 15.6, bare  10.8 px
+JOINTS crew|comic|elbow|60 to 90                     13 joints: likeness 0.542 (worst 0.000), blots 10.4%, colour off 15.8, bare   9.3 px
+JOINTS crew|comic|elbow|90 and over                  10 joints: likeness 0.580 (worst 0.000), blots  5.9%, colour off 12.5, bare   9.1 px
+JOINTS crew|comic|elbow|all                          54 joints: likeness 0.612 (worst 0.000), blots  7.4%, colour off 12.2, bare   7.8 px
+JOINTS crew|comic|elbow|asked                         6 joints: likeness 0.578 (worst 0.396), blots  6.2%, colour off 12.1, bare   7.3 px
+JOINTS crew|comic|elbow|under 30                     26 joints: likeness 0.655 (worst 0.000), blots  6.0%, colour off  9.7, bare   5.9 px
+JOINTS crew|comic|hip|30 to 60                       19 joints: likeness 0.547 (worst 0.206), blots  2.0%, colour off  7.0, bare  33.7 px
+JOINTS crew|comic|hip|60 to 90                       14 joints: likeness 0.406 (worst 0.106), blots  3.2%, colour off  7.9, bare  27.3 px
+JOINTS crew|comic|hip|90 and over                     5 joints: likeness 0.683 (worst 0.581), blots  5.5%, colour off 13.1, bare  19.6 px
+JOINTS crew|comic|hip|all                            54 joints: likeness 0.559 (worst 0.106), blots  2.7%, colour off  7.8, bare  29.0 px
+JOINTS crew|comic|hip|asked                           6 joints: likeness 0.451 (worst 0.106), blots  4.3%, colour off  9.7, bare  13.1 px
+JOINTS crew|comic|hip|under 30                       16 joints: likeness 0.670 (worst 0.218), blots  2.3%, colour off  6.9, bare  27.8 px
+JOINTS crew|comic|knee|30 to 60                      21 joints: likeness 0.869 (worst 0.607), blots  2.0%, colour off  5.8, bare  14.2 px
+JOINTS crew|comic|knee|60 to 90                      16 joints: likeness 0.808 (worst 0.615), blots  3.4%, colour off  7.3, bare  19.4 px
+JOINTS crew|comic|knee|90 and over                   12 joints: likeness 0.759 (worst 0.410), blots  4.4%, colour off  9.0, bare  10.1 px
+JOINTS crew|comic|knee|all                           54 joints: likeness 0.822 (worst 0.410), blots  2.9%, colour off  6.8, bare  14.7 px
+JOINTS crew|comic|knee|asked                         12 joints: likeness 0.796 (worst 0.574), blots  3.3%, colour off  7.4, bare  16.4 px
+JOINTS crew|comic|knee|under 30                       5 joints: likeness 0.822 (worst 0.675), blots  1.7%, colour off  4.4, bare  13.3 px
+JOINTS crew|comic|shaft|shaft                       108 joints: likeness 0.554 (worst 0.000), blots  7.2%, colour off 12.0, bare   9.8 px
+JOINTS crew|comic|shoulder|30 to 60                  27 joints: likeness 0.650 (worst 0.232), blots  8.1%, colour off 15.3, bare  18.9 px
+JOINTS crew|comic|shoulder|60 to 90                  13 joints: likeness 0.532 (worst 0.090), blots 10.1%, colour off 17.3, bare  16.8 px
+JOINTS crew|comic|shoulder|90 and over               12 joints: likeness 0.582 (worst 0.182), blots  6.0%, colour off 16.5, bare  30.7 px
+JOINTS crew|comic|shoulder|all                       54 joints: likeness 0.608 (worst 0.090), blots  8.0%, colour off 15.8, bare  20.6 px
+JOINTS crew|comic|shoulder|asked                      6 joints: likeness 0.621 (worst 0.455), blots  5.0%, colour off 13.5, bare  24.7 px
+JOINTS crew|comic|shoulder|under 30                   2 joints: likeness 0.695 (worst 0.654), blots  5.3%, colour off  9.2, bare   9.2 px
+JOINTS crew|joe|any|60 and over                      95 joints: likeness 0.572 (worst 0.085), blots  7.4%, colour off 24.3, bare  18.5 px
+JOINTS crew|joe|elbow|30 to 60                        5 joints: likeness 0.502 (worst 0.105), blots  9.4%, colour off 28.0, bare  10.8 px
+JOINTS crew|joe|elbow|60 to 90                       13 joints: likeness 0.545 (worst 0.242), blots 11.3%, colour off 27.5, bare  15.9 px
+JOINTS crew|joe|elbow|90 and over                    10 joints: likeness 0.570 (worst 0.085), blots  8.1%, colour off 27.3, bare   7.1 px
+JOINTS crew|joe|elbow|all                            54 joints: likeness 0.567 (worst 0.085), blots  8.5%, colour off 25.7, bare   9.7 px
+JOINTS crew|joe|elbow|asked                           6 joints: likeness 0.584 (worst 0.233), blots  5.8%, colour off 26.8, bare   7.2 px
+JOINTS crew|joe|elbow|under 30                       26 joints: likeness 0.589 (worst 0.106), blots  7.2%, colour off 23.7, bare   7.3 px
+JOINTS crew|joe|hip|30 to 60                         19 joints: likeness 0.598 (worst 0.418), blots  2.4%, colour off 17.8, bare  26.9 px
+JOINTS crew|joe|hip|60 to 90                         14 joints: likeness 0.436 (worst 0.211), blots  3.2%, colour off 18.7, bare  25.6 px
+JOINTS crew|joe|hip|90 and over                       5 joints: likeness 0.587 (worst 0.430), blots  6.9%, colour off 23.8, bare  19.3 px
+JOINTS crew|joe|hip|all                              54 joints: likeness 0.586 (worst 0.211), blots  3.1%, colour off 18.1, bare  26.7 px
+JOINTS crew|joe|hip|asked                             6 joints: likeness 0.484 (worst 0.249), blots  4.8%, colour off 20.2, bare  12.5 px
+JOINTS crew|joe|hip|under 30                         16 joints: likeness 0.701 (worst 0.487), blots  2.8%, colour off 16.3, bare  29.9 px
+JOINTS crew|joe|knee|30 to 60                        21 joints: likeness 0.808 (worst 0.571), blots  2.4%, colour off 17.1, bare  14.0 px
+JOINTS crew|joe|knee|60 to 90                        16 joints: likeness 0.768 (worst 0.464), blots  2.9%, colour off 18.7, bare  18.2 px
+JOINTS crew|joe|knee|90 and over                     12 joints: likeness 0.654 (worst 0.466), blots  5.8%, colour off 21.7, bare  10.2 px
+JOINTS crew|joe|knee|all                             54 joints: likeness 0.753 (worst 0.464), blots  3.3%, colour off 18.6, bare  14.4 px
+JOINTS crew|joe|knee|asked                           12 joints: likeness 0.722 (worst 0.464), blots  3.7%, colour off 20.2, bare  14.7 px
+JOINTS crew|joe|knee|under 30                         5 joints: likeness 0.710 (worst 0.594), blots  2.5%, colour off 16.7, bare  13.5 px
+JOINTS crew|joe|shaft|shaft                         108 joints: likeness 0.618 (worst 0.000), blots  6.7%, colour off 22.1, bare  13.5 px
+JOINTS crew|joe|shoulder|30 to 60                    27 joints: likeness 0.557 (worst 0.324), blots  9.7%, colour off 27.6, bare  22.8 px
+JOINTS crew|joe|shoulder|60 to 90                    13 joints: likeness 0.474 (worst 0.089), blots 12.7%, colour off 30.2, bare  23.4 px
+JOINTS crew|joe|shoulder|90 and over                 12 joints: likeness 0.521 (worst 0.106), blots  9.5%, colour off 29.2, bare  25.4 px
+JOINTS crew|joe|shoulder|all                         54 joints: likeness 0.532 (worst 0.089), blots 10.2%, colour off 28.3, bare  23.0 px
+JOINTS crew|joe|shoulder|asked                        6 joints: likeness 0.572 (worst 0.432), blots  7.9%, colour off 27.1, bare  17.3 px
+JOINTS crew|joe|shoulder|under 30                     2 joints: likeness 0.636 (worst 0.523), blots  4.9%, colour off 21.7, bare  10.0 px
+JOINTS crew|pixel-baked|any|60 and over              95 joints: likeness 0.609 (worst 0.058), blots  4.6%, colour off 19.4, bare  16.7 px
+JOINTS crew|pixel-baked|elbow|30 to 60                5 joints: likeness 0.615 (worst 0.161), blots  6.0%, colour off 20.6, bare  10.5 px
+JOINTS crew|pixel-baked|elbow|60 to 90               13 joints: likeness 0.550 (worst 0.089), blots  6.3%, colour off 19.9, bare   9.5 px
+JOINTS crew|pixel-baked|elbow|90 and over            10 joints: likeness 0.576 (worst 0.293), blots  4.4%, colour off 18.9, bare   9.0 px
+JOINTS crew|pixel-baked|elbow|all                    54 joints: likeness 0.614 (worst 0.089), blots  5.1%, colour off 18.4, bare   7.3 px
+JOINTS crew|pixel-baked|elbow|asked                   6 joints: likeness 0.566 (worst 0.434), blots  4.8%, colour off 20.0, bare   7.2 px
+JOINTS crew|pixel-baked|elbow|under 30               26 joints: likeness 0.661 (worst 0.216), blots  4.6%, colour off 17.1, bare   4.8 px
+JOINTS crew|pixel-baked|hip|30 to 60                 19 joints: likeness 0.609 (worst 0.312), blots  1.8%, colour off 14.5, bare  20.9 px
+JOINTS crew|pixel-baked|hip|60 to 90                 14 joints: likeness 0.518 (worst 0.275), blots  2.5%, colour off 14.4, bare  24.3 px
+JOINTS crew|pixel-baked|hip|90 and over               5 joints: likeness 0.619 (worst 0.468), blots  4.9%, colour off 19.7, bare  17.8 px
+JOINTS crew|pixel-baked|hip|all                      54 joints: likeness 0.600 (worst 0.275), blots  2.4%, colour off 14.9, bare  22.9 px
+JOINTS crew|pixel-baked|hip|asked                     6 joints: likeness 0.579 (worst 0.285), blots  3.3%, colour off 16.0, bare  13.2 px
+JOINTS crew|pixel-baked|hip|under 30                 16 joints: likeness 0.656 (worst 0.315), blots  2.3%, colour off 14.4, bare  25.6 px
+JOINTS crew|pixel-baked|knee|30 to 60                21 joints: likeness 0.810 (worst 0.698), blots  1.8%, colour off 17.7, bare  14.5 px
+JOINTS crew|pixel-baked|knee|60 to 90                16 joints: likeness 0.793 (worst 0.643), blots  2.4%, colour off 16.7, bare  18.4 px
+JOINTS crew|pixel-baked|knee|90 and over             12 joints: likeness 0.650 (worst 0.268), blots  4.5%, colour off 22.4, bare   9.7 px
+JOINTS crew|pixel-baked|knee|all                     54 joints: likeness 0.764 (worst 0.268), blots  2.6%, colour off 18.1, bare  14.4 px
+JOINTS crew|pixel-baked|knee|asked                   12 joints: likeness 0.745 (worst 0.548), blots  3.1%, colour off 19.2, bare  15.0 px
+JOINTS crew|pixel-baked|knee|under 30                 5 joints: likeness 0.753 (worst 0.449), blots  1.7%, colour off 14.3, bare  12.3 px
+JOINTS crew|pixel-baked|shaft|shaft                 108 joints: likeness 0.578 (worst 0.000), blots  4.5%, colour off 18.9, bare   8.8 px
+JOINTS crew|pixel-baked|shoulder|30 to 60            27 joints: likeness 0.665 (worst 0.322), blots  7.1%, colour off 22.9, bare  17.6 px
+JOINTS crew|pixel-baked|shoulder|60 to 90            13 joints: likeness 0.568 (worst 0.058), blots  6.3%, colour off 22.1, bare  14.0 px
+JOINTS crew|pixel-baked|shoulder|90 and over         12 joints: likeness 0.559 (worst 0.355), blots  6.4%, colour off 22.6, bare  29.5 px
+JOINTS crew|pixel-baked|shoulder|all                 54 joints: likeness 0.620 (worst 0.058), blots  6.6%, colour off 22.5, bare  19.1 px
+JOINTS crew|pixel-baked|shoulder|asked                6 joints: likeness 0.595 (worst 0.355), blots  5.3%, colour off 21.5, bare  20.1 px
+JOINTS crew|pixel-baked|shoulder|under 30             2 joints: likeness 0.723 (worst 0.701), blots  3.4%, colour off 19.2, bare   9.8 px
+JOINTS crew|pixel-both|any|60 and over               95 joints: likeness 0.563 (worst 0.143), blots  7.1%, colour off 21.0, bare   5.1 px
+JOINTS crew|pixel-both|elbow|30 to 60                 5 joints: likeness 0.690 (worst 0.479), blots  6.4%, colour off 21.9, bare   0.7 px
+JOINTS crew|pixel-both|elbow|60 to 90                13 joints: likeness 0.550 (worst 0.412), blots  8.5%, colour off 21.8, bare   7.0 px
+JOINTS crew|pixel-both|elbow|90 and over             10 joints: likeness 0.531 (worst 0.298), blots  8.4%, colour off 20.8, bare   0.6 px
+JOINTS crew|pixel-both|elbow|all                     54 joints: likeness 0.580 (worst 0.184), blots  7.4%, colour off 20.7, bare   3.1 px
+JOINTS crew|pixel-both|elbow|asked                    6 joints: likeness 0.498 (worst 0.298), blots  8.6%, colour off 21.3, bare   0.4 px
+JOINTS crew|pixel-both|elbow|under 30                26 joints: likeness 0.593 (worst 0.184), blots  6.7%, colour off 19.8, bare   2.6 px
+JOINTS crew|pixel-both|hip|30 to 60                  19 joints: likeness 0.544 (worst 0.174), blots  3.1%, colour off 16.0, bare   6.1 px
+JOINTS crew|pixel-both|hip|60 to 90                  14 joints: likeness 0.472 (worst 0.181), blots  3.4%, colour off 16.7, bare   9.7 px
+JOINTS crew|pixel-both|hip|90 and over                5 joints: likeness 0.558 (worst 0.428), blots  7.8%, colour off 22.4, bare   0.9 px
+JOINTS crew|pixel-both|hip|all                       54 joints: likeness 0.537 (worst 0.174), blots  3.7%, colour off 16.9, bare   7.4 px
+JOINTS crew|pixel-both|hip|asked                      6 joints: likeness 0.518 (worst 0.185), blots  4.8%, colour off 18.5, bare   0.4 px
+JOINTS crew|pixel-both|hip|under 30                  16 joints: likeness 0.579 (worst 0.182), blots  3.3%, colour off 16.5, bare   8.8 px
+JOINTS crew|pixel-both|knee|30 to 60                 21 joints: likeness 0.761 (worst 0.631), blots  4.1%, colour off 17.8, bare   1.8 px
+JOINTS crew|pixel-both|knee|60 to 90                 16 joints: likeness 0.736 (worst 0.560), blots  5.0%, colour off 16.8, bare   0.8 px
+JOINTS crew|pixel-both|knee|90 and over              12 joints: likeness 0.533 (worst 0.143), blots  8.1%, colour off 23.0, bare   0.4 px
+JOINTS crew|pixel-both|knee|all                      54 joints: likeness 0.695 (worst 0.143), blots  5.2%, colour off 18.4, bare   1.1 px
+JOINTS crew|pixel-both|knee|asked                    12 joints: likeness 0.664 (worst 0.157), blots  6.2%, colour off 19.2, bare   0.5 px
+JOINTS crew|pixel-both|knee|under 30                  5 joints: likeness 0.679 (worst 0.372), blots  3.8%, colour off 15.3, bare   0.6 px
+JOINTS crew|pixel-both|shaft|shaft                  108 joints: likeness 0.570 (worst 0.018), blots  5.5%, colour off 19.8, bare   5.3 px
+JOINTS crew|pixel-both|shoulder|30 to 60             27 joints: likeness 0.625 (worst 0.308), blots  9.1%, colour off 25.6, bare   5.1 px
+JOINTS crew|pixel-both|shoulder|60 to 90             13 joints: likeness 0.542 (worst 0.170), blots  8.4%, colour off 24.6, bare   5.2 px
+JOINTS crew|pixel-both|shoulder|90 and over          12 joints: likeness 0.532 (worst 0.332), blots  8.6%, colour off 24.4, bare  13.2 px
+JOINTS crew|pixel-both|shoulder|all                  54 joints: likeness 0.582 (worst 0.170), blots  8.7%, colour off 25.0, bare   6.7 px
+JOINTS crew|pixel-both|shoulder|asked                 6 joints: likeness 0.548 (worst 0.346), blots  7.5%, colour off 23.8, bare   4.4 px
+JOINTS crew|pixel-both|shoulder|under 30              2 joints: likeness 0.561 (worst 0.449), blots  5.1%, colour off 22.3, bare   0.4 px
+RESULT {"out": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/.claude/worktrees/agent-ac810ab080b7e41ad/evidence/knees", "seconds": 603.4}
