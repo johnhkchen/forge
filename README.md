@@ -102,6 +102,8 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just set-from-run <set> <run folder>` | use an object you already made as a set's geometry |
 | `just shoot <take>`, then `just cast <take> runs "" <clip>` | a take on a set with several people in it (`studio-guest-entrance`): every role's motion, then the cast, filmed from every camera of the set |
 | `just fight <fight> <left run> <right run>` | stage a fight from its script in `scripts/fight/fights/`: both fighters on one timeline, each baked through the same skeleton and limits as a walk, filmed from every camera of the set with hitstop, camera shake and flashes (see "Fights"). `just fight-test` tries the kit without Blender |
+| `just skate <ride> <character run> [versions]` | put a character on the skateboard and have it ride a run on the halfpipe, from its script in `scripts/skate/rides/`: the board kept on the ramp, the rider baked on the board, filmed from every camera of the set (see "The halfpipe"). `just skate-test` tries the kit without Blender; `just skate-plan <ride>` only lays a run out |
+| `just halfpipe-build`, `just skate-board` | build the ramp and the skateboard again from their numbers |
 | `just world-check` | is the world sound: every place a sound set, no footprints overlapping, every toon on a mark, the newest epoch up to date |
 | `just buy-house <toon>` | Opus designs a house for a toon from their own brief, and it is built as a set (a new folder each time) |
 | `just world-places`, `just world-stock`, `just world-toons` | build the world's places from data, bring in light copies of the runs' objects, stand the toons up in their poses |
@@ -370,6 +372,7 @@ just buy-house flamenco-dancer
 | The spawn spot | the gachapon machine, the landing ring, the BUY HOUSE pedestal | |
 | The ninja's stage | his photo stage (the `studio` set): a sitter's mark, a row for a group, a photographer's mark | the ninja, with his pinhole camera |
 | The dancer's house | Casa de la Rosa: the house she asked for, with her stage and her microphone | the dancer |
+| The halfpipe | a plywood vert ramp, north of the ninja's stage and east of the settlement (the `halfpipe` set) | |
 
 Around them is the developer's plain grey floor, with a few grey one-metre cubes and a "TODO" or two: what hasn't been built yet.
 
@@ -560,6 +563,45 @@ just fight first runs/<roosevelt> runs/<lincoln>
 
 **What is weak.** A fist is the open hand folded twice: it reads at ring distance, but the thumb goes along with the fingers. A man who is hit is pushed, never caught: no clinch, no grabbing. Loose cloth would only swing, not be struck. Nothing checks one body against the other, so a long arm can pass through a guard on the way back. Roosevelt's arms are short, so he steps a long way in to reach Lincoln's head and punches steeply upward.
 
+## The halfpipe
+
+A plywood ramp, a skateboard, and Lincoln on it. Like a fight, a run is our own poses on the `rig.py` skeleton, played by `animate.py`; nothing is simulated beyond a little school physics and nothing is generated.
+
+```
+just skate first runs/<young lincoln>
+just skate first runs/<young lincoln> lowpoly,midpoly
+```
+
+- **The ramp is built from its own numbers** (`scripts/skate/halfpipe_set.py`): a flat bottom 5 m across, a quarter circle of 3.4 m up each side, 30 cm of straight wall on top of that, a steel tube along each top edge, and a platform behind it 3.7 m up; 12 m long. `just halfpipe-build` writes `sets/halfpipe/set.json` and builds `set.glb` from the same arithmetic the riding uses, in sheets of plywood each a slightly different tan. It stands in the world north of the ninja's stage and east of the settlement, at (40.5, -12.5), its open end facing north.
+- **The set says what shape it is.** `"ramp"` in its `set.json` holds the numbers and the cut across the ramp, piece by piece. `scripts/skate/pipe.py` reads them and answers what the motion needs: `Pipe.at(s)` is the point `s` metres along the surface from the middle of the flat, and the way the surface runs and faces there; `Pipe.where(x, y)` is the nearest point of the surface to anywhere and how far off it that is; `Pipe.inside(x, y, z)` is how deep a point is in the wood.
+- **Marks and cameras like a broadcast.** Marks on both platforms and on the flat (a mark can now say how high its floor is, `floor_y`, and `just set-check` reads it). Three cameras that never move: `side` from out front of the open end, `low` on the flat looking up the right wall, `deck` from the left platform looking down in.
+- **The skateboard** (`scripts/skate/board.py`, `just skate-board`) is a deck with two kicktails, two trucks, four wheels and its eight bolts: `world/props/skateboard.glb`, with a card beside it that says where the bolts, the wheels and the edges are.
+
+**A run is two things, kept apart.**
+
+*The board's ride* (`scripts/skate/ride.py`). The board sits on the surface with both trucks on it, so its up is the way the ramp faces there. Its speed is simple energy: gravity along the surface, a little drag, and pumping, which adds or scrubs a little through each curve: as much as the next trick needs, and no more than 1.3 m/s2. Ask for more air than the speed gives and you get what it gives, with a note; ask with far too little and it is done as a kickturn. Past the top edge the board is in the air, straight up and back under gravity, and turns half way round on the way. At the end he lets it run out across the flat and stands up.
+
+*The rider on it* (`scripts/skate/rider.py`). His poses are written in the board's own frame, so to `animate.py` the deck is simply the floor: both feet planted over the bolts on every frame, legs solved to them, every joint held to its limit. Knees bend into the bottom of each curve and push out of it, he crouches into each air, tucks, and for a grab folds down until his back hand is on the deck by the toe edge. Where an elbow's side would turn a shoulder past its limit, the elbow comes round instead. A shorter-armed body folds further for the same grab.
+
+`apply_ride.py` then puts the two together: the board is bound to a bone under his feet, the way a prop rides a socket, and one more bone, `ride`, above the hips and the board, is keyed to where the ride says the board is. So the file holds the whole run in the set's own place: put it down at the set's origin and it rides the ramp.
+
+- **A ride is a list** (`scripts/skate/rides/first.json`): `{"trick": "kickturn"}`, `{"trick": "air", "height_m": 0.8}`, `{"trick": "air grab", "height_m": 0.9}`, `{"trick": "handplant"}`. One pass is one crossing of the pipe, ending in its trick on the wall he reaches. He turns one way on the right wall and back the other way on the left, so he always comes off a wall nose first.
+- **The handplant.** The board carries on up past the edge until its tail is level with his back hand; the hand goes on the coping; the board swings up and over it until it is above his head with its wheels to the sky, turns, and comes back down onto the wall nose first, 60 cm further along. While the hand is down, the board is carried by the hand: on every frame the baked hand is found and the board is put wherever keeps it on its spot.
+
+**The first run** (Lincoln in his low-poly, 28.6 seconds, seven passes): a kickturn, a small air, a grabbed air, a higher one (a metre over the edge, 0.9 s in the air, 9.6 m/s across the flat), a handplant, another grabbed air, a last kickturn, and he rolls to a stop with a hand raised. Measured on the baked file: riding, every wheel is on the surface to within a tenth of a millimetre (in a kickturn the back two stay within 3 mm while the nose lifts); the balls of both feet stay on the deck to a tenth of a millimetre and never move on it; no joint leaves its limits; the planted hand is on its spot on the coping for as long as it is down (the board was moved up to 11 cm to keep it there); and nothing goes more than 5 cm into the ramp, which is that hand and forearm against the coping. `animate.py` clamps his right arm on 49 frames: the handplant, and the reach for the grabs. His mid-poly rides the same run with the same numbers.
+
+**A pose from a video.** A motion read off a clip (see "From a video") knows a floor, and a ramp would fight it. So a ride never takes its path from a clip; a trick can take its body from one:
+
+```json
+{"trick": "air", "height_m": 1.0, "pose_from": {"video": "halfpipe", "shot": 8, "from_s": 37.1, "to_s": 38.6}}
+```
+
+`shot` is numbered as the clip's page numbers them, and the seconds are on the clip's own clock. On every frame of that stretch the clip's skater is given a board of his own, a frame laid through his two feet; how each part of him is turned, and where his hips are from his feet, is read in that frame, retimed to our trick and eased on and off in place of our pose. Upside down over a coping, that frame is upside down with him, so nothing depends on which way the clip thinks is up. Our feet stay on our bolts and the board's path stays ours (`scripts/skate/video_pose.py`). `"pose_from": {"motion": "<a SOMA motion file>", ...}` does the same with any motion of ours. Until `shots/video-halfpipe/` exists the pass keeps its own pose and says so. `rides/borrowed.json` tries it with a piece Kimodo made standing in for a clip: both fists thrown up, in the air, feet on the board.
+
+`python3 scripts/skate/test_skate.py` (part of `just check`) tries all of it with no Blender: the ramp's cut, wheels on the surface, energy, feet on the bolts, limits, hands, and a made-up clip read the right way up and upside down.
+
+**What is weak.** He rides one line: no carving along the ramp, so a kickturn pivots on the spot. The start is the top of the left wall, not a drop-in from the platform, and nobody climbs the platforms: there are no stairs. Airs go straight up and down; the body does not lean into the turn or spot its landing. In a grab the hand lies on the deck about 8 cm in from the edge, flat, because our hands have no fingers and `animate.py` keeps a hand out of its floor. On the way overhead in the handplant the shoulder is asked for up to 30 degrees more twist than it has for a few frames, and is clamped. Going up for the handplant the hand is not on the coping until the board has risen (the first and last quarter of it). The pose-from-a-clip hook has only been tried on a stand-in: nothing has come back from GEM-X yet, and a clip's skater who rides goofy will come out with our left foot forward all the same. Loose cloth would hang as if the deck were always level. The wheels do not turn. The side camera has to hold the whole ramp, so he is small in it.
+
 ## Flat cards
 
 An experiment: can a toon be a handful of flat pictures instead of a mesh, and still play any motion? It is the cut-up impostor of Aubel, Boulic and Thalmann, done one card per joint as Beacco and others at UPC do it, tried on one character (Roosevelt in his painted outfit) to see whether it is good enough for a sprite-like world.
@@ -643,6 +685,8 @@ The flat cards timed against meshes, as a crowd: a field of Roosevelts playing t
 - **Five ways to draw them.** Meshes one by one (every runner his own skinned meshes and ink shell); meshes all at once (one draw a piece for the whole field, the bones read from a picture); cards one by one (the cards page as it is); cards all at once (every card of every runner in one draw: the graphics card picks each card's picture and places it); and that with the search by depth switched off past 12 m.
 - **Skeletons are timed apart**, and can be shared: every move is sampled once, thirty poses a second, into a table the graphics card reads, and a runner is then a place, a heading and a row of it. Or each runner works his own skeleton out every frame. Both are offered to every way of drawing.
 - **Measure all** runs every count and way for a few seconds each and shows a table to read or copy; **Measure the looks** does the same for every look. The big number is the work in one frame (skeletons, placing, drawing, and waiting for the graphics card to finish), because frames a second can't go past what the screen shows.
+
+- **Phone test** is the narrow one, built to give the same answer twice: low-poly meshes, painted meshes, cards, and cards with the search off far away; in the comic look and as pixel art; 100, 250, 500 and 1000 runners; poses shared, one seed, one fixed eye. The picture is drawn 1080 by 608 whatever the screen and however the phone is held. Every setting is timed three times, the three spread through the test, and the first is timed again at the end to say whether the phone slowed as it warmed. It takes six and a half minutes, keeps the screen awake where the browser allows, and says at the top, in words, how big a crowd each way holds full speed at and how many times faster cards are than the cheapest meshes; "Copy results" copies every number as JSON.
 
 **Measured on this Mac** (Apple M5, Chrome without a window, a picture of 1080 by 608; `evidence/impostor/tag-measured-mac.md`), ms of work a frame with shared poses:
 

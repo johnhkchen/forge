@@ -1,0 +1,486 @@
+{
+ "format": "forge-set/1",
+ "name": "halfpipe",
+ "title": "The halfpipe",
+ "about": "A plywood vert ramp out past the settlement: a flat bottom, a curved wall up each side, a steel tube along each top edge and a platform behind it. Somewhere to roll back and forth and, with enough speed, leave the top.",
+ "stage": "open",
+ "frame": {
+  "origin": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "front_deg": 0.0,
+  "about": "the origin is the middle of the flat bottom, on the wood; the front is the open end the cameras look in from"
+ },
+ "footprint": {
+  "outline": [
+   [
+    -8.0,
+    -6.5
+   ],
+   [
+    8.0,
+    -6.5
+   ],
+   [
+    8.0,
+    6.5
+   ],
+   [
+    1.6,
+    13.2
+   ],
+   [
+    -1.6,
+    13.2
+   ],
+   [
+    -8.0,
+    6.5
+   ]
+  ],
+  "about": "the ramp and a little ground round it, and a point out front where the side camera stands"
+ },
+ "units": "metres. y is up and 0 is the flat bottom. x is across the pipe (the walls are at -x and +x), z is along it; the front is +z.",
+ "ramp": {
+  "flat_m": 5.0,
+  "radius_m": 3.4,
+  "vert_m": 0.3,
+  "deck_m": 1.6,
+  "width_m": 12.0,
+  "coping_radius_m": 0.03,
+  "coping_proud_m": 0.012,
+  "height_m": 3.7,
+  "wall_x_m": 5.9,
+  "lip_s_m": 8.1407,
+  "ride_line_z": 2.0,
+  "about": "The ramp cut across: it is this shape all the way along z. `s` is metres along the riding surface from the middle of the flat (minus to the left, plus to the right). scripts/skate/pipe.py reads the numbers here and answers where the surface is and which way it faces at any point across; `cross_section` says the same thing piece by piece.",
+  "coping": [
+   {
+    "side": "left",
+    "centre": [
+     -5.918,
+     3.682
+    ],
+    "radius_m": 0.03
+   },
+   {
+    "side": "right",
+    "centre": [
+     5.918,
+     3.682
+    ],
+    "radius_m": 0.03
+   }
+  ],
+  "cross_section": [
+   {
+    "part": "deck left",
+    "kind": "line",
+    "from": [
+     -7.5,
+     3.7
+    ],
+    "to": [
+     -5.9,
+     3.7
+    ],
+    "about": "the platform: stand here, drop in from here"
+   },
+   {
+    "part": "vert left",
+    "kind": "line",
+    "from": [
+     -5.9,
+     3.7
+    ],
+    "to": [
+     -5.9,
+     3.4
+    ],
+    "s": [
+     -8.1407,
+     -7.8407
+    ],
+    "about": "the straight wall under the coping"
+   },
+   {
+    "part": "transition left",
+    "kind": "arc",
+    "centre": [
+     -2.5,
+     3.4
+    ],
+    "radius_m": 3.4,
+    "from": [
+     -5.9,
+     3.4
+    ],
+    "to": [
+     -2.5,
+     0.0
+    ],
+    "s": [
+     -7.8407,
+     -2.5
+    ],
+    "about": "a quarter circle from the wall down to the flat"
+   },
+   {
+    "part": "flat",
+    "kind": "line",
+    "from": [
+     -2.5,
+     0.0
+    ],
+    "to": [
+     2.5,
+     0.0
+    ],
+    "s": [
+     -2.5,
+     2.5
+    ],
+    "about": "the flat bottom"
+   },
+   {
+    "part": "transition right",
+    "kind": "arc",
+    "centre": [
+     2.5,
+     3.4
+    ],
+    "radius_m": 3.4,
+    "from": [
+     2.5,
+     0.0
+    ],
+    "to": [
+     5.9,
+     3.4
+    ],
+    "s": [
+     2.5,
+     7.8407
+    ],
+    "about": "a quarter circle from the wall down to the flat"
+   },
+   {
+    "part": "vert right",
+    "kind": "line",
+    "from": [
+     5.9,
+     3.4
+    ],
+    "to": [
+     5.9,
+     3.7
+    ],
+    "s": [
+     7.8407,
+     8.1407
+    ],
+    "about": "the straight wall under the coping"
+   },
+   {
+    "part": "deck right",
+    "kind": "line",
+    "from": [
+     5.9,
+     3.7
+    ],
+    "to": [
+     7.5,
+     3.7
+    ],
+    "about": "the platform: stand here, drop in from here"
+   }
+  ]
+ },
+ "floor": {
+  "areas": [
+   [
+    [
+     -2.5,
+     -6.0
+    ],
+    [
+     2.5,
+     6.0
+    ]
+   ],
+   [
+    [
+     -7.5,
+     -6.0
+    ],
+    [
+     -5.9,
+     6.0
+    ]
+   ],
+   [
+    [
+     5.9,
+     -6.0
+    ],
+    [
+     7.5,
+     6.0
+    ]
+   ]
+  ],
+  "note": "the flat bottom and the two platforms. The curved walls are ridden, not stood on."
+ },
+ "ground": {
+  "y": -0.02,
+  "color": [
+   0.72,
+   0.71,
+   0.69
+  ],
+  "size_m": 60.0
+ },
+ "blocks": [
+  {
+   "name": "deck left",
+   "kind": "deck",
+   "center": [
+    -6.7,
+    1.85,
+    0.0
+   ],
+   "size": [
+    1.6,
+    3.7,
+    12.0
+   ],
+   "heading": 0.0,
+   "color": [
+    0.47,
+    0.32,
+    0.19
+   ],
+   "build": false
+  },
+  {
+   "name": "rail left",
+   "kind": "rail",
+   "center": [
+    -7.46,
+    4.25,
+    0.0
+   ],
+   "size": [
+    0.08,
+    1.1,
+    12.0
+   ],
+   "heading": 0.0,
+   "color": [
+    0.72,
+    0.74,
+    0.76
+   ],
+   "see_through": true,
+   "build": false
+  },
+  {
+   "name": "deck right",
+   "kind": "deck",
+   "center": [
+    6.7,
+    1.85,
+    0.0
+   ],
+   "size": [
+    1.6,
+    3.7,
+    12.0
+   ],
+   "heading": 0.0,
+   "color": [
+    0.47,
+    0.32,
+    0.19
+   ],
+   "build": false
+  },
+  {
+   "name": "rail right",
+   "kind": "rail",
+   "center": [
+    7.46,
+    4.25,
+    0.0
+   ],
+   "size": [
+    0.08,
+    1.1,
+    12.0
+   ],
+   "heading": 0.0,
+   "color": [
+    0.72,
+    0.74,
+    0.76
+   ],
+   "see_through": true,
+   "build": false
+  }
+ ],
+ "marks": {
+  "deck_left": {
+   "kind": "stand",
+   "at": [
+    -6.7,
+    2.0
+   ],
+   "facing_deg": 90.0,
+   "floor_y": 3.7,
+   "about": "on the left platform, 3.7 m up, looking into the pipe: where a run starts and ends"
+  },
+  "deck_right": {
+   "kind": "stand",
+   "at": [
+    6.7,
+    2.0
+   ],
+   "facing_deg": -90.0,
+   "floor_y": 3.7,
+   "about": "on the right platform, 3.7 m up, looking into the pipe: where a run starts and ends"
+  },
+  "flat": {
+   "kind": "stand",
+   "at": [
+    0.0,
+    2.0
+   ],
+   "facing_deg": 0.0,
+   "about": "the middle of the flat bottom"
+  }
+ },
+ "paths": [],
+ "cameras": {
+  "side": {
+   "at": [
+    0.0,
+    2.6,
+    12.7
+   ],
+   "aim": [
+    0.0,
+    3.2,
+    2.0
+   ],
+   "lens_mm": 22,
+   "sees": [
+    "flat",
+    "deck_left",
+    "deck_right"
+   ],
+   "about": "side-on from out front, level with the middle of the flat: the whole ramp and the air above both lips"
+  },
+  "low": {
+   "at": [
+    -1.2,
+    0.45,
+    5.5
+   ],
+   "aim": [
+    5.9,
+    4.6,
+    1.6
+   ],
+   "lens_mm": 20,
+   "sees": [
+    "deck_right"
+   ],
+   "about": "low on the flat bottom, looking up the right wall"
+  },
+  "deck": {
+   "at": [
+    -6.9,
+    5.449999999999999,
+    5.4
+   ],
+   "aim": [
+    1.2,
+    1.9,
+    1.4
+   ],
+   "lens_mm": 18,
+   "sees": [
+    "flat",
+    "deck_right"
+   ],
+   "about": "from the left platform, looking down into the pipe and across to the other lip"
+  }
+ },
+ "lights": [
+  {
+   "name": "sun",
+   "kind": "sun",
+   "at": [
+    -6.0,
+    16.0,
+    12.0
+   ],
+   "aim": [
+    0.0,
+    1.5,
+    0.0
+   ],
+   "power": 2.2,
+   "color": [
+    1.0,
+    0.96,
+    0.88
+   ]
+  },
+  {
+   "name": "sky",
+   "kind": "area",
+   "at": [
+    4.0,
+    12.0,
+    9.0
+   ],
+   "aim": [
+    0.0,
+    1.5,
+    0.0
+   ],
+   "power": 500.0,
+   "color": [
+    0.88,
+    0.93,
+    1.0
+   ],
+   "size_m": 12.0
+  }
+ ],
+ "world": {
+  "color": [
+   0.8,
+   0.86,
+   0.9
+  ],
+  "strength": 0.7
+ },
+ "backdrop": null,
+ "signs": [],
+ "slots": {},
+ "dressing": [],
+ "geometry": {
+  "glb": "set.glb",
+  "move": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "turn_deg": 0.0,
+  "built_by": "python3 scripts/skate/halfpipe_set.py, then just halfpipe-build (scripts/skate/build_halfpipe.py)"
+ }
+}

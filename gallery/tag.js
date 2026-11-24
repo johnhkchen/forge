@@ -958,7 +958,7 @@ class Field {
     }
     const keep = this.times;
     keep.frame.push(took); keep.anim.push(t1 - t0); keep.place.push(t2 - t1); keep.draw.push(t3 - t2); keep.work.push(t4 - t0);
-    for (const list of Object.values(keep)) if (list.length > 240) list.shift();
+    for (const list of Object.values(keep)) if (list.length > 900) list.shift();
     this.info = { calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles };
     this.renderer.info.reset();
   }
@@ -1002,10 +1002,34 @@ class Field {
     return got;
   }
 
+  // The picture is as big as its place on the page, unless a test has fixed it (so a phone and a Mac, or a phone
+  // held upright and on its side, draw exactly the same number of pixels).
   layout() {
-    this.renderer.setSize(this.el.clientWidth, this.el.clientHeight, false);
-    this.camera.aspect = this.el.clientWidth / Math.max(1, this.el.clientHeight);
+    const [wide, tall] = this.fixed || [this.el.clientWidth, this.el.clientHeight];
+    this.renderer.setPixelRatio(this.fixed ? 1 : Math.min(window.devicePixelRatio, 2));
+    this.renderer.setSize(wide, tall, false);
+    this.camera.aspect = wide / Math.max(1, tall);
     this.camera.updateProjectionMatrix();
+  }
+
+  // Time one setting once, for the phone test: the work in a frame, and the real gaps between frames.
+  async timeOnce(setting, warm, seconds) {
+    Object.assign(this.state, { count: setting.count, way: setting.way, shared: true, model: setting.model || this.state.model, paused: false });
+    await this.useLook(setting.look);
+    this.measuring = true;
+    this.restart();
+    const wait = (ms) => new Promise((done) => setTimeout(done, ms));
+    await wait(warm * 1000);
+    for (const list of Object.values(this.times)) list.length = 0;
+    await wait(seconds * 1000);
+    const t = this.times;
+    const sorted = (list) => [...list].sort((a, b) => a - b);
+    const middle = (list) => { const x = sorted(list); return x.length ? x[Math.floor(x.length / 2)] : 0; };
+    const mean = (list) => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : 0);
+    const slow = (list) => { const x = sorted(list); return mean(x.slice(Math.floor(x.length * 0.95))); };
+    this.measuring = false;
+    return { work: middle(t.work), work_mean: mean(t.work), work_slow: slow(t.work), frame: middle(t.frame), frame_mean: mean(t.frame), frame_slow: slow(t.frame),
+      anim: mean(t.anim), place: mean(t.place), frames: t.frame.length, calls: this.info?.calls, triangles: this.info?.triangles };
   }
 
   dispose() {
@@ -1110,6 +1134,139 @@ export function tagPage({ run, sets, h, loader }) {
     table.replaceChildren(...blocks, h("p", { class: "about" }, "The big number is the work in one frame: moving the skeletons, placing, drawing, and waiting for the graphics card to finish. Frames a second can't go past what the screen shows, so the work is the fairer number when both are fast."), copy);
   };
   const measure = h("button", { class: "clay-button", type: "button", onclick: () => runAll() }, "Measure all");
+
+  // ---- the phone test: a narrow one, built to give the same answer twice ----
+  // Four ways, two looks, four crowds; poses shared; one seed, one fixed eye, one fixed size of picture. Every
+  // setting is timed three times, the three spread through the test (so a phone warming up is shared out, not
+  // dumped on whatever comes last), and the first setting is timed once more at the very end to see whether the
+  // phone slowed as it warmed.
+  const TEST = {
+    size: [1080, 608], warm: 1.2, seconds: 2.6, repeats: 3, counts: [100, 250, 500, 1000],
+    ways: [{ id: "mesh-low", name: "Low-poly meshes", cards: false }, { id: "mesh-batch", name: "Painted meshes", cards: false },
+      { id: "card-batch", name: "Cards", cards: true }, { id: "card-far", name: "Cards, search off far away", cards: true }],
+    looks: [{ id: "comic", name: "Comic", mesh: "comic", cards: "comic" }, { id: "pixels", name: "Pixel art", mesh: "pixel-screen", cards: "pixel-both" }],
+  };
+  const answer = h("div", { class: "tag-answer" });
+  let testing = null;
+  const median = (list) => { const x = [...list].sort((a, b) => a - b); return x[Math.floor(x.length / 2)]; };
+  const phoneTest = async (options = {}) => {
+    const plan = { ...TEST, ...options };
+    const settings = [];
+    for (const look of plan.looks) for (const way of plan.ways) for (const count of plan.counts) settings.push({ key: `${look.id}|${way.id}|${count}`, lookId: look.id, look: way.cards ? look.cards : look.mesh, way: way.id, count, model: "painted" });
+    // three passes, each starting a third of the way round from the last and every other one backwards
+    const order = [];
+    const shares = (a, b) => (b ? shares(b, a % b) : a);
+    const stride = [5, 7, 11, 13, 3, 1].find((n) => shares(n, settings.length) === 1); // a step that visits every setting before coming round
+    for (let r = 0; r < plan.repeats; r++) {
+      const turned = settings.map((_, i) => settings[(i * stride + r * 11) % settings.length]); // every setting once, heavy and light mixed
+      order.push(...(r % 2 ? turned.reverse() : turned));
+    }
+    order.push(order[0]); // the first setting once more at the end: has the phone slowed as it warmed?
+    const each = plan.warm + plan.seconds + 0.25;
+    const runs = [];
+    testing = { stop: false };
+    const lock = await navigator.wakeLock?.request?.("screen").catch(() => null);
+    const was = { ...field.state };
+    field.fixed = plan.size;
+    pane.classList.add("testing");
+    field.controls.enabled = false;
+    field.layout();
+    for (const b of [measure, looksButton, testButton]) b.disabled = true;
+    const began = performance.now();
+    for (let k = 0; k < order.length && !testing.stop; k++) {
+      const left = Math.round(((order.length - k) * each) / 60 * 10) / 10;
+      answer.replaceChildren(h("p", { class: "tag-progress" }, h("b", {}, `Testing: ${k + 1} of ${order.length}`), ` · about ${left < 1 ? "under a minute" : `${left.toFixed(1)} minutes`} left. Leave the page open and the phone alone.`),
+        h("button", { class: "toggle clay-button clay-button--soft", type: "button", onclick: () => { testing.stop = true; } }, "Stop the test"));
+      const setting = order[k];
+      runs.push({ ...setting, at: Math.round((performance.now() - began) / 100) / 10, last: k === order.length - 1, ...(await field.timeOnce(setting, plan.warm, plan.seconds)) });
+    }
+    lock?.release?.();
+    field.fixed = null;
+    pane.classList.remove("testing");
+    field.controls.enabled = true;
+    Object.assign(field.state, { count: was.count, way: was.way, shared: was.shared, model: was.model });
+    await field.useLook(was.look);
+    field.layout();
+    field.restart();
+    for (const b of [measure, looksButton, testButton]) b.disabled = false;
+    const result = judge(plan, settings, runs, testing.stop, (performance.now() - began) / 1000);
+    testing = null;
+    showAnswer(result);
+    return result;
+  };
+  // What the runs say: for every setting the middle of its three, the screen's own frame gap, who holds it, and
+  // how much faster cards are than the cheapest meshes where meshes give out.
+  const judge = (plan, settings, runs, stopped, took) => {
+    const main = runs.filter((r) => !r.last);
+    const rows = settings.map((setting) => {
+      const mine = main.filter((r) => r.key === setting.key);
+      if (!mine.length) return { ...setting, runs: 0 };
+      return { ...setting, runs: mine.length, work: median(mine.map((r) => r.work)), work_low: Math.min(...mine.map((r) => r.work)), work_high: Math.max(...mine.map((r) => r.work)),
+        frame: median(mine.map((r) => r.frame)), frame_low: Math.min(...mine.map((r) => r.frame)), frame_high: Math.max(...mine.map((r) => r.frame)), frame_slow: median(mine.map((r) => r.frame_slow)),
+        calls: mine[0].calls, triangles: mine[0].triangles };
+    });
+    const done = rows.filter((r) => r.runs);
+    // the screen's own gap between frames, which nothing can beat: the quickest setting's, taken as the nearest of the usual screens (120, 90 or 60 a second)
+    const quickest = done.length ? Math.min(...done.map((r) => r.frame)) : 16.67;
+    const gap = [1000 / 60, 1000 / 90, 1000 / 120].find((g) => g <= quickest * 1.04) || quickest;
+    const full = Math.round(1000 / gap);
+    for (const r of done) r.holds = r.frame <= gap * 1.08 && r.frame_slow <= gap * 2.2; // the middle frame on time, and the slow ones no worse than one missed
+    const first = runs[0], again = runs.find((r) => r.last);
+    const warmed = first && again ? { first: first.work, last: again.work, slower_pct: Math.round((again.work / first.work - 1) * 100), first_frame: first.frame, last_frame: again.frame } : null;
+    const looks = plan.looks.map((look) => {
+      const ways = plan.ways.map((way) => {
+        const mine = done.filter((r) => r.lookId === look.id && r.way === way.id).sort((a, b) => a.count - b.count);
+        let most = 0;
+        for (const r of mine) { if (r.holds) most = r.count; else break; }
+        return { id: way.id, name: way.name, cards: way.cards, holds_up_to: most, tried_up_to: mine.length ? mine[mine.length - 1].count : 0, rows: mine };
+      });
+      const low = ways.find((w) => w.id === "mesh-low"), cards = ways.filter((w) => w.cards);
+      const dropAt = low?.rows.find((r) => !r.holds)?.count || null;
+      const at = dropAt || low?.tried_up_to;
+      const meshAt = low?.rows.find((r) => r.count === at);
+      const best = cards.map((w) => ({ w, r: w.rows.find((r) => r.count === at) })).filter((x) => x.r).sort((a, b) => a.r.work - b.r.work)[0];
+      return { id: look.id, name: look.name, ways, meshes_drop_at: dropAt, compared_at: at, low_poly_ms: meshAt?.work, best_cards: best?.w.name, best_cards_ms: best?.r.work,
+        times_faster: meshAt && best ? Math.round((meshAt.work / best.r.work) * 10) / 10 : null };
+    });
+    return { test: "forge tag phone test/1", when: new Date().toISOString(), device: navigator.userAgent, platform: navigator.platform, cores: navigator.hardwareConcurrency,
+      pixel_ratio: window.devicePixelRatio, screen: [screen.width, screen.height], window: [innerWidth, innerHeight], picture: plan.size, warm_s: plan.warm, measure_s: plan.seconds,
+      repeats: plan.repeats, took_s: Math.round(took), stopped, frame_gap_ms: Math.round(gap * 100) / 100, full_speed_fps: full, warmed, looks, rows, runs };
+  };
+  const ms = (v) => (v === undefined ? "" : `${v.toFixed(1)} ms`);
+  const showAnswer = (result) => {
+    const lines = [];
+    for (const look of result.looks) {
+      const held = look.ways.map((w) => `${w.name.toLowerCase()} to ${w.holds_up_to ? (w.holds_up_to === w.tried_up_to ? `${w.holds_up_to}, the most tried` : w.holds_up_to) : "none of them"}`).join("; ");
+      const versus = look.times_faster ? (look.meshes_drop_at
+        ? ` At ${look.compared_at}, where the low-poly meshes give out, ${look.best_cards.toLowerCase()} do a frame's work in ${ms(look.best_cards_ms)} against ${ms(look.low_poly_ms)}: ${look.times_faster} times ${look.times_faster >= 1 ? "faster" : "as fast"}.`
+        : ` The low-poly meshes never gave out; at ${look.compared_at}, ${look.best_cards.toLowerCase()} do a frame's work in ${ms(look.best_cards_ms)} against ${ms(look.low_poly_ms)}: ${look.times_faster} times ${look.times_faster >= 1 ? "faster" : "as fast"}.`) : "";
+      lines.push(h("p", {}, h("b", {}, `${look.name}. `), `Holds ${result.full_speed_fps} frames a second: ${held}.${versus}`));
+    }
+    const heat = result.warmed ? (result.warmed.slower_pct > 15
+      ? h("p", { class: "tag-warn" }, `The phone slowed down as it warmed: the first setting took ${ms(result.warmed.first)} at the start and ${ms(result.warmed.last)} at the end (${result.warmed.slower_pct}% slower). Let it cool and run the test again before trusting these.`)
+      : h("p", { class: "about" }, `It did not slow as it warmed: the first setting took ${ms(result.warmed.first)} at the start and ${ms(result.warmed.last)} at the end.`)) : null;
+    const copy = h("button", { class: "clay-button tag-big", type: "button", onclick: () => {
+      const text = JSON.stringify(result);
+      const done = () => { copy.textContent = "Copied"; };
+      (navigator.clipboard?.writeText(text) || Promise.reject()).then(done, () => {
+        const box = h("textarea", { class: "tag-json" }, text);
+        answer.append(box);
+        box.select();
+        try { document.execCommand("copy"); done(); } catch { copy.textContent = "Select the text below and copy it"; }
+      });
+    } }, "Copy results");
+    const blocks = result.looks.map((look) => [h("h3", {}, look.name), h("div", { class: "tag-scroll" }, h("table", {},
+      h("thead", {}, h("tr", {}, h("th", {}, "Runners"), result.rows.filter((r) => r.lookId === look.id && r.way === look.ways[0].id).map((r) => h("th", {}, String(r.count))))),
+      h("tbody", {}, look.ways.map((w) => h("tr", {}, h("th", {}, w.name), w.rows.map((r) => h("td", { class: r.holds ? "holds" : "drops" },
+        h("b", {}, ms(r.work)), h("small", {}, `${(1000 / r.frame).toFixed(0)} a second`), h("small", {}, `${r.work_low.toFixed(1)} to ${r.work_high.toFixed(1)}`))))))))]).flat();
+    answer.replaceChildren(
+      h("h2", {}, result.stopped ? "Phone test (stopped early)" : "Phone test"),
+      ...lines, heat,
+      h("p", { class: "about" }, `Drawn ${result.picture[0]} by ${result.picture[1]} whatever the screen, poses shared, ${result.repeats} goes at each setting; the big number is the middle one's work in a frame, under it the frames a second really shown and the least and most work of the goes. A setting "holds" when its middle frame is on time and its slow ones miss no more than one. Took ${Math.round(result.took_s / 6) / 10} minutes.`),
+      copy, ...blocks);
+    answer.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const testButton = h("button", { class: "clay-button tag-big", type: "button", onclick: () => phoneTest() }, "Phone test");
   const looksButton = h("button", { class: "toggle clay-button clay-button--soft", type: "button", title: "Every look, a hundred and a thousand runners, as meshes and as cards drawn all at once",
     onclick: () => runAll({ looks: LOOKS.map((l) => l.id), ways: ["mesh-batch", "mesh-low", "card-batch", "mix"], counts: [100, 1000] }) }, "Measure the looks");
 
@@ -1123,13 +1280,15 @@ export function tagPage({ run, sets, h, loader }) {
     group("In the look", lookChips),
     models.length > 1 ? group("Cards pictured from", modelChips) : null,
     h("div", { class: "controls" }, h("div", { class: "toggles" }, pause, again, measure, looksButton)),
+    h("div", { class: "controls" }, testButton, h("span", { class: "about" }, "Six and a half minutes: which ways hold full speed at 100 to 1000 runners, and how much faster cards are than the cheapest meshes.")),
+    answer,
     stage,
     facts,
     table,
   );
   queueMicrotask(() => {
     field = new Field(pane, { run, baked, set: sets.find((s) => s.id === "grass"), loader, onReady: show });
-    window.forgeTag = { state: () => field.reading(), measureAll: runAll, look: (id) => field.useLook(id).then(() => field.drop()), results, text: () => text(...last), field,
+    window.forgeTag = { state: () => field.reading(), measureAll: runAll, look: (id) => field.useLook(id).then(() => field.drop()), results, text: () => text(...last), field, phoneTest,
       // one moment of the game, held still: for pictures of the same field drawn different ways
       // the eye brought up close to one runner
       near: (i = 0, away = 3.6) => {

@@ -108,6 +108,7 @@ the whole world.
 - the spawn spot, with the gachapon and the BUY HOUSE pedestal;
 - the ninja's stage, a short walk east of the spawn spot;
 - the flamenco dancer's house, Casa de la Rosa;
+- the halfpipe, a plywood ramp on the open ground north of the ninja's stage;
 - the toons in their places.
 
 ## How this world began: the reset
@@ -159,6 +160,7 @@ placed in the world like the other places.)
 | The settlement | Two homes joined by a porch, a shared fire, and their stall | built (Epoch 0) |
 | The spawn spot | New toons land here; the gachapon; the BUY HOUSE pedestal | built (Epoch 0) |
 | The dancer's house | Rehearsals, small shows for friends | Casa de la Rosa (Epoch 0) |
+| The halfpipe | Rolling back and forth on a plank with wheels; with enough speed, leaving the top | built (Epoch 0): north of the ninja's stage, east of the settlement |
 | The Niantic | The pirate's other home base: a saloon below decks in a beached ship | planned: past the "TODO: more world" corner; the saloon from a Marble world, the cove and hull to come |
 
 ## The Niantic (planned)

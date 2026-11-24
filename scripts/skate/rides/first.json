@@ -1,0 +1,16 @@
+{
+ "name": "first",
+ "title": "First run",
+ "about": "Lincoln's first run on the halfpipe. He drops in off the left wall, feels the ramp out with a kickturn, pumps up to a first small air, grabs the next one, goes higher, plants a hand on the coping and goes over it, grabs one more air, turns once more and rolls to a stop on the flat with a hand raised.",
+ "set": "halfpipe",
+ "rider": {"character": "young-lincoln-frontier-wrestler", "version": "lowpoly"},
+ "passes": [
+  {"trick": "kickturn"},
+  {"trick": "air", "height_m": 0.35},
+  {"trick": "air grab", "height_m": 0.8},
+  {"trick": "air", "height_m": 1.0},
+  {"trick": "handplant"},
+  {"trick": "air grab", "height_m": 0.9},
+  {"trick": "kickturn"}
+ ]
+}
