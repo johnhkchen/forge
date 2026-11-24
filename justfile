@@ -248,7 +248,7 @@ impostor-layered run from="painted":
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --layers 2 --look pixel --px 96 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --layers 2 --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --layers 2 --look joe --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
-    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_joints.py -- "{{run}}" detailed --from joe-layered,pixel-clear-layered,comic-layered 2>&1 | grep -E '^JOINTS .*skinned|^JOINTS left|Error|Traceback'
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_joints.py -- "{{run}}" detailed --from joe-layered,pixel-clear-layered,comic-layered 2>&1 | grep -E '^JOINTS .*(skinned|necked)|^JOINTS left|Error|Traceback'
 
 # Count what the layers behind a card's first surface fill, with no browser: a take's cast drawn from the sheets one surface deep and from the layered ones, through the set's crew camera, from 2 m and from 1 m of each head, against the real model (holes, bare pixels, what sticks out; over the whole figure and round the head, where a hat is). Writes out/layers-<tag>.json. more: any of judge_layers.py's flags (--only right --stills right@18:close ...)
 impostor-layers take="crew-candy-shop" tag="after" out="evidence/layers" *more:
