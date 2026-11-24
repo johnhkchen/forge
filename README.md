@@ -1064,11 +1064,129 @@ On the tag field on this Mac (1080 by 608, poses shared, the gallery as it was a
 - **Hips and shoulders gain least**, and leave more bare. They were less wrong to begin with; the web of skin under a raised arm is drawn now only as far as the zone reaches; and from 1 m a few hundred more pixels of the model go uncovered round a hip or a shoulder than did.
 - **Bent as far as it goes, a piece folds as the model's skin does.** Behind the pirate's knee at 147 degrees a fin of folded skin and a few specks stand out from 1 m (`knee-pirate-deep-joe.png`). A speck of the same kind shows beside his thigh in the squat.
 - **The comic look and "Pixels, baked" count more holes than they did** (the table above), and get no line across a piece's own folds, only its outline. Nothing fills a crack for them. A wider overlap between a piece and its cards, or the crack filling the other looks have, would be the next thing to try.
-- **Wrists, ankles, the neck and the waist have no pieces.** They bend less, and a hand or a head is most of a zone.
+- **Wrists, ankles, the neck and the waist have no pieces.** They bend less, and a hand or a head is most of a zone. (The neck has one since, and it turned out to matter more than its bend: "A neck that holds", below.)
 - **The judge's likeness is light and dark, not a person looking.** It ranks these pictures the way the eye does. It would not notice a knee that is right and ugly.
 - No phone has run it.
 
 Stills (`evidence/knees/`, taken by `just joint-shots`, the cards alone on the left and with the pieces on the right): `stage-38-<look>.png` is the squat through the crew camera; `knee-<who>-left-<look>.png`, `-right-` and `-deep-` are a square round each knee, down the page through the crew camera, from 2 m and from 1 m; `elbow-`, `hip-` and `shoulder-` the same for the other joints. `before-*` and `after-*` are the judge's own: the real model, then the cards in each look.
+
+## A neck that holds
+
+When a dancer turned his head or threw an arm up, the head and arms went and the neck, the collar and the tops of the shoulders stayed behind with the chest. Now that skin is one more piece of the model itself, pulled by the skeleton, and the chest's card steps aside for it.
+
+```
+just impostor-joints runs/<character> detailed      # the pieces, the neck's among them, for cards already baked: ten seconds
+just impostor-neck crew-candy-shop after            # do the head and arms hold to the chest? counted, no browser
+just joint-shots "8048/?joints=knees" 8048/ crew-candy-shop evidence/neck --square 0.8 --joints turn=0:neck@28.75   # stills, before and after
+```
+
+**What it was** (`evidence/neck/turn-lincoln-joe.png`, `twist-lincoln-joe.png`, `raise-roosevelt-joe.png`: before on the left).
+
+- **The skeleton has a neck bone and two collar bones, and no card rode any of them.** The cut gives every bone's skin to one of 16 parts, and the neck bone's and the collar bones' went to the chest. The chest's card rides the chest bone alone.
+- **The dance uses all three.** Over the candy-shop routine the neck bone is turned 17 to 21 degrees from rest on average (62 at most) and the head another 15 to 20 on top of it: a turn of the head is shared about half and half between the two, which is roughly how a real neck shares it (half or more of a turn is at the top two bones, the rest spread down). The collar bones are 14 to 17 degrees from rest on average (33 at most), and they lift with the arm: 15 degrees below level with the arm hanging, about level with it raised, which is a real shoulder's rhythm near enough (a raised arm is about two parts arm to one part shoulder blade and collar bone). So nothing had to be made up. The motion was right, and the cards were not listening to it.
+- **So the skin of the neck and collar sat in the wrong place.** Measured on the model itself: the chest's card held that skin 2.8 cm from where the model has it on Lincoln, a typical point at a typical one of these moments (6 cm for the worst twentieth of it, 12 cm in his furthest turn), 2.0 cm on Roosevelt, 1.4 cm on the pirate. The head's joint moves 4 to 5 cm against the chest on average and up to 12; an arm's joint 3 to 4 cm and up to 9. The head slid off a neck stump that stood still, and the stump showed behind it; a raised arm lifted its shoulder off a strap that stayed down.
+- **The rig's own weights are hard there**, each point of the neck given to one bone alone: all chest and collar, then all neck, then all head from 8 cm up. That is the real model's doing, not the cards', and it is why the real model creases at the neck too.
+- **Not the cause:** a missing rule for the collar bone. One was on the list to try (lift the collar a third of what the arm lifts). The clips already do it.
+
+**How it is measured.** `just impostor-neck` (`scripts/impostor/judge_joints.py --kinds neck,shoulder,yoke`) looks at one disc that holds the neck, the collar and both shoulders, at the two moments of the dance where each of four things is asked most: the head turned furthest, an arm raised highest, a collar bone shrugged furthest, the chest twisted furthest against the hips. Three dancers, through the crew camera, from 2 m and from 1 m. It says what the knee judge says (likeness to the real model, blots, pixels of the model left bare), and two things more: pixels that stick out where the model has nothing, and how far the skin there is drawn from where the model has it, in centimetres, measured on the skin and not on a picture.
+
+**What was looked into, and what was kept.**
+
+| | neck and shoulders, likeness from 1 m (bold ink) | skin off, cm | triangles it adds, a dancer |
+|---|---|---|---|
+| the cards as they were | 0.591 | 2.1 | |
+| a piece of the model for the neck and collar, with the rig's own pull | 0.607 | 0.9 | 1,300 to 1,700 |
+| ... its pull evened out along the neck, and cloth held back | 0.609 | 0.9 | 1,300 to 1,700 |
+| ... its rim, and the shoulders' rims, eased over to the chest bone instead, so piece and card meet without a step | 0.591 | 1.0 | 1,300 to 1,700 |
+| **... pull evened out, cloth held back, a third of the triangles: kept** | 0.610 | 1.0 | 364 and 451 |
+| a collar bone that follows the arm by rule; a head's turn spread down the neck by rule | not built | | the clips already do both |
+| a collar that lags and settles on a spring | not built | | see below |
+
+(All three dancers together; the pirate has no neck piece, so his share of each number does not move.) Having the piece at all is what counts: 0.591 to 0.607. Evening out its pull and holding cloth back add two or three thousandths, which is inside what the judge can tell apart; they are kept because they cost nothing to draw and are the truer thing to do. The rim easing looked right on paper and scored worst: pinning the edge of a shoulder's piece to the chest takes the collar bone's lift out of the skin round the shoulder, which is the very thing that was missing. A raised arm went from 0.554 to 0.539 and a shrug from 0.627 to 0.606. It is still there to try (`--rim 0.3`). The finer piece bought nothing the judge could see, and a phone pays for triangles.
+
+**What was done** (`scripts/impostor/yoke.py`, `bake_joints.py`; `gallery/impostor-math.js`: partBalls).
+
+- **One piece for the neck, the collar and the shoulder tops.** It is the skin the chest's card used to hold inside a ball about the foot of the neck, most of the way out to the arms (15 cm on Lincoln, 18 on Roosevelt), up to where the head's own skin begins. The two shoulders keep the pieces they had; the new one stops a centimetre inside their zones. It is cut from the tidy low-poly model and laid onto the detailed one, like the knees, but with the head's own faces left out of the way, so it does not climb a beard, a jaw or a hat brim.
+- **Only the chest's card steps aside**, and for this piece it keeps nothing back. The head's card stays whole: a face is the last thing to hand over to a few hundred triangles, and the faces' scores did not move (below).
+- **A neck is not a hinge.** The piece's pull is the rig's, evened out along the surface over about 3 cm, with the head's own points kept as they were. On a neck drawn finely that is a real change: a nod of 50 degrees that folds the rig's neck at two creases of 20 and 30 degrees bends in a curve instead, 9 degrees at the sharpest (`test_impostor.py`). On the piece as kept, whose triangles are 3 to 4 cm across, it is one or two rounds of each point taking after its neighbours: gentle. Each point is then moved, as it rests, so that in the pose the cards were pictured in it stands exactly where it stood: the piece is the cards' own surface there, and only differs from the rig's as the bones leave that pose.
+- **Cloth is not skin.** A collar lies on the shoulders and the neck turns inside it. Where the tidy model has clothing as a mesh of its own and it reaches the neck (Lincoln's shirt: 138 points of his piece), those points give half of what the neck and head pull on them to the chest. So Lincoln's open collar follows a turn of his head half as far as his neck does. Roosevelt's singlet is cut low and its straps lie in his shoulders' zones, so none of it is in his neck's piece: his straps go up with his shoulders because the skin between them now does.
+- **A piece that will not lie down is left out**, as with any joint. The pirate has no neck to speak of: his head sits in his coat collar, his shoulders' zones nearly meet under his beard, and the tidy model has 24 triangles in between. The bake found that his piece missed 61% of what is there and left it out. Forced in, it scored worse than his cards (0.508 to 0.484), and his cards were the least wrong to begin with (1.4 cm).
+- The pieces go in `<version>-impostor-<look>-necked/`, which the pages read first; the `-skinned` folders and every sheet are left alone, and a gallery older than this does not read the new ones at all. Add `?joints=knees` to a page's address to see the pieces as they were, without the neck's.
+
+**What was not built, and why.**
+
+- **A collar bone that follows the arm, and a turn shared down the neck, by rule.** Both were on the list. The motion already has both, measured above; a rule on top would do it twice.
+- **Cloth that lags and settles.** `swing.py` in the tidy-mesh skill does this for skirts and hair: bones for the cloth, trailed behind the body like weights on strings, baked into the clip. A collar has no such bones, and a card or a piece is placed afresh every frame with no memory of the last; a thousand runners would each need one. And a shirt collar is a hand's width of stiff cloth: it settles inside a frame or two. What a collar does that a neck does not is stay put, and that needs no clock, only the weights above.
+
+**What it is now** (`evidence/neck/joints-before.json`, `joints-after.json`; the three dancers together, before to after).
+
+| look | from | likeness, neck and shoulders | head turned | arm raised | shrug | twist | bare pixels | sticks out |
+|---|---|---|---|---|---|---|---|---|
+| Bold ink | crew camera | 0.61 to 0.62 | 0.63 to 0.66 | 0.59 to 0.60 | 0.63 to 0.64 | 0.51 to 0.51 | 34 to 32 | 261 to 252 |
+| Bold ink | 2 m | 0.61 to 0.62 | 0.68 to 0.71 | 0.59 to 0.60 | 0.66 to 0.66 | 0.50 to 0.51 | 317 to 227 | 1,331 to 1,276 |
+| Bold ink | 1 m | 0.59 to 0.61 | 0.64 to 0.67 | 0.55 to 0.57 | 0.63 to 0.63 | 0.54 to 0.57 | 1,774 to 1,298 | 4,775 to 4,681 |
+| Pixels, both | crew camera | 0.65 to 0.66 | 0.68 to 0.69 | 0.62 to 0.62 | 0.65 to 0.64 | 0.63 to 0.64 | 11 to 10 | 439 to 433 |
+| Pixels, both | 2 m | 0.70 to 0.71 | 0.76 to 0.77 | 0.69 to 0.69 | 0.72 to 0.72 | 0.65 to 0.66 | 205 to 132 | 1,629 to 1,628 |
+| Pixels, both | 1 m | 0.67 to 0.69 | 0.70 to 0.72 | 0.66 to 0.67 | 0.71 to 0.71 | 0.62 to 0.64 | 1,665 to 1,175 | 5,017 to 5,083 |
+
+The skin itself, how far it is drawn from where the model has it (a typical point, and the worst twentieth): Lincoln 2.8 cm (6.1) to 0.9 (2.4); Roosevelt 2.0 (5.2) to 0.6 (1.5); the pirate 1.4 (4.4), unchanged. By what they were doing, all three together: a turned head 2.7 (7.2) to 1.2 (3.7), a twist 2.3 (5.3) to 1.0 (2.6), a shrug 1.8 (4.3) to 0.9 (2.3), a raised arm 1.6 (4.2) to 0.9 (2.4).
+
+Read plainly: the skin is where it should be to within a centimetre where it was two or three out, a quarter to a third fewer pixels of the model are left bare from close by, and the likeness moves by a hundredth or two, most for a turned head. The likeness is a small number because the disc is the whole bust, head and both shoulders, and the piece is a small part of it; the stills say it better. In `turn-lincoln-joe.png` the stump of neck that stood up behind his ear is gone and his collar runs into his neck; in `twist-lincoln-joe.png` his head no longer rides ahead of his shirt; in `raise-roosevelt-joe.png` the singlet's straps go up with his shoulders.
+
+**The knees did not slip** (`just impostor-knees`, `evidence/neck/joints-knees-before.json`, `joints-knees-after.json`; likeness of the joints each moment was picked for, bold ink through the crew camera and from 1 m, then "Pixels, both" the same): a knee 0.72 to 0.72, 0.73 to 0.73, 0.66 to 0.67, 0.76 to 0.76; an elbow 0.58 to 0.58, 0.60 to 0.60, 0.50 to 0.50, 0.65 to 0.65; a hip 0.48 to 0.48, 0.55 to 0.55, 0.52 to 0.52, 0.64 to 0.64; a shoulder 0.57 to 0.59, 0.55 to 0.57, 0.55 to 0.56, 0.60 to 0.62. The knees', elbows' and hips' pieces are the ones they were, to the last triangle; a shoulder gains a little from the skin beside it.
+
+**The faces did not slip** (`just impostor-faces`, `evidence/neck/faces-before.json`, `faces-after.json`; all three dancers, how much of a face is kept, through the crew camera, from 2 m and from 1 m): bold ink 0.742, 0.771, 0.745 to 0.742, 0.771, 0.744; "Pixels, both" 0.777, 0.818, 0.789 to 0.777, 0.819, 0.790.
+
+**The seams** (`just impostor-seams crew-candy-shop after evidence/neck --deep 2`, `seams-before.json`, `seams-after.json`; pixels of one figure in one picture, 60 pictures; the first of each pair through the crew camera, the second from 2 m):
+
+| look | bare and shut in by cards | | bare between two cards | | sticks out | | line that is not there, % | |
+|---|---|---|---|---|---|---|---|---|
+| Bold ink | 12.4 to 12.1 | 103 to 99 | 33.2 to 31.7 | 299 to 295 | 319 to 319 | 2188 to 2195 | 0.44 to 0.43 | 0.30 to 0.29 |
+| Pixels, both | 0.7 to 0.7 | 13.5 to 13.7 | 3.9 to 3.8 | 54.9 to 55.3 | 137 to 138 | 1141 to 1138 | 1.20 to 1.17 | 0.63 to 0.60 |
+| Comic | 48.3 to 46.7 | 292 to 283 | 78.0 to 77.0 | 472 to 468 | 464 to 461 | 3408 to 3387 | 0.92 to 0.91 | 0.76 to 0.75 |
+| Pixels, baked | 27.6 to 26.7 | 163 to 159 | 60.9 to 59.5 | 380 to 378 | 594 to 592 | 4083 to 4063 | 1.06 to 1.14 | 1.10 to 1.17 |
+
+Nothing moves by more than a few pixels, and nearly all of it the right way. The one slip is "Pixels, baked", whose line that is not there goes from 1.06 to 1.14% of the figure through the crew camera and 1.10 to 1.17 from 2 m. It was not looked into.
+
+**What it costs.** The cards' sheets are not baked again. A dancer's pieces are still one file and two pictures 512 by 512, 2.1 MB in memory:
+
+| | triangles, before | now | points pulled about | joints with a piece | bones that pull on them | to fetch, bold ink |
+|---|---|---|---|---|---|---|
+| Lincoln | 4,031 | 4,395 | 3,071 to 3,365 | 7 to 8 | 13 of 21, as before | 0.63 to 0.66 MB |
+| Roosevelt | 4,741 | 5,192 | 3,249 to 3,641 | 8 to 9 | 15 of 21, as before | 0.56 to 0.61 MB |
+| the pirate | 4,195 | 4,195 | 2,961 | 6 | 17 of 21 | 0.75 MB |
+| Roosevelt's painted model (the tag field's) | 2,489 | 2,489 | 1,446 | 8 | | 0.41 MB |
+
+So a dancer who has the piece is a tenth heavier in triangles and in points to pull (9% and 10% for Lincoln, 10% and 12% for Roosevelt), and no bone is pulled that was not pulled already: the neck's piece hangs on the chest, the neck, the collar bones and the tops of the arms (Roosevelt's on the head too), and the shoulders' pieces were already pulled by every one of them.
+
+On the tag field on this Mac (1080 by 608, poses shared, this gallery with the neck's piece and without it (`?joints=knees`) turn about, three goes each; `evidence/neck/cost-mac.json` by `face_cost.py`, `cost-near-mac.json` by `near_cost.py`), ms of work a frame for a hundred and a thousand Roosevelts, before to after:
+
+| | bold ink | "Pixels, both" |
+|---|---|---|
+| from the phone test's eye, well back (nobody within 8 m: no pieces drawn) | | |
+| detailed cards | 4.4 to 4.3, 7.5 to 7.8 | 4.0 to 4.2, 5.7 to 6.1 |
+| detailed cards, search off far away | 2.2 to 1.9, 3.0 to 4.5 | 1.6 to 2.3, 2.3 to 3.1 |
+| painted cards (no neck piece: the same pieces both times) | 4.7 to 4.3, 7.8 to 8.1 | 2.2 to 3.7, 5.4 to 6.1 |
+| painted cards, search off far away | 2.1 to 1.9, 3.4 to 3.8 | 1.6 to 1.9, 2.6 to 5.4 |
+| with the eye among the runners (50 of the hundred and 74 of the thousand get pieces) | | |
+| detailed cards (50 runners: 237,050 to 259,600 triangles of pieces; 74 runners: 350,834 to 384,208) | 6.2 to 5.7, 7.8 to 8.2 | 5.6 to 5.0, 8.9 to 6.0 |
+| detailed cards, search off far away | 5.8 to 6.7, 9.2 to 7.1 | 5.6 to 5.0, 6.9 to 5.5 |
+| painted cards (no neck piece) | 7.0 to 7.1, 8.3 to 9.3 | 4.9 to 4.0, 7.9 to 6.0 |
+| painted cards, search off far away | 6.1 to 7.3, 7.0 to 8.4 | 4.8 to 4.8, 6.1 to 5.4 |
+(Five goes each this time. Another piece of work was baking on the same machine throughout, and one go differed from the next by up to five and a half milliseconds, which is more than any of these differences.) From the phone test's eye the two draw the very same thing, since nobody is near enough to get pieces, and the painted cards have no neck piece from any eye: those rows are what one go differs from another by, and they move as much as the rest. With the eye among the runners the neck's piece is 23,000 more triangles in 260,000 for the hundred and 33,000 in 384,000 for the thousand, a tenth, and no cost shows above the noise: six of the eight settings read cheaper with it. Every setting drew a frame every 16.7 ms. "Pixels, both" is the cheaper of the two looks at 28 of the 32 settings by the middle go. The four that read the other way round are three from the eye that stands well back, where no piece is drawn at all (two of them painted cards), and one with the eye among the runners in the gallery without the neck's piece (8.9 against 7.8): none is the neck's doing. Meshes are untouched. No phone has run it. A phone is held back by triangles and by pulling points about, and this is a tenth more of each for a runner within 8 m; the knobs are `--neck-triangles`, `--kinds` without `neck`, and how near a runner must be (`JOINTS_M` in `gallery/tag.js`).
+
+**What is still weak.**
+
+- **The pirate has no neck piece**, and neither has Roosevelt's painted model, the one the tag field opens with: its cards were baked without a joint between head and chest, so there is nothing to hang the piece on until they are baked again. The tag field's detailed cards have it.
+- **The piece is plainer than the card it replaced.** A few hundred flat triangles under the cards' colours. The dark folds in the V of Lincoln's open collar are a flat pale patch now, with a white fleck or two where the collar's edge would not lie down on the model; from 1 m it reads as a collar, not as that collar.
+- **Where the piece meets the chest's card there can be a step**, a few millimetres as a rule and more in a hard shrug: the piece's rim still follows the collar bones and the card does not. Bold ink draws a short line there now and then (across Roosevelt's chest in `raise-roosevelt-joe.png`). Easing the rim to the chest bone cures the step and costs more than it gives, as measured above; a card for the chest that itself leans a little with the collar bones is the thing not yet tried.
+- **A twist is still the worst of the four** (0.51 through the crew camera): most of a twist is at the waist, between the chest's card and the spine's, and the waist has no piece.
+- **The head is still one rigid card**, and the piece stops where the head's own skin begins, 8 cm up Lincoln's neck. There the piece goes with the neck bone and the card with the head, and the card laps over it by 2 cm. In a deep nod or a head thrown right back the two part by a centimetre or two under the jaw.
+- **Cloth is held back by one number**, half, wherever the tidy model keeps clothing apart from the body. The pirate's coat is part of his body's mesh and gets none of it. Nothing lags or swings.
+- **The judge's likeness is light and dark over a whole bust.** It moved by hundredths for a change the eye sees at once; the centimetres on the skin are the better count here, and they are of where the skin is, not of how it looks.
+- No phone has run it.
+
+Stills (`evidence/neck/`): `turn-lincoln-<look>.png`, `turn-roosevelt-`, `turn-pirate-`, `raise-roosevelt-`, `shrug-roosevelt-`, `twist-lincoln-` are a square 80 cm across round the foot of the neck on the watch page, down the page through the crew camera, from 2 m and from 1 m, before on the left and after on the right (`just joint-shots`); `stage-28.75-<look>.png` the stage. `before-*` and `after-*` are the judge's own: the real model, then the cards in bold ink and in "Pixels, both".
 
 ## A place from a world model
 
