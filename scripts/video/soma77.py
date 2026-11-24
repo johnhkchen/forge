@@ -18,7 +18,9 @@ things are ours to settle:
 
   size     the hips' path is scaled by our leg length over the person's, so a
            step that was one leg-length long still is
-  ground   the lowest the toes go, bar a few stray frames, is the floor
+  ground   the lowest the toes go in the few seconds around a frame, bar a
+           few stray frames, is the floor there (GEM-X's own floor creeps
+           over a long shot)
   check    GEM-X's own hands, toes and head are compared with where ours end
            up (`ours_vs_gemx_cm`); a few centimetres is the two bodies'
            proportions, a lot would mean the two skeletons are not being
@@ -62,6 +64,8 @@ from soma_bridge import Bridge  # noqa: E402
 FPS = 30
 BLEND_FRAMES = 8  # frames of a new shot over which the jump in pose at a cut is eased out
 GROUND_SHARE = 0.03  # the floor is where the lowest toe is, leaving out this share of the lowest frames
+FLOOR_REACH = 45  # frames either side that say where the floor is under a frame (three seconds in all)
+FLOOR_SMOOTH = 20  # frames either side the floor's height is averaged over, so it never steps
 INVERTED_SHARE = 0.9  # refuse a shot as the wrong way up only when the body is upside down in more than this share of it
 CONTACT_ORDER = ["left_heel", "left_toe", "right_heel", "right_toe"]
 TOP_SPEED = 4.0  # m/s; the hips are not carried across a cut faster than this
@@ -127,9 +131,25 @@ def convert(raw: dict, sk: Skeleton, card: dict = None) -> tuple:
     inverted = sum(u < 0.0 for u in ups) / count
     if inverted > INVERTED_SHARE:
         raise clip_file.Stop("the motion came back upside down (%d%% of its frames): the worker's world is not Y-up the way this conversion expects" % round(100 * inverted))
-    floor = sorted(lows)[min(count - 1, int(GROUND_SHARE * count))]
-    for row in root_rows:
-        row[1] -= floor
+    # The floor. GEM-X's world creeps up or down over a long shot (tens of centimetres in half a minute), so one
+    # height for the whole shot leaves the body floating by its end. The floor is taken to be under the lower
+    # toe, as it was in the few seconds around each frame: a jump is still a jump, a slow climb is not kept.
+    def around(values: list, f: int, reach: int) -> list:
+        reach = min(reach, f, count - 1 - f)  # the same either side, so a climb is not read as a floor that lags
+        return values[f - reach : f + reach + 1]
+
+    # First the slow climb itself (the toes' average height over a few seconds), then how far below that average
+    # the floor is (the lowest the toes go against it). Together: the floor under each frame.
+    climb = [sum(around(lows, f, FLOOR_REACH)) / len(around(lows, f, FLOOR_REACH)) for f in range(count)]
+    against = [lows[f] - climb[f] for f in range(count)]
+    below = []
+    for f in range(count):
+        near = sorted(around(against, f, FLOOR_REACH))
+        below.append(near[min(len(near) - 1, int(GROUND_SHARE * len(near)) + 1 if len(near) > 20 else 0)])
+    under = [climb[f] + sum(around(below, f, FLOOR_SMOOTH)) / len(around(below, f, FLOOR_SMOOTH)) for f in range(count)]
+    for f, row in enumerate(root_rows):
+        row[1] -= under[f]
+    floor = sorted(under)[count // 2]
     contacts = [[round(float(c), 3) for c in row[:4]] for row in raw["contacts"]]
     motion = {
         "format": "forge-soma-motion/1",
@@ -147,6 +167,7 @@ def convert(raw: dict, sk: Skeleton, card: dict = None) -> tuple:
         "size_ours_over_theirs": round(size, 4),
         "rest_pose_turned_deg": round(math.degrees(2.0 * math.acos(min(1.0, abs(turn[3])))), 2),
         "floor_moved_cm": round(100.0 * floor, 2),
+        "floor_followed_cm": round(100.0 * (max(under) - min(under)), 1),  # how far GEM-X's floor crept over the shot
         "upright": round(upright, 3),
         "ours_vs_gemx_cm": {name: {"typical": round(100.0 * sorted(d)[len(d) // 2], 1), "worst": round(100.0 * max(d), 1)} for name, d in apart.items()},
         "feet_down_share": round(sum(1 for c in contacts if max(c) > 0.5) / float(count), 3),
