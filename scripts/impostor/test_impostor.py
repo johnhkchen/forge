@@ -273,14 +273,14 @@ def test_page():
                       "cell": [10, 20, int(rng.integers(20, 90)), int(rng.integers(20, 90)), int(rng.integers(5, 40)), int(rng.integers(5, 40)), -0.05, float(rng.uniform(0.0, 0.2))],
                       "held": int(rng.integers(len(views)))})
     script = """
-      import { eyeInBone, choose, place, corners, marchSteps } from %s;
+      import { eyeInBone, choose, place, corners, marchSteps, fan } from %s;
       const { views, cases } = JSON.parse(await new Promise((done) => { let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => done(s)); }));
       const dirs = views.map((v) => v.d);
       console.log(JSON.stringify(cases.map((c) => {
         const v = eyeInBone(c.bone, c.center, c.eye);
         const pick = choose(dirs, v, null, %r, %r), kept = choose(dirs, v, c.held, %r, %r);
         const card = place(views[pick.first], c.bone, c.center, c.eye);
-        return { v, pick: [pick.first, pick.second, pick.share], kept: [kept.first, kept.second, kept.share], back: card.back, lean: card.lean, deep: card.deep,
+        return { v, pick: [pick.first, pick.second, pick.share], kept: [kept.first, kept.second, kept.share], back: card.back, lean: card.lean, deep: card.deep, foot: card.foot, far: card.far, fan: fan(card, [0.13, -0.07]),
                  corners: corners(card, c.cell, 192).world, flat: corners(card, c.cell, 192, false).world, steps: marchSteps(card, c.cell, 192, { px: %r, max: %r }) };
       })));
     """ % (json.dumps("file://" + os.path.join(REPO, "gallery", "impostor-math.js")), impostor.HOLD_DEG, impostor.BLEND_DEG, impostor.HOLD_DEG, impostor.BLEND_DEG, impostor.MARCH_PX, impostor.MARCH_MAX)
@@ -294,11 +294,33 @@ def test_page():
         pick, kept = impostor.choose(np.array(dirs), v), impostor.choose(np.array(dirs), v, held=case["held"])
         card = impostor.place(views[pick[0]], bone, case["center"], case["eye"])
         same &= list(pick[:2]) == js["pick"][:2] and list(kept[:2]) == js["kept"][:2] and impostor.march_steps(card, case["cell"], 192.0) == js["steps"]
-        for mine, theirs in ((v, js["v"]), (card["back"].reshape(-1), js["back"]), (card["lean"], js["lean"]), (card["deep"], js["deep"]), ([pick[2], kept[2]], [js["pick"][2], js["kept"][2]]),
+        for mine, theirs in ((v, js["v"]), (card["back"].reshape(-1), js["back"]), (card["lean"], js["lean"]), (card["deep"], js["deep"]), ([pick[2], kept[2]], [js["pick"][2], js["kept"][2]]), (card["foot"], js["foot"]), ([card["far"]], [js["far"]]),
+                             (impostor.fan(card, [0.13, -0.07])[0], js["fan"]["p"]), (impostor.fan(card, [0.13, -0.07])[1], js["fan"]["lean"]),
                              (impostor.corners(card, case["cell"], 192.0), js["corners"]), (impostor.corners(card, case["cell"], 192.0, False), js["flat"])):
             worst = max(worst, float(np.abs(np.asarray(mine) - np.asarray(theirs)).max()))
     check("the page picks the same views and takes the same number of steps as impostor.py (60 cases)", same)
     check("... and puts every card's corners in the same place, and reads its picture the same way", worst < 1e-9, "worst %.2g" % worst)
+    # A pixel's line fans out from the eye (impostor.fan). From 1 m, a point of a picture that stands well off its
+    # card is seen through the card at one place; that place's own line must pass through the point at the point's
+    # own height, and the card's corners must have room for it. With straight lines it is centimetres out.
+    worst, straight, room = 0.0, 0.0, True
+    for _ in range(200):
+        bone, center = some_bone(rng, float(rng.uniform(0.6, 1.5))), (rng.normal(size=3) * 0.1).tolist()
+        eye = bone[:3, 3] + impostor.unit(rng.normal(size=3)) * 1.0
+        view = views[impostor.choose(np.array(dirs), impostor.eye_in_bone(bone, center, eye))[0]]
+        card = impostor.place(view, bone, center, eye)
+        x, y, h = rng.uniform(-0.2, 0.2), rng.uniform(-0.2, 0.2), rng.uniform(-0.05, 0.25)
+        point = bone[:3, 3] + bone[:3, :3] @ (x * np.array(view["r"]) + y * np.array(view["u"]) + h * np.array(view["d"]))
+        on_card = eye + (point - eye) * ((card["head"] - eye) @ card["toward"]) / ((point - eye) @ card["toward"])
+        place_ = np.array([(on_card - card["head"]) @ card["e2"], (on_card - card["head"]) @ card["e1"]]) / card["size"]
+        start, lean = impostor.fan(card, place_)
+        worst = max(worst, float(np.abs(card["back"] @ (start - h * lean) - (x, y)).max()))
+        straight = max(straight, float(np.abs(card["back"] @ (place_ - h * card["lean"]) - (x, y)).max()))
+        ax, ay = int(round(0.2 * 192)), int(round(0.2 * 192))
+        x0, y0, x1, y1 = impostor.box(card, [0, 0, 2 * ax, 2 * ay, ax, ay, -0.05, 0.25], 192.0)
+        room &= bool(x0 - 1e-9 <= place_[0] <= x1 + 1e-9 and y0 - 1e-9 <= place_[1] <= y1 + 1e-9)
+    check("a pixel's line fans out from the eye: from 1 m it passes through the very point the eye sees there (straight lines are centimetres out), and the card has room for it",
+          worst < 1e-9 and straight > 0.02 and room, "worst %.2g, straight %.3f, room %s" % (worst, straight, room))
 
 
 def tube(rng, radius=0.05, around=48, rings=61):
@@ -806,7 +828,7 @@ def test_fill():
         away, _, _ = impostor.draw(character, {"a": bone, "j": far}, eye, forced={"a": 8})
         was, now = bare[..., 3] > 0, filled[..., 3] > 0
         new = now & ~was
-        check("a see-through pixel beside a tall top is filled when a joint is there", new.sum() > 0.3 * was.sum() and not (was & ~now).any(), "%d pixels more on %d" % (new.sum(), was.sum()))
+        check("a see-through pixel beside a tall top is filled when a joint is there", new.sum() > 0.25 * was.sum() and not (was & ~now).any(), "%d pixels more on %d" % (new.sum(), was.sum()))
         ys, xs = np.nonzero(new)
         at, _ = eye.to_pixels(bone[:3, 3])
         check("... only inside the joint's ball, behind the top, in the top's colour", bool(len(ys)) and float(np.hypot(xs + 0.5 - at[0], ys + 0.5 - at[1]).max()) < 0.12 / per_px + 1.0

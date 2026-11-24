@@ -23,7 +23,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density, FILL, inBone, behindOf } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, fanOf, FAN, density, FILL, inBone, behindOf } from "./impostor-math.js";
 import { CARD_VERTEX, CARD_FRAGMENT, JOINT_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setBalls, setBehind, sheetBalls, skinFor } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, FINE_FROM, withoutHeads } from "./looks.js";
 
@@ -421,6 +421,8 @@ flat out vec2 heights;
 flat out vec4 back;
 flat out vec2 lean;
 flat out vec3 deep;
+flat out vec3 fan;   // a pixel's line fans out from the eye (impostor-math.js: fan): the place the eye stands square over, and how far off it is
+uniform float fanOn;
 flat out float size;
 flat out float depthM;
 flat out float pxPerM;
@@ -482,18 +484,35 @@ void main() {
   anchor = more.xy;
   heights = more.zw;
   bool search = farAway < 0.0 ? false : (farAway == 0.0 || distance(cameraPosition, middle) < farAway);
-  float reach = length(vec2(back.x * lean.x + back.y * lean.y, back.z * lean.x + back.w * lean.y)) * (heights.y - heights.x) * pxPerM;
-  steps = search ? int(min(marchMax, max(1.0, ceil(reach / marchPx)))) : 0;
+  float farOff = dot(cameraPosition - head, toward);
+  fan = search && fanOn > 0.5 && farOff >= FAN_NEAR_ ? vec3(dot(middle - head, e2), dot(middle - head, e1), farOff) : vec3(0.0);
   vec2 lo = vec2(1e9), hi = vec2(-1e9);
+  float most = 0.0;
   for (int k = 0; k < 4; k++) {
     vec2 q = (vec2(k == 1 || k == 2 ? cell.z : 0.0, k >= 2 ? cell.w : 0.0) - anchor) / pxPerM;
     vec2 p = vec2(m.x * q.x + m.y * q.y, m.z * q.x + m.w * q.y);
     lo = min(lo, p);
     hi = max(hi, p);
+    most = max(most, dot(deep.xy, q) + max(deep.z * heights.x, deep.z * heights.y));
   }
   vec2 l = search ? lean : vec2(0.0);
   lo += min(l * heights.x, l * heights.y);
   hi += max(l * heights.x, l * heights.y);
+  float longest = length(vec2(back.x * lean.x + back.y * lean.y, back.z * lean.x + back.w * lean.y));
+  if (fan.z > 0.0) {
+    // what stands toward the eye shows bigger, about the place the eye stands square over: room for the highest
+    float grow = 1.0 / (1.0 - min(most / fan.z, FAN_MOST_));
+    lo = min(lo, fan.xy + (lo - fan.xy) * grow);
+    hi = max(hi, fan.xy + (hi - fan.xy) * grow);
+    vec2 g = vec2(deep.x * back.x + deep.y * back.z, deep.x * back.y + deep.y * back.w);
+    float rise = deep.z - dot(g, lean);
+    for (int k = 0; k < 4; k++) { // (a line that fans out leans most at a corner)
+      vec2 w = vec2(k == 1 || k == 2 ? hi.x : lo.x, k >= 2 ? hi.y : lo.y) - fan.xy;
+      vec2 lk = lean + w * (rise / max(fan.z + dot(w, g), 1e-6));
+      longest = max(longest, length(vec2(back.x * lk.x + back.y * lk.y, back.z * lk.x + back.w * lk.y)));
+    }
+  }
+  steps = search ? int(min(marchMax, max(1.0, ceil(longest * (heights.y - heights.x) * pxPerM / marchPx)))) : 0;
   vSheet = mix(lo, hi, position.xy);
   vView = (viewMatrix * vec4(head + vSheet.x * e2 + vSheet.y * e1, 1.0)).xyz;
   facingToEye = mat3(viewMatrix) * turn;
@@ -504,9 +523,9 @@ void main() {
     vec2 at = (headClip.xy / headClip.w * 0.5 + 0.5) * fineSize;
     gl_Position.xy += (floor(at + 0.5) - at) * 2.0 / fineSize * gl_Position.w;
   }
-}`;
+}`.replaceAll("FAN_NEAR_", FAN.near.toFixed(3)).replaceAll("FAN_MOST_", FAN.most.toFixed(3));
 // The cards page's own pixel shader, told that what was one card's settings now comes with each card.
-const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who", "float keepDark", "vec4 balls[4]"]
+const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "vec3 fan", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who", "float keepDark", "vec4 balls[4]"]
   .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT)
   // every part's balls come in one list: each ball's colour, and the radius of the ball itself
   .replace("uniform vec4 ballTint[4];\n#define TINT(k) ballTint[k]", "uniform vec4 ballTints[80];\nflat in int partOf;\n#define TINT(k) ballTints[partOf * 4 + k]")
@@ -928,6 +947,7 @@ class Field {
             u.heights.value.set(cell[6], cell[7]);
             u.back.value.set(...where.back);
             u.lean.value.set(...where.lean);
+            u.fan.value.set(...fanOf(where));
             u.deep.value.set(...where.deep);
             u.steps.value = marchSteps(where, cell, density(card, part), card.march);
             u.line.value = told.line;
@@ -1017,7 +1037,7 @@ class Field {
       fine: { value: pad(parts.map((part) => density(card, part)), () => 0) }, ballBone: { value: ballBone }, ballSize: { value: ballSize }, ballTints: { value: ballTints },
       ballZone: { value: ballZone }, zones: { value: zones }, zoneFar: { value: joined ? JOINTS_M : 0 },
       sheetSize: { value: new THREE.Vector2(...sheet.size) }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
-      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ids: { value: 0 },
+      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), fanOn: { value: FAN.on ? 1 : 0 }, ids: { value: 0 },
       headPass: this.screen.told.headPass, fineSize: { value: new THREE.Vector2() }, fineFrom: { value: FINE_FROM }, fineTimes: { value: 1 }, headPart: { value: parts.findIndex((part) => part.name === "head") } } });
     const mesh = new THREE.Mesh(shape, paint);
     mesh.layers.enable(1); // its heads may go on the finer grid

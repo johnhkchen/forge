@@ -74,10 +74,34 @@ export function place(view, bone, center, eye) {
   const det = m[0] * m[3] - m[1] * m[2];
   return {
     head, toward, size, e1, e2, turnXY: m,
+    // for a line that fans out from the eye (fan): the place on the sheet the eye stands square over, and how far off the eye is
+    foot: [dot(sub(middle, head), e2) / size, dot(sub(middle, head), e1) / size], far: dot(sub(eye, head), toward) / size,
     back: [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det],
     lean: [dot(d, a2), dot(d, a1)],
     deep: [dot(r, v), dot(u, v), dot(d, v)],
   };
+}
+
+// A pixel's line through the picture, for an eye that is near. place() reads a pixel at P along the line
+// (X, Y) = back . (P - h * lean), which is the eye's own line only from far off: every line of a card then runs the
+// same way, and a hat's brim 25 cm in front of its card is a tenth too small from 2 m. The eye's real line through P
+// leans away from the middle, more the further P is from the place the eye stands square over (foot), and it is still
+// a straight line through the picture. So it is the same search with a start and a lean of its own for every pixel:
+// (X, Y) = back . (P' - h * lean'). fan gives { p: P', lean: lean' } for a place P; the card's shader does the same
+// sum for every pixel from `fan` (fanOf: foot and far; far 0 switches it off). "?fan=off" in the page's address
+// leaves the lines straight, to see what it mends. (impostor.py: fan, FAN_NEAR, FAN_MOST.)
+export const FAN = { near: 0.05, most: 0.8, on: new URLSearchParams(globalThis.location?.search || "").get("fan") !== "off" };
+export const fanned = (card) => FAN.on && card.far * card.size >= FAN.near;
+export const fanOf = (card) => (fanned(card) ? [card.foot[0], card.foot[1], card.far] : [0, 0, 0]);
+export function fan(card, P) {
+  if (!fanned(card)) return { p: P, lean: card.lean };
+  const b = card.back, l = card.lean, d = card.deep;
+  const g = [d[0] * b[0] + d[1] * b[2], d[0] * b[1] + d[1] * b[3]];
+  const rise = d[2] - (g[0] * l[0] + g[1] * l[1]);
+  const w = [P[0] - card.foot[0], P[1] - card.foot[1]];
+  const k = 1 / Math.max(card.far + w[0] * g[0] + w[1] * g[1], 1e-6);
+  const across = (P[0] * g[0] + P[1] * g[1]) * k;
+  return { p: [P[0] - w[0] * across, P[1] - w[1] * across], lean: [l[0] + w[0] * rise * k, l[1] + w[1] * rise * k] };
 }
 
 // The part of the sheet a card must cover: [left, bottom, right, top] in the sheet's own metres. The picture's
@@ -92,7 +116,16 @@ export function box(card, cell, pxPerM, relief = true) {
     x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
   }
   const [lx, ly] = relief ? card.lean : [0, 0];
-  return [x0 + Math.min(lx * low, lx * high), y0 + Math.min(ly * low, ly * high), x1 + Math.max(lx * low, lx * high), y1 + Math.max(ly * low, ly * high)];
+  const out = [x0 + Math.min(lx * low, lx * high), y0 + Math.min(ly * low, ly * high), x1 + Math.max(lx * low, lx * high), y1 + Math.max(ly * low, ly * high)];
+  if (relief && fanned(card)) {
+    // what stands toward the eye shows bigger, about the place the eye stands square over: room for the highest
+    let most = 0;
+    for (const [cx, cy] of [[0, 0], [w, 0], [w, h], [0, h]]) for (const hgt of [low, high]) most = Math.max(most, card.deep[0] * (cx - ax) / pxPerM + card.deep[1] * (cy - ay) / pxPerM + card.deep[2] * hgt);
+    const grow = 1 / (1 - Math.min(most / card.far, FAN.most)), [fx, fy] = card.foot;
+    out[0] = Math.min(out[0], fx + (out[0] - fx) * grow); out[1] = Math.min(out[1], fy + (out[1] - fy) * grow);
+    out[2] = Math.max(out[2], fx + (out[2] - fx) * grow); out[3] = Math.max(out[3], fy + (out[3] - fy) * grow);
+  }
+  return out;
 }
 
 // Layers behind the first. A picture holds the first surface its eye met; a sheet baked with layers
@@ -204,7 +237,12 @@ export const jointNumber = (radius, back, zoneOn) => (Math.floor(radius * 1000) 
 
 // How many steps the search down a pixel's line takes: enough that none is longer than march.px of the picture.
 export function marchSteps(card, cell, pxPerM, march) {
-  const b = card.back, l = card.lean;
-  const reach = Math.hypot(b[0] * l[0] + b[1] * l[1], b[2] * l[0] + b[3] * l[1]) * (cell[7] - cell[6]) * pxPerM;
+  const b = card.back, [x0, y0, x1, y1] = box(card, cell, pxPerM);
+  let longest = 0; // (a line that fans out leans most at a corner)
+  for (const P of [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]) {
+    const l = fan(card, P).lean;
+    longest = Math.max(longest, Math.hypot(b[0] * l[0] + b[1] * l[1], b[2] * l[0] + b[3] * l[1]));
+  }
+  const reach = longest * (cell[7] - cell[6]) * pxPerM;
   return Math.min(march.max, Math.max(1, Math.ceil(reach / march.px)));
 }

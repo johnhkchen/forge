@@ -4,6 +4,7 @@
         [--runs runs] [--shots shots] [--take crew-candy-shop] [--model detailed] [--times 9,13.5,18,24,36,45]
         [--eyes crew,two,close] [--looks joe,pixel-both,comic] [--only right] [--stills right@18:two,...]
         [--before joe=FOLDER,...] [--after joe=FOLDER,...] [--round 0.32] [--first-only]
+        [--before-how FAN=0,...] [--after-how SECOND=1,...]
 
 For every one of the take's cast, at each of --times seconds of it, through three eyes (the set's crew camera;
 2 m from his head; 1 m from it), it draws the real model his cards were pictured from, and his cards twice: from
@@ -20,7 +21,10 @@ the middle of his head (a hat is there):
     off        (the comic look, which is drawn in the model's own colours and light) pixels both have whose colour
                is further from the model's than 64 in 255
 
---before and --after name a look's folder outright (a path, or a name under the run's profiles).
+--before and --after name a look's folder outright (a path, or a name under the run's profiles). --before-how and
+--after-how say how each is drawn: switches of impostor.py by name (FAN=0: every line of a card runs the same way,
+as before the eye's own fan; LAYERS=0; AROUND=0: no second picture from the next direction round), so the same sheets
+can be counted drawn two ways.
 
 Writes <out>/layers[-tag].json and, for --stills, <tag>-<role>-<seconds>-<eye>-<look>.png: the real model, the
 cards before, the cards after, and the cards after again with what the layers filled marked green, what is still
@@ -86,13 +90,26 @@ def main():
     stills = set(flag("--stills", "").split(",")) - {""}
     named = {way: dict(pair.split("=") for pair in flag("--" + way, "").split(",") if pair) for way in ("before", "after")}
     round_m = float(flag("--round", "0.32"))
+    how = {way: {k: float(v) if "." in v else int(v) for k, v in (pair.split("=") for pair in flag("--%s-how" % way, "").split(",") if pair)} for way in ("before", "after")}
+    usual = {k: getattr(impostor, k) for way in how for k in how[way]}
+
+    def drawn_as(way, look):
+        """A look's cards drawn one of the two ways, with that way's switches set (and put back after)."""
+        for k, v in {**usual, **how[way]}.items():
+            setattr(impostor, k, type(usual[k])(v))
+        characters[look, way].use(characters[look, way].set_name) if "LAYERS" in usual else None
+        try:
+            return cards(characters[look, way], pose, eye, LOOKS[look][3])
+        finally:
+            for k, v in usual.items():
+                setattr(impostor, k, v)
     impostor.LAYERS = "--first-only" not in args  # the layered sheets read as if they had one layer: what the bake alone changed
     with open(os.path.join(take, next(f for f in sorted(os.listdir(take)) if f.startswith("cast-") and f.endswith(".json")))) as f:
         cast = json.load(f)
     with open(os.path.join(REPO, "sets", cast["set"], "set.json")) as f:
         crew = json.load(f)["cameras"]["crew"]
     crew_fov = math.degrees(2.0 * math.atan(36.0 / (16.0 / 9.0) / 2.0 / crew["lens_mm"]))
-    report = {"take": os.path.basename(take), "model": model, "size": list(SIZE), "round_m": round_m, "sheets": {}, "rows": []}
+    report = {"take": os.path.basename(take), "model": model, "size": list(SIZE), "round_m": round_m, "how": how, "sheets": {}, "rows": []}
     began = time.time()
     for role, part in cast["roles"].items():
         if only and role not in only:
@@ -125,7 +142,7 @@ def main():
                     (hx, hy), _ = eye.to_pixels(head)
                     ys, xs = np.mgrid[0:eye.size[1], 0:eye.size[0]]
                     near = (xs + 0.5 - hx) ** 2 + (ys + 0.5 - hy) ** 2 < (round_m / eye.m_per_px(head)) ** 2
-                    drawn = {way: cards(characters[look, way], pose, eye, lines) for way in ("before", "after")}
+                    drawn = {way: drawn_as(way, look) for way in ("before", "after")}
                     row = {"role": role, "seconds": t, "eye": eye_name, "look": look, "body": int(body.sum()), "body_head": int((body & near).sum())}
                     masks = {}
                     for way, picture in drawn.items():

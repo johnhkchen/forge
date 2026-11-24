@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density, FILL, partBalls, ownTint, tintPlace, inBone, ballBack, jointNumber, behindOf, deepest, MARCH_MORE } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, fanOf, density, FILL, partBalls, ownTint, tintPlace, inBone, ballBack, jointNumber, behindOf, deepest, MARCH_MORE } from "./impostor-math.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
@@ -92,6 +92,7 @@ uniform float lowB;
 uniform vec4 back;
 uniform vec2 lean;
 uniform vec3 deep;
+uniform vec3 fan;
 uniform float size;
 uniform float depthM;
 uniform float wallM;
@@ -119,9 +120,14 @@ uniform float fillBackM;
 uniform float ballBackM;
 varying vec2 vSheet;
 varying vec3 vView;
-// How far toward the eye a place of the picture stands from the card, and whether it is near a joint.
+// A pixel's own line through the picture (impostor-math.js: fan): where it starts and how it leans, and how far
+// along the eye's line a metre square off the card is. With `fan` 0 they are the card's own, the same for every pixel.
+vec2 sheetP;
+vec2 leanP;
+float per;
+// How far toward the eye, along the pixel's own line, a place of the picture stands from the card, and whether it is near a joint.
 float outAt(vec2 p, float h) {
-  return (p.x * deep.x + p.y * deep.y + h * deep.z) * size;
+  return (p.x * deep.x + p.y * deep.y + h * deep.z) * size * per;
 }
 bool inBall(vec2 p, float h) {
   vec3 here = vView + normalize(-vView) * outAt(p, h);
@@ -168,6 +174,14 @@ bool readB(vec2 xy, out float height, out vec3 data) {
 void main() {
   if (mix_ == 1 && pattern(gl_FragCoord.xy) >= share) discard;
   if (mix_ == 2 && pattern(gl_FragCoord.xy) < share) discard;
+  sheetP = vSheet; leanP = lean; per = 1.0;
+  if (fan.z > 0.0 && steps > 0) {
+    vec2 g = vec2(deep.x * back.x + deep.y * back.z, deep.x * back.y + deep.y * back.w), w = vSheet - fan.xy;
+    float k = 1.0 / max(fan.z + dot(w, g), 1e-6);
+    sheetP = vSheet - w * (dot(vSheet, g) * k);
+    leanP = lean + w * ((deep.z - dot(g, lean)) * k);
+    per = length(vView) / (fan.z * size);
+  }
   vec2 xy;
   float height;
   vec3 data;
@@ -184,7 +198,7 @@ void main() {
     for (int i = 1; i <= 32 + MARCH_MORE_; i++) {
       if (i > steps + more || found) break;
       float at = top + (bottom - top) * float(i) / float(steps);
-      vec2 spot = inPicture(vSheet - at * lean);
+      vec2 spot = inPicture(sheetP - at * leanP);
       bool there = i <= steps && readAt(spot, height, data);  // (below the first layer's lowest only the layer behind is searched)
       bool under = there && height >= at;
       float heightNow = height;
@@ -192,10 +206,10 @@ void main() {
         float a = above, b = at;
         for (int k = 0; k < 5; k++) {
           float mid = (a + b) * 0.5;
-          if (readAt(inPicture(vSheet - mid * lean), height, data) && height >= mid) b = mid; else a = mid;
+          if (readAt(inPicture(sheetP - mid * leanP), height, data) && height >= mid) b = mid; else a = mid;
         }
         // the surface itself, or the side of something? Under a side the search goes on
-        if (readAt(inPicture(vSheet - b * lean), height, data) && height - b < wallM + (top - bottom) / float(steps) / 32.0) { below = b; found = true; }
+        if (readAt(inPicture(sheetP - b * leanP), height, data) && height - b < wallM + (top - bottom) / float(steps) / 32.0) { below = b; found = true; }
       }
       // under the surface with no surface found, and inside a joint's ball: the first such place is kept for the filling
       if (under && !found && !filled && inBall(spot, at)) { filled = true; fillAt = at; }
@@ -205,9 +219,9 @@ void main() {
           float a = last, b = at, lid = heightNow + wallM * 0.5;
           for (int k = 0; k < 5; k++) {
             float mid = (a + b) * 0.5;
-            if (readAt(inPicture(vSheet - mid * lean), height, data) && height >= mid && height < lid) b = mid; else a = mid;
+            if (readAt(inPicture(sheetP - mid * leanP), height, data) && height >= mid && height < lid) b = mid; else a = mid;
           }
-          if (readAt(inPicture(vSheet - b * lean), height, data) && height >= b && height - b < wallM + slack && height < lid && (!found || b > below)) { below = b; found = true; }
+          if (readAt(inPicture(sheetP - b * leanP), height, data) && height >= b && height - b < wallM + slack && height < lid && (!found || b > below)) { below = b; found = true; }
         }
         float heightB;
         vec3 dataB;
@@ -216,9 +230,9 @@ void main() {
           float a = last, b = at;
           for (int k = 0; k < 5; k++) {
             float mid = (a + b) * 0.5;
-            if (readB(inPicture(vSheet - mid * lean), heightB, dataB) && heightB >= mid) b = mid; else a = mid;
+            if (readB(inPicture(sheetP - mid * leanP), heightB, dataB) && heightB >= mid) b = mid; else a = mid;
           }
-          if (readB(inPicture(vSheet - b * lean), heightB, dataB) && heightB >= b && heightB - b < wallM + slack && (!found || b > below)) { below = b; found = true; behind = true; }
+          if (readB(inPicture(sheetP - b * leanP), heightB, dataB) && heightB >= b && heightB - b < wallM + slack && (!found || b > below)) { below = b; found = true; behind = true; }
         }
         wasB = underB;
         thereWas = there;
@@ -228,7 +242,7 @@ void main() {
       was = under;
     }
     if (!found) below = fillAt;
-    xy = inPicture(vSheet - below * lean);
+    xy = inPicture(sheetP - below * leanP);
     ok = behind ? readB(xy, height, data) : (found || filled) && readAt(xy, height, data);
     if (ok && !found) {
       // the edge of a picture is its ink line: the colour is taken from a little further in along the pixel's line
@@ -237,7 +251,7 @@ void main() {
         if (line == 0.0 || data.x >= 0.5 / 255.0 || data.y >= 0.5 / 255.0 || run < 1e-6) break;
         float further = below - 2.0 / run, height2;
         vec3 data2;
-        vec2 spot = inPicture(vSheet - further * lean);
+        vec2 spot = inPicture(sheetP - further * leanP);
         if (!(readAt(spot, height2, data2) && height2 >= further)) break;
         below = further; xy = spot; height = height2; data = data2;
       }
@@ -335,7 +349,7 @@ export function setBehind(quad, cell, behind) {
   return deepest(cell, behind);
 }
 // What every card's shader needs about the sheet's ink line, to go in with a material's other uniforms.
-export const lineUniforms = () => ({ cellB: { value: new THREE.Vector4() }, anchorB: { value: new THREE.Vector2() }, lowB: { value: 0 }, line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 },
+export const lineUniforms = () => ({ fan: { value: new THREE.Vector3() }, cellB: { value: new THREE.Vector4() }, anchorB: { value: new THREE.Vector2() }, lowB: { value: 0 }, line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 },
   balls: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, ballTint: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, fillBackM: { value: FILL.backM }, ballBackM: { value: FILL.ballBackM },
   zone: { value: [0, 1, 2, 3].map(() => new THREE.Vector2()) }, zoneBackM: { value: FILL.zoneBackM } });
 // For every part of a baked character, its joints for the filling (impostor-math.js: partBalls), each with
@@ -812,6 +826,7 @@ class CardViewer {
         u.heights.value.set(cell[6], cell[7]);
         u.back.value.set(...where.back);
         u.lean.value.set(...where.lean);
+        u.fan.value.set(...fanOf(where));
         u.deep.value.set(...where.deep);
         u.size.value = where.size;
         u.steps.value = state.relief ? marchSteps(where, cell, density(card, part), card.march) : 0;

@@ -10,7 +10,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density, behindOf } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, fanOf, density, behindOf } from "./impostor-math.js";
 import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, setBehind, sheetBalls, skinFor, skinMeshes } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, withoutHeads } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
@@ -285,6 +285,7 @@ class TakeViewer {
       u.heights.value.set(cell[6], cell[7]);
       u.back.value.set(...where.back);
       u.lean.value.set(...where.lean);
+      u.fan.value.set(...fanOf(where));
       u.deep.value.set(...where.deep);
       u.size.value = where.size;
       u.steps.value = marchSteps(where, cell, density(card, part), card.march);

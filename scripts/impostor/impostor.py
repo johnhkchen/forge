@@ -40,6 +40,7 @@ MARCH_PX = 1.0       # sliding a pixel by its depth: the picture is searched in 
 MARCH_MAX = 32       # ... and never more steps than this (a longer search takes longer steps)
 REFINE = 5           # ... then the place found is halved in on this many times
 WALL_M = 0.04        # a pixel found this far below the surface it landed on is looking at nothing the picture saw
+FAN = True           # a pixel's line through a picture fans out from the eye, as the eye's own does (False: every line of a card runs the same way, as if the eye were far off: a brim 25 cm in front of its card is then a tenth too small from 2 m)
 LAYERS = True        # a sheet baked with layers behind the first (bake_impostor.py --layers) has them searched too (False: the first layer alone, as if it had none)
 GO_ON = True         # ... and the search then goes on under it to the next surface (False: it gives up there, as the page did before the joints were mended)
 FILL = {"ball", "joint", "screen"}  # what fills a bent joint, each of which judge_seams.py --fill can leave out: "ball" (a ball in every joint), "joint" (a see-through pixel near a joint), "screen" (cracks, on the finished picture)
@@ -187,8 +188,39 @@ def place(view, bone, center, eye):
     a1, a2, v = turn.T @ e1, turn.T @ e2, turn.T @ toward
     r, u, d = np.asarray(view["r"]), np.asarray(view["u"]), np.asarray(view["d"])
     turn_xy = np.array([[r @ a2, u @ a2], [r @ a1, u @ a1]])
-    return {"head": head, "toward": toward, "size": size, "e1": e1, "e2": e2, "turn": turn,
+    # for a line that fans out from the eye (fan): the place on the sheet the eye stands square over (the part's
+    # middle is in line with it), and how far off the eye is, at the bone's own size
+    foot = np.array([(middle - head) @ e2, (middle - head) @ e1]) / size
+    far = float((np.asarray(eye, dtype=np.float64) - head) @ toward) / size
+    return {"head": head, "toward": toward, "size": size, "e1": e1, "e2": e2, "turn": turn, "foot": foot, "far": far,
             "back": np.linalg.inv(turn_xy), "turn_xy": turn_xy, "lean": np.array([d @ a2, d @ a1]), "deep": np.array([r @ v, u @ v, d @ v])}
+
+
+FAN_NEAR = 0.05      # an eye nearer the card than this (m) is given straight lines: the fan would turn inside out
+FAN_MOST = 0.8       # ... and a card's corners are never pushed out by more than a surface this share of the way to the eye would need
+
+
+def fanned(card):
+    """Whether a card's lines fan out from the eye: FAN is on and the eye is not on top of the card."""
+    return FAN and card.get("far", 0.0) * card["size"] >= FAN_NEAR
+
+
+def fan(card, sheet):
+    """A pixel's line through the picture, for an eye that is near. place() reads a pixel at P along the line
+    (X, Y) = back . (P - h * lean), which is the eye's own line only from far off: every line of a card then runs
+    the same way. The eye's real line through P leans away from the middle, more the further P is from the place the
+    eye stands square over (foot), and it is still a straight line through the picture. So it is the same search
+    with a start and a lean of its own for every pixel: (X, Y) = back . (P' - h * lean'). Returns P' and lean' for
+    places P on the sheet (..., 2). From far off they are P and lean themselves."""
+    sheet = np.asarray(sheet, dtype=np.float64)
+    lean = np.broadcast_to(card["lean"], sheet.shape)
+    if not fanned(card):
+        return sheet, lean
+    g = card["deep"][:2] @ card["back"]          # how far toward the eye a place of the picture stands, for a step across the sheet
+    rise = card["deep"][2] - g @ card["lean"]    # ... and for a step up the line
+    w = sheet - card["foot"]
+    k = 1.0 / np.maximum(card["far"] + w @ g, 1e-6)
+    return sheet - w * ((sheet @ g) * k)[..., None], lean + w * (rise * k)[..., None]
 
 
 def eye_in_bone(bone, center, eye):
@@ -232,7 +264,13 @@ def box(card, cell, px_per_m, relief=True):
     _, _, w, h, ax, ay, low, high = cell
     spots = np.array([[(cx - ax) / px_per_m, (cy - ay) / px_per_m] for cx, cy in ((0, 0), (w, 0), (w, h), (0, h))]) @ card["turn_xy"].T
     lean = card["lean"] if relief else np.zeros(2)
-    return np.concatenate([spots.min(axis=0) + np.minimum(lean * low, lean * high), spots.max(axis=0) + np.maximum(lean * low, lean * high)])
+    lo, hi = spots.min(axis=0) + np.minimum(lean * low, lean * high), spots.max(axis=0) + np.maximum(lean * low, lean * high)
+    if relief and fanned(card):
+        # what stands toward the eye shows bigger, about the place the eye stands square over: room for the highest
+        out = max(float(card["deep"] @ [(cx - ax) / px_per_m, (cy - ay) / px_per_m, hgt]) for cx, cy in ((0, 0), (w, 0), (w, h), (0, h)) for hgt in (low, high))
+        grow = 1.0 / (1.0 - min(max(out, 0.0) / card["far"], FAN_MOST))
+        lo, hi = np.minimum(lo, card["foot"] + (lo - card["foot"]) * grow), np.maximum(hi, card["foot"] + (hi - card["foot"]) * grow)
+    return np.concatenate([lo, hi])
 
 
 def corners(card, cell, px_per_m, relief=True):
@@ -243,7 +281,9 @@ def corners(card, cell, px_per_m, relief=True):
 
 def march_steps(card, cell, px_per_m):
     """How many steps the search down a pixel's line takes: enough that none is longer than MARCH_PX of the picture."""
-    reach = float(np.linalg.norm(card["back"] @ card["lean"])) * (cell[7] - cell[6]) * px_per_m
+    x0, y0, x1, y1 = box(card, cell, px_per_m)
+    _, leans = fan(card, np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]))  # (a line that fans out leans most at a corner)
+    reach = float(np.linalg.norm(leans @ card["back"].T, axis=1).max()) * (cell[7] - cell[6]) * px_per_m
     return int(min(MARCH_MAX, max(1, math.ceil(reach / MARCH_PX))))
 
 
@@ -667,6 +707,8 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     sheet = np.stack([rel @ card["e2"], rel @ card["e1"]], axis=-1)  # P: across and up on the card
     sheet_tall, sheet_wide = character.colour.shape[:2]
     back, lean = card["back"], card["lean"]
+    sheet_p, lean_p = fan(card, sheet) if relief else (sheet, np.broadcast_to(lean, sheet.shape))  # every pixel's own line (fan)
+    per = reach / (card["far"] * card["size"]) if relief and fanned(card) else np.ones_like(reach)  # a metre toward the eye, square off the card, is this far along the pixel's own line
 
     x0_, y0_, ax_, ay_ = x0, y0, ax, ay  # where on the sheet the pixel shown is read from: the first layer's picture, or one behind
 
@@ -708,7 +750,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
                 if not new.any():
                     continue
                 rows, cols = np.nonzero(new)
-                mine, a, b = sheet[rows, cols], np.full(len(rows), last_at), np.full(len(rows), at)
+                mine, lean, a, b = sheet_p[rows, cols], lean_p[rows, cols], np.full(len(rows), last_at), np.full(len(rows), at)
                 lid = ceiling[rows, cols] if ceiling is not None else np.inf  # (coming down past an edge: under the lower surface, not the one that ended)
                 for _ in range(REFINE):
                     mid = (a + b) / 2.0
@@ -725,7 +767,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         there_was, height_was = np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape)
         for i in range(1, steps + march_more(steps, cell, hidden) + 1):
             at = top + (bottom - top) * i / steps
-            spot = (sheet - at * lean) @ back.T
+            spot = (sheet_p - at * lean_p) @ back.T
             there, height, _ = read(spot)
             under = there & (height >= at)
             if i > steps:  # below the first layer's lowest: only the layers behind are searched
@@ -741,7 +783,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
             found_before, there_now, height_now = found.copy() if hidden else None, there, height
             if round_ and (under & ~found & ~walled).any():
                 # under the surface, and inside a joint's ball: the first such place on the line is kept for the filling
-                here = world + toward_eye * ((spot[..., 0] * card["deep"][0] + spot[..., 1] * card["deep"][1] + at * card["deep"][2]) * card["size"])[..., None]
+                here = world + toward_eye * ((spot[..., 0] * card["deep"][0] + spot[..., 1] * card["deep"][1] + at * card["deep"][2]) * card["size"] * per)[..., None]
                 inside_ball = np.zeros(xs.shape, dtype=bool)
                 for centre, ring, _, _, _, _ in round_:
                     inside_ball |= ((here - centre) ** 2).sum(axis=-1) < ring * ring
@@ -751,7 +793,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
             new = under & ~was & ~found & ~over
             if new.any():  # only the pixels whose line has just gone under
                 rows, cols = np.nonzero(new)
-                mine, a, b = sheet[rows, cols], above[rows, cols], np.full(len(rows), at)
+                mine, lean, a, b = sheet_p[rows, cols], lean_p[rows, cols], above[rows, cols], np.full(len(rows), at)
                 for _ in range(REFINE):
                     mid = (a + b) / 2.0
                     there, height, _ = read((mine - mid[:, None] * lean) @ back.T)
@@ -783,7 +825,8 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         skirt = walled & ~found
         below[skirt] = wall_at[skirt]
         found = found | skirt
-        xy = (sheet - below[..., None] * lean) @ back.T
+        lean = card["lean"]
+        xy = (sheet_p - below[..., None] * lean_p) @ back.T
         there, height, data = read(xy)
         if skirt.any() and character.card.get("line_marked"):
             # the edge of a picture is its ink line: the colour is taken from a little further in along the line
@@ -793,9 +836,9 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
                 if not edge.any() or run < 1e-6:
                     break
                 further = below - np.where(edge, 2.0 / run, 0.0)
-                there2, height2, data2 = read((sheet - further[..., None] * lean) @ back.T)
+                there2, height2, data2 = read((sheet_p - further[..., None] * lean_p) @ back.T)
                 take = edge & there2 & (height2 >= further)
-                below, xy = np.where(take, further, below), np.where(take[..., None], (sheet - further[..., None] * lean) @ back.T, xy)
+                below, xy = np.where(take, further, below), np.where(take[..., None], (sheet_p - further[..., None] * lean_p) @ back.T, xy)
                 height, data = np.where(take, height2, height), np.where(take[..., None], data2, data)
         height = np.where(skirt, below - FILL_BACK_M, height)
         for k, of in enumerate(hidden):  # a pixel that found its surface in a layer behind is read from that layer's picture
@@ -854,7 +897,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         rgba = rgba.copy()
         rgba[..., :3] = np.where(inked[..., None], np.array(INK, dtype=np.float32), rgba[..., :3])  # the sheet holds no ink: the line is painted here
         height = height - np.where(inked, LINE_BACK_M, 0.0)
-    out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"]
+    out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"] * per
     point = world + toward_eye * out[..., None]
     ahead = -((point - eye.at) @ eye.turn[:, 2])
     if within is not None:  # a joint's own card (pictured bent) shows only what is in its zone and a little past it
