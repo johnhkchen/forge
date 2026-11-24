@@ -625,6 +625,8 @@ The flat cards timed against meshes, as a crowd: a field of Roosevelts playing t
 - **Skeletons are timed apart**, and can be shared: every move is sampled once, thirty poses a second, into a table the graphics card reads, and a runner is then a place, a heading and a row of it. Or each runner works his own skeleton out every frame. Both are offered to every way of drawing.
 - **Measure all** runs every count and way for a few seconds each and shows a table to read or copy; **Measure the looks** does the same for every look. The big number is the work in one frame (skeletons, placing, drawing, and waiting for the graphics card to finish), because frames a second can't go past what the screen shows.
 
+- **Phone test** is the narrow one, built to give the same answer twice: low-poly meshes, painted meshes, cards, and cards with the search off far away; in the comic look and as pixel art; 100, 250, 500 and 1000 runners; poses shared, one seed, one fixed eye. The picture is drawn 1080 by 608 whatever the screen and however the phone is held. Every setting is timed three times, the three spread through the test, and the first is timed again at the end to say whether the phone slowed as it warmed. It takes six and a half minutes, keeps the screen awake where the browser allows, and says at the top, in words, how big a crowd each way holds full speed at and how many times faster cards are than the cheapest meshes; "Copy results" copies every number as JSON.
+
 **Measured on this Mac** (Apple M5, Chrome without a window, a picture of 1080 by 608; `evidence/impostor/tag-measured-mac.md`), ms of work a frame with shared poses:
 
 | runners | 10 | 100 | 250 | 500 | 1000 |
