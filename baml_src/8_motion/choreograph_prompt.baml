@@ -178,6 +178,18 @@ class ShotBeat {
     person: int?,
     drift: ("keep" | "flatten")?,
     handles: bool?,
+    formation: VideoFormation?,
+}
+
+/// Several dancers of one clip as several roles of a take, standing to each
+/// other as they did in the clip (scripts/video/formation.py). Every role's
+/// beat carries the same one.
+class VideoFormation {
+    people: int[],
+    at: string?,
+    origin: float[]?,
+    heading: float?,
+    spread: float?,
 }
 
 /// Where a carried prop sits from a moment on.

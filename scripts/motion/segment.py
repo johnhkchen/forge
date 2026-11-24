@@ -37,6 +37,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, HERE)
 SEGMENTS = os.path.join(REPO, "motion", "segments")
 FPS = 30
 
@@ -54,19 +55,41 @@ def load(name: str) -> dict:
         return json.load(f)
 
 
-def beat_frames(beat: dict) -> int:
-    """How many frames a beat plays for, the way plan_shot.py and timeline.py count them."""
-    if beat.get("source", "poses") == "poses":
+def beat_frames(beat: dict, before: dict = None, after: dict = None) -> int:
+    """How many frames a beat plays for, the way plan_shot.py and timeline.py count them. A beat from a video
+    also brings the frames the joins at its two ends use up, so it needs to know its neighbours."""
+    source = beat.get("source", "poses")
+    if source == "poses":
         return sum(4 * int(m["tokens"]) - 7 - int(m.get("early_frames", 0)) for m in beat.get("moves") or [])
+    if source == "video":
+        import timeline
+
+        def takes(a: dict, b: dict) -> tuple:
+            from_end = int(a["join_out_frames"]) if a.get("join_out_frames") is not None else timeline.TAKE_FROM_END[a.get("source", "poses")]
+            from_start = int(b["join_in_frames"]) if b.get("join_in_frames") is not None else timeline.TAKE_FROM_START
+            return timeline.tween_length(from_end, from_start)
+
+        if beat.get("from_s") is None or beat.get("to_s") is None:
+            raise SegmentProblem(f"beat \"{beat['name']}\": a video beat says which seconds of the clip it wants (from_s, to_s)")
+        handles = beat.get("handles", True) is not False
+        lead = takes(before, beat)[1] if before and handles else 0
+        tail = takes(beat, after)[0] if after and handles else 0
+        return int(round(float(beat["to_s"]) * FPS)) - int(round(float(beat["from_s"]) * FPS)) + lead + tail
     return int(beat["frames"]) if beat.get("frames") else int(round(float(beat["seconds"]) * FPS))
+
+
+def frames_of(shot: dict) -> list:
+    """Each beat's length in frames, in order."""
+    beats = shot["beats"]
+    return [beat_frames(beat, beats[i - 1] if i else None, beats[i + 1] if i + 1 < len(beats) else None) for i, beat in enumerate(beats)]
 
 
 def spans(shot: dict) -> dict:
     """{beat name: (first frame, last frame)} for a role's shot list."""
     out, frame = {}, 0
-    for beat in shot["beats"]:
-        out[beat["name"]] = (frame, frame + beat_frames(beat))
-        frame += beat_frames(beat)
+    for beat, count in zip(shot["beats"], frames_of(shot)):
+        out[beat["name"]] = (frame, frame + count)
+        frame += count
     return out
 
 
@@ -97,6 +120,8 @@ def expand(template: dict, take: dict) -> dict:
             for key in ("from", "to", "at"):
                 if beat.get(key):
                     beat[key] = marked(beat[key])
+            if (beat.get("formation") or {}).get("at"):
+                beat["formation"]["at"] = marked(beat["formation"]["at"])
             for move in beat.get("moves") or []:
                 if move.get("at"):
                     move["at"] = marked(move["at"])
@@ -107,7 +132,22 @@ def expand(template: dict, take: dict) -> dict:
                     raise SegmentProblem(f"{role}, beat \"{beat['name']}\": the segment has no sentence called {e}") from None
         shots[role] = shot
 
-    lengths = {role: sum(beat_frames(b) for b in shot["beats"]) for role, shot in shots.items()}
+    # People who dance one formation have to mean the same one: the same clip, seconds, people and mark.
+    crews = {}
+    for role, shot in shots.items():
+        for beat in shot["beats"]:
+            if beat.get("formation"):
+                crews.setdefault(beat["name"], {})[role] = json.dumps([beat.get("clip"), beat.get("from_s"), beat.get("to_s"), beat["formation"]], sort_keys=True)
+                if beat.get("person") not in (beat["formation"].get("people") or []):
+                    raise SegmentProblem(f"{role}, beat \"{beat['name']}\": its person ({beat.get('person')}) is not one of the formation's people {beat['formation'].get('people')}")
+    for name, by_role in crews.items():
+        if len(set(by_role.values())) > 1:
+            raise SegmentProblem(f"the beat \"{name}\" is one formation, but the roles do not ask for the same clip, seconds, people and mark: {', '.join(by_role)}")
+        people = [next(b for b in shots[role]["beats"] if b["name"] == name)["person"] for role in by_role]
+        if len(set(people)) != len(people):
+            raise SegmentProblem(f"the beat \"{name}\": two roles are the same person of the clip ({people})")
+
+    lengths = {role: sum(frames_of(shot)) for role, shot in shots.items()}
     if len(set(lengths.values())) > 1:
         raise SegmentProblem("the roles' shots are not the same length: " + ", ".join(f"{r} {n} frames" for r, n in lengths.items()))
     for name in template.get("together") or []:
@@ -134,7 +174,7 @@ def write_take(plan_file: str, folder: str) -> dict:
     if os.path.exists(record_path):
         with open(record_path) as f:
             record = json.load(f)
-    frames = sum(beat_frames(b) for b in next(iter(shots.values()))["beats"])
+    frames = sum(frames_of(next(iter(shots.values()))))
     record.update({
         "name": take["name"], "title": template["title"], "about": template["about"], "set": take["set"], "segment": template["name"],
         "fps": FPS, "frames": frames + 1, "seconds": round(frames / FPS, 2),
@@ -156,7 +196,7 @@ def main() -> None:
     except SegmentProblem as e:
         sys.exit(f"segment: {e}")
     for role, shot in made["shots"].items():
-        beats = ", ".join(f"{b['name']} ({beat_frames(b)})" for b in shot["beats"])
+        beats = ", ".join(f"{b['name']} ({n})" for b, n in zip(shot["beats"], frames_of(shot)))
         print(f"SEGMENT {role} ({made['take']['roles'][role]['character']}): {beats}")
     print(f"SEGMENT {made['take']['segment']} on the set \"{made['take']['set']}\": {len(made['shots'])} roles, {made['take']['frames']} frames, {made['take']['seconds']} s")
 
