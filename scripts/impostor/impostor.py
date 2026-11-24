@@ -40,6 +40,15 @@ MARCH_PX = 1.0       # sliding a pixel by its depth: the picture is searched in 
 MARCH_MAX = 32       # ... and never more steps than this (a longer search takes longer steps)
 REFINE = 5           # ... then the place found is halved in on this many times
 WALL_M = 0.04        # a pixel found this far below the surface it landed on is looking at nothing the picture saw
+FAN = True           # a pixel's line through a picture fans out from the eye, as the eye's own does (False: every line of a card runs the same way, as if the eye were far off: a brim 25 cm in front of its card is then a tenth too small from 2 m)
+AROUND = 0           # a part is drawn from this many directions more than its nearest: the next nearest round the eye, each standing a little behind the first, so what the first picture never saw from where it was taken is filled by one that did (0: the nearest alone)
+AROUND_DEG = 50.0    # ... none of them further than this from the eye's own direction
+AROUND_BACK_M = 0.008  # ... each standing this far behind where it would, so the nearest picture wins wherever it has something
+AROUND_WALL_M = 0.012  # ... and believed only where its line comes down on the surface itself, within this (the first picture is given WALL_M): a guess from further round is worse than a hole the next card may fill
+DOTS = ()            # parts drawn as a cloud of dots, not as a card (dots_of, draw_dots): ("head",) was tried against the cards and set down (README: "From more angles")
+DOTS_GRID = 1.0      # ... one dot kept for every little box this many of the part's sheet pixels across
+DOTS_SIZE = 1.0      # ... each a flat disc this many boxes in radius, lying on the surface
+LAYERS = True        # a sheet baked with layers behind the first (bake_impostor.py --layers) has them searched too (False: the first layer alone, as if it had none)
 GO_ON = True         # ... and the search then goes on under it to the next surface (False: it gives up there, as the page did before the joints were mended)
 FILL = {"ball", "joint", "screen"}  # what fills a bent joint, each of which judge_seams.py --fill can leave out: "ball" (a ball in every joint), "joint" (a see-through pixel near a joint), "screen" (cracks, on the finished picture)
 FILL_BALL = 1.0      # a see-through pixel is filled inside a ball about a joint this many times the radius of the ring where its two parts meet
@@ -186,8 +195,39 @@ def place(view, bone, center, eye):
     a1, a2, v = turn.T @ e1, turn.T @ e2, turn.T @ toward
     r, u, d = np.asarray(view["r"]), np.asarray(view["u"]), np.asarray(view["d"])
     turn_xy = np.array([[r @ a2, u @ a2], [r @ a1, u @ a1]])
-    return {"head": head, "toward": toward, "size": size, "e1": e1, "e2": e2, "turn": turn,
+    # for a line that fans out from the eye (fan): the place on the sheet the eye stands square over (the part's
+    # middle is in line with it), and how far off the eye is, at the bone's own size
+    foot = np.array([(middle - head) @ e2, (middle - head) @ e1]) / size
+    far = float((np.asarray(eye, dtype=np.float64) - head) @ toward) / size
+    return {"head": head, "toward": toward, "size": size, "e1": e1, "e2": e2, "turn": turn, "foot": foot, "far": far,
             "back": np.linalg.inv(turn_xy), "turn_xy": turn_xy, "lean": np.array([d @ a2, d @ a1]), "deep": np.array([r @ v, u @ v, d @ v])}
+
+
+FAN_NEAR = 0.05      # an eye nearer the card than this (m) is given straight lines: the fan would turn inside out
+FAN_MOST = 0.8       # ... and a card's corners are never pushed out by more than a surface this share of the way to the eye would need
+
+
+def fanned(card):
+    """Whether a card's lines fan out from the eye: FAN is on and the eye is not on top of the card."""
+    return FAN and card.get("far", 0.0) * card["size"] >= FAN_NEAR
+
+
+def fan(card, sheet):
+    """A pixel's line through the picture, for an eye that is near. place() reads a pixel at P along the line
+    (X, Y) = back . (P - h * lean), which is the eye's own line only from far off: every line of a card then runs
+    the same way. The eye's real line through P leans away from the middle, more the further P is from the place the
+    eye stands square over (foot), and it is still a straight line through the picture. So it is the same search
+    with a start and a lean of its own for every pixel: (X, Y) = back . (P' - h * lean'). Returns P' and lean' for
+    places P on the sheet (..., 2). From far off they are P and lean themselves."""
+    sheet = np.asarray(sheet, dtype=np.float64)
+    lean = np.broadcast_to(card["lean"], sheet.shape)
+    if not fanned(card):
+        return sheet, lean
+    g = card["deep"][:2] @ card["back"]          # how far toward the eye a place of the picture stands, for a step across the sheet
+    rise = card["deep"][2] - g @ card["lean"]    # ... and for a step up the line
+    w = sheet - card["foot"]
+    k = 1.0 / np.maximum(card["far"] + w @ g, 1e-6)
+    return sheet - w * ((sheet @ g) * k)[..., None], lean + w * (rise * k)[..., None]
 
 
 def eye_in_bone(bone, center, eye):
@@ -197,6 +237,33 @@ def eye_in_bone(bone, center, eye):
     return unit(bone[:3, :3].T @ (np.asarray(eye, dtype=np.float64) - middle))
 
 
+def layered_folder(cards, pieces=True):
+    """The same cards baked more than one surface deep (bake_impostor.py --layers), as gallery/looks.js finds them
+    (bakedFor): the folder named as `cards` is with "-layered" for "-joined" (or added), and with "-skinned" after
+    that when it has a piece of the model in each big joint and those are wanted. None when there is none."""
+    base = cards[:-len("-joined")] if cards.endswith("-joined") else cards
+    for name in ([base + "-layered-skinned"] if pieces else []) + [base + "-layered"]:
+        if os.path.isfile(os.path.join(name, "impostor.json")):
+            return name
+    return None
+
+
+MARCH_MORE = 16      # a layer behind the first may stand lower than the first ever does: the search goes on down for it, in steps of the same length, this many at most
+
+
+def deepest(cell, behind):
+    """A picture's cell with its lowest made the lowest of any of its layers (behind: the cells of the layers behind
+    it): a card's corners lean by how low and high its surface goes, and must make room for them all."""
+    low = min([cell[6]] + [c[6] for c in behind if c[2] > 0])
+    return cell if low == cell[6] else list(cell[:6]) + [low, cell[7]]
+
+
+def march_more(steps, cell, behind):
+    """How many steps more the search takes below the first layer's lowest, to reach the lowest of the layers behind."""
+    low = min([cell[6]] + [c[6] for c in behind if c[2] > 0])
+    return int(min(MARCH_MORE, math.ceil((cell[6] - low) * steps / max(cell[7] - cell[6] + 0.004, 1e-9)))) if low < cell[6] else 0
+
+
 def box(card, cell, px_per_m, relief=True):
     """The part of the sheet a card must cover: (left, bottom, right, top) in the sheet's own metres. The
     picture's four corners as they now show, and (relief) room for its pixels to lean, by how low and
@@ -204,7 +271,13 @@ def box(card, cell, px_per_m, relief=True):
     _, _, w, h, ax, ay, low, high = cell
     spots = np.array([[(cx - ax) / px_per_m, (cy - ay) / px_per_m] for cx, cy in ((0, 0), (w, 0), (w, h), (0, h))]) @ card["turn_xy"].T
     lean = card["lean"] if relief else np.zeros(2)
-    return np.concatenate([spots.min(axis=0) + np.minimum(lean * low, lean * high), spots.max(axis=0) + np.maximum(lean * low, lean * high)])
+    lo, hi = spots.min(axis=0) + np.minimum(lean * low, lean * high), spots.max(axis=0) + np.maximum(lean * low, lean * high)
+    if relief and fanned(card):
+        # what stands toward the eye shows bigger, about the place the eye stands square over: room for the highest
+        out = max(float(card["deep"] @ [(cx - ax) / px_per_m, (cy - ay) / px_per_m, hgt]) for cx, cy in ((0, 0), (w, 0), (w, h), (0, h)) for hgt in (low, high))
+        grow = 1.0 / (1.0 - min(max(out, 0.0) / card["far"], FAN_MOST))
+        lo, hi = np.minimum(lo, card["foot"] + (lo - card["foot"]) * grow), np.maximum(hi, card["foot"] + (hi - card["foot"]) * grow)
+    return np.concatenate([lo, hi])
 
 
 def corners(card, cell, px_per_m, relief=True):
@@ -215,7 +288,9 @@ def corners(card, cell, px_per_m, relief=True):
 
 def march_steps(card, cell, px_per_m):
     """How many steps the search down a pixel's line takes: enough that none is longer than MARCH_PX of the picture."""
-    reach = float(np.linalg.norm(card["back"] @ card["lean"])) * (cell[7] - cell[6]) * px_per_m
+    x0, y0, x1, y1 = box(card, cell, px_per_m)
+    _, leans = fan(card, np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]))  # (a line that fans out leans most at a corner)
+    reach = float(np.linalg.norm(leans @ card["back"].T, axis=1).max()) * (cell[7] - cell[6]) * px_per_m
     return int(min(MARCH_MAX, max(1, math.ceil(reach / MARCH_PX))))
 
 
@@ -589,6 +664,7 @@ class Character:
         self.colour = read_png(os.path.join(self.folder, sheet["color"])).astype(np.float32) / 255.0
         self.data = read_png(os.path.join(self.folder, sheet["data"])).astype(np.float32) / 255.0
         self.cells = sheet["cells"]
+        self.behind = sheet.get("behind", []) if LAYERS else []  # the layers behind the first: for each, every part's pictures as "cells" has them
         lit = np.round(self.colour * 255.0)
         self.balls, self.tints, self.pixel = part_balls(self.card), getattr(self, "tints", {}), lambda x, y: lit[y, x]
         self.zones, self.abouts = part_zones(self.card), part_zones(self.card, about=True)
@@ -596,7 +672,7 @@ class Character:
             self.skin = Skin(self.folder, self.card["skin"])
 
 
-def card_pixels(character, part, view_index, card, eye, relief=True, line="shell", keep_dark=False, balls=None, within=None):
+def card_pixels(character, part, view_index, card, eye, relief=True, line="shell", keep_dark=False, balls=None, within=None, second=False):
     """One card as the eye sees it: (x0, y0, colour HxWx3 as stored, cover HxW 0..1, normal HxWx3 in the bone's
     frame, distance in front HxW, HxW True where the pixel is the part's ink line), or None when it is off the
     picture. The page's fragment shader, slowly.
@@ -607,26 +683,35 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     the sheet's), a pixel takes the darkest of what it covers when that is a good deal darker than its middle: an
     eye or a brow one sheet pixel wide is kept, where reading only the middle would drop it on every other frame.
     balls: this part's joints where they are now (joint_balls): a see-through pixel near one is filled, and each
-    has a ball in it, or a zone (the last number of each: joint_balls) inside which the card shows nothing."""
+    has a ball in it, or a zone (the last number of each: joint_balls) inside which the card shows nothing.
+    second: this is a picture from further round than the nearest, drawn to fill what that one never saw (AROUND):
+    nothing is filled or guessed in it, no ball is drawn, and its line is left out."""
     cell = character.cells[part["name"]][view_index]
     x0, y0, w, h, ax, ay, low, high = cell
     if w <= 0 or h <= 0:
         return None
     ppm = float(part.get("px_per_m") or character.px_per_m)  # a part pictured finer than the rest (a head) says so
-    quad = corners(card, cell, ppm, relief)
+    # the layers behind the first that this picture has: each a picture of its own on the sheet, cut down to what it holds
+    hidden = [c[part["name"]][view_index] for c in getattr(character, "behind", [])]
+    hidden = [c for c in hidden if c[2] > 0] if relief else []
+    quad = corners(card, deepest(cell, hidden), ppm, relief)
     spots, ahead = eye.to_pixels(quad)
-    if (ahead <= eye.near).any():
+    if (ahead <= eye.near).all():
         return None
     wide, tall = eye.size
     lo = np.maximum(np.floor(spots.min(axis=0)).astype(int), 0)
     hi = np.minimum(np.ceil(spots.max(axis=0)).astype(int), [wide, tall])
+    if (ahead <= eye.near).any():
+        # a corner of the card is beside or behind the eye (a big card, the eye close: a chest from 1 m off a shoulder).
+        # The graphics card cuts such a card off at the eye and draws the rest; so every pixel is looked at here
+        lo, hi = np.array([0, 0]), np.array([wide, tall])
     if (hi <= lo).any():
         return None
     xs, ys = np.meshgrid(np.arange(lo[0], hi[0]) + 0.5, np.arange(lo[1], hi[1]) + 0.5)
     ray_cam = np.stack([((xs - eye.shift[0]) / wide * 2 - 1) * eye.tan * wide / tall, ((ys - eye.shift[1]) / tall * 2 - 1) * eye.tan, -np.ones_like(xs)], axis=-1)
     ray = ray_cam @ eye.turn.T
     toward, head = card["toward"], card["head"]
-    along_ray = (toward @ (head - eye.at)) / (ray @ toward)
+    along_ray = (toward @ (head - eye.at)) / np.minimum(ray @ toward, -1e-9)  # (a line that never meets the card's sheet in front of the eye meets it far off, outside the picture)
     world = eye.at + ray * along_ray[..., None]
     reach = np.linalg.norm(eye.at - world, axis=-1)
     toward_eye = (eye.at - world) / reach[..., None]
@@ -635,9 +720,15 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     sheet = np.stack([rel @ card["e2"], rel @ card["e1"]], axis=-1)  # P: across and up on the card
     sheet_tall, sheet_wide = character.colour.shape[:2]
     back, lean = card["back"], card["lean"]
+    sheet_p, lean_p = fan(card, sheet) if relief else (sheet, np.broadcast_to(lean, sheet.shape))  # every pixel's own line (fan)
+    per = reach / (card["far"] * card["size"]) if relief and fanned(card) else np.ones_like(reach)  # a metre toward the eye, square off the card, is this far along the pixel's own line
 
-    def read(xy):
-        """The data sheet at a place of the picture: (is there surface here, how high, the pixel's numbers)."""
+    x0_, y0_, ax_, ay_ = x0, y0, ax, ay  # where on the sheet the pixel shown is read from: the first layer's picture, or one behind
+
+    def read(xy, of=None):
+        """The data sheet at a place of the picture: (is there surface here, how high, the pixel's numbers). of: a
+        layer behind the first (its cell), in place of the first."""
+        x0, y0, w, h, ax, ay = (of or cell)[:6]
         cx, cy = xy[..., 0] * ppm + ax, xy[..., 1] * ppm + ay
         inside = (cx >= 0) & (cx < w) & (cy >= 0) & (cy < h)
         data = character.data[np.clip(np.floor(y0 + cy).astype(int), 0, sheet_tall - 1), np.clip(np.floor(x0 + cx).astype(int), 0, sheet_wide - 1)]
@@ -653,15 +744,60 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         above, below = np.full(xs.shape, top), np.full(xs.shape, bottom)
         found, was, over = np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool)
         walled, wall_at = np.zeros(xs.shape, dtype=bool), np.full(xs.shape, bottom)
-        round_ = balls if "joint" in FILL else []
-        for i in range(1, steps + 1):
+        round_ = balls if "joint" in FILL and not second else []
+        wall_m = AROUND_WALL_M if second else WALL_M
+        # Layers behind the first (hidden). Each is searched as the first is: the line goes under it, the place is
+        # halved in on, and it counts if it is the surface and not the side of something. Of two layers met in one
+        # step the higher is shown. One thing more: the line may pass under the edge of something (a hat's brim)
+        # and come down on what is below it (the crown) just where the brim's picture ends and the crown's own
+        # begins, in the first layer both. That is no new going-under, the line was under the brim; so where the
+        # first layer's surface has dropped by more than a wall since the last step and the line is now only just
+        # under it, that counts as coming down on it.
+        lay = np.zeros(xs.shape, dtype=int)                      # which layer each pixel found its surface in (0: the first)
+
+        def search_behind(tries, i, at):
+            """Step i of the search, at height `at`, for the layers behind: tries are (the layer's cell or None for
+            the first, its number, the pixels whose line has just gone under it, a height its surface must be under
+            or None)."""
+            last_at = top + (bottom - top) * (i - 1) / steps
+            for of, number, new, ceiling in tries:
+                if not new.any():
+                    continue
+                rows, cols = np.nonzero(new)
+                mine, lean, a, b = sheet_p[rows, cols], lean_p[rows, cols], np.full(len(rows), last_at), np.full(len(rows), at)
+                lid = ceiling[rows, cols] if ceiling is not None else np.inf  # (coming down past an edge: under the lower surface, not the one that ended)
+                for _ in range(REFINE):
+                    mid = (a + b) / 2.0
+                    there_k, height_k, _ = read((mine - mid[:, None] * lean) @ back.T, of)
+                    deep = there_k & (height_k >= mid) & (height_k < lid)
+                    b, a = np.where(deep, mid, b), np.where(deep, a, mid)
+                there_k, height_k, _ = read((mine - b[:, None] * lean) @ back.T, of)
+                hit = there_k & (height_k >= b) & (height_k - b < wall_m + (top - bottom) / steps / 2 ** REFINE) & (height_k < lid)
+                hit &= ~found[rows, cols] | (b > below[rows, cols])  # of two layers met in one step, the higher
+                below[rows[hit], cols[hit]] = b[hit]
+                found[rows[hit], cols[hit]] = True
+                lay[rows[hit], cols[hit]] = number
+        was_behind = [np.zeros(xs.shape, dtype=bool) for _ in hidden]
+        there_was, height_was = np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape)
+        for i in range(1, steps + march_more(steps, cell, hidden) + 1):
             at = top + (bottom - top) * i / steps
-            spot = (sheet - at * lean) @ back.T
+            spot = (sheet_p - at * lean_p) @ back.T
             there, height, _ = read(spot)
             under = there & (height >= at)
+            if i > steps:  # below the first layer's lowest: only the layers behind are searched
+                under, found_before = np.zeros_like(under), found.copy()
+                tries = []
+                for k, of in enumerate(hidden):
+                    there_k, height_k, _ = read(spot, of)
+                    under_k = there_k & (height_k >= at)
+                    tries.append((of, k + 1, under_k & ~was_behind[k] & ~found_before, None))
+                    was_behind[k] = under_k
+                search_behind(tries, i, at)
+                continue
+            found_before, there_now, height_now = found.copy() if hidden else None, there, height
             if round_ and (under & ~found & ~walled).any():
                 # under the surface, and inside a joint's ball: the first such place on the line is kept for the filling
-                here = world + toward_eye * ((spot[..., 0] * card["deep"][0] + spot[..., 1] * card["deep"][1] + at * card["deep"][2]) * card["size"])[..., None]
+                here = world + toward_eye * ((spot[..., 0] * card["deep"][0] + spot[..., 1] * card["deep"][1] + at * card["deep"][2]) * card["size"] * per)[..., None]
                 inside_ball = np.zeros(xs.shape, dtype=bool)
                 for centre, ring, _, _, _, _ in round_:
                     inside_ball |= ((here - centre) ** 2).sum(axis=-1) < ring * ring
@@ -671,18 +807,27 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
             new = under & ~was & ~found & ~over
             if new.any():  # only the pixels whose line has just gone under
                 rows, cols = np.nonzero(new)
-                mine, a, b = sheet[rows, cols], above[rows, cols], np.full(len(rows), at)
+                mine, lean, a, b = sheet_p[rows, cols], lean_p[rows, cols], above[rows, cols], np.full(len(rows), at)
                 for _ in range(REFINE):
                     mid = (a + b) / 2.0
                     there, height, _ = read((mine - mid[:, None] * lean) @ back.T)
                     deep = there & (height >= mid)
                     b, a = np.where(deep, mid, b), np.where(deep, a, mid)
                 there, height, _ = read((mine - b[:, None] * lean) @ back.T)
-                hit = there & (height - b < WALL_M + (top - bottom) / steps / 2 ** REFINE)
+                hit = there & (height - b < wall_m + (top - bottom) / steps / 2 ** REFINE)
                 below[rows[hit], cols[hit]] = b[hit]
                 found[rows[hit], cols[hit]] = True
                 if not GO_ON:
                     over[rows[~hit], cols[~hit]] = True
+            if hidden:
+                tries = [(None, 0, under & was & ~found_before & there_was & (height_was - height_now > WALL_M) & (height_now - at < WALL_M), height_now + WALL_M / 2.0)]
+                for k, of in enumerate(hidden):
+                    there_k, height_k, _ = read(spot, of)
+                    under_k = there_k & (height_k >= at)
+                    tries.append((of, k + 1, under_k & ~was_behind[k] & ~found_before, None))
+                    was_behind[k] = under_k
+                search_behind(tries, i, at)
+                there_was, height_was = there_now, height_now
             above[~under & ~found] = at
             was = under
         # Filling a joint. A line that went in only by the side of something, and came down on no surface after,
@@ -694,7 +839,8 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         skirt = walled & ~found
         below[skirt] = wall_at[skirt]
         found = found | skirt
-        xy = (sheet - below[..., None] * lean) @ back.T
+        lean = card["lean"]
+        xy = (sheet_p - below[..., None] * lean_p) @ back.T
         there, height, data = read(xy)
         if skirt.any() and character.card.get("line_marked"):
             # the edge of a picture is its ink line: the colour is taken from a little further in along the line
@@ -704,25 +850,37 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
                 if not edge.any() or run < 1e-6:
                     break
                 further = below - np.where(edge, 2.0 / run, 0.0)
-                there2, height2, data2 = read((sheet - further[..., None] * lean) @ back.T)
+                there2, height2, data2 = read((sheet_p - further[..., None] * lean_p) @ back.T)
                 take = edge & there2 & (height2 >= further)
-                below, xy = np.where(take, further, below), np.where(take[..., None], (sheet - further[..., None] * lean) @ back.T, xy)
+                below, xy = np.where(take, further, below), np.where(take[..., None], (sheet_p - further[..., None] * lean_p) @ back.T, xy)
                 height, data = np.where(take, height2, height), np.where(take[..., None], data2, data)
         height = np.where(skirt, below - FILL_BACK_M, height)
+        for k, of in enumerate(hidden):  # a pixel that found its surface in a layer behind is read from that layer's picture
+            mine = lay == k + 1
+            if mine.any():
+                there_k, height_k, data_k = read(xy, of)
+                there, height, data = np.where(mine, there_k, there), np.where(mine, height_k, height), np.where(mine[..., None], data_k, data)
+                x0_, y0_, ax_, ay_ = np.where(mine, of[0], x0_), np.where(mine, of[1], y0_), np.where(mine, of[4], ax_), np.where(mine, of[5], ay_)
         inside = found & there
     else:
         xy = sheet @ back.T
         inside, height, data = read(xy)
     if not inside.any():
         return None
-    cx, cy = xy[..., 0] * ppm + ax, xy[..., 1] * ppm + ay
-    u, v = x0 + cx, y0 + cy
+    cx, cy = xy[..., 0] * ppm + ax_, xy[..., 1] * ppm + ay_
+    u, v = x0_ + cx, y0_ + cy
     # colour: smoothed between the four pixels around, as a texture is
     fu, fv = u - 0.5, v - 0.5
     iu, iv = np.floor(fu).astype(int), np.floor(fv).astype(int)
     tu, tv = (fu - iu)[..., None], (fv - iv)[..., None]
     grab = lambda a, b: character.colour[np.clip(b, 0, sheet_tall - 1), np.clip(a, 0, sheet_wide - 1)]
     rgba = (grab(iu, iv) * (1 - tu) + grab(iu + 1, iv) * tu) * (1 - tv) + (grab(iu, iv + 1) * (1 - tu) + grab(iu + 1, iv + 1) * tu) * tv
+    if relief and hidden:
+        # At the edge of a layer behind, smoothing mixes in the empty pixels beside it and the cover falls under a
+        # half: the pixel would be dropped, and a hole left where the first layer alone had gone on and found
+        # something. The search found surface there, so the pixel takes the one sheet pixel it falls in.
+        thin = (lay > 0) & (rgba[..., 3] < 0.5)
+        rgba = np.where(thin[..., None], grab(np.floor(u).astype(int), np.floor(v).astype(int)), rgba)
     if character.card.get("nearest"):  # pixel art is read without smoothing: the one pixel it falls in
         rgba = grab(np.floor(u).astype(int), np.floor(v).astype(int))
         covers = ppm * eye.m_per_px(head) / card["size"]  # how many of the sheet's pixels one of the eye's is across
@@ -748,12 +906,12 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         # is a shell behind the surface: whatever of the figure is beside it, a hair nearer, covers it.
         inked = (data[..., 0] < 0.5 / 255.0) & (data[..., 1] < 0.5 / 255.0)
         normal = np.where(inked[..., None], np.asarray(card["turn"].T @ card["toward"], dtype=np.float32), normal)
-        if line == "off":
+        if line == "off" or second:
             inside = inside & ~inked
         rgba = rgba.copy()
         rgba[..., :3] = np.where(inked[..., None], np.array(INK, dtype=np.float32), rgba[..., :3])  # the sheet holds no ink: the line is painted here
         height = height - np.where(inked, LINE_BACK_M, 0.0)
-    out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"]
+    out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"] * per
     point = world + toward_eye * out[..., None]
     ahead = -((point - eye.at) @ eye.turn[:, 2])
     if within is not None:  # a joint's own card (pictured bent) shows only what is in its zone and a little past it
@@ -772,7 +930,7 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     cover = np.where(inside, rgba[..., 3], 0.0)
     inked = inked & inside
     rgb = rgba[..., :3]
-    if balls and "ball" in FILL:
+    if balls and "ball" in FILL and not second:
         # The ball in a joint. A ball about each of this part's joints, small enough to lie inside the body, in
         # this part's own colour near the joint (the part next door draws the same ball in its colour, and the one
         # whose body is behind the ball, as the eye sees it, is the one that shows). Wherever the eye's own line
@@ -991,6 +1149,9 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
         if bone is None and only is not None and name not in only:
             continue
         bone = pose[part["bone"]] if bone is None else bone
+        if within is None and name in DOTS:  # this part as a cloud of dots, not a card
+            draw_dots(character, part, bone, eye, colour, depth, who, 1 + PARTS_A_FIGURE * (figure % 15) + index % PARTS_A_FIGURE, paint)
+            continue
         v = eye_in_bone(bone, part["center"], eye.at)
         first, second, share = choose(character.dirs, v, None if held is None else held.get(name))
         if forced and name in forced:
@@ -999,13 +1160,19 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
             held[name] = first
         off = math.degrees(math.acos(max(-1.0, min(1.0, float(character.dirs[first] @ v)))))
         said[name] = {"view": first, "next": second, "share": share, "off_deg": off}
-        showing = [(first, None)] if not blend or share >= 1.0 else [(first, share), (second, share)]
-        for n, (view, portion) in enumerate(showing):
+        showing = [(first, None, False)] if not blend or share >= 1.0 else [(first, share, False), (second, share, False)]
+        if AROUND and relief and not within and not (forced and name in forced):
+            # the next directions round the eye, each a little behind the first: what the nearest picture never saw
+            order, angles = nearest_views(character.dirs, v)
+            showing += [(int(k), None, True) for k, a in zip(order, angles) if int(k) != first and a < AROUND_DEG][:AROUND]
+        for n, (view, portion, more) in enumerate(showing):
             card = place(character.views[view], bone, part["center"], eye.at)
-            got = card_pixels(character, part, view, card, eye, relief, "off" if within else line, keep_dark and name == "head", [] if within else joint_balls(character, part, bone, pose, eye.at), within)
+            got = card_pixels(character, part, view, card, eye, relief, "off" if within else line, keep_dark and name == "head", [] if within else joint_balls(character, part, bone, pose, eye.at), within, second=more)
             if got is None:
                 continue
             x0, y0, rgb, cover, normal, ahead, inked = got
+            if more:
+                ahead = ahead + AROUND_BACK_M
             h, w = cover.shape
             keep = cover >= 0.5
             if portion is not None:
@@ -1027,6 +1194,100 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
     out[..., :3] = np.round(to_screen(colour) * 255.0)
     out[..., 3] = np.where(np.isfinite(depth), 255, 0)
     return out, depth, said
+
+
+# ---------- a part as a cloud of dots (tried, and not what the pages draw) ----------
+
+def dots_of(character, part):
+    """A part as dots on its surface, gathered from every picture of it at once: each pixel of each picture (and of
+    the layers behind) is a place on the part (so far right, so far up, so high toward that picture's eye), with a
+    colour and a facing. All of them are put in the bone's own frame, and of the ones that fall in the same little
+    box the one its picture saw most square-on is kept. What no picture saw from where it stood, another did: there
+    is no nearest picture, nothing to swap, and nothing behind a surface but what some eye saw. Returns (places Nx3,
+    facings Nx3, colours Nx3 as stored, the box's size in metres)."""
+    ppm = float(part.get("px_per_m") or character.px_per_m)
+    grid = DOTS_GRID / ppm
+    places, facings, colours, square = [], [], [], []
+    for cells in [character.cells] + list(getattr(character, "behind", [])):
+        for view, cell in zip(character.views, cells[part["name"]]):
+            x0, y0, w, h, ax, ay = cell[:6]
+            if w <= 0 or h <= 0:
+                continue
+            data, rgba = character.data[y0:y0 + h, x0:x0 + w], character.colour[y0:y0 + h, x0:x0 + w]
+            # (not the line's pixels, nor the folds bold ink's sheet has drawn into each picture: a fold is drawn where that
+            # picture's own eye saw one, and the same fold from 26 eyes is a scatter of black dots)
+            drawn = (np.abs(rgba[..., :3] - np.array([0.07, 0.055, 0.086], dtype=np.float32)).max(axis=-1) < 0.02) if character.card.get("look") == "joe" else False
+            ys, xs = np.nonzero((data[..., 2] > 0.5 / 255.0) & (rgba[..., 3] > 0.5) & (data[..., 0] + data[..., 1] > 0.5 / 255.0) & ~drawn)
+            got = data[ys, xs]
+            normal = unpack_normal(got[:, :2]).astype(np.float64)
+            height = (got[:, 2] * 2.0 - 1.0) * part["depth_m"]
+            r, u, d = np.asarray(view["r"]), np.asarray(view["u"]), np.asarray(view["d"])
+            places.append(((xs + 0.5 - ax) / ppm)[:, None] * r + ((ys + 0.5 - ay) / ppm)[:, None] * u + height[:, None] * d)
+            facings.append(normal)
+            colours.append(rgba[ys, xs, :3])
+            square.append(normal @ d)
+    places, facings, colours, square = np.concatenate(places), np.concatenate(facings), np.concatenate(colours), np.concatenate(square)
+    # a dot is told from its neighbours by its box and by which of six ways it faces: the two sides of a thin brim are two dots
+    box = np.floor(places / grid).astype(np.int64)
+    side = np.argmax(np.abs(facings), axis=1) * 2 + (np.take_along_axis(facings, np.argmax(np.abs(facings), axis=1)[:, None], axis=1)[:, 0] > 0)
+    key = ((box[:, 0] + 4096) * 8192 + (box[:, 1] + 4096)) * 8192 * 8 + (box[:, 2] + 4096) * 8 + side
+    order = np.lexsort((square, key))                      # by box, the most square-on last
+    last = np.r_[key[order][1:] != key[order][:-1], True]
+    keep = order[last]
+    keep = keep[square[keep] > 0.15]
+    return places[keep], facings[keep], colours[keep], grid
+
+
+def draw_dots(character, part, bone, eye, colour, depth, who=None, number=1, paint=None):
+    """A part's dots drawn into a picture (colour: light as it adds up; depth: distance in front): each a flat disc
+    lying on its surface, seen only from its own side, the nearest winning pixel by pixel."""
+    key = (character.set_name, part["name"])
+    if not hasattr(character, "dots"):
+        character.dots = {}
+    if key not in character.dots:
+        character.dots[key] = dots_of(character, part)
+    places, facings, rgb, grid = character.dots[key]
+    bone = np.asarray(bone, dtype=np.float64)
+    size = float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))
+    turn = bone[:3, :3] / size
+    at, normal = places @ bone[:3, :3].T + bone[:3, 3], facings @ turn.T
+    seen = ((eye.at - at) * normal).sum(axis=1) > 0.0
+    at, normal, rgb, facings = at[seen], normal[seen], rgb[seen], facings[seen]
+    spots, ahead = eye.to_pixels(at)
+    front = ahead > eye.near
+    at, normal, rgb, facings, spots, ahead = at[front], normal[front], rgb[front], facings[front], spots[front], ahead[front]
+    wide, tall = eye.size
+    radius = DOTS_SIZE * grid * size
+    reach = radius * tall / (2.0 * ahead * eye.tan)          # a disc's radius in pixels
+    most = int(min(24, math.ceil(float(reach.max()) if len(reach) else 0)))
+    lit = to_linear(rgb) * tones(facings, turn, eye) if paint is None else painted(rgb, facings, turn, eye, paint)
+    base = np.floor(spots).astype(int)
+    lean = ((at - eye.at) * normal).sum(axis=1)
+    pix, far, which = [], [], []
+    for dy in range(-most, most + 1):
+        for dx in range(-most, most + 1):
+            near = np.nonzero((dx * dx + dy * dy) <= (reach + 1.0) ** 2)[0]
+            px, py = base[near, 0] + dx, base[near, 1] + dy
+            ok = (px >= 0) & (px < wide) & (py >= 0) & (py < tall)
+            near, px, py = near[ok], px[ok], py[ok]
+            ray = np.stack([((px + 0.5 - eye.shift[0]) / wide * 2 - 1) * eye.tan * wide / tall, ((py + 0.5 - eye.shift[1]) / tall * 2 - 1) * eye.tan, -np.ones(len(px))], axis=-1) @ eye.turn.T
+            along = lean[near] / np.minimum((ray * normal[near]).sum(axis=1), -1e-9)
+            hit = (((eye.at + ray * along[:, None] - at[near]) ** 2).sum(axis=1) < radius * radius) & (along > eye.near)
+            pix.append((py * wide + px)[hit]); far.append(along[hit]); which.append(near[hit])
+    if not pix:
+        return
+    pix, far, which = np.concatenate(pix), np.concatenate(far), np.concatenate(which)
+    order = np.argsort(-far)                                 # the nearest written last
+    pix, far, which = pix[order], far[order], which[order]
+    nearest = np.full(wide * tall, np.inf)
+    nearest[pix] = far
+    best = np.full(wide * tall, -1)
+    best[pix] = which
+    win = (nearest < depth.reshape(-1)) & (best >= 0)
+    colour.reshape(-1, 3)[win] = lit[best[win]]
+    depth.reshape(-1)[win] = nearest[win]
+    if who is not None:
+        who.reshape(-1)[win] = number
 
 
 # ---------- a piece of the real model in each big joint (bake_joints.py) ----------

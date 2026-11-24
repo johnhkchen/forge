@@ -93,16 +93,23 @@ export function modelsOf(run) {
 // read first; the older ones stay where they were for pages older than this.
 // The same cards with a piece of the real model for every big joint (scripts/impostor/bake_joints.py) are in the
 // folder of that name with "-skinned" for "-joined" (or added), and are read before those. The ones that have a
-// piece for the neck, the collar and the tops of the shoulders as well are in "-necked", and are read first of all
+// piece for the neck, the collar and the tops of the shoulders as well are in "-necked", and are read before those
 // ("?joints=knees" in the page's address reads the "-skinned" ones instead, for a picture of before and after).
-export function bakedFor(run, look, model) {
+// Cards whose pictures go more than one surface deep (bake_impostor.py --layers: what lay behind the first surface
+// and can be seen from a little to one side) are in the folder of that name with "-layered" for "-joined" (or
+// added), their pieces in "-layered-necked" or "-layered-skinned". The order: layered with a neck, then a neck
+// without layers, then layered without a neck, then the rest. "?layers=off" in the page's address reads the cards
+// as if there were no layers: for a picture of before and after, or to time what the layers cost.
+const LAYERED = new URLSearchParams(globalThis.location?.search || "").get("layers") !== "off";
+export function bakedFor(run, look, model, layered = LAYERED) {
   const mine = run.cards.filter((c) => c.profile === (model || modelsOf(run)[0].id));
   const ends = (tail) => mine.find((c) => c.folder.endsWith(tail));
   const plain = ends("-impostor-comic-joined") || ends("-impostor") || mine[0];
   const cards = (look.first && ends(`-impostor-${look.first}`)) || (look.sheet && (ends(`-impostor-${look.sheet}-joined`) || ends(`-impostor-${look.sheet}-faces`) || ends(`-impostor-${look.sheet}`))) || plain;
-  const pieces = (tail) => cards && mine.find((c) => c.folder === `${cards.folder.replace(/-joined$/, "")}${tail}`);
-  const knees = new URLSearchParams(globalThis.location?.search || "").get("joints") === "knees";
-  return (!knees && pieces("-necked")) || pieces("-skinned") || cards;
+  const named = (tail) => cards && mine.find((c) => c.folder === `${cards.folder.replace(/-joined$/, "")}${tail}`);
+  const necked = new URLSearchParams(globalThis.location?.search || "").get("joints") !== "knees";
+  return (layered && necked && named("-layered-necked")) || (necked && named("-necked"))
+    || (layered && (named("-layered-skinned") || named("-layered"))) || named("-skinned") || cards;
 }
 
 const FULL_VERTEX = `

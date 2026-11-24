@@ -3,7 +3,7 @@
     Blender -b --factory-startup -P scripts/impostor/judge_faces.py -- --out <folder> [--tag before]
         [--runs runs] [--shots shots] [--take crew-candy-shop] [--model detailed] [--times 9,13.5,18,...]
         [--eyes crew,two,close] [--looks joe,pixel-both] [--pixel old|new] [--sheet NAME] [--why] [--only left,right]
-        [--stills frontman@24:crew,...]
+        [--stills frontman@24:crew,...] [--layers off]
 
 For every one of the take's cast, at each of --times seconds of it, through three eyes (the set's crew camera;
 2 m from his head; 1 m from it, both on the crew camera's side), it draws him twice from the same eye: the real
@@ -270,6 +270,9 @@ def main():
             tails = ([] if flag("--joints", "") == "knees" else ["-necked"]) + ["-skinned"]  # (the ones with a piece for the neck too, first; --joints knees: without)
             pieces = lambda name: next((stem(name) + t for t in tails if os.path.isfile(os.path.join(stem(name) + t, "impostor.json"))), stem(name) + "-skinned")
             folder = lambda name: pieces(name) if os.path.isfile(os.path.join(pieces(name), "impostor.json")) else plain(name)
+        if flag("--layers", "on") != "off":  # the same cards more than one surface deep (bake_impostor.py --layers), when there are some
+            single = folder
+            folder = lambda name: impostor.layered_folder(plain(name), single(name) != plain(name)) or single(name)
         joe = impostor.Character(folder("impostor-joe-joined"))
         comic = impostor.Character(folder("impostor-comic-joined")) if why else None
         named = flag("--sheet", "")

@@ -2,7 +2,7 @@
 is a face as clear in "Pixels, both" as it is in bold ink?
 
     python3 scripts/impostor/clear_shots.py [--base http://localhost:8042/] [--take crew-candy-shop] [--out evidence/clear]
-        [--tag after] [--at 24] [--looks joe,pixel-both] [--eyes crew,two,close] [--ratio 1]
+        [--tag after] [--at 24] [--looks joe,pixel-both] [--eyes crew,two,close] [--ratio 1] [--square 0.36]
         [--sides joe:after,pixel-both:before,pixel-both:after]
 
 The gallery must be running on that port. With the take stopped at --at seconds, for every look and eye it takes
@@ -115,6 +115,8 @@ def main():
     flag = lambda name, default: args[args.index(name) + 1] if name in args else default
     base, take, out, tag = flag("--base", "http://localhost:8042/"), flag("--take", "crew-candy-shop"), os.path.abspath(flag("--out", os.path.join(REPO, "evidence", "clear"))), flag("--tag", "after")
     at, ratio = flag("--at", "24"), int(flag("--ratio", "1"))
+    global HEAD_M
+    HEAD_M = float(flag("--square", str(HEAD_M)))  # (0.7 takes in a hat)
     looks, eyes = flag("--looks", "joe,pixel-both").split(","), flag("--eyes", "crew,two,close").split(",")
     if "--sides" in args:
         return sides(out, at, flag("--sides", "").split(","), eyes, flag("--roles", "frontman,left,right").split(","))

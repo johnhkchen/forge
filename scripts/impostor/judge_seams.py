@@ -4,7 +4,7 @@
         [--runs runs] [--shots shots] [--take crew-candy-shop] [--model detailed] [--sheets old|new]
         [--times 9,13.5,18,...] [--walk 6] [--eyes crew,close] [--looks comic,pixel-baked,pixel-both,joe]
         [--why] [--stills left@24:close,right@31.5:crew] [--deep 2] [--clip tag=tag-moves/painted-tag.glb] [--only left]
-        [--fill off|ball+joint+screen] [--joints cards]
+        [--fill off|ball+joint+screen] [--joints cards] [--layers off]
 
 For every one of the take's cast, at each of --times seconds of it (and at --walk moments of his own walk),
 through the set's crew camera and from 2 m off, it draws the character twice from the same eye: as cards, by
@@ -38,6 +38,9 @@ surface left out; the outline taken from the data sheet alone (no cover test on 
 
 --joints cards reads the cards without the pieces of the real model that bake_joints.py puts in the big joints
 (<model>-impostor-<look>-skinned, read first when they are there), to count what the pieces change.
+
+--layers off reads the cards one surface deep, as they were before bake_impostor.py --layers
+(<model>-impostor-<look>-layered and -layered-skinned are read first of all when they are there).
 
 --sheets old reads the sheets as they were baked before the joints were mended (<model>-impostor,
 -impostor-pixel-faces) and draws them as the page then did (a search by depth that gave up on the side of
@@ -73,6 +76,7 @@ TO_BL = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))  # a .
 # name: (which sheet, how many screen pixels one of the picture's is, the lines drawn on the finished picture)
 LOOKS = {"comic": ("comic", 1, None), "pixel-baked": ("pixel", 1, None), "pixel-screen": ("comic", 2, "grid"), "pixel-both": ("pixel", 2, "grid"), "joe": ("joe", 1, "bold")}
 PAPER = (250, 248, 245)
+LAYERED = True         # read the cards baked more than one surface deep, when there are some (--layers off: do not)
 PIECES = True          # read the cards that have a piece of the model in each big joint, when there are some (--joints cards: do not)
 NECKED = True          # ... and of those the ones with a piece for the neck and collar too (--joints knees: the ones without)
 
@@ -98,7 +102,13 @@ def sheet_folder(profiles, model, sheet, which, look=""):
     cards = next(os.path.join(profiles, n) for n in names if os.path.isfile(os.path.join(profiles, n, "impostor.json")))
     # the same cards with a piece of the model for every big joint (bake_joints.py), when there are some and they are wanted
     stem = cards[:-len("-joined")] if cards.endswith("-joined") else cards
+    if which == "new" and LAYERED and PIECES and NECKED and os.path.isfile(os.path.join(stem + "-layered-necked", "impostor.json")):
+        return stem + "-layered-necked"  # layered cards with a neck piece, read first of all (as bakedFor does)
     pieces = next((stem + tail for tail in (["-necked"] if NECKED else []) + ["-skinned"] if os.path.isfile(os.path.join(stem + tail, "impostor.json"))), stem + "-skinned")
+    if which == "new" and NECKED and PIECES and pieces.endswith("-necked"):
+        return pieces  # a neck piece before layers without one
+    if which == "new" and LAYERED and impostor.layered_folder(cards, PIECES):  # the same cards more than one surface deep
+        return impostor.layered_folder(cards, PIECES)
     return pieces if which == "new" and PIECES and os.path.isfile(os.path.join(pieces, "impostor.json")) else cards
 
 
@@ -337,8 +347,9 @@ def main():
     out = os.path.abspath(flag("--out", "evidence/seams"))
     os.makedirs(out, exist_ok=True)
     tag, which, model = flag("--tag", ""), flag("--sheets", "new"), flag("--model", "detailed")
-    global PIECES, NECKED
+    global PIECES, NECKED, LAYERED
     PIECES, NECKED = flag("--joints", "pieces") != "cards", flag("--joints", "pieces") != "knees"
+    LAYERED = flag("--layers", "on") != "off"
     runs, shots = os.path.abspath(flag("--runs", os.path.join(REPO, "runs"))), os.path.abspath(flag("--shots", os.path.join(REPO, "shots")))
     take = os.path.join(shots, flag("--take", "crew-candy-shop"))
     times = [float(t) for t in flag("--times", "9,13.5,18,22.5,27,31.5,36,40.5,45,49.5").split(",") if t]

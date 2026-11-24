@@ -10,8 +10,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, sheetBalls, skinFor, skinMeshes } from "./impostor.js";
+import { eyeInBone, choose, place, corners, marchSteps, fanOf, density, behindOf } from "./impostor-math.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, setBehind, sheetBalls, skinFor, skinMeshes } from "./impostor.js";
+import { DOTS, dotsOf, dotsMesh } from "./dots.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, withoutHeads } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
 
@@ -218,7 +219,7 @@ class TakeViewer {
       const model = (models.find((m) => m.id === "detailed") || models[0]).id; // the detailed model's cards when there are some
       const folder = `runs/${encodeURIComponent(actor.run.id)}/${bakedFor(actor.run, this.look, model).folder}`;
       // what this look does with the sheet's ink line: a shell behind the surface, or one line on the finished picture
-      const line = () => { const told = cardLine(actor.card, this.look); actor.quads.forEach((quad, p) => { quad.material.uniforms.line.value = told.line; quad.material.uniforms.who.value = told.ids ? cardNumber(who, p) : 1; }); };
+      const line = () => { const told = cardLine(actor.card, this.look); actor.quads.forEach((quad, p) => { quad.material.uniforms.line.value = told.line; quad.material.uniforms.who.value = told.ids ? cardNumber(who, p) : 1; }); if (actor.dots) actor.dots.material.uniforms.who.value = actor.quads[actor.dots.userData.part].material.uniforms.who.value; };
       if (folder === actor.folder) { line(); continue; }
       actor.folder = folder;
       const card = await fetch(`${folder}/impostor.json`).then((r) => r.json());
@@ -247,6 +248,16 @@ class TakeViewer {
         actor.cards.add(quad);
         return quad;
       });
+      // "?head=dots": the head as a cloud of dots gathered from all its pictures, in place of its card (dots.js)
+      actor.dots?.geometry.dispose();
+      actor.dots?.material.dispose();
+      actor.dots = null;
+      const headPart = card.parts.findIndex((part) => part.name === "head");
+      if (DOTS.on && headPart >= 0) {
+        actor.dots = dotsMesh(dotsOf(card, actor.sheet, card.parts[headPart]), this.paint, this.screen.told.headPass);
+        actor.dots.userData.part = headPart;
+        actor.cards.add(actor.dots);
+      }
       // the pieces of the model in the big joints, riding the same skeleton
       actor.skin = skin;
       actor.joined = skinMeshes(skin, actor.bones, this.paint);
@@ -269,12 +280,19 @@ class TakeViewer {
     card.parts.forEach((part, p) => {
       const bone = actor.bones[part.bone], quad = actor.quads[p];
       if (!bone) { quad.visible = false; return; }
+      if (actor.dots && actor.dots.userData.part === p) { // this part is drawn as dots, not a card
+        quad.visible = false;
+        actor.dots.matrix.copy(bone.matrixWorld);
+        actor.dots.matrixWorld.copy(bone.matrixWorld);
+        setHeadGrid(actor.dots, this.screen, this.look, this.camera, [bone.matrixWorld.elements[12], bone.matrixWorld.elements[13], bone.matrixWorld.elements[14]]);
+        return;
+      }
       const world = bone.matrixWorld.elements;
       const pick = choose(sheet.dirs, eyeInBone(world, part.center, eye), actor.held[part.name], card.hold_deg, card.blend_deg);
       actor.held[part.name] = pick.first;
       const cell = sheet.cells[part.name][pick.first];
       const where = place(sheet.views[pick.first], world, part.center, eye);
-      const spots = corners(where, cell, density(card, part), true);
+      const spots = corners(where, setBehind(quad, cell, behindOf(sheet, part.name, pick.first)), density(card, part), true);
       const at = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
       spots.world.forEach((s, k) => at.setXYZ(k, s[0], s[1], s[2]));
       spots.sheet.forEach((s, k) => uv.setXY(k, s[0], s[1]));
@@ -285,6 +303,7 @@ class TakeViewer {
       u.heights.value.set(cell[6], cell[7]);
       u.back.value.set(...where.back);
       u.lean.value.set(...where.lean);
+      u.fan.value.set(...fanOf(where));
       u.deep.value.set(...where.deep);
       u.size.value = where.size;
       u.steps.value = marchSteps(where, cell, density(card, part), card.march);
