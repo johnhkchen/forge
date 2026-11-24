@@ -32,6 +32,15 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             never between two parts at the same depth; an arm in front of a chest still gets its line, and so
             does one figure in front of another; bold ink leaves a small step between two cards of one figure
             alone and still inks a real one; gallery/looks.js has the same numbers
+  fill      a bent joint filled: a part with a tall flat top, seen from a little to one side, is see-through beside
+            its top where the eye looks under the edge; with a joint there those pixels are filled, in the top's
+            colour, behind the top and inside the joint's ball, and with the joint a metre off nothing changes;
+            a part that is a rim round a hollow, seen from in front, gets the joint's ball in the hollow, round
+            and at the right depth, and none where it has no surface; the part whose body is behind a ball
+            stands it nearest; on the finished picture a crack a pixel wide between two parts that meet is
+            filled from the nearer and gets no line, and one between parts that do not meet, a wide one, and a
+            pixel that is in front are left alone; the page has the same numbers, the same table of parts that
+            meet, and finds the same colour for a ball (needs node)
   clear     a face kept clear in "Pixels, both": a head far off stays on the body's grid and a near one goes on a
             grid twice as fine, slid so the bone's head sits on a corner of a pixel; drawn that way a head is twice
             the pixels across, its line is still one big pixel wide and wholly outside it, and a body drawn
@@ -724,10 +733,189 @@ def test_clear(runs):
                   face.sum() > 300 and (~whole).sum() < 0.6 * math.sqrt(face.sum()) * 4, "%d fine pixels of head; %d big pixels are part body" % (face.sum(), (~whole).sum()))
 
 
+def post(folder, kind, radius=0.05, tall=0.10, ppm=192.0):
+    """A part for the filling, baked as two_plates is (every picture the same, facing its own eye), with a joint at
+    its bone's head. kind "post": a round flat top `tall` above the bone's head, with nothing round it (its sides
+    are what no picture saw). kind "cup": a rim at the bone's head round a hollow `tall` deep."""
+    views = impostor.views_of("26")
+    half = int(math.ceil(2 * radius * ppm)) + 2
+    side = 2 * half
+    ys, xs = np.mgrid[0:side, 0:side]
+    x, y = (xs + 0.5 - half) / ppm, (ys + 0.5 - half) / ppm
+    inner = x * x + y * y < radius * radius
+    there = inner if kind == "post" else x * x + y * y < (2 * radius) ** 2
+    z = np.where(inner, tall if kind == "post" else -tall, 0.0)
+    depth_m = tall + 0.05
+    cols = 6
+    rows = (len(views) + cols - 1) // cols
+    colour = np.zeros((rows * (side + 2) + 2, cols * (side + 2) + 2, 4), dtype=np.uint8)
+    data = np.zeros(colour.shape[:2] + (3,), dtype=np.uint8)
+    cells = []
+    for i, view in enumerate(views):
+        x0, y0 = 2 + (i % cols) * (side + 2), 2 + (i // cols) * (side + 2)
+        normal = np.broadcast_to(np.array(view["d"]), x.shape + (3,))
+        packed = np.concatenate([impostor.pack_normal(normal), np.clip(z / depth_m * 0.5 + 0.5, 1 / 255.0, 1.0)[..., None]], axis=-1)
+        packed[~there] = (0.5, 0.5, 0.0)
+        colour[y0:y0 + side, x0:x0 + side] = np.where(there[..., None], np.where(inner[..., None], (200, 120, 40, 255), (90, 90, 200, 255)), (0, 0, 0, 0))
+        data[y0:y0 + side, x0:x0 + side] = np.round(packed * 255.0)
+        cells.append([x0, y0, side, side, half, half, float(z.min()), float(z.max())])
+    impostor.write_png(os.path.join(folder, "c.png"), colour)
+    impostor.write_png(os.path.join(folder, "d.png"), data)
+    card = {"px_per_m": ppm, "default_views": "26", "line_marked": True, "parts": [{"name": "a", "bone": "a", "center": [0, 0, 0], "depth_m": depth_m}],
+            "joints": [{"bone": "j", "between": ["a", "gone"], "ring_cm": 12.0, "ball_cm": 100.0 * radius * 0.75 / impostor.FILL_INNER}],
+            "sets": {"26": {"color": "c.png", "data": "d.png", "size": [colour.shape[1], colour.shape[0]], "views": views, "cells": {"a": cells}}}}
+    with open(os.path.join(folder, "impostor.json"), "w") as f:
+        json.dump(card, f)
+
+
+def test_fill():
+    keep = set(impostor.FILL)
+    bone = np.eye(4)
+    bone[:3, 3] = (0.2, 1.0, -0.1)
+    far = np.eye(4)
+    far[:3, 3] = (1.2, 1.0, -0.1)
+    views = impostor.views_of("26")
+    d = np.array(views[8]["d"])  # a picture taken from the side
+    folder = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        # a see-through pixel near a joint: the eye 25 degrees off a picture of a tall flat top looks in under its edge
+        post(folder, "post")
+        character = impostor.Character(folder)
+        off = impostor.unit(d + 0.47 * np.array(views[8]["r"]))
+        eye = impostor.Eye(bone[:3, 3] + 3.0 * off, bone[:3, 3], 8.0, (200, 200))
+        per_px = eye.m_per_px(bone[:3, 3])
+        impostor.FILL = set()
+        bare, bare_depth, _ = impostor.draw(character, {"a": bone, "j": bone}, eye, forced={"a": 8})
+        impostor.FILL = {"joint"}
+        filled, depth, _ = impostor.draw(character, {"a": bone, "j": bone}, eye, forced={"a": 8})
+        away, _, _ = impostor.draw(character, {"a": bone, "j": far}, eye, forced={"a": 8})
+        was, now = bare[..., 3] > 0, filled[..., 3] > 0
+        new = now & ~was
+        check("a see-through pixel beside a tall top is filled when a joint is there", new.sum() > 0.3 * was.sum() and not (was & ~now).any(), "%d pixels more on %d" % (new.sum(), was.sum()))
+        ys, xs = np.nonzero(new)
+        at, _ = eye.to_pixels(bone[:3, 3])
+        check("... only inside the joint's ball, behind the top, in the top's colour", bool(len(ys)) and float(np.hypot(xs + 0.5 - at[0], ys + 0.5 - at[1]).max()) < 0.12 / per_px + 1.0
+              and float(depth[new].min()) > float(bare_depth[was].min()) and bool((filled[new][:, 0] > filled[new][:, 2]).all()),
+              "furthest %.1f cm from the joint" % (100.0 * per_px * float(np.hypot(xs + 0.5 - at[0], ys + 0.5 - at[1]).max()) if len(ys) else 0.0))
+        check("... and with the joint a metre away nothing is filled", bool((away == bare).all()))
+        # the ball in a joint: a rim round a hollow, seen from straight in front
+        post(folder, "cup")
+        character = impostor.Character(folder)
+        eye = impostor.Eye(bone[:3, 3] + 3.0 * d, bone[:3, 3], 8.0, (200, 200))
+        per_px = eye.m_per_px(bone[:3, 3])
+        impostor.FILL = set()
+        hollow, hollow_depth, _ = impostor.draw(character, {"a": bone, "j": bone}, eye, forced={"a": 8})
+        impostor.FILL = {"ball"}
+        stopped, depth, _ = impostor.draw(character, {"a": bone, "j": bone}, eye, forced={"a": 8})
+        changed = depth < hollow_depth - 0.01
+        ys, xs = np.mgrid[0:200, 0:200]
+        ball_px = impostor.FILL_INNER * character.card["joints"][0]["ball_cm"] / 100.0 / per_px
+        true = (xs + 0.5 - 100) ** 2 + (ys + 0.5 - 100) ** 2 < ball_px ** 2
+        check("a hollow gets the joint's ball in it, round and the right size", (changed & true).sum() / float((changed | true).sum()) > 0.9, "shares %.3f of the true disc" % ((changed & true).sum() / float((changed | true).sum())))
+        nearest = 3.0 - impostor.FILL_INNER * character.card["joints"][0]["ball_cm"] / 100.0 + impostor.BALL_BACK_M / 2.0
+        check("... its nearest point a ball's radius in front of the joint (and stood back half way: the part's middle is the joint)", abs(float(depth[100, 100]) - nearest) < 0.003 and float(hollow_depth[100, 100]) > 3.05, "%.3f m, the hollow %.3f" % (depth[100, 100], hollow_depth[100, 100]))
+        check("... and the picture's outline is as it was: no ball where the part has no surface", bool(((stopped[..., 3] > 0) == (hollow[..., 3] > 0)).all()))
+        tint = impostor.own_tint(character.card, character.sheet, character.parts[0], [0.0, 0.0, 0.0], 0.02, character.pixel)
+        check("the ball takes the colour the part has round the place looked at (its hollow, here)", np.abs(np.array(tint) * 255.0 - (200, 120, 40)).max() < 1.0, str(tint))
+    finally:
+        impostor.FILL = keep
+        shutil.rmtree(folder)
+    joint, eye_at = np.array([0.0, 1.0, 0.0]), np.array([0.0, 1.0, 3.0])
+    check("the part whose body is behind a ball, as the eye sees it, stands it nearest", impostor.ball_back(joint, joint + [0, 0, -0.2], eye_at) < 1e-9
+          and abs(impostor.ball_back(joint, joint + [0, 0, 0.2], eye_at) - impostor.BALL_BACK_M) < 1e-9 and abs(impostor.ball_back(joint, joint + [0.2, 0, 0], eye_at) - impostor.BALL_BACK_M / 2) < 1e-9)
+    # cracks on the finished picture
+    names = impostor.PART_NAMES
+    number = lambda part, figure=0: 1 + impostor.PARTS_A_FIGURE * figure + names.index(part)
+    picture = np.zeros((9, 12, 4), dtype=np.uint8)
+    depth = np.full((9, 12), np.inf, dtype=np.float32)
+    who = np.zeros((9, 12), dtype=np.int32)
+
+    def lay(rows, cols, part, colour, away, figure=0):
+        picture[rows, cols], depth[rows, cols], who[rows, cols] = colour + (255,), away, number(part, figure)
+
+    lay(slice(0, 3), slice(0, 5), "thigh_l", (10, 0, 0), 4.00)
+    lay(slice(0, 3), slice(6, 12), "shin_l", (20, 0, 0), 4.03)       # row 1: a crack one pixel wide at a knee
+    lay(slice(3, 6), slice(0, 5), "thigh_l", (10, 0, 0), 4.00)
+    lay(slice(3, 6), slice(6, 12), "thigh_r", (30, 0, 0), 4.03)      # row 4: one pixel between the legs
+    lay(slice(6, 9), slice(0, 4), "thigh_l", (10, 0, 0), 4.00)
+    lay(slice(6, 9), slice(7, 12), "shin_l", (20, 0, 0), 4.03)       # row 7: a gap three pixels wide
+    got, got_depth, got_who, filled = impostor.crack_fill(picture, depth, who, [(0, 1), (1, 0)])
+    check("a crack a pixel wide between two parts that meet is filled, from the nearer of the two", bool(filled[0:3, 5].all()) and tuple(got[1, 5]) == (10, 0, 0, 255) and got_who[1, 5] == number("thigh_l") and abs(float(got_depth[1, 5]) - 4.0) < 1e-6)
+    check("... one between the legs is not, and nor is a gap three pixels wide", not filled[3:6, 5].any() and not filled[6:9, 4:7].any() and int(filled.sum()) == 3)
+    front = depth.copy()
+    front[0:3, 5] = 3.5
+    check("... nor a pixel that shows something in front of the two", not impostor.crack_fill(picture, front, who, [(0, 1), (1, 0)])[3].any())
+    other = who.copy()
+    other[0:3, 6:12] = number("shin_l", 1)
+    check("... nor one between two figures", not impostor.crack_fill(picture, depth, other, [(0, 1), (1, 0)])[3][0:3].any())
+    check("bold ink looks for a crack's two sides as far off as its thick line reaches, four ways", impostor.bold_offsets() == [(0, 3), (2, 2), (3, 0), (2, -2)])
+    joined = impostor.JOINED
+    check("parts meet as the skeleton has them: each with itself, a thigh with its shin and the hips, not with the other thigh", bool((joined == joined.T).all() and joined.diagonal().all()) and bool(joined[names.index("thigh_l"), names.index("shin_l")])
+          and bool(joined[names.index("thigh_l"), names.index("hips")]) and not joined[names.index("thigh_l"), names.index("thigh_r")] and not joined[names.index("forearm_l"), names.index("hips")] and int(joined.sum()) == 16 + 2 * 15)
+    # the page
+    with open(os.path.join(REPO, "gallery", "impostor-math.js")) as f:
+        page = f.read()
+    with open(os.path.join(REPO, "gallery", "looks.js")) as f:
+        looks = f.read()
+    check("the page has the same numbers for the filling", "export const FILL = { ball: %s, backM: %g, inner: %g, tintReach: %g, tintIn: %g, ballBackM: %g, aPart: %d };" % (
+        ("%.1f" % impostor.FILL_BALL), impostor.FILL_BACK_M, impostor.FILL_INNER, impostor.TINT_REACH, impostor.TINT_IN, impostor.BALL_BACK_M, impostor.BALLS_A_PART) in page
+        and "export const CRACK = { behindM: %g, apartM: %g };" % (impostor.CRACK_BEHIND_M, impostor.CRACK_APART_M) in looks)
+    node = shutil.which("node")
+    if not node:
+        print("    skipped  the page's filling against impostor.py (no node here)")
+        return
+    rng = np.random.default_rng(11)
+    cells = [[int(rng.integers(0, 40)), int(rng.integers(0, 40)), int(rng.integers(30, 70)), int(rng.integers(30, 70)), int(rng.integers(10, 30)), int(rng.integers(10, 30)), 0.0, 0.1] for _ in views]
+    card = {"px_per_m": 96.0, "parts": [{"name": "a", "bone": "a", "center": [0.01, 0.2, -0.02]}, {"name": "b", "bone": "b", "px_per_m": 192.0, "center": [0.0, 0.1, 0.0]}],
+            "joints": [{"bone": "b", "between": ["b", "a"], "ring_cm": 9.5, "ball_cm": 6.2}, {"bone": "c", "between": ["c", "b"], "ring_cm": 4.0, "ball_cm": 3.1}]}
+    sheet = {"views": views, "cells": {"a": cells, "b": cells}}
+    pixel = lambda x, y: [(x * 7 + y * 13) % 256, (x * 3 + y * 5) % 256, (x + y * 11) % 256, 255 if (x + y) % 5 else 0]
+    cases = [{"bone": some_bone(rng, float(rng.uniform(0.6, 1.5))).T.reshape(-1).tolist(), "at": rng.normal(size=3).tolist(), "eye": (rng.normal(size=3) * 3).tolist(),
+              "place": (rng.normal(size=3) * 0.05).tolist(), "reach": float(rng.uniform(0.01, 0.06)), "part": int(rng.integers(2))} for _ in range(24)]
+    script = """
+      import { FILL, ownTint, tintPlace, inBone, ballBack, partBalls } from %s;
+      import { JOINED, PART_NAMES } from %s;
+      const { card, sheet, cases } = JSON.parse(await new Promise((done) => { let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => done(s)); }));
+      const pixel = (x, y) => [(x * 7 + y * 13) %% 256, (x * 3 + y * 5) %% 256, (x + y * 11) %% 256, (x + y) %% 5 ? 255 : 0];
+      console.log(JSON.stringify({ joined: JOINED, names: PART_NAMES, balls: partBalls(card), cases: cases.map((c) => {
+        const part = card.parts[c.part], middle = [c.bone[12], c.bone[13], c.bone[14]];
+        return { tint: ownTint(card, sheet, part, c.place, c.reach, pixel), place: tintPlace(c.place, part.center, 0.1), inBone: inBone(c.bone, c.at), back: ballBack(c.at, middle, c.eye) };
+      }) }));
+    """ % (json.dumps("file://" + os.path.join(REPO, "gallery", "impostor-math.js")), json.dumps("file://" + os.path.join(REPO, "gallery", "looks.js")))
+    # looks.js draws with three.js, which node has not got here: its tables are read with that one line left out
+    shim = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        with open(os.path.join(shim, "looks.mjs"), "w") as f:
+            f.write(looks.replace('import * as THREE from "three";', "const THREE = { Color: class {}, Vector2: class {}, Vector3: class {} };"))
+        script = script.replace(json.dumps("file://" + os.path.join(REPO, "gallery", "looks.js")), json.dumps("file://" + os.path.join(shim, "looks.mjs")))
+        out = subprocess.run([node, "--input-type=module", "-e", script], input=json.dumps({"card": card, "sheet": sheet, "cases": cases}), capture_output=True, text=True)
+    finally:
+        shutil.rmtree(shim)
+    if out.returncode:
+        raise AssertionError("node could not run the page's filling:\n" + out.stderr[-800:])
+    js = json.loads(out.stdout)
+    bits = [sum(1 << b for b in range(impostor.PARTS_A_FIGURE) if joined[a, b]) for a in range(impostor.PARTS_A_FIGURE)]
+    check("the page has the same parts in the same order, and the same table of which meet", js["names"] == names and js["joined"] == bits)
+    mine = impostor.part_balls(card)
+    check("... gives every part the same joints, each with the same two radii", [[(b["bone"], round(b["radius"], 9), round(b["inner"], 9)) for b in balls] for balls in js["balls"]]
+          == [[(bone, round(ring, 9), round(inner, 9)) for bone, ring, inner in mine.get(part["name"], [])] for part in card["parts"]])
+    worst, same = 0.0, True
+    for case, got in zip(cases, js["cases"]):
+        part = card["parts"][case["part"]]
+        bone = np.array(case["bone"]).reshape(4, 4).T
+        size = float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))
+        same &= impostor.own_tint(card, sheet, part, case["place"], case["reach"], pixel) == got["tint"]
+        for a, b in ((impostor.tint_place(case["place"], part["center"], 0.1), got["place"]), ((bone[:3, :3] / size).T @ (np.array(case["at"]) - bone[:3, 3]) / size, got["inBone"]),
+                     ([impostor.ball_back(case["at"], bone[:3, 3], case["eye"])], [got["back"]])):
+            worst = max(worst, float(np.abs(np.asarray(a) - np.asarray(b)).max()))
+    check("... finds the same colour for a ball in the same pixels (24 cases)", same)
+    check("... and looks for it in the same place, with the joint where the bone has it and the ball stood back as far", worst < 1e-9, "worst %.2g" % worst)
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
+             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
     failed = 0
     for name, case in cases:
         print(name)

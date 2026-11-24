@@ -103,6 +103,73 @@ export function corners(card, cell, pxPerM, relief = true) {
   return { sheet, world: sheet.map(([x, y]) => add(card.head, scale(add(scale(card.e2, x), scale(card.e1, y)), card.size))) };
 }
 
+// Filling a bent joint. Where two parts meet, a bend opens the figure: each card's picture never saw what lies
+// beyond its own edge there, and the open end of a limb shows as a hollow. Two things mend it, both in the card's
+// shader (CARD_FRAGMENT):
+//   - a ball in every joint, small enough to lie inside the body (FILL.inner of the ball the bake found room for).
+//     It shows wherever the eye meets it before it meets the picture's surface, which only happens where a bend
+//     has opened the figure. Both parts that meet at the joint draw it, each in its own colour near the joint
+//     (looked for FILL.tintIn of the ring's radius in from the joint, FILL.tintReach of the ball's radius round
+//     there), and the part whose body is not behind the ball, as the eye sees it, stands its own back by up to
+//     FILL.ballBackM: looking in at the open end of a thigh, the ball is the thigh's colour;
+//   - a see-through pixel is filled where its line runs under the part's own surface inside a wider ball about
+//     the joint (FILL.ball of the radius of the ring where the two parts meet): the limb goes on into the next
+//     part there. FILL.backM: how far behind its place such a pixel stands, so anything truly there covers it.
+// FILL.aPart: a part meets at most this many others. scripts/impostor/impostor.py has the same numbers.
+export const FILL = { ball: 1.0, backM: 0.02, inner: 0.8, tintReach: 0.6, tintIn: 0.8, ballBackM: 0.01, aPart: 4 };
+
+// The colour a part gives the ball of one of its joints: the middle colour (each of red, green and blue by itself)
+// of what the part's own pictures show round a place on it (`at`, in the bone's frame, metres; reachM round it),
+// seen from the side. `sheet` is one view set of the card (views, cells); pixel(x, y) gives the colour sheet's
+// pixel x from the left and y from the bottom, four numbers 0 to 255. Returns three numbers 0 to 1, as the sheet
+// stores colour. (impostor.py: own_tint.)
+export function ownTint(card, sheet, part, at, reachM, pixel) {
+  const ppm = density(card, part), reach = Math.max(2, reachM * ppm);
+  const seen = [[], [], []];
+  sheet.views.forEach((view, v) => {
+    const [x0, y0, wide, tall, ax, ay] = sheet.cells[part.name][v];
+    if (Math.abs(view.d[1]) >= 0.5 || wide <= 0 || tall <= 0) return;
+    const mx = ax + ppm * dot(at, view.r), my = ay + ppm * dot(at, view.u);
+    for (let cy = Math.max(0, Math.floor(my - reach)); cy < Math.min(tall, Math.ceil(my + reach) + 1); cy++) {
+      for (let cx = Math.max(0, Math.floor(mx - reach)); cx < Math.min(wide, Math.ceil(mx + reach) + 1); cx++) {
+        if ((cx + 0.5 - mx) ** 2 + (cy + 0.5 - my) ** 2 > reach * reach) continue;
+        const got = pixel(x0 + cx, y0 + cy);
+        if (got[3] >= 128) for (let k = 0; k < 3; k++) seen[k].push(got[k]);
+      }
+    }
+  });
+  if (!seen[0].length) return [0.5, 0.5, 0.5];
+  return seen.map((channel) => channel.sort((a, b) => a - b)[Math.floor(channel.length / 2)] / 255);
+}
+
+// Where on a part to look for that colour: FILL.tintIn of the joint's ring radius in from the joint, toward the
+// middle of the part: its own skin, past what it borrows from next door. All in the bone's frame.
+export const tintPlace = (jointAt, center, ring) => add(jointAt, scale(unit(sub(center, jointAt)), FILL.tintIn * ring));
+
+// A place in the world as a bone has it (the bone as three.js keeps it), at the bone's own size.
+export function inBone(bone, at) {
+  const size = Math.cbrt(Math.abs(
+    bone[0] * (bone[5] * bone[10] - bone[9] * bone[6]) - bone[4] * (bone[1] * bone[10] - bone[9] * bone[2]) + bone[8] * (bone[1] * bone[6] - bone[5] * bone[2])));
+  return scale(turnedBack(bone, sub(at, [bone[12], bone[13], bone[14]])), 1 / (size * size));
+}
+
+// How far back a part stands the ball of one of its joints (m): nothing when the part's own body is straight behind
+// the ball as the eye sees it, FILL.ballBackM when it is straight in front. jointAt, middle (of the part) and eye
+// are in the world.
+export const ballBack = (jointAt, middle, eye) => (FILL.ballBackM * (1 - dot(unit(sub(middle, jointAt)), unit(sub(jointAt, eye))))) / 2;
+
+// For every part of a baked character, in order, the joints it has: [{ bone: the bone whose head is the joint,
+// radius: within which a see-through pixel is filled, inner: of the ball in it (metres at the bone's own size) }].
+// A sheet baked before the joints were mended says nothing of them: no balls.
+export function partBalls(card) {
+  const out = card.parts.map(() => []);
+  for (const joint of card.joints || []) for (const name of joint.between) {
+    const p = card.parts.findIndex((part) => part.name === name);
+    if (p >= 0 && out[p].length < FILL.aPart) out[p].push({ bone: joint.bone, radius: (FILL.ball * joint.ring_cm) / 100, inner: (FILL.inner * joint.ball_cm) / 100 });
+  }
+  return out;
+}
+
 // How many steps the search down a pixel's line takes: enough that none is longer than march.px of the picture.
 export function marchSteps(card, cell, pxPerM, march) {
   const b = card.back, l = card.lean;

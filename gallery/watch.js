@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid } from "./impostor.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, sheetBalls } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, withoutHeads } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
 
@@ -225,6 +225,8 @@ class TakeViewer {
       actor.sheet?.colour.dispose();
       actor.sheet?.data.dispose();
       Object.assign(actor, { card, sheet: { ...sheet, colour, data, dirs: sheet.views.map((v) => v.d) }, held: {} });
+      actor.joints = sheetBalls(card, actor.sheet);
+      actor.jointAt = (name) => { const e = actor.bones[name]?.matrixWorld.elements; return e && [e[12], e[13], e[14]]; };
       actor.cards.clear();
       actor.quads = card.parts.map((part) => {
         const shape = new THREE.BufferGeometry();
@@ -279,6 +281,7 @@ class TakeViewer {
       u.size.value = where.size;
       u.steps.value = marchSteps(where, cell, density(card, part), card.march);
       u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, bone.matrixWorld)).multiplyScalar(1 / where.size);
+      setBalls(quad, actor.joints[p], part.center, world, this.camera, actor.jointAt, where.size);
       if (part.name === "head") setHeadGrid(quad, this.screen, this.look, this.camera, where.head);
     });
   }

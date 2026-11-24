@@ -3,7 +3,8 @@
     Blender -b --factory-startup -P scripts/impostor/judge_seams.py -- --out <folder> [--tag before]
         [--runs runs] [--shots shots] [--take crew-candy-shop] [--model detailed] [--sheets old|new]
         [--times 9,13.5,18,...] [--walk 6] [--eyes crew,close] [--looks comic,pixel-baked,pixel-both,joe]
-        [--why] [--stills left@24:close,right@31.5:crew]
+        [--why] [--stills left@24:close,right@31.5:crew] [--deep 2] [--clip tag=tag-moves/painted-tag.glb] [--only left]
+        [--fill off|ball+joint+screen]
 
 For every one of the take's cast, at each of --times seconds of it (and at --walk moments of his own walk),
 through the set's crew camera and from 2 m off, it draws the character twice from the same eye: as cards, by
@@ -20,6 +21,15 @@ line. Then it counts, in pixels of the picture:
                  the cards, and "between cards" has cards within a centimetre and a half on both sides
 
 each over the whole figure and within 12 cm of a joint, and as a share of the real body's pixels.
+
+It also says the same joint by joint, against how far each joint is bent (BENT lines, and "bent" and every row's
+"joints" in the file). A joint's bend is how far the part below it is turned from where it stood, against the part
+above, when the parts were cut: a part is only exact in that pose. A joint's own ground in the picture is a disc
+about it as big as the ring where its two parts meet and 6 cm more. --deep N adds, for each of knees, elbows, the
+neck, shoulders and hips, the N moments of the dance where that joint is bent furthest. --clip name=file.glb judges
+another clip of the same skeleton (the tag field's moves, with --model painted --only left for Roosevelt's painted
+cards) from 4.4 m and from 2 m. --fill leaves out some or all of what fills a bent joint (impostor.py: FILL), to
+count what each is worth; off is the cards as they were before any of it.
 
 --why also draws the cards with one thing changed at a time, to say what the see-through pixels come from:
 the parts as rigid pieces of the real model riding the bones (no pictures at all: what the cut alone leaves
@@ -53,6 +63,7 @@ import bake_impostor  # noqa: E402  (how a character is cut into parts)
 TOON = os.path.join(REPO, ".claude", "skills", "tidy-mesh", "scripts", "toon.py")
 SIZE = (1080, 608)
 SEAM_M = 0.12          # this close to a joint is "at a joint"
+JOINT_M = 0.06         # counting joint by joint, a joint's own ground reaches this far past the ring where its two parts meet
 CLOSE_M = 2.0
 DARK = 80              # the real model's picture is "dark" where no colour of a pixel is over this (its ink is 33)
 TO_BL = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))  # a .glb's y-up to Blender's z-up
@@ -107,6 +118,11 @@ class Real:
             chosen, _, _ = bake_impostor.cut_round(self.bodies, rig, posed, round_["lap"], round_["smooth_m"], round_.get("ball", 0.0), round_.get("overlap", card["overlap"]), round_.get("trunk_overlap", card["trunk_overlap"]))
         else:
             chosen, _ = bake_impostor.cut(self.bodies, rig, card["overlap"], card["trunk_overlap"])
+        # every joint as it stood when the parts were cut: how the part below is turned in the frame of the part
+        # above. A joint's bend is how far it is turned from that (a part is only exact in the pose it was cut in).
+        first = dict(bake_impostor.PARTS)
+        turn = lambda name: np.array(rig.pose.bones[name].matrix.to_3x3().normalized())
+        self.joints = [(bone, first[above][0], turn(first[above][0]).T @ turn(bone)) for _, above, bone in bake_impostor.joints_of(rig) if bone in rest and first[above][0] in rest]
         white = bpy.data.materials.new("piece")
         white.use_nodes = True
         white.node_tree.nodes.clear()
@@ -163,6 +179,15 @@ class Real:
         for bone, piece in self.pieces:
             piece.matrix_world = TO_BL @ Matrix(np.asarray(frames[bone]).tolist())
         bpy.context.view_layer.update()
+
+    def bends(self, frames):
+        """{joint: how far it is turned from the pose the parts were cut in, degrees} for a set of bone frames."""
+        out = {}
+        for bone, above, cut in self.joints:
+            a, b = np.asarray(frames[above])[:3, :3], np.asarray(frames[bone])[:3, :3]
+            a, b = a / np.cbrt(abs(np.linalg.det(a))), b / np.cbrt(abs(np.linalg.det(b)))
+            out[bone] = math.degrees(math.acos(max(-1.0, min(1.0, (np.trace(cut.T @ (a.T @ b)) - 1.0) / 2.0))))
+        return out
 
     def shoot(self, eye):
         self.cam.data.angle_y = math.radians(eye.fov_deg)
@@ -230,6 +255,31 @@ def outside(solid):
         out |= more
 
 
+KINDS = {"shin": "knee", "forearm": "elbow", "head": "neck", "upper_arm": "shoulder", "thigh": "hip", "hand": "wrist", "foot": "ankle", "spine": "waist", "chest": "waist"}
+STEPS = (30, 60, 90)  # a joint's bend is counted as under 30 degrees, 30 to 60, 60 to 90, or 90 and over
+
+
+def kind_of(bone):
+    return KINDS.get(bone[:-2] if bone[-2:] in ("_l", "_r") else bone, bone)
+
+
+def by_joint(masks, joints_px, names, reach_px):
+    """Each mask's pixels shared out among the joints. A joint's own ground is a disc about it (reach_px: the
+    ring where its two parts meet and JOINT_M beyond, so a hip's is bigger than a wrist's); a pixel goes to the
+    joint whose disc it is deepest inside, and to none if it is in no disc. {joint: [count for each mask]}."""
+    ys, xs = np.nonzero(np.logical_or.reduce(masks))
+    out = {name: [0] * len(masks) for name in names}
+    if not len(ys) or not names:
+        return out
+    off = np.hypot(xs[:, None] + 0.5 - np.array([p[0] for p in joints_px])[None, :], ys[:, None] + 0.5 - np.array([p[1] for p in joints_px])[None, :]) / np.asarray(reach_px)[None, :]
+    nearest, near = off.argmin(axis=1), off.min(axis=1) < 1.0
+    for m, mask in enumerate(masks):
+        mine = nearest[mask[ys, xs] & near]
+        for j in np.unique(mine):
+            out[names[j]][m] = int((mine == j).sum())
+    return out
+
+
 def compare(real, body, cards, inked, joints_px, per_px, k):
     """What the cards show at the joints that the real model does not. real: the model with its ink line; body:
     where its own surface is. k: screen pixels to one of the picture's."""
@@ -247,7 +297,7 @@ def compare(real, body, cards, inked, joints_px, per_px, k):
     crack = open_ & shrink(grow(b, wide), wide)  # cards close by on both sides: a gap between two of them, not an edge that fell short
     return {"crack": int(crack.sum()), "body": int(body.sum()), "zone": int((body & zone).sum()), "dark": int(dark.sum()), "dark_zone": int((dark & zone).sum()),
             "open": int(open_.sum()), "open_zone": int((open_ & zone).sum()), "hole": int(hole.sum()), "hole_zone": int((hole & zone).sum()),
-            "out": int(out.sum())}, dark, open_, hole
+            "out": int(out.sum())}, dark, open_, hole, crack, out
 
 
 def over_paper(picture):
@@ -280,6 +330,14 @@ def main():
     take = os.path.join(shots, flag("--take", "crew-candy-shop"))
     times = [float(t) for t in flag("--times", "9,13.5,18,22.5,27,31.5,36,40.5,45,49.5").split(",") if t]
     walk = int(flag("--walk", "6"))
+    deep = int(flag("--deep", "0"))     # as well as --times: for each kind of joint, this many moments of the dance where it is bent furthest
+    extra = [pair.split("=") for pair in flag("--clip", "").split(",") if pair]  # name=file.glb: other clips of the same skeleton (the tag field's moves), judged from 4.4 m and from 2 m
+    extra_moments = int(flag("--clip-moments", "8"))
+    fill = flag("--fill", "")           # what fills a joint, to try one thing at a time: "" (as the page does), or off, or any of ball, joint, screen joined by +
+    if fill:
+        impostor.FILL = set(fill.split("+")) - {"off"}
+    impostor.FILL_BALL = float(flag("--fill-ball", str(impostor.FILL_BALL)))
+    impostor.FILL_INNER = float(flag("--fill-inner", str(impostor.FILL_INNER)))
     eyes = flag("--eyes", "crew,close").split(",")
     looks = flag("--looks", "comic,pixel-baked,pixel-both,joe").split(",")
     only = flag("--only", "").split(",") if flag("--only", "") else None
@@ -309,7 +367,22 @@ def main():
             characters[look] = characters[folder]
         first = characters[looks[0]].card
         real = Real(os.path.join(profiles, first["source"]), first, try_cut)
-        clips = [("dance", impostor.Glb(os.path.join(take, part["glb"])), times, eyes)]
+        dance = impostor.Glb(os.path.join(take, part["glb"]))
+        moments = list(times)
+        if deep:
+            # where each kind of joint is bent furthest in the dance (looked at four times a second, picks a second apart)
+            looked = [(t, real.bends(dance.pose(t))) for t in np.arange(0.0, dance.seconds, 0.25)]
+            for kind in ("knee", "elbow", "neck", "shoulder", "hip"):
+                ranked = sorted(((max(v for b, v in bends.items() if kind_of(b) == kind), t) for t, bends in looked), reverse=True)
+                picked = []
+                for _, t in ranked:
+                    if len(picked) < deep and all(abs(t - u) >= 1.0 for u in picked + moments):
+                        picked.append(float(t))
+                moments += picked
+        clips = [("dance", dance, sorted(moments), eyes)]
+        for name, path in extra:
+            other = impostor.Glb(path if os.path.isabs(path) else os.path.join(shots, path))
+            clips.append((name, other, [other.seconds * (i + 0.5) / extra_moments for i in range(extra_moments)], ["quarter", "near"]))
         if walk:
             stride = impostor.Glb(os.path.join(profiles, "%s-walk.glb" % first["plays"]))
             clips.append(("walk", stride, [stride.seconds * i / walk for i in range(walk)], ["quarter"]))
@@ -318,16 +391,17 @@ def main():
                 pose = motion.pose(t)
                 hips = pose["hips"][:3, 3]
                 real.pose(pose)
+                bends = real.bends(pose)
                 for eye_name in clip_eyes:
                     if eye_name == "crew":
                         at, aim, fov = np.array(crew["at"], dtype=float), np.array(crew["aim"], dtype=float), crew_fov
                     elif eye_name == "close":  # from 2 m, on the crew camera's side of him
                         toward = np.array([crew["at"][0] - hips[0], 0.0, crew["at"][2] - hips[2]])
                         at, aim, fov = hips + CLOSE_M * toward / np.linalg.norm(toward) + np.array([0.0, 0.35, 0.0]), hips + np.array([0.0, 0.1, 0.0]), 36.0
-                    else:  # the judge's three-quarter eye
+                    else:  # the judge's three-quarter eye, from 4.4 m ("near": from 2 m)
                         a, e = math.radians(35.0), math.radians(12.0)
-                        aim = np.array([hips[0], 0.95, hips[2]])
-                        at, fov = aim + 4.4 * np.array([math.sin(a) * math.cos(e), math.sin(e), math.cos(a) * math.cos(e)]), 30.0
+                        aim = np.array([hips[0], hips[1] if eye_name == "near" else 0.95, hips[2]])
+                        at, fov = aim + (CLOSE_M if eye_name == "near" else 4.4) * np.array([math.sin(a) * math.cos(e), math.sin(e), math.cos(a) * math.cos(e)]), 36.0 if eye_name == "near" else 30.0
                     reals, covers, bodies = {}, {}, {}
                     if pieces_only:  # only the cut is being tried: the parts as rigid pieces against the model
                         eye = impostor.Eye(at, aim, fov, SIZE)
@@ -370,6 +444,9 @@ def main():
                                 drawn = impostor.grid_line(depth, who, eye)
                             elif lines == "bold":
                                 drawn = impostor.bold_lines(depth, who if marked else None, eye) & (who > 0)
+                            if drawn is not None and marked and "screen" in impostor.FILL:  # cracks filled on the finished picture, as the page does
+                                picture, depth, who, filled = impostor.crack_fill(picture, depth, who, [(0, 1), (1, 0)] if lines == "grid" else impostor.bold_offsets())
+                                drawn &= ~filled
                             if drawn is not None:
                                 picture = impostor.with_lines(picture, drawn)
                                 if inked is not None:
@@ -379,7 +456,12 @@ def main():
                         inked = np.zeros((eye.size[1], eye.size[0]), dtype=bool)
                         cards = cards_now(inked)
                         joints, _ = eye.to_pixels(np.array([pose[p["bone"]][:3, 3] for p in character.parts]))
-                        row, dark, open_, hole = compare(reals[k], bodies[k], cards, inked, joints, per_px, k)
+                        row, dark, open_, hole, crack, out_ = compare(reals[k], bodies[k], cards, inked, joints, per_px, k)
+                        # the same, joint by joint, with how far each is bent: [bend, see-through, holes, between cards, sticks out]
+                        named = [(p["bone"], xy) for p, xy in zip(character.parts, joints) if p["bone"] in bends]
+                        rings = {j["bone"]: j["ring_cm"] / 100.0 for j in card.get("joints") or []}
+                        shared = by_joint([open_, hole, crack, out_], [xy for _, xy in named], [b for b, _ in named], [(rings.get(b, SEAM_M - JOINT_M) + JOINT_M) / per_px for b, _ in named])
+                        row["joints"] = {b: [round(bends[b], 1)] + counts for b, counts in shared.items()}
                         row.update({"role": role, "clip": clip, "seconds": round(t, 2), "eye": eye_name, "look": look, "m_per_px": round(per_px, 4)})
                         report["rows"].append(row)
                         name = "%s@%g:%s" % (role, t, eye_name)
@@ -417,6 +499,20 @@ def main():
         print("SEAMS %-28s %3d pictures: line %5.1f px a picture (%.2f%% of the body, worst %d; %.1f at a joint), see-through %5.1f (%.2f%%, worst %d; %.1f at a joint; holes %.1f; between cards %.1f, %.2f%%, worst %d), sticks out %.1f" % (
             key, e["frames"], e["dark"] / e["frames"], e["dark_pct"], e["worst_dark"], e["dark_zone"] / e["frames"], e["open"] / e["frames"], e["open_pct"], e["worst_open"], e["open_zone"] / e["frames"], e["hole"] / e["frames"], e["crack"] / e["frames"], e["crack_pct"], e["worst_crack"], e["out"] / e["frames"]), flush=True)
     report["table"] = table
+    # what shows at each kind of joint against how far it is bent: a typical joint of that kind, in pixels of the picture
+    bent = {}
+    for row in report["rows"]:
+        for bone, (bend, open_, hole, crack, out_) in row.get("joints", {}).items():
+            step = sum(bend >= s for s in STEPS)
+            for key in ("%s|%s|%s" % (row["eye"], row["look"], kind_of(bone)), "%s|%s|all" % (row["eye"], row["look"])):
+                e = bent.setdefault(key, [{"joints": 0, "open": 0, "hole": 0, "crack": 0, "out": 0, "worst": 0} for _ in range(len(STEPS) + 1)])[step]
+                e["joints"] += 1
+                e["open"], e["hole"], e["crack"], e["out"], e["worst"] = e["open"] + open_, e["hole"] + hole, e["crack"] + crack, e["out"] + out_, max(e["worst"], crack + hole)
+    names = ["under %d" % STEPS[0]] + ["%d to %d" % (a, b) for a, b in zip(STEPS, STEPS[1:])] + ["%d and over" % STEPS[-1]]
+    for key in sorted(bent):
+        print("BENT  %-28s %s" % (key, "; ".join("%s: %d joints, holes %.1f, between cards %.1f, see-through %.1f, sticks out %.1f (worst %d)" % (
+            names[i], e["joints"], e["hole"] / e["joints"], e["crack"] / e["joints"], e["open"] / e["joints"], e["out"] / e["joints"], e["worst"]) for i, e in enumerate(bent[key]) if e["joints"])), flush=True)
+    report["bent"], report["bent_steps"] = bent, names
     causes = {}
     for said in report["why"]:
         entry = causes.setdefault("%s|%s|%s" % (said["clip"], said["eye"], said["look"]), {"frames": 0, "body": 0, "as_drawn": 0, "rigid_pieces": 0, "rigid_out": 0, "finer_search": 0, "no_wall": 0, "no_cover_test": 0})

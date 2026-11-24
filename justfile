@@ -249,7 +249,11 @@ impostor-judge run version="painted" out="evidence/impostor" *more:
 
 # Count what shows at the joints of a take's cast drawn as cards, against the real models posed the same and drawn the same way: dark lines that are not there, and see-through gaps, in every look, from the set's crew camera and from 2 m, in the dance and in a walk. Writes seams[-tag].json into out. more: judge_seams.py's flags (--sheets old for the sheets as they were before the joints were mended; --why to say what the gaps come from; --stills left@24:close,... for pictures)
 impostor-seams take="crew-candy-shop" tag="after" out="evidence/seams" *more:
-    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_seams.py -- --take "{{take}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^SEAMS (dance|walk)\||^WHY|^RESULT \{"out|Error|Traceback'
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_seams.py -- --take "{{take}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^SEAMS [a-z]+\||^BENT|^WHY|^RESULT \{"out|Error|Traceback'
+
+# Stills of a take's bent joints from two galleries side by side (say, main's and a branch's): a square round each joint through the set's camera, from 2 m and from 1 m, into out as <joint>-<look>.png (both galleries must be running; needs Chrome). more: joint_shots.py's flags (--joints knee=1:shin_l@16.25,... --looks joe,pixel-both --stage 42.25)
+joint-shots before="8030" after="8028" take="crew-candy-shop" out="evidence/joints" *more:
+    python3 scripts/impostor/joint_shots.py "before=http://localhost:{{before}}/" "after=http://localhost:{{after}}/" --take "{{take}}" --out "{{out}}" {{more}} | grep -E '^SHOTS|Error|Traceback'
 
 # Stills of a take's joints on the watch page: the stage from the set's camera, close on each of the cast, and closer still on an elbow and a knee, as cards in every look, and the stage as meshes, into out as <tag>-*.png (the gallery must be running on that port; needs Chrome)
 seam-shots take="crew-candy-shop" tag="after" port="8028" out="evidence/seams" at="24":

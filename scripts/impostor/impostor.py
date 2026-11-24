@@ -41,6 +41,14 @@ MARCH_MAX = 32       # ... and never more steps than this (a longer search takes
 REFINE = 5           # ... then the place found is halved in on this many times
 WALL_M = 0.04        # a pixel found this far below the surface it landed on is looking at nothing the picture saw
 GO_ON = True         # ... and the search then goes on under it to the next surface (False: it gives up there, as the page did before the joints were mended)
+FILL = {"ball", "joint", "screen"}  # what fills a bent joint, each of which judge_seams.py --fill can leave out: "ball" (a ball in every joint), "joint" (a see-through pixel near a joint), "screen" (cracks, on the finished picture)
+FILL_BALL = 1.0      # a see-through pixel is filled inside a ball about a joint this many times the radius of the ring where its two parts meet
+FILL_BACK_M = 0.02   # ... and stands this far behind where its line went in: anything truly there covers it
+FILL_INNER = 0.8     # the ball in a joint is this share of the ball the bake found room for inside the body there (that one is as big as fits at the joint, and a thin forearm just past a thick elbow is thinner than it)
+TINT_REACH = 0.6     # the colour a part gives a joint's ball is looked for this share of the ball's radius round a place ...
+TINT_IN = 0.8        # ... this share of the joint's ring radius in from the joint, toward the middle of the part: its own skin, past what it borrows from next door
+BALL_BACK_M = 0.01   # two parts both draw the ball of the joint between them, each in its own colour: the one whose body is not behind the ball, as the eye sees it, stands its ball back by up to this
+BALLS_A_PART = 4     # a part meets at most this many others (a chest: the spine, the head and two arms)
 BLEND_DEG = 7.0      # two views are mixed when the eye is within this of the line between them
 HOLD_DEG = 2.5       # a view is kept until another is nearer by this much (stops flicker on the line)
 INK = (0.11, 0.09, 0.13)  # the ink line's colour, as it looks on screen
@@ -48,6 +56,16 @@ LINE_BACK_M = 0.03   # the ink line round a part stands this far behind the part
 BREAK_M = 0.05       # lines drawn on the finished picture: within one figure, a line only where the surface steps back by more than this
 SEAM_M = 0.09        # ... and bold ink's thin lines leave a step smaller than this alone where two cards of one figure meet
 PARTS_A_FIGURE = 16  # a pixel's number in the finished picture: 1 + sixteen times which figure + which of its parts; 0 is not a card
+CRACK_BEHIND_M = 0.02  # filling a crack on the finished picture: what shows through it is this much further off than the cards on both sides
+CRACK_APART_M = 0.12   # ... which are no further than this from each other in depth
+# The parts in the order a bake lists them (bake_impostor.py: PARTS), and which meet at a joint: a crack is only
+# filled between two cards of one part, or of two parts that meet. gallery/looks.js has the same table.
+PART_NAMES = ["hips", "spine", "chest", "head"] + [name + side for side in ("_l", "_r") for name in ("upper_arm", "forearm", "hand", "thigh", "shin", "foot")]
+MEET = [("hips", "spine"), ("spine", "chest"), ("chest", "head")] + [pair for side in ("_l", "_r") for pair in (
+    ("chest", "upper_arm" + side), ("upper_arm" + side, "forearm" + side), ("forearm" + side, "hand" + side), ("hips", "thigh" + side), ("thigh" + side, "shin" + side), ("shin" + side, "foot" + side))]
+JOINED = np.eye(PARTS_A_FIGURE, dtype=bool)
+for _a, _b in MEET:
+    JOINED[PART_NAMES.index(_a), PART_NAMES.index(_b)] = JOINED[PART_NAMES.index(_b), PART_NAMES.index(_a)] = True
 BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], dtype=np.float32) / 16.0 + 1.0 / 32.0
 # The comic look (toon.py's numbers): where the light is as the eye sees it (right, up, toward the eye),
 # what the middle and dark tones multiply a colour by, and how far a surface must face the light for each.
@@ -549,9 +567,11 @@ class Character:
         self.colour = read_png(os.path.join(self.folder, sheet["color"])).astype(np.float32) / 255.0
         self.data = read_png(os.path.join(self.folder, sheet["data"])).astype(np.float32) / 255.0
         self.cells = sheet["cells"]
+        lit = np.round(self.colour * 255.0)
+        self.balls, self.tints, self.pixel = part_balls(self.card), getattr(self, "tints", {}), lambda x, y: lit[y, x]
 
 
-def card_pixels(character, part, view_index, card, eye, relief=True, line="shell", keep_dark=False):
+def card_pixels(character, part, view_index, card, eye, relief=True, line="shell", keep_dark=False, balls=None):
     """One card as the eye sees it: (x0, y0, colour HxWx3 as stored, cover HxW 0..1, normal HxWx3 in the bone's
     frame, distance in front HxW, HxW True where the pixel is the part's ink line), or None when it is off the
     picture. The page's fragment shader, slowly.
@@ -560,7 +580,9 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     LINE_BACK_M behind the surface, "off" leaves it out (the line is then drawn on the finished picture).
     keep_dark: where the picture is shown smaller than it was taken (one pixel of the eye's covers more than one of
     the sheet's), a pixel takes the darkest of what it covers when that is a good deal darker than its middle: an
-    eye or a brow one sheet pixel wide is kept, where reading only the middle would drop it on every other frame."""
+    eye or a brow one sheet pixel wide is kept, where reading only the middle would drop it on every other frame.
+    balls: this part's joints where they are now (joint_balls): a see-through pixel near one is filled, and each
+    has a ball in it."""
     cell = character.cells[part["name"]][view_index]
     x0, y0, w, h, ax, ay, low, high = cell
     if w <= 0 or h <= 0:
@@ -581,6 +603,9 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
     toward, head = card["toward"], card["head"]
     along_ray = (toward @ (head - eye.at)) / (ray @ toward)
     world = eye.at + ray * along_ray[..., None]
+    reach = np.linalg.norm(eye.at - world, axis=-1)
+    toward_eye = (eye.at - world) / reach[..., None]
+    balls = balls or []
     rel = (world - head) / card["size"]
     sheet = np.stack([rel @ card["e2"], rel @ card["e1"]], axis=-1)  # P: across and up on the card
     sheet_tall, sheet_wide = character.colour.shape[:2]
@@ -602,10 +627,22 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         top, bottom = high + 0.002, low - 0.002
         above, below = np.full(xs.shape, top), np.full(xs.shape, bottom)
         found, was, over = np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool)
+        walled, wall_at = np.zeros(xs.shape, dtype=bool), np.full(xs.shape, bottom)
+        round_ = balls if "joint" in FILL else []
         for i in range(1, steps + 1):
             at = top + (bottom - top) * i / steps
-            there, height, _ = read((sheet - at * lean) @ back.T)
+            spot = (sheet - at * lean) @ back.T
+            there, height, _ = read(spot)
             under = there & (height >= at)
+            if round_ and (under & ~found & ~walled).any():
+                # under the surface, and inside a joint's ball: the first such place on the line is kept for the filling
+                here = world + toward_eye * ((spot[..., 0] * card["deep"][0] + spot[..., 1] * card["deep"][1] + at * card["deep"][2]) * card["size"])[..., None]
+                inside_ball = np.zeros(xs.shape, dtype=bool)
+                for centre, ring, _, _, _ in round_:
+                    inside_ball |= ((here - centre) ** 2).sum(axis=-1) < ring * ring
+                first = under & ~found & ~walled & inside_ball
+                wall_at[first] = at
+                walled |= first
             new = under & ~was & ~found & ~over
             if new.any():  # only the pixels whose line has just gone under
                 rows, cols = np.nonzero(new)
@@ -623,8 +660,30 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
                     over[rows[~hit], cols[~hit]] = True
             above[~under & ~found] = at
             was = under
+        # Filling a joint. A line that went in only by the side of something, and came down on no surface after,
+        # shows nothing: a see-through pixel, and at a bent joint that is the tear in the figure. The picture
+        # never saw what is there. But inside a joint's ball, under the part's own surface, there is body: the
+        # limb goes on into the next part. So such a pixel is filled where its line first runs under the surface
+        # inside a joint's ball, in the colour of the surface over that place, standing a little behind it so
+        # that anything truly there covers it. Along the side of a limb, away from any joint, nothing is filled.
+        skirt = walled & ~found
+        below[skirt] = wall_at[skirt]
+        found = found | skirt
         xy = (sheet - below[..., None] * lean) @ back.T
         there, height, data = read(xy)
+        if skirt.any() and character.card.get("line_marked"):
+            # the edge of a picture is its ink line: the colour is taken from a little further in along the line
+            run = float(np.linalg.norm(back @ lean)) * ppm  # pixels of the picture the line crosses for a metre it drops
+            for _ in range(3):
+                edge = skirt & (data[..., 0] < 0.5 / 255.0) & (data[..., 1] < 0.5 / 255.0)
+                if not edge.any() or run < 1e-6:
+                    break
+                further = below - np.where(edge, 2.0 / run, 0.0)
+                there2, height2, data2 = read((sheet - further[..., None] * lean) @ back.T)
+                take = edge & there2 & (height2 >= further)
+                below, xy = np.where(take, further, below), np.where(take[..., None], (sheet - further[..., None] * lean) @ back.T, xy)
+                height, data = np.where(take, height2, height), np.where(take[..., None], data2, data)
+        height = np.where(skirt, below - FILL_BACK_M, height)
         inside = found & there
     else:
         xy = sheet @ back.T
@@ -670,12 +729,114 @@ def card_pixels(character, part, view_index, card, eye, relief=True, line="shell
         rgba[..., :3] = np.where(inked[..., None], np.array(INK, dtype=np.float32), rgba[..., :3])  # the sheet holds no ink: the line is painted here
         height = height - np.where(inked, LINE_BACK_M, 0.0)
     out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"]
-    to_eye = eye.at - world
-    reach = np.linalg.norm(to_eye, axis=-1)
-    point = world + to_eye / reach[..., None] * out[..., None]
+    point = world + toward_eye * out[..., None]
     ahead = -((point - eye.at) @ eye.turn[:, 2])
     cover = np.where(inside, rgba[..., 3], 0.0)
-    return int(lo[0]), int(lo[1]), rgba[..., :3], cover, normal, ahead, inked & inside
+    inked = inked & inside
+    rgb = rgba[..., :3]
+    if balls and "ball" in FILL:
+        # The ball in a joint. A ball about each of this part's joints, small enough to lie inside the body, in
+        # this part's own colour near the joint (the part next door draws the same ball in its colour, and the one
+        # whose body is behind the ball, as the eye sees it, is the one that shows). Wherever the eye's own line
+        # through a pixel meets one before it meets the picture's surface, the ball is what shows: the eye is
+        # looking in at the open end of the part, at the inside of its far wall, and the ball stops the hollow.
+        # Skin is nearer than the ball everywhere else, and covers it. Where the picture has no surface at all
+        # the ball is not drawn: beside a thin arm in a wide sleeve there is nothing, and a ball would be a knob.
+        surface = np.where(cover >= 0.5, reach - out, np.inf)  # how far along the eye's line the picture's surface is
+        nearest, colour, facing = surface.copy(), np.zeros(rgb.shape, dtype=np.float32), np.zeros(rgb.shape, dtype=np.float64)
+        for centre, _, inner, tint, back in balls:
+            off = centre - eye.at
+            along = -(toward_eye @ off)                       # the eye's line runs from the eye away through the pixel
+            under_root = along * along - off @ off + inner * inner
+            hit = (under_root >= 0.0) & (inner > 0.0)
+            far = along - np.sqrt(np.where(hit, under_root, 0.0)) + back
+            take = hit & (far > back) & (far < nearest) & (cover >= 0.5)
+            nearest = np.where(take, far, nearest)
+            colour[take] = tint
+            facing[take] = ((eye.at - toward_eye * (far - back)[..., None] - centre) / max(inner, 1e-9))[take]
+        ball = nearest < surface
+        if ball.any():
+            rgb, normal = np.where(ball[..., None], colour, rgb), np.where(ball[..., None], facing @ card["turn"], normal)
+            ahead = np.where(ball, -((-toward_eye * nearest[..., None]) @ eye.turn[:, 2]), ahead)
+            cover, inked = np.where(ball, 1.0, cover), inked & ~ball
+    return int(lo[0]), int(lo[1]), rgb, cover, normal, ahead, inked
+
+
+def own_tint(card, sheet, part, at, reach_m, pixel):
+    """The colour a part gives the ball of one of its joints: the middle colour (each of red, green and blue by
+    itself) of what the part's own pictures show round a place on it, seen from the side.
+    part: one of the card's parts;  at: the place, in the bone's frame (m);  reach_m: how far round it to look;
+    sheet: one view set of the card ("views", "cells");  pixel(x, y): the colour sheet's pixel x from the left and
+    y from the bottom, four numbers 0 to 255. gallery/impostor-math.js has the same (ownTint).
+    Returns three numbers 0 to 1, as the sheet stores colour."""
+    ppm = float(part.get("px_per_m") or card["px_per_m"])
+    reach = max(2.0, reach_m * ppm)
+    seen = [[], [], []]
+    for view, cell in zip(sheet["views"], sheet["cells"][part["name"]]):
+        x0, y0, wide, tall, ax, ay = cell[:6]
+        if abs(view["d"][1]) >= 0.5 or wide <= 0 or tall <= 0:
+            continue
+        mx = ax + ppm * (at[0] * view["r"][0] + at[1] * view["r"][1] + at[2] * view["r"][2])
+        my = ay + ppm * (at[0] * view["u"][0] + at[1] * view["u"][1] + at[2] * view["u"][2])
+        for cy in range(max(0, int(math.floor(my - reach))), min(tall, int(math.ceil(my + reach)) + 1)):
+            for cx in range(max(0, int(math.floor(mx - reach))), min(wide, int(math.ceil(mx + reach)) + 1)):
+                if (cx + 0.5 - mx) ** 2 + (cy + 0.5 - my) ** 2 > reach * reach:
+                    continue
+                got = pixel(x0 + cx, y0 + cy)
+                if got[3] >= 128:
+                    for k in range(3):
+                        seen[k].append(int(got[k]))
+    if not seen[0]:
+        return [0.5, 0.5, 0.5]
+    return [sorted(channel)[len(channel) // 2] / 255.0 for channel in seen]
+
+
+def tint_place(joint_at, center, ring):
+    """Where on a part to look for the colour it gives a joint's ball: TINT_IN of the joint's ring radius in from
+    the joint toward the middle of the part. All in the bone's frame."""
+    joint_at, center = np.asarray(joint_at, dtype=np.float64), np.asarray(center, dtype=np.float64)
+    return joint_at + unit(center - joint_at) * (TINT_IN * ring)
+
+
+def part_balls(card):
+    """{part name: [(the bone whose head is a joint of that part, the radius the joint is filled within, the
+    radius of the ball in it)]}, in metres at the bone's own size, from what a bake says of its joints (the ring
+    where the two parts meet, and the ball it found room for inside the body there). A sheet baked before the
+    joints were mended says nothing of them and gets none."""
+    out = {}
+    for joint in card.get("joints") or []:
+        for name in joint["between"]:
+            out.setdefault(name, []).append((joint["bone"], FILL_BALL * joint["ring_cm"] / 100.0, FILL_INNER * joint["ball_cm"] / 100.0))
+    return {name: balls[:BALLS_A_PART] for name, balls in out.items()}
+
+
+def ball_back(joint_at, middle, eye_at):
+    """How far back a part stands the ball of one of its joints (m): nothing when the part's own body is straight
+    behind the ball as the eye sees it (the eye is looking in at that part's open end, and the ball is that part's
+    to colour), BALL_BACK_M when it is straight in front. joint_at, middle (of the part), eye_at: in the world."""
+    joint_at = np.asarray(joint_at, dtype=np.float64)
+    return BALL_BACK_M * (1.0 - float(unit(np.asarray(middle) - joint_at) @ unit(joint_at - np.asarray(eye_at)))) / 2.0
+
+
+def joint_balls(character, part, bone, pose, eye_at):
+    """A part's joints where they are now: [(the joint in the world, the radius it is filled within, the radius
+    of the ball in it, the colour this part gives the ball, how far back it stands it)], in metres as the world has
+    them. bone: the part's bone in the world; pose: every bone in the world. The colour is looked up the first time
+    (where the joint is on the part hardly changes) and kept."""
+    bone = np.asarray(bone, dtype=np.float64)
+    turn = bone[:3, :3]
+    size = float(np.cbrt(abs(np.linalg.det(turn))))
+    middle = bone[:3, 3] + turn @ np.asarray(part["center"], dtype=np.float64)
+    out = []
+    for name, ring, inner in character.balls.get(part["name"], []):
+        if name not in pose:
+            continue
+        at = np.asarray(pose[name], dtype=np.float64)[:3, 3]
+        key = (character.set_name, part["name"], name)
+        if key not in character.tints:
+            character.tints[key] = np.asarray(own_tint(character.card, character.sheet, part, tint_place((turn / size).T @ (at - bone[:3, 3]) / size, part["center"], ring), TINT_REACH * inner, character.pixel), dtype=np.float32)
+        out.append((at, ring * size, inner * size, character.tints[key], ball_back(at, middle, eye_at)))
+    return out
 
 
 def tones(normal_bone, turn, eye, light=LIGHT, shade=SHADE, edges=EDGES):
@@ -752,7 +913,7 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
         showing = [(first, None)] if not blend or share >= 1.0 else [(first, share), (second, share)]
         for n, (view, portion) in enumerate(showing):
             card = place(character.views[view], bone, part["center"], eye.at)
-            got = card_pixels(character, part, view, card, eye, relief, line, keep_dark and name == "head")
+            got = card_pixels(character, part, view, card, eye, relief, line, keep_dark and name == "head", joint_balls(character, part, bone, pose, eye.at))
             if got is None:
                 continue
             x0, y0, rgb, cover, normal, ahead, inked = got
@@ -855,6 +1016,9 @@ def draw_fine_heads(character, pose, eye, paint=None, fine=FINE, fine_from=FINE_
         front = head_depth < depth
         picture[front], depth[front], who[front] = head[front], head_depth[front], head_who[front]
     lines = grid_line(depth, who, Eye(eye.at, eye.aim, eye.fov_deg, (wide * fine, tall * fine), eye.near, eye.far), fine=fine) if line else np.zeros(who.shape, dtype=bool)
+    if "screen" in FILL:  # a crack one big pixel wide between two cards that meet is filled, and gets no line
+        picture, depth, who, filled = crack_fill(picture, depth, who, [(0, fine), (fine, 0)])
+        lines &= ~filled
     return with_lines(picture, lines, GRID_INK), depth, who, lines
 
 
@@ -889,6 +1053,38 @@ def bold_lines(depth, who, eye, outer=3.2, inner=1.2, seam_m=SEAM_M):
         for dy, dx in ((0, r), (0, -r), (r, 0), (-r, 0)):
             fold &= ~((who > 0) & (_beside(figure, dy, dx) == figure) & (_beside(who, dy, dx) != who))
     return inked | fold
+
+
+def crack_fill(picture, depth, who, offsets):
+    """Cracks filled on the finished picture (gallery/looks.js does the same on the graphics card). A pixel that
+    shows no card, or another figure, with two cards of one figure on opposite sides of it (at each of
+    `offsets`, (up, right) in pixels, and the same the other way), is a crack between them when the two are one
+    part or two parts that meet at a joint, stand within CRACK_APART_M of each other, and what the pixel shows
+    is further off than both by CRACK_BEHIND_M. It takes the colour, depth and number of the nearer of the two.
+    A real gap (between the legs, between an arm and the hips, the stage seen through a bent arm) is wider than
+    the offsets reach, or lies between parts that do not meet, and is left alone.
+    Returns (picture, depth, who, True where a pixel was filled); what was given is not changed."""
+    d = np.where(np.isfinite(depth), depth, 1e9)
+    figure = np.where(who > 0, (who - 1) // PARTS_A_FIGURE, -1)
+    part = np.where(who > 0, (who - 1) % PARTS_A_FIGURE, 0)
+    picture, new_depth, new_who = picture.copy(), depth.copy(), who.copy()
+    filled = np.zeros(depth.shape, dtype=bool)
+    for dy, dx in offsets:
+        a_who, b_who, a_d, b_d = _beside(who, dy, dx), _beside(who, -dy, -dx), _beside(d, dy, dx), _beside(d, -dy, -dx)
+        a_fig, b_fig = _beside(figure, dy, dx), _beside(figure, -dy, -dx)
+        crack = (a_who > 0) & (b_who > 0) & (a_fig == b_fig) & (figure != a_fig) & JOINED[_beside(part, dy, dx), _beside(part, -dy, -dx)]
+        crack &= (np.abs(a_d - b_d) < CRACK_APART_M) & (d - np.maximum(a_d, b_d) > CRACK_BEHIND_M) & ~filled
+        from_a = crack & (a_d <= b_d)
+        from_b = crack & ~from_a
+        for take, oy, ox in ((from_a, dy, dx), (from_b, -dy, -dx)):
+            picture[take], new_depth[take], new_who[take] = _beside(picture, oy, ox)[take], _beside(depth, oy, ox)[take], _beside(who, oy, ox)[take]
+        filled |= crack
+    return picture, new_depth, new_who, filled
+
+
+def bold_offsets(outer=3.2):
+    """Where bold ink looks for the two sides of a crack: as far off as its thick line reaches, four ways."""
+    return [(int(round(math.sin(i * 0.7853982) * outer)), int(round(math.cos(i * 0.7853982) * outer))) for i in range(4)]
 
 
 def with_lines(picture, lines, ink=(0x12, 0x0e, 0x16)):

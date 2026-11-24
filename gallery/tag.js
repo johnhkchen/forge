@@ -23,8 +23,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms } from "./impostor.js";
+import { eyeInBone, choose, place, corners, marchSteps, density, FILL, inBone } from "./impostor-math.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setBalls, sheetBalls } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, FINE_FROM, withoutHeads } from "./looks.js";
 
 // name: where its poses come from.
@@ -406,6 +406,10 @@ uniform vec2 fineSize;    // the finer picture's size in its own pixels; 0 when 
 uniform float fineFrom;   // a head goes there once a metre at it is this many big pixels
 uniform float fineTimes;
 uniform int headPart;
+uniform vec4 ballBone[20];   // each part's joints, for the filling of a bent joint: the bones whose heads they are (under 0: none)
+uniform vec4 ballSize[20];   // ... and the radius each is filled within
+flat out vec4 balls[4];
+flat out int partOf;
 flat out float keepDark;
 flat out float who;
 flat out vec4 cell;
@@ -458,6 +462,17 @@ void main() {
   back = vec4(m.w, -m.y, -m.z, m.x) / (m.x * m.w - m.y * m.z);
   lean = vec2(dot(d, a2), dot(d, a1));
   deep = vec3(dot(r, v), dot(u, v), dot(d, v));
+  // this part's joints as the eye has them now
+  partOf = part;
+  for (int k = 0; k < 4; k++) {
+    float joint = ballBone[part][k];
+    balls[k] = vec4(0.0);
+    if (joint < 0.0) continue;
+    vec4 at = feet() * texelFetch(poseTex, ivec2(int(joint + 0.5) * 12 + 3, int(runner.w + 0.5)), 0);
+    // the radius in whole millimetres, and after the point how far back this part stands the ball: nothing when
+    // its own body is straight behind the ball as the eye sees it (impostor-math.js: ballBack)
+    balls[k] = vec4((viewMatrix * at).xyz, floor(ballSize[part][k] * 1000.0) + 0.25 * (1.0 - dot(normalize(middle - at.xyz), normalize(at.xyz - cameraPosition))));
+  }
   cell = texelFetch(cellTex, ivec2(best * 2, part), 0);
   vec4 more = texelFetch(cellTex, ivec2(best * 2 + 1, part), 0);
   anchor = more.xy;
@@ -487,8 +502,10 @@ void main() {
   }
 }`;
 // The cards page's own pixel shader, told that what was one card's settings now comes with each card.
-const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who", "float keepDark"]
-  .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT);
+const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who", "float keepDark", "vec4 balls[4]"]
+  .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT)
+  // every part's balls come in one list: each ball's colour, and the radius of the ball itself
+  .replace("uniform vec4 ballTint[4];\n#define TINT(k) ballTint[k]", "uniform vec4 ballTints[80];\nflat in int partOf;\n#define TINT(k) ballTints[partOf * 4 + k]");
 
 // Every runner's meshes in one draw a piece: each point is moved by its bones' rows of the table.
 const MESHES_VERTEX = `${RUNNER}
@@ -831,7 +848,18 @@ class Field {
         quads.push(quad);
       }
       const bones = card.parts.map((part) => this.table.names.indexOf(part.bone));
+      const joints = sheetBalls(card, sheet);
       const world = new THREE.Matrix4(), root = new THREE.Matrix4(), m = new THREE.Matrix4(), toEye = new THREE.Matrix4();
+      // where a bone's head is now, for the runner being placed: his own skeleton's, or the shared table's row
+      let mine = null, rowAt = 0;
+      const spot = new THREE.Vector3();
+      const jointAt = (name) => {
+        const b = this.table.names.indexOf(name);
+        if (b < 0) return null;
+        if (mine) spot.setFromMatrixPosition(mine.skeleton.bones[b].matrixWorld);
+        else spot.fromArray(this.table.data, rowAt + b * COLUMNS * 4 + 12).applyMatrix4(root);
+        return [spot.x, spot.y, spot.z];
+      };
       layer.place = () => {
         const eye = this.camera.position.toArray();
         const own = this.sharing() ? null : this.ownRunners();
@@ -839,6 +867,8 @@ class Field {
         for (let i = 0; i < n; i++) {
           const at = this.row(i) * this.table.wide * 4;
           if (!own) root.makeRotationY(game.heading[i]).setPosition(game.x[i], 0, game.z[i]);
+          mine = own ? own[i] : null;
+          rowAt = at;
           card.parts.forEach((part, p) => {
             if (own) world.copy(own[i].skeleton.bones[bones[p]].matrixWorld); else world.multiplyMatrices(root, m.fromArray(this.table.data, at + bones[p] * COLUMNS * 4));
             const quad = quads[i * card.parts.length + p];
@@ -860,6 +890,7 @@ class Field {
             u.steps.value = marchSteps(where, cell, density(card, part), card.march);
             u.line.value = told.line;
             u.who.value = told.ids ? cardNumber(i, p) : 1;
+            setBalls(quad, joints[p], part.center, world.elements, this.camera, jointAt);
             u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, world));
           });
         }
@@ -920,6 +951,17 @@ class Field {
     shape.setAttribute("runner", spots);
     shape.instanceCount = n * parts.length;
     const pad = (list, fill) => [...list, ...Array.from({ length: 20 - list.length }, () => fill())];
+    const ballBone = new Float32Array(80).fill(-1), ballSize = new Float32Array(80), ballTints = new Float32Array(320);
+    // each ball's colour is looked up with the joints where the first pose of the table has them
+    const first = (bone) => this.table.data.subarray(bone * COLUMNS * 4, bone * COLUMNS * 4 + 16);
+    sheetBalls(card, sheet).forEach((joints, p) => joints.forEach((joint, k) => {
+      const bone = this.table.names.indexOf(joint.bone), mine = this.table.names.indexOf(parts[p].bone);
+      if (p >= 20 || k >= FILL.aPart || bone < 0 || mine < 0) return;
+      const tint = joint.tintAt(inBone(first(mine), [first(bone)[12], first(bone)[13], first(bone)[14]]));
+      ballBone[p * 4 + k] = bone;
+      ballSize[p * 4 + k] = joint.radius;
+      ballTints.set([tint[0], tint[1], tint[2], joint.inner], (p * 4 + k) * 4);
+    }));
     const paint = new THREE.ShaderMaterial({ vertexShader: CARDS_VERTEX, fragmentShader: CARDS_FRAGMENT, side: THREE.DoubleSide, uniforms: {
       ...this.shade, poseTex: this.pose, keep, cellTex: { value: sheet.cellTex }, colourMap: { value: sheet.colour }, dataMap: { value: sheet.data },
       dirs: { value: [...sheet.dirs.map((d) => new THREE.Vector3(...d)), ...Array.from({ length: 114 - sheet.dirs.length }, () => new THREE.Vector3())] },
@@ -927,7 +969,7 @@ class Field {
       partBone: { value: pad(parts.map((part) => this.table.names.indexOf(part.bone)), () => 0) },
       centers: { value: pad(parts.map((part) => new THREE.Vector3(...part.center)), () => new THREE.Vector3()) },
       depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
-      fine: { value: pad(parts.map((part) => density(card, part)), () => 0) },
+      fine: { value: pad(parts.map((part) => density(card, part)), () => 0) }, ballBone: { value: ballBone }, ballSize: { value: ballSize }, ballTints: { value: ballTints },
       sheetSize: { value: new THREE.Vector2(...sheet.size) }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
       wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ids: { value: 0 },
       headPass: this.screen.told.headPass, fineSize: { value: new THREE.Vector2() }, fineFrom: { value: FINE_FROM }, fineTimes: { value: 1 }, headPart: { value: parts.findIndex((part) => part.name === "head") } } });

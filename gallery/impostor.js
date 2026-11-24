@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
+import { eyeInBone, choose, place, corners, marchSteps, density, FILL, partBalls, ownTint, tintPlace, inBone, ballBack } from "./impostor-math.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
 
 const PAPER = 0xebe6dc;
@@ -43,6 +43,21 @@ void main() {
 // it, to the next place the line comes down onto the surface, and only gives up when there is none. Mixing two
 // views is done by a fixed pattern of pixels, each pixel one view or the other, so every pixel still has one
 // true depth.
+//
+// A bent joint is filled here, two ways (impostor-math.js: FILL). `balls` are this part's joints as the eye has
+// them: where each is, and one number more: the radius it is filled within in whole millimetres, and after the
+// point how far back this part stands the ball (0 to a half: none to all of ballBackM). TINT(k) is the colour this
+// part gives each ball, and the ball's radius.
+//   - A pixel whose line went in only by the side of something and came down on no surface after would show
+//     nothing, and where two parts meet that is the tear in the figure. It is filled where its line first runs
+//     under the part's surface near a joint: there is body there, the limb going on into the next part. It takes
+//     the colour of the surface over that place and stands a little behind it (fillBackM), so anything truly
+//     there covers it. Along the side of a limb, away from any joint, nothing is filled.
+//   - Every joint has a ball in it, small enough to lie inside the body. Where the eye meets a ball before it
+//     meets the picture's surface, the ball shows: the eye is looking in at the open end of the part, at the
+//     inside of its far wall, and the ball stops the hollow. Skin is nearer than the ball everywhere else. Where
+//     the picture has no surface at all no ball is drawn (beside a thin arm in a wide sleeve it would be a knob). The two parts that meet there each draw it
+//     in their own colour; the one whose body is behind the ball, as the eye sees it, is the one that shows.
 //
 // The ink line round the part is marked in the data sheet (both of the facing's numbers are 0) and painted here.
 // `line` says what becomes of it (looks.js: cardLine): over 0, it stands that many metres behind the surface, so
@@ -77,8 +92,26 @@ uniform float line;
 uniform float who;
 uniform vec3 lineInk;
 uniform float keepDark;
+uniform vec4 balls[4];
+uniform vec4 ballTint[4];
+#define TINT(k) ballTint[k]
+uniform float fillBackM;
+uniform float ballBackM;
 varying vec2 vSheet;
 varying vec3 vView;
+// How far toward the eye a place of the picture stands from the card, and whether it is near a joint.
+float outAt(vec2 p, float h) {
+  return (p.x * deep.x + p.y * deep.y + h * deep.z) * size;
+}
+bool inBall(vec2 p, float h) {
+  vec3 here = vView + normalize(-vView) * outAt(p, h);
+  for (int k = 0; k < 4; k++) {
+    vec3 off = here - balls[k].xyz;
+    float ring = floor(balls[k].w) / 1000.0;
+    if (dot(off, off) < ring * ring) return true;
+  }
+  return false;
+}
 float pattern(vec2 at) {
   int x = int(mod(at.x, 4.0)), y = int(mod(at.y, 4.0));
   int i = y * 4 + x;
@@ -105,6 +138,8 @@ bool readAt(vec2 xy, out float height, out vec3 data) {
   return c.x >= 0.0 && c.x < cell.z && c.y >= 0.0 && c.y < cell.w && data.z > 0.5 / 255.0;
 }
 void main() {
+  if (mix_ == 1 && pattern(gl_FragCoord.xy) >= share) discard;
+  if (mix_ == 2 && pattern(gl_FragCoord.xy) < share) discard;
   vec2 xy;
   float height;
   vec3 data;
@@ -112,11 +147,13 @@ void main() {
   if (steps > 0) {
     float top = heights.y + 0.002, bottom = heights.x - 0.002;
     float above = top, below = bottom;
-    bool found = false, was = false;
+    bool found = false, was = false, filled = false;
+    float fillAt = bottom;
     for (int i = 1; i <= 32; i++) {
       if (i > steps || found) break;
       float at = top + (bottom - top) * float(i) / float(steps);
-      bool under = readAt(inPicture(vSheet - at * lean), height, data) && height >= at;
+      vec2 spot = inPicture(vSheet - at * lean);
+      bool under = readAt(spot, height, data) && height >= at;
       if (under && !was) { // the line has just gone under the surface: halve in on where
         float a = above, b = at;
         for (int k = 0; k < 5; k++) {
@@ -126,21 +163,62 @@ void main() {
         // the surface itself, or the side of something? Under a side the search goes on
         if (readAt(inPicture(vSheet - b * lean), height, data) && height - b < wallM + (top - bottom) / float(steps) / 32.0) { below = b; found = true; }
       }
+      // under the surface with no surface found, and inside a joint's ball: the first such place is kept for the filling
+      if (under && !found && !filled && inBall(spot, at)) { filled = true; fillAt = at; }
       if (!under) above = at;
       was = under;
     }
-    if (!found) discard;
+    if (!found) below = fillAt;
     xy = inPicture(vSheet - below * lean);
-    ok = readAt(xy, height, data);
+    ok = (found || filled) && readAt(xy, height, data);
+    if (ok && !found) {
+      // the edge of a picture is its ink line: the colour is taken from a little further in along the pixel's line
+      float run = length(inPicture(lean)) * pxPerM;
+      for (int k = 0; k < 3; k++) {
+        if (line == 0.0 || data.x >= 0.5 / 255.0 || data.y >= 0.5 / 255.0 || run < 1e-6) break;
+        float further = below - 2.0 / run, height2;
+        vec3 data2;
+        vec2 spot = inPicture(vSheet - further * lean);
+        if (!(readAt(spot, height2, data2) && height2 >= further)) break;
+        below = further; xy = spot; height = height2; data = data2;
+      }
+      height = below - fillBackM;
+    }
   } else {
     xy = inPicture(vSheet);
     ok = readAt(xy, height, data);
   }
+  bool inked = ok && line != 0.0 && data.x + data.y < 0.5 / 255.0;
+  if (inked && line < 0.0) ok = false;
+  vec4 colour = vec4(0.0);
+  if (ok) {
+    colour = textureLod(colourMap, (cell.xy + xy * pxPerM + anchor) / sheetSize, 0.0);
+    if (colour.a < 0.5) ok = false;
+  }
   if (!ok) discard;
-  bool inked = line != 0.0 && data.x + data.y < 0.5 / 255.0;
-  if (inked && line < 0.0) discard;
-  vec4 colour = textureLod(colourMap, (cell.xy + xy * pxPerM + anchor) / sheetSize, 0.0);
-  if (colour.a < 0.5) discard;
+  // the ball in a joint: the nearest one the eye's own line through this pixel meets, if it meets it before the surface
+  float out_ = outAt(xy, height - (inked ? line : 0.0));
+  vec3 ray = normalize(vView);
+  float nearest = length(vView) - out_;
+  int ball = -1;
+  float stoodBack = 0.0;
+  for (int k = 0; k < 4; k++) {
+    float inner = TINT(k).a, along = dot(ray, balls[k].xyz), back_ = fract(balls[k].w) * 2.0 * ballBackM;
+    float root = along * along - dot(balls[k].xyz, balls[k].xyz) + inner * inner;
+    if (inner <= 0.0 || root < 0.0) continue;
+    float far = along - sqrt(root) + back_;
+    if (far > back_ && far < nearest) { nearest = far; ball = k; stoodBack = back_; }
+  }
+  if (ball >= 0) {
+    vec3 at = ray * nearest, seen = normalize(ray * (nearest - stoodBack) - balls[ball].xyz), tint = TINT(ball).rgb;
+    float facing = dot(seen, light);
+    vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
+    vec4 clip = projectionMatrix * vec4(at, 1.0);
+    gl_FragDepth = clip.z / clip.w * 0.5 + 0.5;
+    gl_FragColor = vec4(mix(vec3(dot(tint, vec3(0.2126, 0.7152, 0.0722))), tint, punch) * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), who);
+    #include <colorspace_fragment>
+    return;
+  }
   if (keepDark > 0.5 && !inked) {
     // Shown smaller than it was pictured (one pixel here covers more than one of the sheet's), a pixel takes the
     // darkest of what it covers when that is a good deal darker than its middle and on the same surface: an eye
@@ -158,12 +236,9 @@ void main() {
       }
     }
   }
-  if (mix_ == 1 && pattern(gl_FragCoord.xy) >= share) discard;
-  if (mix_ == 2 && pattern(gl_FragCoord.xy) < share) discard;
   vec3 seen = inked ? vec3(0.0, 0.0, 1.0) : facingToEye * unfold(data.xy);
   float facing = dot(seen, light);
   vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
-  float out_ = (xy.x * deep.x + xy.y * deep.y + (height - (inked ? line : 0.0)) * deep.z) * size;
   vec3 point = vView + normalize(-vView) * out_;
   vec4 clip = projectionMatrix * vec4(point, 1.0);
   gl_FragDepth = clip.z / clip.w * 0.5 + 0.5;
@@ -172,7 +247,63 @@ void main() {
   #include <colorspace_fragment>
 }`;
 // What every card's shader needs about the sheet's ink line, to go in with a material's other uniforms.
-export const lineUniforms = () => ({ line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 } });
+export const lineUniforms = () => ({ line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 },
+  balls: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, ballTint: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) }, fillBackM: { value: FILL.backM }, ballBackM: { value: FILL.ballBackM } });
+// For every part of a baked character, its joints for the filling (impostor-math.js: partBalls), each with
+// tintAt(where the joint is in the part's bone's frame): the colour the part gives that joint's ball, looked up in
+// the colour sheet the first time it is asked for and kept, as light adds up (the way the shader has every other
+// colour). `sheet` is a view set with its colour picture loaded (colour: a texture).
+const scrap = typeof document === "undefined" ? null : document.createElement("canvas");
+export function sheetBalls(card, sheet) {
+  const image = sheet.colour?.image;
+  // the sheet is read a square at a time, each begun a little before the pixel asked for: the pixels round a place
+  // are asked for row by row, left to right and upward
+  const SIDE = 96;
+  let left = 0, bottom = 0, block = null;
+  const pixel = (x, y) => {
+    if (!block || x < left || x >= left + SIDE || y < bottom || y >= bottom + SIDE) {
+      const pen = scrap.getContext("2d", { willReadFrequently: true });
+      if (scrap.width !== SIDE) scrap.width = scrap.height = SIDE;
+      left = Math.max(0, x - 8);
+      bottom = Math.max(0, y - 8);
+      pen.clearRect(0, 0, SIDE, SIDE);
+      pen.drawImage(image, left, image.height - bottom - SIDE, SIDE, SIDE, 0, 0, SIDE, SIDE);
+      block = pen.getImageData(0, 0, SIDE, SIDE).data;
+    }
+    const i = ((SIDE - 1 - (y - bottom)) * SIDE + (x - left)) * 4;
+    return [block[i], block[i + 1], block[i + 2], block[i + 3]];
+  };
+  const lit = new THREE.Color();
+  return partBalls(card).map((joints, p) => joints.map((joint) => {
+    let tint = null;
+    const tintAt = (at) => {
+      if (!tint) {
+        const seen = image && scrap ? ownTint(card, sheet, card.parts[p], tintPlace(at, card.parts[p].center, joint.radius), FILL.tintReach * joint.inner, pixel) : [0.5, 0.5, 0.5];
+        tint = lit.setRGB(seen[0], seen[1], seen[2], THREE.SRGBColorSpace).toArray();
+      }
+      return tint;
+    };
+    return { ...joint, tintAt };
+  }));
+}
+// Tell a card where its part's joints are now, as the eye has them, for the filling of a bent joint. `joints` is
+// the part's list from sheetBalls; `center` the part's middle in its bone's frame; `world` the part's bone;
+// `at(bone)` gives where a bone's head is in the world now, or nothing if the skeleton has no such bone; `size` is
+// how big the bone is drawn (1: as it was pictured).
+const jointSpot = new THREE.Vector3();
+export function setBalls(quad, joints, center, world, camera, at, size = 1) {
+  const u = quad.material.uniforms, eye = camera.position;
+  const middle = [world[12] + world[0] * center[0] + world[4] * center[1] + world[8] * center[2], world[13] + world[1] * center[0] + world[5] * center[1] + world[9] * center[2],
+    world[14] + world[2] * center[0] + world[6] * center[1] + world[10] * center[2]];
+  for (let k = 0; k < FILL.aPart; k++) {
+    const joint = joints[k], p = joint && at(joint.bone);
+    if (!p) { u.balls.value[k].set(0, 0, 0, 0); u.ballTint.value[k].set(0, 0, 0, 0); continue; }
+    const tint = joint.tintAt(inBone(world, p));
+    jointSpot.set(p[0], p[1], p[2]).applyMatrix4(camera.matrixWorldInverse);
+    u.balls.value[k].set(jointSpot.x, jointSpot.y, jointSpot.z, Math.floor(joint.radius * size * 1000) + (0.5 * ballBack(p, middle, [eye.x, eye.y, eye.z])) / FILL.ballBackM);
+    u.ballTint.value[k].set(tint[0], tint[1], tint[2], joint.inner * size);
+  }
+}
 // Tell a head's card whether it goes on the finer grid this frame, and how far it is slid there (looks.js: headGrid).
 // `at` is the bone's head in the world, as place() gives it.
 const spot = new THREE.Vector3();
@@ -336,7 +467,8 @@ class CardViewer {
     this.edges.clear();
     const { card, sheet } = this;
     const line = new THREE.LineBasicMaterial({ color: 0x44679b, depthTest: false });
-    this.parts = card.parts.map((part) => {
+    const joints = sheetBalls(card, sheet);
+    this.parts = card.parts.map((part, p) => {
       const quads = [0, 1].map(() => {
         const shape = new THREE.BufferGeometry();
         shape.setAttribute("position", new THREE.BufferAttribute(new Float32Array(12), 3));
@@ -363,7 +495,7 @@ class CardViewer {
       outline.frustumCulled = false;
       outline.renderOrder = 5;
       this.edges.add(outline);
-      return { ...part, quads };
+      return { ...part, quads, joints: joints[p] };
     });
     this.setLine();
   }
@@ -424,6 +556,7 @@ class CardViewer {
     const { card, sheet, camera, state } = this;
     const eye = camera.position.toArray();
     const toEye = new THREE.Matrix4();
+    this.jointAt ||= (name) => { const e = this.bones[name]?.matrixWorld.elements; return e && [e[12], e[13], e[14]]; };
     let swapped = 0;
     for (const part of this.parts) {
       const bone = this.bones[part.bone];
@@ -458,6 +591,7 @@ class CardViewer {
         u.facingToEye.value.setFromMatrix4(toEye).multiplyScalar(1 / where.size);
         u.share.value = pick.share;
         u.mix_.value = mixing ? n + 1 : 0;
+        setBalls(quad, part.joints, part.center, world, camera, this.jointAt, where.size);
         if (part.name === "head") setHeadGrid(quad, this.screen, this.look, camera, where.head, this.el.classList.contains("stacked") ? { w: 1, h: 0.5 } : { w: 0.5, h: 1 });
       });
     }

@@ -63,6 +63,20 @@ export function cardLine(card, look) {
 // A card pixel's number: 1 + 16 times which figure (they come round again after fifteen) + which of its parts.
 export const cardNumber = (figure, part) => (1 + 16 * (figure % 15) + (part % 16)) / 255;
 
+// Cracks filled on the finished picture. A look that goes by way of a picture of its own can see a crack for what
+// it is: a pixel that shows no card (or another figure) with two cards of one figure on opposite sides of it,
+// close by. It is filled from the nearer of the two when they are one part or two parts that meet at a joint,
+// stand within CRACK.apartM of each other, and what shows through is further off than both by CRACK.behindM.
+// A real gap (between the legs, between an arm and the hips, the stage seen through a bent arm) is wider than the
+// two places reach, or lies between parts that do not meet, and is left alone. The pixel looks look one big pixel
+// either side; bold ink as far as its thick line reaches, so a crack is not inked black from both edges.
+// PART_NAMES is the order a bake lists the parts in; JOINED[a] has bit b set when parts a and b are one or meet.
+// scripts/impostor/impostor.py has the same numbers and the same table (crack_fill).
+export const CRACK = { behindM: 0.02, apartM: 0.12 };
+export const PART_NAMES = ["hips", "spine", "chest", "head", ...["_l", "_r"].flatMap((side) => ["upper_arm", "forearm", "hand", "thigh", "shin", "foot"].map((name) => name + side))];
+const MEET = [["hips", "spine"], ["spine", "chest"], ["chest", "head"], ...["_l", "_r"].flatMap((s) => [["chest", `upper_arm${s}`], [`upper_arm${s}`, `forearm${s}`], [`forearm${s}`, `hand${s}`], ["hips", `thigh${s}`], [`thigh${s}`, `shin${s}`], [`shin${s}`, `foot${s}`]])];
+export const JOINED = PART_NAMES.map((name, a) => MEET.reduce((bits, [x, y]) => bits | (x === name ? 1 << PART_NAMES.indexOf(y) : y === name ? 1 << PART_NAMES.indexOf(x) : 0), 1 << a));
+
 // The models a run's cards were pictured from: the rigged version itself first ("painted"), then any other model
 // given its skeleton (the detailed mesh). Each has a name for the page.
 export function modelsOf(run) {
@@ -112,6 +126,9 @@ uniform vec3 gridInk;
 uniform float pixelM;    // how big one pixel of the picture is, a metre away
 uniform float breakM;    // within one figure the grid's line needs the surface to step back by more than this
 uniform float seamM;     // bold ink's thin lines leave a step under this alone where two cards of one figure meet
+uniform int joined[16];  // bit b of joined[a]: parts a and b of a figure are one part or meet at a joint
+uniform float behindM;   // a crack: what shows through is this much further off than the cards on both sides of it
+uniform float apartM;    // ... which stand no further than this from each other
 varying vec2 vUv;
 float away(vec2 uv) {
   float z = texture2D(depths, uv).x * 2.0 - 1.0;
@@ -124,10 +141,29 @@ float card(vec2 uv) {    // which card a pixel shows: 1 + 16 * figure + part, or
 float figureOf(float c) {
   return floor((c - 1.0) / 16.0);
 }
+// Two cards either side of this pixel, of one figure that this pixel does not show, one part or two that meet.
+bool sides(vec2 step_, float me) {
+  float a = card(vUv + step_), b = card(vUv - step_);
+  if (a < 0.5 || b < 0.5 || figureOf(a) != figureOf(b) || (me > 0.5 && figureOf(me) == figureOf(a))) return false;
+  return ((joined[int(mod(a - 1.0, 16.0))] >> int(mod(b - 1.0, 16.0))) & 1) == 1;
+}
+// ... and the crack between them: filled from the nearer of the two.
+bool crack(vec2 step_, float here, float me, inout vec4 colour) {
+  if (!sides(step_, me)) return false;
+  float a = away(vUv + step_), b = away(vUv - step_);
+  if (abs(a - b) >= apartM || here - max(a, b) <= behindM) return false;
+  colour = texture2D(picture, vUv + (a <= b ? step_ : -step_));
+  return true;
+}
 void main() {
   vec4 colour = texture2D(picture, vUv);
+  bool filled = false;
+  if (grid > 0.0 && behindM > 0.0) {
+    float here = away(vUv), me = card(vUv);
+    filled = crack(vec2(pixel.x * float(fine), 0.0), here, me, colour) || crack(vec2(0.0, pixel.y * float(fine)), here, me, colour);
+  }
   if (levels > 0.0) colour.rgb = pow(floor(pow(colour.rgb, vec3(1.0 / 2.2)) * levels + 0.5) / levels, vec3(2.2)); // cut as the eye sees them
-  if (grid > 0.0) {
+  if (grid > 0.0 && !filled) {
     // just outside a card: this pixel is not that figure and is the further of the two. Or inside one figure,
     // where the surface steps back by more than a slope would make it: an arm in front of a chest.
     // The pixels beside it are looked at up to one big pixel off, so the line is one big pixel wide round a head
@@ -164,7 +200,15 @@ void main() {
       wide[i] = away(vUv + step_ * outer);
       close[i] = away(vUv + step_ * inner);
     }
+    // a crack between two cards that meet: filled, and not inked (only the depths already read are looked at
+    // until two of them say there may be one)
+    for (int i = 0; i < 4; i++) {
+      if (filled || behindM <= 0.0 || abs(wide[i] - wide[i + 4]) >= apartM || here - max(wide[i], wide[i + 4]) <= behindM) continue;
+      float a = float(i) * 0.7853982;
+      filled = crack(vec2(cos(a), sin(a)) * pixel * outer, here, me, colour);
+    }
     for (int i = 0; i < 8; i++) {
+      if (filled) break;
       // nearer on this side by more than the ground's own slope would make it (the far side says what that is)
       float drop = here - wide[i], slope = abs(wide[(i + 4) % 8] - here);
       if (drop > 0.3 + 0.03 * wide[i] && drop > 2.5 * slope) line = 1.0;       // something stands well in front, close by: the outside line
@@ -180,7 +224,7 @@ void main() {
     float raw = texture2D(depths, vUv).x;
     float bend = abs(texture2D(depths, vUv + vec2(pixel.x * inner, 0.0)).x + texture2D(depths, vUv - vec2(pixel.x * inner, 0.0)).x - 2.0 * raw)
                + abs(texture2D(depths, vUv + vec2(0.0, pixel.y * inner)).x + texture2D(depths, vUv - vec2(0.0, pixel.y * inner)).x - 2.0 * raw);
-    if (here < 40.0 && bend * here * here * (far - near) / (near * far) > 0.02 + 0.004 * here) { // far off, the depth is too coarse to tell
+    if (!filled && here < 40.0 && bend * here * here * (far - near) / (near * far) > 0.02 + 0.004 * here) { // far off, the depth is too coarse to tell
       bool joint = false; // where two cards of one figure meet the depth bends too, and that is not a fold
       for (int i = 0; i < 4; i++) {
         float it = card(vUv + (i == 0 ? vec2(pixel.x, 0.0) : i == 1 ? vec2(-pixel.x, 0.0) : i == 2 ? vec2(0.0, pixel.y) : vec2(0.0, -pixel.y)) * inner);
@@ -215,7 +259,8 @@ export class Screen {
       vertexShader: FULL_VERTEX, fragmentShader: FULL_FRAGMENT, depthTest: false, depthWrite: false,
       uniforms: { picture: { value: null }, depths: { value: null }, pixel: { value: new THREE.Vector2() }, near: { value: 0.1 }, far: { value: 100 },
         levels: { value: 0 }, outer: { value: 0 }, inner: { value: 0 }, ink: { value: new THREE.Color(0x120e16) },
-        grid: { value: 0 }, fine: { value: 1 }, gridInk: { value: new THREE.Color(0x1c1721) }, pixelM: { value: 0 }, breakM: { value: 0.05 }, seamM: { value: 0.09 } } }));
+        grid: { value: 0 }, fine: { value: 1 }, gridInk: { value: new THREE.Color(0x1c1721) }, pixelM: { value: 0 }, breakM: { value: 0.05 }, seamM: { value: 0.09 },
+        joined: { value: JOINED }, behindM: { value: CRACK.behindM }, apartM: { value: CRACK.apartM } } }));
     this.quad.frustumCulled = false;
     this.flat = new THREE.Scene();
     this.flat.add(this.quad);

@@ -1,0 +1,4015 @@
+{
+ "take": "crew-candy-shop",
+ "model": "detailed",
+ "pixel": "new",
+ "size": [
+  1080,
+  608
+ ],
+ "rows": [
+  {
+   "role": "frontman",
+   "seconds": 9.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0091,
+   "face_big_px": 16.4,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.915296196937561,
+    "brow_l": 0.9412990808486938,
+    "eye_r": 0.8052012920379639,
+    "eye_l": 0.8517360091209412
+   },
+   "likeness": 0.6114252805709839,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 9.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0091,
+   "face_big_px": 16.4,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.9093381762504578,
+    "brow_l": 0.8972945809364319,
+    "eye_r": 0.7895194888114929,
+    "eye_l": 0.7589782476425171
+   },
+   "likeness": 0.5420373678207397,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.002,
+    "brow_l": 0.002,
+    "eye_r": 0.004,
+    "eye_l": 0.004
+   },
+   "kept_worst": {
+    "brow_r": 0.908,
+    "brow_l": 0.897,
+    "eye_r": 0.788,
+    "eye_l": 0.755
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 9.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.924162745475769,
+    "brow_l": 0.9214923977851868,
+    "eye_r": 0.8083722591400146,
+    "eye_l": 0.8360306024551392
+   },
+   "likeness": 0.6666282415390015,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 9.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.9075704216957092,
+    "brow_l": 0.9423157572746277,
+    "eye_r": 0.8259797692298889,
+    "eye_l": 0.780504047870636
+   },
+   "likeness": 0.6514590382575989,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.001,
+    "brow_l": 0.0,
+    "eye_r": 0.0,
+    "eye_l": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.907,
+    "brow_l": 0.942,
+    "eye_r": 0.826,
+    "eye_l": 0.78
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 9.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.888640820980072,
+    "brow_l": 0.9028480052947998,
+    "eye_r": 0.7569412589073181,
+    "eye_l": 0.8424112796783447
+   },
+   "likeness": 0.671863853931427,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 9.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8579874634742737,
+    "brow_l": 0.9245405793190002,
+    "eye_r": 0.7835230231285095,
+    "eye_l": 0.7252647876739502
+   },
+   "likeness": 0.6705393195152283,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "brow_l": 0.0,
+    "eye_r": 0.0,
+    "eye_l": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.858,
+    "brow_l": 0.925,
+    "eye_r": 0.783,
+    "eye_l": 0.725
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 13.5,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0082,
+   "face_big_px": 18.2,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8714562654495239,
+    "brow_l": 0.938215434551239,
+    "eye_r": 0.8186203837394714,
+    "eye_l": 0.874953031539917
+   },
+   "likeness": 0.6772348284721375,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 13.5,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0082,
+   "face_big_px": 18.2,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.903685986995697,
+    "brow_l": 0.9099991321563721,
+    "eye_r": 0.8614334464073181,
+    "eye_l": 0.7332664132118225
+   },
+   "likeness": 0.6601525545120239,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "brow_l": 0.003,
+    "eye_r": 0.006,
+    "eye_l": 0.003
+   },
+   "kept_worst": {
+    "brow_r": 0.903,
+    "brow_l": 0.907,
+    "eye_r": 0.861,
+    "eye_l": 0.733
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 13.5,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8859557509422302,
+    "brow_l": 0.9275693893432617,
+    "eye_r": 0.8069465160369873,
+    "eye_l": 0.7811135649681091
+   },
+   "likeness": 0.6984079480171204,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 0.9488630878811334,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 13.5,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.87735515832901,
+    "brow_l": 0.9114618897438049,
+    "eye_r": 0.8341099619865417,
+    "eye_l": 0.7830802798271179
+   },
+   "likeness": 0.6626704335212708,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.001,
+    "brow_l": 0.0,
+    "eye_r": 0.001,
+    "eye_l": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.877,
+    "brow_l": 0.911,
+    "eye_r": 0.834,
+    "eye_l": 0.783
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 13.5,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8894405961036682,
+    "brow_l": 0.909142792224884,
+    "eye_r": 0.761418342590332,
+    "eye_l": 0.7655185461044312
+   },
+   "likeness": 0.7606879472732544,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 0.9091973831487128,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 13.5,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8504659533500671,
+    "brow_l": 0.9002053141593933,
+    "eye_r": 0.8404866456985474,
+    "eye_l": 0.7483420968055725
+   },
+   "likeness": 0.6969316601753235,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "brow_l": 0.0,
+    "eye_r": 0.0,
+    "eye_l": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.85,
+    "brow_l": 0.9,
+    "eye_r": 0.84,
+    "eye_l": 0.748
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 18.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 4,
+   "hidden": 2,
+   "turned": 0,
+   "big_px_m": 0.0097,
+   "face_big_px": 15.4,
+   "look": "joe",
+   "kept": {
+    "brow_l": 0.9378024339675903,
+    "eye_l": 0.9256890416145325
+   },
+   "likeness": 0.6408742666244507,
+   "shows": {
+    "brow_l": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 18.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 4,
+   "hidden": 2,
+   "turned": 0,
+   "big_px_m": 0.0097,
+   "face_big_px": 15.4,
+   "look": "pixel-both",
+   "kept": {
+    "brow_l": 0.863541305065155,
+    "eye_l": 0.7452553510665894
+   },
+   "likeness": 0.6341033577919006,
+   "shows": {
+    "brow_l": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_l": 0.003,
+    "eye_l": 0.003
+   },
+   "kept_worst": {
+    "brow_l": 0.861,
+    "eye_l": 0.745
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 18.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8958669304847717,
+    "brow_l": 0.9480323195457458,
+    "eye_l": 0.9822046756744385,
+    "nose": 0.7510879635810852
+   },
+   "likeness": 0.6960626244544983,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 18.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7872068881988525,
+    "brow_l": 0.8872060775756836,
+    "eye_l": 0.7919409871101379,
+    "nose": 0.48096099495887756
+   },
+   "likeness": 0.5981800556182861,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.001,
+    "brow_l": 0.001,
+    "eye_l": 0.001,
+    "nose": 0.002
+   },
+   "kept_worst": {
+    "brow_r": 0.787,
+    "brow_l": 0.887,
+    "eye_l": 0.791,
+    "nose": 0.481
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 18.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8638880252838135,
+    "brow_l": 0.9686412811279297,
+    "eye_l": 0.9636983871459961
+   },
+   "likeness": 0.6471984386444092,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 18.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7261707186698914,
+    "brow_l": 0.8933455944061279,
+    "eye_l": 0.7639867663383484
+   },
+   "likeness": 0.5402090549468994,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "brow_l": 0.0,
+    "eye_l": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.726,
+    "brow_l": 0.893,
+    "eye_l": 0.764
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 24.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0091,
+   "face_big_px": 16.5,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.9301626682281494,
+    "brow_l": 0.8976767659187317,
+    "eye_r": 0.8661445379257202,
+    "eye_l": 0.652330219745636
+   },
+   "likeness": 0.6042023301124573,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 24.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0091,
+   "face_big_px": 16.5,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.9001536965370178,
+    "brow_l": 0.7191588878631592,
+    "eye_r": 0.85696941614151,
+    "eye_l": 0.7395839095115662
+   },
+   "likeness": 0.5754843950271606,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.004,
+    "brow_l": 0.003,
+    "eye_r": 0.002,
+    "eye_l": 0.003
+   },
+   "kept_worst": {
+    "brow_r": 0.899,
+    "brow_l": 0.719,
+    "eye_r": 0.857,
+    "eye_l": 0.74
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 24.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8788590431213379,
+    "brow_l": 0.9337635636329651,
+    "eye_r": 0.8615585565567017,
+    "eye_l": 0.7396485805511475
+   },
+   "likeness": 0.6383199691772461,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 24.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.871006965637207,
+    "brow_l": 0.7731122374534607,
+    "eye_r": 0.8308857679367065,
+    "eye_l": 0.7882786989212036
+   },
+   "likeness": 0.6688732504844666,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.001,
+    "brow_l": 0.001,
+    "eye_r": 0.001,
+    "eye_l": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.87,
+    "brow_l": 0.773,
+    "eye_r": 0.831,
+    "eye_l": 0.788
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 24.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7813674807548523,
+    "brow_l": 0.9127824306488037,
+    "eye_r": 0.8065509796142578,
+    "eye_l": 0.7719922661781311
+   },
+   "likeness": 0.6872546076774597,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 24.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8107144832611084,
+    "brow_l": 0.8062939047813416,
+    "eye_r": 0.7924102544784546,
+    "eye_l": 0.7631425857543945
+   },
+   "likeness": 0.6922089457511902,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "brow_l": 0.0,
+    "eye_r": 0.0,
+    "eye_l": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.811,
+    "brow_l": 0.806,
+    "eye_r": 0.792,
+    "eye_l": 0.763
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 36.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0091,
+   "face_big_px": 16.5,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.9362576007843018,
+    "brow_l": 0.9303401708602905,
+    "eye_r": 0.7947763800621033,
+    "eye_l": 0.9447495937347412,
+    "nose": 0.7752413749694824
+   },
+   "likeness": 0.6680959463119507,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 36.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0091,
+   "face_big_px": 16.5,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.9105002880096436,
+    "brow_l": 0.8702611923217773,
+    "eye_r": 0.7315970063209534,
+    "eye_l": 0.8563730120658875,
+    "nose": 0.7786514163017273
+   },
+   "likeness": 0.5975776314735413,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "brow_l": 0.003,
+    "eye_r": 0.004,
+    "eye_l": 0.001,
+    "nose": 0.021
+   },
+   "kept_worst": {
+    "brow_r": 0.908,
+    "brow_l": 0.869,
+    "eye_r": 0.729,
+    "eye_l": 0.855,
+    "nose": 0.764
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 36.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.9300670623779297,
+    "brow_l": 0.9216716885566711,
+    "eye_r": 0.8503462076187134,
+    "eye_l": 0.9356132745742798
+   },
+   "likeness": 0.7080616354942322,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 36.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8880559802055359,
+    "brow_l": 0.935265839099884,
+    "eye_r": 0.7799327969551086,
+    "eye_l": 0.825190544128418
+   },
+   "likeness": 0.7395842671394348,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.001,
+    "brow_l": 0.001,
+    "eye_r": 0.001,
+    "eye_l": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.887,
+    "brow_l": 0.935,
+    "eye_r": 0.779,
+    "eye_l": 0.824
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 36.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.9086120128631592,
+    "brow_l": 0.9025847911834717,
+    "eye_r": 0.7525392174720764,
+    "eye_l": 0.8608266711235046
+   },
+   "likeness": 0.710482656955719,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 36.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8363757133483887,
+    "brow_l": 0.8921197652816772,
+    "eye_r": 0.7382264733314514,
+    "eye_l": 0.7755499482154846
+   },
+   "likeness": 0.7211658358573914,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "brow_l": 0.0,
+    "eye_r": 0.0,
+    "eye_l": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.836,
+    "brow_l": 0.892,
+    "eye_r": 0.738,
+    "eye_l": 0.775
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 45.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0082,
+   "face_big_px": 18.4,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.5733342170715332,
+    "brow_l": 0.5748889446258545,
+    "eye_r": 0.9447312951087952,
+    "eye_l": 0.8884028196334839
+   },
+   "likeness": 0.4156493842601776,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 45.0,
+   "eye": "crew",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0082,
+   "face_big_px": 18.4,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.6428531408309937,
+    "brow_l": 0.6265788078308105,
+    "eye_r": 0.8456412553787231,
+    "eye_l": 0.8684052228927612
+   },
+   "likeness": 0.3632565438747406,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "brow_l": 0.004,
+    "eye_r": 0.004,
+    "eye_l": 0.002
+   },
+   "kept_worst": {
+    "brow_r": 0.643,
+    "brow_l": 0.625,
+    "eye_r": 0.842,
+    "eye_l": 0.867
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 45.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.5972132682800293,
+    "brow_l": 0.4988453984260559,
+    "eye_r": 0.8991668224334717,
+    "eye_l": 0.855501115322113,
+    "nose": 0.42929139733314514
+   },
+   "likeness": 0.43767091631889343,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 45.0,
+   "eye": "two",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.6549658179283142,
+    "brow_l": 0.5651009678840637,
+    "eye_r": 0.7306000590324402,
+    "eye_l": 0.8745763301849365,
+    "nose": 0.5441306829452515
+   },
+   "likeness": 0.47701218724250793,
+   "shows": {
+    "brow_r": 1.0,
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.001,
+    "brow_l": 0.002,
+    "eye_r": 0.001,
+    "eye_l": 0.001,
+    "nose": 0.003
+   },
+   "kept_worst": {
+    "brow_r": 0.655,
+    "brow_l": 0.565,
+    "eye_r": 0.73,
+    "eye_l": 0.874,
+    "nose": 0.542
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 45.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_l": 0.43974825739860535,
+    "eye_r": 0.8518267869949341,
+    "eye_l": 0.8303787112236023,
+    "nose": 0.5001534819602966
+   },
+   "likeness": 0.48391127586364746,
+   "shows": {
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   }
+  },
+  {
+   "role": "frontman",
+   "seconds": 45.0,
+   "eye": "close",
+   "features": 6,
+   "counted": 6,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_l": 0.5591067671775818,
+    "eye_r": 0.7401431798934937,
+    "eye_l": 0.8666977286338806,
+    "nose": 0.5121880173683167
+   },
+   "likeness": 0.5646043419837952,
+   "shows": {
+    "brow_l": 1.0,
+    "eye_r": 1.0,
+    "eye_l": 1.0,
+    "nose": 1.0
+   },
+   "crawl": {
+    "brow_l": 0.0,
+    "eye_r": 0.0,
+    "eye_l": 0.0,
+    "nose": 0.0
+   },
+   "kept_worst": {
+    "brow_l": 0.559,
+    "eye_r": 0.74,
+    "eye_l": 0.867,
+    "nose": 0.512
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 9.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0119,
+   "face_big_px": 12.7,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.4118359088897705,
+    "glass_r": 0.7456770539283752,
+    "glass_l": 0.7490919232368469,
+    "moustache": 0.6833077073097229,
+    "mouth": 0.7636700868606567
+   },
+   "likeness": 0.6408215165138245,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.8965828150578746
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 9.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0119,
+   "face_big_px": 12.7,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.7563279271125793,
+    "glass_r": 0.7860640287399292,
+    "glass_l": 0.8047225475311279,
+    "moustache": 0.7566772699356079,
+    "mouth": 0.520542562007904
+   },
+   "likeness": 0.6852842569351196,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.031,
+    "glass_r": 0.001,
+    "glass_l": 0.001,
+    "moustache": 0.009,
+    "mouth": 0.012
+   },
+   "kept_worst": {
+    "bridge": 0.739,
+    "glass_r": 0.786,
+    "glass_l": 0.804,
+    "moustache": 0.757,
+    "mouth": 0.512
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 9.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.47054344415664673,
+    "glass_r": 0.7214299440383911,
+    "glass_l": 0.731041669845581,
+    "moustache": 0.7519237399101257,
+    "mouth": 0.8805222511291504
+   },
+   "likeness": 0.6323006749153137,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.9463017921845516
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 9.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.897345781326294,
+    "glass_r": 0.8168054223060608,
+    "glass_l": 0.8416498899459839,
+    "moustache": 0.8273946046829224,
+    "mouth": 0.6165276765823364
+   },
+   "likeness": 0.7343596816062927,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.004,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.004,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "bridge": 0.894,
+    "glass_r": 0.817,
+    "glass_l": 0.841,
+    "moustache": 0.827,
+    "mouth": 0.616
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 9.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.6128552556037903,
+    "glass_r": 0.6669182777404785,
+    "glass_l": 0.688396692276001,
+    "moustache": 0.6122797727584839,
+    "mouth": 0.8921328186988831
+   },
+   "likeness": 0.5766114592552185,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 9.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.8778814077377319,
+    "glass_r": 0.7975618243217468,
+    "glass_l": 0.7964869737625122,
+    "moustache": 0.7831581234931946,
+    "mouth": 0.5958031415939331
+   },
+   "likeness": 0.6742123365402222,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.0,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.001,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "bridge": 0.878,
+    "glass_r": 0.798,
+    "glass_l": 0.796,
+    "moustache": 0.782,
+    "mouth": 0.596
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 13.5,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0112,
+   "face_big_px": 13.4,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.5285382270812988,
+    "glass_r": 0.6838425397872925,
+    "glass_l": 0.7666648626327515,
+    "moustache": 0.6115632653236389,
+    "mouth": 0.793668270111084
+   },
+   "likeness": 0.6157086491584778,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.9750952037634747
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 13.5,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0112,
+   "face_big_px": 13.4,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.7657134532928467,
+    "glass_r": 0.7208655476570129,
+    "glass_l": 0.800827145576477,
+    "moustache": 0.6500661969184875,
+    "mouth": 0.5939806699752808
+   },
+   "likeness": 0.6268323659896851,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.005,
+    "glass_r": 0.002,
+    "glass_l": 0.001,
+    "moustache": 0.004,
+    "mouth": 0.012
+   },
+   "kept_worst": {
+    "bridge": 0.765,
+    "glass_r": 0.721,
+    "glass_l": 0.801,
+    "moustache": 0.647,
+    "mouth": 0.582
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 13.5,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.6464518904685974,
+    "glass_r": 0.700627326965332,
+    "glass_l": 0.75426185131073,
+    "moustache": 0.6584721207618713,
+    "mouth": 0.9111372232437134
+   },
+   "likeness": 0.6222508549690247,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.6888249640422738
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 13.5,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.9014713764190674,
+    "glass_r": 0.7982811331748962,
+    "glass_l": 0.8461516499519348,
+    "moustache": 0.754901647567749,
+    "mouth": 0.6984476447105408
+   },
+   "likeness": 0.7104297280311584,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.002,
+    "glass_r": 0.002,
+    "glass_l": 0.0,
+    "moustache": 0.001,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "bridge": 0.901,
+    "glass_r": 0.798,
+    "glass_l": 0.846,
+    "moustache": 0.755,
+    "mouth": 0.698
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 13.5,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.6297487020492554,
+    "glass_r": 0.6623952984809875,
+    "glass_l": 0.6960358023643494,
+    "moustache": 0.579621434211731,
+    "mouth": 0.9293357133865356
+   },
+   "likeness": 0.5165979862213135,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.8802928162643174
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 13.5,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.8758032321929932,
+    "glass_r": 0.8083361387252808,
+    "glass_l": 0.8018827438354492,
+    "moustache": 0.8085216879844666,
+    "mouth": 0.6317797303199768
+   },
+   "likeness": 0.6689574122428894,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.0,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.002,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "bridge": 0.876,
+    "glass_r": 0.808,
+    "glass_l": 0.802,
+    "moustache": 0.807,
+    "mouth": 0.632
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 18.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 5,
+   "hidden": 2,
+   "turned": 0,
+   "big_px_m": 0.0115,
+   "face_big_px": 13.1,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.16561293601989746,
+    "glass_r": 0.37806588411331177,
+    "moustache": 0.45040440559387207
+   },
+   "likeness": 0.4480377733707428,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "moustache": 0.35521639143087325
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 18.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 5,
+   "hidden": 2,
+   "turned": 0,
+   "big_px_m": 0.0115,
+   "face_big_px": 13.1,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.6213297247886658,
+    "glass_r": 0.6337422132492065,
+    "moustache": 0.5911440849304199
+   },
+   "likeness": 0.5773081183433533,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "moustache": 0.8394955824756742
+   },
+   "crawl": {
+    "bridge": 0.009,
+    "glass_r": 0.002,
+    "moustache": 0.002
+   },
+   "kept_worst": {
+    "bridge": 0.621,
+    "glass_r": 0.634,
+    "moustache": 0.591
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 18.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.782962441444397,
+    "glass_r": 0.8167642951011658,
+    "glass_l": 0.8259279727935791,
+    "moustache": 0.7052924036979675
+   },
+   "likeness": 0.7447840571403503,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.8034806493092463
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 18.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.9318494200706482,
+    "glass_r": 0.8759066462516785,
+    "glass_l": 0.8831256628036499,
+    "moustache": 0.8273032903671265
+   },
+   "likeness": 0.8405469655990601,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0
+   },
+   "crawl": {
+    "bridge": 0.001,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.0
+   },
+   "kept_worst": {
+    "bridge": 0.931,
+    "glass_r": 0.876,
+    "glass_l": 0.883,
+    "moustache": 0.827
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 18.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.6371668577194214,
+    "glass_r": 0.8235156536102295,
+    "glass_l": 0.8140853643417358,
+    "moustache": 0.733797013759613
+   },
+   "likeness": 0.7524503469467163,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.9128365405731317
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 18.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.9214150905609131,
+    "glass_r": 0.8832781314849854,
+    "glass_l": 0.8859291076660156,
+    "moustache": 0.8542060256004333
+   },
+   "likeness": 0.844965934753418,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0
+   },
+   "crawl": {
+    "bridge": 0.0,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.0
+   },
+   "kept_worst": {
+    "bridge": 0.921,
+    "glass_r": 0.883,
+    "glass_l": 0.886,
+    "moustache": 0.854
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 24.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0119,
+   "face_big_px": 12.6,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.6020256876945496,
+    "glass_r": 0.7921562194824219,
+    "glass_l": 0.763209342956543,
+    "moustache": 0.66502845287323,
+    "mouth": 0.8932672142982483
+   },
+   "likeness": 0.6705174446105957,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.9465246623557738,
+    "mouth": 0.7551950534789428
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 24.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0119,
+   "face_big_px": 12.6,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.856976330280304,
+    "glass_r": 0.8022812604904175,
+    "glass_l": 0.811481773853302,
+    "moustache": 0.7520214319229126,
+    "mouth": 0.7826318144798279
+   },
+   "likeness": 0.7011088728904724,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.009,
+    "glass_r": 0.002,
+    "glass_l": 0.001,
+    "moustache": 0.003,
+    "mouth": 0.011
+   },
+   "kept_worst": {
+    "bridge": 0.848,
+    "glass_r": 0.802,
+    "glass_l": 0.811,
+    "moustache": 0.752,
+    "mouth": 0.771
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 24.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.5886363983154297,
+    "glass_r": 0.8145413398742676,
+    "glass_l": 0.7557854652404785,
+    "moustache": 0.7312774062156677,
+    "mouth": 0.8450989127159119
+   },
+   "likeness": 0.697626531124115,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.891703399280348
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 24.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.8700392246246338,
+    "glass_r": 0.8589116930961609,
+    "glass_l": 0.8528494834899902,
+    "moustache": 0.8284065127372742,
+    "mouth": 0.6664161086082458
+   },
+   "likeness": 0.7744413018226624,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.002,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.0,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "bridge": 0.868,
+    "glass_r": 0.859,
+    "glass_l": 0.853,
+    "moustache": 0.828,
+    "mouth": 0.665
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 24.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.515724778175354,
+    "glass_r": 0.7552756667137146,
+    "glass_l": 0.7332900166511536,
+    "moustache": 0.710153341293335,
+    "mouth": 0.740585446357727
+   },
+   "likeness": 0.6589889526367188,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.8765017342055582
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 24.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.8434364795684814,
+    "glass_r": 0.8219196796417236,
+    "glass_l": 0.8266109824180603,
+    "moustache": 0.8407288789749146,
+    "mouth": 0.5842520594596863
+   },
+   "likeness": 0.7456480264663696,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.0,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.0,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "bridge": 0.843,
+    "glass_r": 0.822,
+    "glass_l": 0.827,
+    "moustache": 0.84,
+    "mouth": 0.584
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 36.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0117,
+   "face_big_px": 12.9,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.7114860415458679,
+    "glass_r": 0.7734884023666382,
+    "glass_l": 0.7709201574325562,
+    "moustache": 0.6518526673316956,
+    "mouth": 0.7533518671989441
+   },
+   "likeness": 0.6795750856399536,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.5752604379749257,
+    "mouth": 0.8425414001864814
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 36.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0117,
+   "face_big_px": 12.9,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.844599723815918,
+    "glass_r": 0.7428913116455078,
+    "glass_l": 0.8237115740776062,
+    "moustache": 0.6642093658447266,
+    "mouth": 0.6358852386474609
+   },
+   "likeness": 0.7286189198493958,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.012,
+    "glass_r": 0.003,
+    "glass_l": 0.001,
+    "moustache": 0.007,
+    "mouth": 0.02
+   },
+   "kept_worst": {
+    "bridge": 0.842,
+    "glass_r": 0.743,
+    "glass_l": 0.824,
+    "moustache": 0.66,
+    "mouth": 0.62
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 36.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.630893886089325,
+    "glass_r": 0.8478657603263855,
+    "glass_l": 0.8116843104362488,
+    "moustache": 0.7342809438705444,
+    "mouth": 0.7612435221672058
+   },
+   "likeness": 0.7285768389701843,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.8716949679756791,
+    "mouth": 0.8658689187066299
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 36.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.9187210202217102,
+    "glass_r": 0.8901834487915039,
+    "glass_l": 0.8927878141403198,
+    "moustache": 0.848617672920227,
+    "mouth": 0.656794548034668
+   },
+   "likeness": 0.8275221586227417,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.001,
+    "glass_r": 0.001,
+    "glass_l": 0.0,
+    "moustache": 0.002,
+    "mouth": 0.002
+   },
+   "kept_worst": {
+    "bridge": 0.918,
+    "glass_r": 0.89,
+    "glass_l": 0.893,
+    "moustache": 0.849,
+    "mouth": 0.655
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 36.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.5621141791343689,
+    "glass_r": 0.8037859201431274,
+    "glass_l": 0.7916334867477417,
+    "moustache": 0.677654504776001,
+    "mouth": 0.7720644474029541
+   },
+   "likeness": 0.6917070746421814,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.9377296498629392
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 36.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.9019818305969238,
+    "glass_r": 0.8603498935699463,
+    "glass_l": 0.8734848499298096,
+    "moustache": 0.8168521523475647,
+    "mouth": 0.5886764526367188
+   },
+   "likeness": 0.7984127402305603,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.0,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.002,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "bridge": 0.902,
+    "glass_r": 0.86,
+    "glass_l": 0.873,
+    "moustache": 0.815,
+    "mouth": 0.589
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 45.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0111,
+   "face_big_px": 13.5,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.642758309841156,
+    "glass_r": 0.7515747547149658,
+    "glass_l": 0.7737355828285217,
+    "moustache": 0.6671218276023865,
+    "mouth": 0.7794169187545776
+   },
+   "likeness": 0.6939315795898438,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.9023701553461503,
+    "mouth": 0.6578794036191452
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 45.0,
+   "eye": "crew",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0111,
+   "face_big_px": 13.5,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.8191801905632019,
+    "glass_r": 0.7889237999916077,
+    "glass_l": 0.8070893287658691,
+    "moustache": 0.6665869355201721,
+    "mouth": 0.6210857033729553
+   },
+   "likeness": 0.7157621383666992,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.8804894499870698,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.01,
+    "glass_r": 0.001,
+    "glass_l": 0.001,
+    "moustache": 0.008,
+    "mouth": 0.01
+   },
+   "kept_worst": {
+    "bridge": 0.819,
+    "glass_r": 0.789,
+    "glass_l": 0.807,
+    "moustache": 0.662,
+    "mouth": 0.621
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 45.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.5667560696601868,
+    "glass_r": 0.7554276585578918,
+    "glass_l": 0.7758884429931641,
+    "moustache": 0.7456091046333313,
+    "mouth": 0.8331717848777771
+   },
+   "likeness": 0.7110583186149597,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 0.925259682058466,
+    "mouth": 0.908358238795989
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 45.0,
+   "eye": "two",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.9346888661384583,
+    "glass_r": 0.8427189588546753,
+    "glass_l": 0.8478856086730957,
+    "moustache": 0.771895706653595,
+    "mouth": 0.6418185234069824
+   },
+   "likeness": 0.7899901866912842,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.004,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.008,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "bridge": 0.931,
+    "glass_r": 0.843,
+    "glass_l": 0.848,
+    "moustache": 0.768,
+    "mouth": 0.642
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 45.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "bridge": 0.6340681314468384,
+    "glass_r": 0.7346859574317932,
+    "glass_l": 0.7282295227050781,
+    "moustache": 0.732459306716919,
+    "mouth": 0.8159337043762207
+   },
+   "likeness": 0.647461473941803,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 0.9531397947366872
+   }
+  },
+  {
+   "role": "left",
+   "seconds": 45.0,
+   "eye": "close",
+   "features": 7,
+   "counted": 7,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "bridge": 0.8829745054244995,
+    "glass_r": 0.8070699572563171,
+    "glass_l": 0.8051496148109436,
+    "moustache": 0.8043701648712158,
+    "mouth": 0.5664456486701965
+   },
+   "likeness": 0.7370017170906067,
+   "shows": {
+    "bridge": 1.0,
+    "glass_r": 1.0,
+    "glass_l": 1.0,
+    "moustache": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "bridge": 0.0,
+    "glass_r": 0.0,
+    "glass_l": 0.0,
+    "moustache": 0.001,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "bridge": 0.883,
+    "glass_r": 0.807,
+    "glass_l": 0.805,
+    "moustache": 0.803,
+    "mouth": 0.566
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 9.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0116,
+   "face_big_px": 12.9,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.6556529998779297,
+    "eye_r": 0.3347354829311371,
+    "patch": 0.7882004976272583,
+    "nose": 0.7414305210113525,
+    "mouth": 0.9409093260765076
+   },
+   "likeness": 0.7494729161262512,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.6050669326946494,
+    "nose": 1.0,
+    "mouth": 0.8418173574173132
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 9.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0116,
+   "face_big_px": 12.9,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.6843140125274658,
+    "eye_r": 0.7058925628662109,
+    "patch": 0.8588282465934753,
+    "nose": 0.7860459089279175,
+    "mouth": 0.9255258440971375
+   },
+   "likeness": 0.7990038990974426,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "eye_r": 0.004,
+    "patch": 0.002,
+    "nose": 0.001,
+    "mouth": 0.006
+   },
+   "kept_worst": {
+    "brow_r": 0.682,
+    "eye_r": 0.705,
+    "patch": 0.859,
+    "nose": 0.786,
+    "mouth": 0.925
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 9.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.6988720893859863,
+    "eye_r": 0.34099072217941284,
+    "patch": 0.799999475479126,
+    "nose": 0.751627504825592,
+    "mouth": 0.9571081399917603
+   },
+   "likeness": 0.7505885362625122,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 0.9906258127708083,
+    "patch": 0.4334958728851126,
+    "nose": 1.0,
+    "mouth": 0.8615111063894967
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 9.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7923091053962708,
+    "eye_r": 0.8195710182189941,
+    "patch": 0.9079091548919678,
+    "nose": 0.7582478523254395,
+    "mouth": 0.9118528366088867
+   },
+   "likeness": 0.8605648279190063,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.001,
+    "patch": 0.0,
+    "nose": 0.001,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.792,
+    "eye_r": 0.82,
+    "patch": 0.908,
+    "nose": 0.758,
+    "mouth": 0.911
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 9.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8362079858779907,
+    "eye_r": 0.5024464726448059,
+    "patch": 0.7759456634521484,
+    "nose": 0.6609901785850525,
+    "mouth": 0.9484161734580994
+   },
+   "likeness": 0.7013678550720215,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 0.7087458629647158,
+    "patch": 0.1677816346376785,
+    "nose": 1.0,
+    "mouth": 0.8437979004269544
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 9.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7659557461738586,
+    "eye_r": 0.781120240688324,
+    "patch": 0.8712047338485718,
+    "nose": 0.6716024279594421,
+    "mouth": 0.8904864192008972
+   },
+   "likeness": 0.7858157753944397,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.0,
+    "patch": 0.0,
+    "nose": 0.0,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.766,
+    "eye_r": 0.781,
+    "patch": 0.871,
+    "nose": 0.672,
+    "mouth": 0.89
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 13.5,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0106,
+   "face_big_px": 14.2,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.9057701230049133,
+    "eye_r": 0.6441795229911804,
+    "patch": 0.8601338863372803,
+    "nose": 0.8240014910697937,
+    "mouth": 0.9796730279922485
+   },
+   "likeness": 0.8512699007987976,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.8453943843502384,
+    "nose": 1.0,
+    "mouth": 0.9994424986316425
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 13.5,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0106,
+   "face_big_px": 14.2,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.738921582698822,
+    "eye_r": 0.6956375241279602,
+    "patch": 0.8857213854789734,
+    "nose": 0.7594484090805054,
+    "mouth": 0.9254168272018433
+   },
+   "likeness": 0.836260199546814,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "eye_r": 0.004,
+    "patch": 0.001,
+    "nose": 0.004,
+    "mouth": 0.003
+   },
+   "kept_worst": {
+    "brow_r": 0.736,
+    "eye_r": 0.692,
+    "patch": 0.885,
+    "nose": 0.759,
+    "mouth": 0.922
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 13.5,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8379994630813599,
+    "eye_r": 0.4529445469379425,
+    "patch": 0.8055293560028076,
+    "nose": 0.7733715772628784,
+    "mouth": 0.9598529934883118
+   },
+   "likeness": 0.8246383666992188,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 13.5,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8301394581794739,
+    "eye_r": 0.7159581184387207,
+    "patch": 0.8313977122306824,
+    "nose": 0.804023265838623,
+    "mouth": 0.872569739818573
+   },
+   "likeness": 0.859837532043457,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.001,
+    "patch": 0.0,
+    "nose": 0.0,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.83,
+    "eye_r": 0.716,
+    "patch": 0.831,
+    "nose": 0.804,
+    "mouth": 0.872
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 13.5,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7601596117019653,
+    "eye_r": 0.5489218831062317,
+    "patch": 0.5821741819381714,
+    "nose": 0.6918827295303345,
+    "mouth": 0.7131578922271729
+   },
+   "likeness": 0.6016859412193298,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 13.5,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7249472737312317,
+    "eye_r": 0.6887165904045105,
+    "patch": 0.5275876522064209,
+    "nose": 0.8425828218460083,
+    "mouth": 0.7070704698562622
+   },
+   "likeness": 0.583706259727478,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.0,
+    "patch": 0.001,
+    "nose": 0.0,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.725,
+    "eye_r": 0.689,
+    "patch": 0.527,
+    "nose": 0.843,
+    "mouth": 0.707
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 18.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0115,
+   "face_big_px": 13.0,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.6586694121360779,
+    "eye_r": 0.32995471358299255,
+    "patch": 0.8135042190551758,
+    "nose": 0.7203617691993713,
+    "mouth": 0.9372977614402771
+   },
+   "likeness": 0.7815051078796387,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.43710733526064055,
+    "nose": 1.0,
+    "mouth": 0.8336394235247079
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 18.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0115,
+   "face_big_px": 13.0,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.6799178719520569,
+    "eye_r": 0.7142040133476257,
+    "patch": 0.8537039756774902,
+    "nose": 0.7232474684715271,
+    "mouth": 0.9304255843162537
+   },
+   "likeness": 0.8096511363983154,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "eye_r": 0.007,
+    "patch": 0.003,
+    "nose": 0.004,
+    "mouth": 0.002
+   },
+   "kept_worst": {
+    "brow_r": 0.677,
+    "eye_r": 0.707,
+    "patch": 0.853,
+    "nose": 0.722,
+    "mouth": 0.928
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 18.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7857142090797424,
+    "eye_r": 0.5053443312644958,
+    "patch": 0.825397253036499,
+    "nose": 0.7749892473220825,
+    "mouth": 0.9730837345123291
+   },
+   "likeness": 0.79183429479599,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.24241573744846123,
+    "nose": 1.0,
+    "mouth": 0.8851469441176082
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 18.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8035753965377808,
+    "eye_r": 0.8370516896247864,
+    "patch": 0.9051549434661865,
+    "nose": 0.730968713760376,
+    "mouth": 0.9192622303962708
+   },
+   "likeness": 0.8699415922164917,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.0,
+    "patch": 0.0,
+    "nose": 0.001,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.804,
+    "eye_r": 0.837,
+    "patch": 0.905,
+    "nose": 0.731,
+    "mouth": 0.919
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 18.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7944325804710388,
+    "eye_r": 0.47301602363586426,
+    "patch": 0.8135288953781128,
+    "nose": 0.6435693502426147,
+    "mouth": 0.9349108934402466
+   },
+   "likeness": 0.7274903655052185,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.26269653574762175,
+    "nose": 1.0,
+    "mouth": 0.8461485827959573
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 18.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7899176478385925,
+    "eye_r": 0.8352519869804382,
+    "patch": 0.860622763633728,
+    "nose": 0.6581995487213135,
+    "mouth": 0.898557722568512
+   },
+   "likeness": 0.8018304109573364,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.0,
+    "patch": 0.0,
+    "nose": 0.0,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.79,
+    "eye_r": 0.835,
+    "patch": 0.861,
+    "nose": 0.658,
+    "mouth": 0.899
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 24.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0111,
+   "face_big_px": 13.5,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7363718748092651,
+    "eye_r": 0.5418362617492676,
+    "patch": 0.7680228352546692,
+    "nose": 0.750564455986023,
+    "mouth": 0.8723000288009644
+   },
+   "likeness": 0.740381121635437,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.40302023155174893,
+    "nose": 1.0,
+    "mouth": 0.9127501880901954
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 24.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0111,
+   "face_big_px": 13.5,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.6835798025131226,
+    "eye_r": 0.6727063655853271,
+    "patch": 0.8370758891105652,
+    "nose": 0.7290064096450806,
+    "mouth": 0.9277324080467224
+   },
+   "likeness": 0.8069183230400085,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "eye_r": 0.004,
+    "patch": 0.001,
+    "nose": 0.003,
+    "mouth": 0.003
+   },
+   "kept_worst": {
+    "brow_r": 0.682,
+    "eye_r": 0.669,
+    "patch": 0.837,
+    "nose": 0.727,
+    "mouth": 0.924
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 24.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7815895080566406,
+    "eye_r": 0.4180791676044464,
+    "patch": 0.7917987108230591,
+    "nose": 0.797958254814148,
+    "mouth": 0.9555778503417969
+   },
+   "likeness": 0.7731321454048157,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 0.6240294290544207,
+    "patch": 0.17848815568532483,
+    "nose": 1.0,
+    "mouth": 0.8524498914613444
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 24.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7807568907737732,
+    "eye_r": 0.8259267807006836,
+    "patch": 0.8920072913169861,
+    "nose": 0.7636488676071167,
+    "mouth": 0.9325093030929565
+   },
+   "likeness": 0.8749929070472717,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.001,
+    "eye_r": 0.001,
+    "patch": 0.0,
+    "nose": 0.001,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.78,
+    "eye_r": 0.825,
+    "patch": 0.892,
+    "nose": 0.764,
+    "mouth": 0.932
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 24.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8193251490592957,
+    "eye_r": 0.46968621015548706,
+    "patch": 0.7733672261238098,
+    "nose": 0.7090886235237122,
+    "mouth": 0.9234145283699036
+   },
+   "likeness": 0.7280924320220947,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 0.9327173170252464,
+    "patch": 0.11372249644440727,
+    "nose": 1.0,
+    "mouth": 0.879673085623242
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 24.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7529484629631042,
+    "eye_r": 0.7927122712135315,
+    "patch": 0.8557862043380737,
+    "nose": 0.7086811065673828,
+    "mouth": 0.9112262725830078
+   },
+   "likeness": 0.8131317496299744,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.0,
+    "patch": 0.0,
+    "nose": 0.0,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.753,
+    "eye_r": 0.793,
+    "patch": 0.856,
+    "nose": 0.709,
+    "mouth": 0.911
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 36.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0107,
+   "face_big_px": 14.0,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7717013955116272,
+    "eye_r": 0.4913014769554138,
+    "patch": 0.7743543386459351,
+    "mouth": 0.9012779593467712
+   },
+   "likeness": 0.7219645977020264,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.4969564240489049,
+    "mouth": 0.7430194174344698
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 36.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0107,
+   "face_big_px": 14.0,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.6911678314208984,
+    "eye_r": 0.7246521711349487,
+    "patch": 0.8432416915893555,
+    "mouth": 0.903785228729248
+   },
+   "likeness": 0.8089362978935242,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.003,
+    "eye_r": 0.002,
+    "patch": 0.002,
+    "mouth": 0.002
+   },
+   "kept_worst": {
+    "brow_r": 0.691,
+    "eye_r": 0.723,
+    "patch": 0.842,
+    "mouth": 0.902
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 36.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7935671806335449,
+    "eye_r": 0.4556838274002075,
+    "patch": 0.8159767389297485,
+    "nose": 0.757229208946228,
+    "mouth": 0.9539074897766113
+   },
+   "likeness": 0.7698203325271606,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 0.7762660149919899,
+    "patch": 0.3645790891244186,
+    "nose": 1.0,
+    "mouth": 0.8548766561709017
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 36.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7835785150527954,
+    "eye_r": 0.7676804661750793,
+    "patch": 0.8849862217903137,
+    "nose": 0.7789034843444824,
+    "mouth": 0.9262112379074097
+   },
+   "likeness": 0.8579657077789307,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.001,
+    "patch": 0.0,
+    "nose": 0.0,
+    "mouth": 0.001
+   },
+   "kept_worst": {
+    "brow_r": 0.783,
+    "eye_r": 0.767,
+    "patch": 0.885,
+    "nose": 0.778,
+    "mouth": 0.926
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 36.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7966147661209106,
+    "eye_r": 0.4669117033481598,
+    "patch": 0.7795044183731079,
+    "nose": 0.5886865854263306,
+    "mouth": 0.9051487445831299
+   },
+   "likeness": 0.7156690359115601,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 0.6787040071430372,
+    "patch": 0.4007776596765145,
+    "nose": 1.0,
+    "mouth": 0.8195798991180528
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 36.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7392963767051697,
+    "eye_r": 0.6961935758590698,
+    "patch": 0.8423237800598145,
+    "nose": 0.6768295764923096,
+    "mouth": 0.9114663004875183
+   },
+   "likeness": 0.7922164797782898,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.0,
+    "patch": 0.0,
+    "nose": 0.0,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.739,
+    "eye_r": 0.696,
+    "patch": 0.842,
+    "nose": 0.677,
+    "mouth": 0.911
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 45.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0096,
+   "face_big_px": 15.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7413935661315918,
+    "eye_r": 0.27229443192481995,
+    "patch": 0.8291804194450378,
+    "nose": 0.5199469923973083,
+    "mouth": 0.951694130897522
+   },
+   "likeness": 0.7505136132240295,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.6978849622897109,
+    "nose": 1.0,
+    "mouth": 0.854623907438848
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 45.0,
+   "eye": "crew",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0096,
+   "face_big_px": 15.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7748975157737732,
+    "eye_r": 0.7969563007354736,
+    "patch": 0.9120557308197021,
+    "nose": 0.7291516661643982,
+    "mouth": 0.9054274559020996
+   },
+   "likeness": 0.8174294233322144,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.002,
+    "eye_r": 0.002,
+    "patch": 0.001,
+    "nose": 0.002,
+    "mouth": 0.003
+   },
+   "kept_worst": {
+    "brow_r": 0.773,
+    "eye_r": 0.797,
+    "patch": 0.912,
+    "nose": 0.727,
+    "mouth": 0.902
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 45.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.7352596521377563,
+    "eye_r": 0.46850308775901794,
+    "patch": 0.8094147443771362,
+    "nose": 0.6717625260353088,
+    "mouth": 0.9775113463401794
+   },
+   "likeness": 0.7334468960762024,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.5763789429744086,
+    "nose": 1.0,
+    "mouth": 0.9237515325072384
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 45.0,
+   "eye": "two",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0043,
+   "face_big_px": 35.1,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.8296917676925659,
+    "eye_r": 0.8484522700309753,
+    "patch": 0.9166215658187866,
+    "nose": 0.7214685082435608,
+    "mouth": 0.9120153784751892
+   },
+   "likeness": 0.8503857851028442,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 1.0,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.001,
+    "patch": 0.0,
+    "nose": 0.001,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.83,
+    "eye_r": 0.848,
+    "patch": 0.917,
+    "nose": 0.721,
+    "mouth": 0.912
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 45.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "joe",
+   "kept": {
+    "brow_r": 0.8232742547988892,
+    "eye_r": 0.5546888113021851,
+    "patch": 0.7930492162704468,
+    "nose": 0.5218760371208191,
+    "mouth": 0.9495938420295715
+   },
+   "likeness": 0.6670700907707214,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 0.9894627516836306,
+    "patch": 0.367734844378175,
+    "nose": 1.0,
+    "mouth": 0.9030127487821712
+   }
+  },
+  {
+   "role": "right",
+   "seconds": 45.0,
+   "eye": "close",
+   "features": 5,
+   "counted": 5,
+   "hidden": 0,
+   "turned": 0,
+   "big_px_m": 0.0022,
+   "face_big_px": 69.7,
+   "look": "pixel-both",
+   "kept": {
+    "brow_r": 0.7959534525871277,
+    "eye_r": 0.8285655975341797,
+    "patch": 0.8841851949691772,
+    "nose": 0.6465791463851929,
+    "mouth": 0.8977450132369995
+   },
+   "likeness": 0.768841564655304,
+   "shows": {
+    "brow_r": 1.0,
+    "eye_r": 1.0,
+    "patch": 0.958757788843034,
+    "nose": 1.0,
+    "mouth": 1.0
+   },
+   "crawl": {
+    "brow_r": 0.0,
+    "eye_r": 0.0,
+    "patch": 0.0,
+    "nose": 0.0,
+    "mouth": 0.0
+   },
+   "kept_worst": {
+    "brow_r": 0.796,
+    "eye_r": 0.829,
+    "patch": 0.884,
+    "nose": 0.647,
+    "mouth": 0.898
+   }
+  }
+ ],
+ "sheets": {
+  "frontman": "detailed-impostor-pixel-clear",
+  "left": "detailed-impostor-pixel-clear",
+  "right": "detailed-impostor-pixel-clear"
+ },
+ "table": {
+  "crew|joe|frontman": {
+   "pictures": 6,
+   "kept": 0.852,
+   "shows": 1.0,
+   "likeness": 0.603,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.859,
+    "eyes": 0.852,
+    "nose": 0.775
+   },
+   "counted": 34,
+   "hidden": 2,
+   "turned": 0,
+   "face_big_px": 16.9,
+   "lost": 0.0
+  },
+  "crew|joe|all": {
+   "pictures": 18,
+   "kept": 0.742,
+   "shows": 0.932,
+   "likeness": 0.665,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.819,
+    "eyes": 0.705,
+    "nose": 0.722,
+    "spectacles": 0.648,
+    "moustache": 0.622,
+    "mouth": 0.87,
+    "patch": 0.806
+   },
+   "counted": 104,
+   "hidden": 4,
+   "turned": 0,
+   "face_big_px": 14.606,
+   "lost": 0.013
+  },
+  "crew|pixel-both|frontman": {
+   "pictures": 6,
+   "kept": 0.814,
+   "shows": 1.0,
+   "likeness": 0.562,
+   "crawl": 0.004,
+   "worst": 0.812,
+   "kinds": {
+    "brows": 0.832,
+    "eyes": 0.799,
+    "nose": 0.779
+   },
+   "counted": 34,
+   "hidden": 2,
+   "turned": 0,
+   "face_big_px": 16.9,
+   "lost": 0.0
+  },
+  "crew|pixel-both|all": {
+   "pictures": 18,
+   "kept": 0.777,
+   "shows": 0.996,
+   "likeness": 0.683,
+   "crawl": 0.005,
+   "worst": 0.774,
+   "kinds": {
+    "brows": 0.789,
+    "eyes": 0.77,
+    "nose": 0.751,
+    "spectacles": 0.776,
+    "moustache": 0.68,
+    "mouth": 0.788,
+    "patch": 0.865
+   },
+   "counted": 104,
+   "hidden": 4,
+   "turned": 0,
+   "face_big_px": 14.606,
+   "lost": 0.0
+  },
+  "two|joe|frontman": {
+   "pictures": 6,
+   "kept": 0.832,
+   "shows": 0.998,
+   "likeness": 0.641,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.855,
+    "eyes": 0.851,
+    "nose": 0.59
+   },
+   "counted": 36,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "two|joe|all": {
+   "pictures": 18,
+   "kept": 0.771,
+   "shows": 0.934,
+   "likeness": 0.701,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.828,
+    "eyes": 0.706,
+    "nose": 0.713,
+    "spectacles": 0.722,
+    "moustache": 0.721,
+    "mouth": 0.91,
+    "patch": 0.808
+   },
+   "counted": 108,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "two|pixel-both|frontman": {
+   "pictures": 6,
+   "kept": 0.795,
+   "shows": 1.0,
+   "likeness": 0.633,
+   "crawl": 0.001,
+   "worst": 0.794,
+   "kinds": {
+    "brows": 0.833,
+    "eyes": 0.804,
+    "nose": 0.513
+   },
+   "counted": 36,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "two|pixel-both|all": {
+   "pictures": 18,
+   "kept": 0.818,
+   "shows": 1.0,
+   "likeness": 0.758,
+   "crawl": 0.001,
+   "worst": 0.818,
+   "kinds": {
+    "brows": 0.823,
+    "eyes": 0.804,
+    "nose": 0.698,
+    "spectacles": 0.872,
+    "moustache": 0.81,
+    "mouth": 0.796,
+    "patch": 0.89
+   },
+   "counted": 108,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "close|joe|frontman": {
+   "pictures": 6,
+   "kept": 0.819,
+   "shows": 0.996,
+   "likeness": 0.66,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.852,
+    "eyes": 0.815,
+    "nose": 0.5
+   },
+   "counted": 36,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  },
+  "close|joe|all": {
+   "pictures": 18,
+   "kept": 0.745,
+   "shows": 0.932,
+   "likeness": 0.664,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.835,
+    "eyes": 0.705,
+    "nose": 0.617,
+    "spectacles": 0.694,
+    "moustache": 0.674,
+    "mouth": 0.866,
+    "patch": 0.753
+   },
+   "counted": 108,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  },
+  "close|pixel-both|frontman": {
+   "pictures": 6,
+   "kept": 0.787,
+   "shows": 1.0,
+   "likeness": 0.648,
+   "crawl": 0.0,
+   "worst": 0.787,
+   "kinds": {
+    "brows": 0.823,
+    "eyes": 0.776,
+    "nose": 0.512
+   },
+   "counted": 36,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  },
+  "close|pixel-both|all": {
+   "pictures": 18,
+   "kept": 0.789,
+   "shows": 0.999,
+   "likeness": 0.717,
+   "crawl": 0.0,
+   "worst": 0.789,
+   "kinds": {
+    "brows": 0.802,
+    "eyes": 0.774,
+    "nose": 0.674,
+    "spectacles": 0.848,
+    "moustache": 0.818,
+    "mouth": 0.744,
+    "patch": 0.807
+   },
+   "counted": 108,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  },
+  "crew|joe|left": {
+   "pictures": 6,
+   "kept": 0.669,
+   "shows": 0.925,
+   "likeness": 0.625,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "spectacles": 0.648,
+    "moustache": 0.622,
+    "mouth": 0.797
+   },
+   "counted": 40,
+   "hidden": 2,
+   "turned": 0,
+   "face_big_px": 13.033,
+   "lost": 0.036
+  },
+  "crew|pixel-both|left": {
+   "pictures": 6,
+   "kept": 0.729,
+   "shows": 0.99,
+   "likeness": 0.672,
+   "crawl": 0.007,
+   "worst": 0.726,
+   "kinds": {
+    "spectacles": 0.776,
+    "moustache": 0.68,
+    "mouth": 0.631
+   },
+   "counted": 40,
+   "hidden": 2,
+   "turned": 0,
+   "face_big_px": 13.033,
+   "lost": 0.0
+  },
+  "two|joe|left": {
+   "pictures": 6,
+   "kept": 0.743,
+   "shows": 0.962,
+   "likeness": 0.689,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "spectacles": 0.722,
+    "moustache": 0.721,
+    "mouth": 0.846
+   },
+   "counted": 42,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "two|pixel-both|left": {
+   "pictures": 6,
+   "kept": 0.822,
+   "shows": 1.0,
+   "likeness": 0.78,
+   "crawl": 0.001,
+   "worst": 0.821,
+   "kinds": {
+    "spectacles": 0.872,
+    "moustache": 0.81,
+    "mouth": 0.656
+   },
+   "counted": 42,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "close|joe|left": {
+   "pictures": 6,
+   "kept": 0.713,
+   "shows": 0.985,
+   "likeness": 0.641,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "spectacles": 0.694,
+    "moustache": 0.674,
+    "mouth": 0.83
+   },
+   "counted": 42,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  },
+  "close|pixel-both|left": {
+   "pictures": 6,
+   "kept": 0.798,
+   "shows": 1.0,
+   "likeness": 0.745,
+   "crawl": 0.0,
+   "worst": 0.798,
+   "kinds": {
+    "spectacles": 0.848,
+    "moustache": 0.818,
+    "mouth": 0.593
+   },
+   "counted": 42,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  },
+  "crew|joe|right": {
+   "pictures": 6,
+   "kept": 0.726,
+   "shows": 0.885,
+   "likeness": 0.766,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.745,
+    "eyes": 0.436,
+    "patch": 0.806,
+    "nose": 0.711,
+    "mouth": 0.931
+   },
+   "counted": 30,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 13.883,
+   "lost": 0.0
+  },
+  "crew|pixel-both|right": {
+   "pictures": 6,
+   "kept": 0.793,
+   "shows": 1.0,
+   "likeness": 0.813,
+   "crawl": 0.003,
+   "worst": 0.791,
+   "kinds": {
+    "brows": 0.709,
+    "eyes": 0.718,
+    "patch": 0.865,
+    "nose": 0.745,
+    "mouth": 0.92
+   },
+   "counted": 30,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 13.883,
+   "lost": 0.0
+  },
+  "two|joe|right": {
+   "pictures": 6,
+   "kept": 0.748,
+   "shows": 0.852,
+   "likeness": 0.774,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.772,
+    "eyes": 0.44,
+    "patch": 0.808,
+    "nose": 0.754,
+    "mouth": 0.963
+   },
+   "counted": 30,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "two|pixel-both|right": {
+   "pictures": 6,
+   "kept": 0.833,
+   "shows": 1.0,
+   "likeness": 0.862,
+   "crawl": 0.0,
+   "worst": 0.833,
+   "kinds": {
+    "brows": 0.803,
+    "eyes": 0.802,
+    "patch": 0.89,
+    "nose": 0.76,
+    "mouth": 0.912
+   },
+   "counted": 30,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 35.1,
+   "lost": 0.0
+  },
+  "close|joe|right": {
+   "pictures": 6,
+   "kept": 0.718,
+   "shows": 0.83,
+   "likeness": 0.69,
+   "crawl": null,
+   "worst": null,
+   "kinds": {
+    "brows": 0.805,
+    "eyes": 0.503,
+    "patch": 0.753,
+    "nose": 0.636,
+    "mouth": 0.896
+   },
+   "counted": 30,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  },
+  "close|pixel-both|right": {
+   "pictures": 6,
+   "kept": 0.782,
+   "shows": 0.999,
+   "likeness": 0.758,
+   "crawl": 0.0,
+   "worst": 0.782,
+   "kinds": {
+    "brows": 0.762,
+    "eyes": 0.77,
+    "patch": 0.807,
+    "nose": 0.701,
+    "mouth": 0.869
+   },
+   "counted": 30,
+   "hidden": 0,
+   "turned": 0,
+   "face_big_px": 69.7,
+   "lost": 0.0
+  }
+ },
+ "seconds": 540.7
+}
