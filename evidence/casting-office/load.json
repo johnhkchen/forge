@@ -1,0 +1,33 @@
+{
+ "about": "What the world view had fetched when each picture was taken (from the page itself: its own files, not three.js or the fonts). A place's number includes the overview, which loads first.",
+ "views": {
+  "overview-phone": {
+   "files": 27,
+   "bytes": 2088927,
+   "seconds": 1.754899999976158,
+   "place": null,
+   "settled": true
+  },
+  "overview-desktop": {
+   "files": 27,
+   "bytes": 2088927,
+   "seconds": 1.1025,
+   "place": null,
+   "settled": true
+  },
+  "casting-office-phone": {
+   "files": 27,
+   "bytes": 2088927,
+   "seconds": 0.7029000000357628,
+   "place": "casting-office",
+   "settled": true
+  },
+  "casting-office-desktop": {
+   "files": 27,
+   "bytes": 2088927,
+   "seconds": 0.36869999998807906,
+   "place": "casting-office",
+   "settled": true
+  }
+ }
+}

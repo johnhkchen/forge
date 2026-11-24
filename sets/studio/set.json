@@ -569,6 +569,20 @@
    ],
    "facing_deg": 0.0,
    "about": "where the left-hand dancer ends in the crew's dance (the candy-shop routine, seconds 5.4 to 53 of the clip, the group's middle on centre, places 1.15 times as far apart as filmed; scripts/video/formation.py prints these)"
+  },
+  "office_door": {
+   "kind": "door",
+   "at": [
+    3.9,
+    1.1
+   ],
+   "facing_deg": -90.0,
+   "offstage": true,
+   "leads_to": {
+    "set": "casting-office",
+    "mark": "door"
+   },
+   "about": "the way off the stage on the desk's side, to the casting office next door: a few steps across the grass to its porch"
   }
  },
  "paths": [

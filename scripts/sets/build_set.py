@@ -56,6 +56,8 @@ def turned(piece):
         out["box"] = {"min": [min(a[i], b[i]) for i in range(3)], "max": [max(a[i], b[i]) for i in range(3)]}
     if "tube" in piece:
         out["tube"] = [blender_point(row[:3]) + list(row[3:]) for row in piece["tube"]]
+        if "up" in piece:  # which way the tube's "up" side faces (a sloping roof slab): a direction, turned the same way
+            out["up"] = blender_point(piece["up"])
     if "lumps" in piece:
         out["lumps"] = [blender_point(row[:3]) + list(row[3:]) for row in piece["lumps"]]
     if "loft" in piece:

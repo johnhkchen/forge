@@ -12,6 +12,8 @@ What it shows:
   placing          every set has an origin, a front and a footprint, and can be put down anywhere as one piece
   doors            a door mark names the set it leads into and the door it comes out at there; one that
                    leads nowhere, or to a mark that is not a door, or is not led back to, is told
+  casting office   the room the concept pictures fit: 6 x 5 m, 3 m up, three side by side on the X, a panel
+                   of three, the eye the pictures were drawn from, a door that pairs with the stage's
   segment          the guest-entrance template: both roles the same length, the handshake on the same
                    frames, the two wrists planned a palm's length either side of one spot
 
@@ -286,7 +288,32 @@ def test_doors():
             standing.SETS = was
 
 
-TESTS = [test_set_check, test_marks, test_cameras, test_rooftop_parity, test_segment, test_placing, test_doors]
+def test_casting_office():
+    """the casting office is a room the concept pictures fit, with room on the X for three and a door that pairs with the stage's."""
+    st = standing.load("casting-office")
+    room = st["room"]["inside"]
+    size = [room["max"][i] - room["min"][i] for i in range(3)]
+    check("the room inside is %g m long, %g m across, %g m to the ceiling, its floor's middle the set's origin" % (size[0], size[2], size[1]),
+          size == [6.0, 3.0, 5.0] and st["room"]["floor_origin"] == [0.0, 0.0, 0.0] and st["frame"]["origin"] == [0.0, 0.0, 0.0])
+    row = [st["marks"][name] for name in st["groups"]["lineup"]]
+    zs = sorted(m["at"][1] for m in row)
+    check("three stand side by side on the X, %.1f m apart, all facing the table" % (zs[1] - zs[0]),
+          len(row) == 3 and st["marks"]["audition"] in row and min(b - a for a, b in zip(zs, zs[1:])) >= 0.7 and all(m["facing_deg"] == -90.0 and m["at"][0] == row[0]["at"][0] for m in row))
+    panel = [st["marks"][name] for name in st["groups"]["panel"]]
+    check("the panel is three seats at the table, facing the X", len(panel) == 3 and all(m["kind"] == "sit" and m["facing_deg"] == 90.0 for m in panel))
+    eye = st["cameras"][st["marble_seat"]["eye"]]
+    ahead = [eye["aim"][i] - eye["at"][i] for i in range(3)]
+    check("the panel's eye is seated (%.1f m up) behind the table, looking down the room at the backdrop" % eye["at"][1],
+          1.1 <= eye["at"][1] <= 1.3 and eye["at"][0] < -2.0 and ahead[0] > 0 and abs(ahead[2]) < 1e-6 and "audition" in eye["sees"])
+    inside = [n for n, m in st["marks"].items() if n != "porch" and not (room["min"][0] < m["at"][0] < room["max"][0] and room["min"][2] < m["at"][1] < room["max"][2])]
+    check("every mark but the porch is inside the room", not inside, inside)
+    door, back = st["marks"]["door"], standing.load("studio")["marks"]["office_door"]
+    check("its door leads to the stage's office door, and that one leads back here", door["leads_to"] == {"set": "studio", "mark": "office_door"} and back["leads_to"] == {"set": "casting-office", "mark": "door"})
+    problems = [p for p in standing.check(st)[0]]
+    check("it is sound", not problems, problems)
+
+
+TESTS = [test_set_check, test_marks, test_cameras, test_rooftop_parity, test_segment, test_placing, test_doors, test_casting_office]
 
 
 def cases():
