@@ -592,7 +592,9 @@ def test_a_stretch_of_a_clip_is_one_beat_between_a_pose_and_two_sentences():
     for f in range(1, 31):
         ours, theirs = motion["rotations"][start + f], truth["rotations"][f]
         worst = max(abs(abs(sum(ours[4 * j + k] * theirs[4 * j + k] for k in range(4))) - 1.0) for j in range(1, len(SK.joints)))
-        assert worst < 1e-4 or (f <= timeline.EASE_FRAMES and worst < 1e-3), (f, worst)
+        # (To four places above the hips; the legs to within a degree or two, where a held foot bent a knee a little.)
+        upper = max(abs(abs(sum(ours[4 * j + k] * theirs[4 * j + k] for k in range(4))) - 1.0) for j in range(1, len(SK.joints)) if "Leg" not in SK.joints[j] and "Shin" not in SK.joints[j] and "Foot" not in SK.joints[j] and "Toe" not in SK.joints[j])
+        assert (upper < 1e-4 or (f <= timeline.EASE_FRAMES and upper < 1e-3)) and worst < 3e-3, (f, upper, worst)
     # It stands where the set says: on the monologue mark, facing the way that mark faces, though the stand-in's
     # world for that shot faced somewhere else entirely.
     with open(os.path.join(REPO, "sets", "studio", "set.json")) as f:
@@ -670,7 +672,7 @@ def test_a_dancer_who_drifts_is_kept_put_or_walked_to_a_mark_on_request():
             stand = {"pose": "stand", "at_m": 0.0, "side_m": 0.0, "facing_deg": 0.0, "speed_mps": 0.0, "tokens": 9, "early_frames": 0, "pins": [], "hold_pins_frames": 0}
             shot = {"start_pose": "stand", "path": [{"x": 0.0, "z": 0.0}, {"x": 0.0, "z": 4.0}],
                     "beats": [{"name": "Waits", "seconds": 0.97, "source": "poses", "moves": [stand]},
-                              {"name": "The routine", "seconds": 1.0, "source": "video", "clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0, "from_m": 0.0, "to_m": 0.0, **routine}]}
+                              {"name": "The routine", "seconds": 1.0, "source": "video", "clip": "drawn-clip", "shot": 3, "from_s": 4.0, "to_s": 5.0, "from_m": 0.0, "to_m": 0.0, "lock_feet": False, **routine}]}
             with open(os.path.join(REPO, "motion", "poses.json")) as f:
                 record, _ = timeline.lay_out(shot, json.load(f), SK, made=import_made)
             piece = record["pieces"][1]
@@ -692,6 +694,12 @@ def test_a_dancer_who_drifts_is_kept_put_or_walked_to_a_mark_on_request():
         # Facing: turned a quarter turn on the path, it faces a quarter turn round.
         side, motion = lay({"facing_deg": 90.0})
         assert abs(timeline.facing(SK, motion, a) - 90.0) < 0.5
+        # That was with the feet left alone. This dancer's feet never leave the floor, so held where they are down
+        # (as they are unless a beat says otherwise) the creep has nothing to carry it: it would take a step.
+        # (That was with the feet left alone. Held where they are down, as they are unless a beat says otherwise, a
+        # creep slow enough to be a foot at rest has nothing to carry it; the cases further down try that.)
+        held, _ = lay({"lock_feet": True})
+        assert held["feet"]["locked"] and not kept["feet"]["locked"]
         # With no handles asked for, the joins eat the stretch's own ends.
         bare, _ = lay({"handles": False})
         assert bare["handles"] == [0, 0] and bare["clip_frames"] == [120, 150]
@@ -756,6 +764,93 @@ def test_the_floor_follows_the_feet_when_the_models_floor_creeps():
     off = [min(positions(motion, f)[t][1] for t in toes) - rest for f in range(0, 240, 6)]
     assert max(abs(v) for v in off) < 0.03, off  # feet that never left the floor are on it from first frame to last
     assert 40.0 < report["floor_followed_cm"] < 60.0, report
+
+
+# ---- feet that are down stay down ------------------------------------------------
+
+
+def gliding(first: int, last: int, steps: bool = False, pivot: bool = False) -> dict:
+    """The stand-in's dance (feet planted) made to skate: the whole body slid 60 cm sideways and 30 cm back over
+    four seconds, as a camera's creep or a formation's nudging would. With `steps`, the model's contacts say the
+    feet take turns (left down, both, right down, both, ...). With `pivot`, the left foot is up on its ball and
+    turns a quarter turn about it."""
+    from soma import Y, qaxis, qmul as mul
+
+    motion = stub_worker.dance(SK, first, last)
+    count = len(motion["root"])
+    ankle = SK.index["LeftFoot"]
+    for f in range(count):
+        t = f / float(count - 1)
+        motion["root"][f] = [motion["root"][f][0] + 0.6 * t, motion["root"][f][1], motion["root"][f][2] - 0.3 * t]
+        if steps:
+            phase = (f // 20) % 4
+            motion["contacts"][f] = [1.0, 1.0, 1.0, 1.0] if phase in (1, 3) else ([1.0, 1.0, 0.0, 0.0] if phase == 0 else [0.0, 0.0, 1.0, 1.0])
+        if pivot:
+            motion["contacts"][f][0] = 0.0  # the left heel is up: only the ball is down
+            row = motion["rotations"][f]
+            pos, rot = SK.fk(motion["root"][f], [tuple(row[4 * j : 4 * j + 4]) for j in range(len(SK.joints))])
+            turned = mul(qaxis(Y, 90.0 * t), rot[ankle])
+            row[4 * ankle : 4 * ankle + 4] = list(mul(soma_conj(rot[SK.parents[ankle]]), turned))
+    return motion
+
+
+def soma_conj(q):
+    return (-q[0], -q[1], -q[2], q[3])
+
+
+def test_feet_that_are_down_are_held_and_drift_becomes_steps():
+    import footlock
+
+    toes = {"l": SK.index["LeftToeBase"], "r": SK.index["RightToeBase"]}
+    # 1. Both feet down the whole time, the body skating 67 cm: held, the feet do not move and the body stays over them.
+    skating = gliding(0, 119)
+    locked, report = footlock.lock(SK, skating)
+    before, after = footlock.slide(SK, skating), footlock.slide(SK, locked)
+    assert min(before["cm_per_s"].values()) > 15.0 and max(after["cm_per_s"].values()) < 0.3, (before, after)
+    assert max(after["worst_stretch_cm"].values()) < 0.5 and report["frames_a_leg_could_not_reach"] == 0, (after, report)
+    assert math.dist(locked["root"][0][::2], locked["root"][119][::2]) < 0.02, "nothing carried the hips anywhere"
+    # The legs still reach the floor and nothing above the hips changed.
+    for f in (0, 60, 119):
+        for j, name in enumerate(SK.joints):
+            if not any(part in name for part in ("Leg", "Shin", "Foot", "Toe")):
+                assert locked["rotations"][f][4 * j : 4 * j + 4] == [round(c, 6) for c in skating["rotations"][f][4 * j : 4 * j + 4]], name
+        assert abs(positions(locked, f)[toes["l"]][1] - SK.rest_world_pos[toes["l"]][1]) < 0.01
+    # 2. The feet take turns. Each stance is held on one spot; the body's travel is still there, taken in steps:
+    #    every time a foot comes down again it is further along.
+    stepping = gliding(0, 159, steps=True)
+    locked, report = footlock.lock(SK, stepping)
+    after = footlock.slide(SK, locked)
+    assert max(after["cm_per_s"].values()) < 1.0 and report["feet"]["l"]["spots"] >= 2 and report["feet"]["r"]["spots"] >= 2, (after, report)
+    world = [(SK.fk(stepping["root"][f], [tuple(stepping["rotations"][f][4 * j : 4 * j + 4]) for j in range(len(SK.joints))])) for f in range(160)]
+    stances = footlock.stances(SK, stepping, world)
+    spots = [positions(locked, (s["first"] + s["last"]) // 2)[toes["l"]] for s in stances["l"]]
+    for s in stances["l"]:
+        inside = [positions(locked, f)[toes["l"]] for f in range(s["first"], s["last"] + 1)]
+        assert max(math.dist(p[::2], inside[0][::2]) for p in inside) < 0.004, "a foot that is down does not move"
+    assert all(b[0] - a[0] > 0.15 for a, b in zip(spots, spots[1:])), spots  # 60 cm in 160 frames, a step every 80
+    assert math.dist(locked["root"][159][::2], locked["root"][0][::2]) > 0.45, "the body got where it was going, by stepping"
+    assert max(math.dist(a[::2], b[::2]) for a, b in zip(locked["root"], stepping["root"])) < 0.25
+    # 3. A pivot is still a pivot: up on the ball of the left foot and turning, the ball is held and the foot turns about it.
+    turning = gliding(0, 89, pivot=True)
+    locked, _ = footlock.lock(SK, turning)
+    ball = [positions(locked, f)[toes["l"]] for f in range(90)]
+    assert max(math.dist(p[::2], ball[0][::2]) for p in ball) < 0.005
+    heel_before, heel_after = positions(locked, 0)[SK.index["LeftFoot"]], positions(locked, 89)[SK.index["LeftFoot"]]
+    assert math.dist(heel_before[::2], heel_after[::2]) > 0.08, "the heel swung round the ball"
+    # 4. In the air, nothing is held: a motion with no foot down comes back as it was.
+    flying = gliding(0, 59)
+    for row in flying["contacts"]:
+        row[:] = [0.0, 0.0, 0.0, 0.0]
+    flying["root"] = [[r[0], r[1] + 0.5, r[2]] for r in flying["root"]]
+    locked, report = footlock.lock(SK, flying)
+    assert report["feet"]["l"]["spots"] == 0 and locked["root"] == [[round(c, 5) for c in r] for r in flying["root"]]
+    # The switch: FORGE_FOOT_LOCK=0 turns it off everywhere, and a beat can say "lock_feet": false.
+    assert footlock.wanted() and footlock.wanted(True) and not footlock.wanted(False)
+    os.environ["FORGE_FOOT_LOCK"] = "0"
+    try:
+        assert not footlock.wanted(True)
+    finally:
+        del os.environ["FORGE_FOOT_LOCK"]
 
 
 def crew_of_two(routine: dict) -> tuple:

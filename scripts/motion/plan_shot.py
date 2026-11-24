@@ -373,6 +373,10 @@ def main() -> None:
                 far = "" if piece["ends_from_its_mark_cm"] <= 30.0 else "; that is a long way for the next join to cover: \"drift\": \"flatten\" brings it back"
                 print(f"PLAN {piece['name']}: frames {piece['clip_frames'][0]}-{piece['clip_frames'][1]} of the clip {piece['clip']} (shot {piece['clip_shot']}, person {piece['person']}), "
                       f"{piece['handles'][0]} and {piece['handles'][1]} of them for the joins; ends {piece['ends_from_its_mark_cm']} cm from where the next beat starts{far}")
+                feet = piece.get("feet") or {}
+                if feet.get("locked"):
+                    print(f"PLAN {piece['name']}: feet held where they are down: they slid {max(feet['slid_cm_per_s'].values())} cm a second at most, now {max(feet['slides_cm_per_s'].values())}; "
+                          f"the hips moved up to {feet['hips_moved_cm_at_most']} cm and came down up to {feet['hips_lowered_cm_at_most']} cm for it")
         for seam in record["seams"]:
             print(f"PLAN seam {seam['from']} to {seam['to']}: MotionBricks fills frames {seam['tween_frames'][0]}-{seam['tween_frames'][1]}")
         print(f"PLAN {len(record['pieces'])} pieces, {len(record['seams'])} seams, {record['frames']} frames, {record['seconds']} s, path {record['path_length_m']} m")

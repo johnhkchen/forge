@@ -298,6 +298,14 @@ def build(folder: str, shot_dir: str, sk: Skeleton = None) -> dict:
         reports[label] = {**report, "camera": (answer.get("made_by") or {}).get("camera"), "boxes_on_frames": (answer.get("made_by") or {}).get("frames_with_a_box")}
         used.append({"shot": shot["index"], "name": label, "person": who, "clip_first_frame": shot["first_frame"], "clip_last_frame": shot["last_frame"]})
     motion, joins, segments = stitch(sk, pieces)
+    # Feet that are down are held on their spot and the body carried by them: the model's sliding, and a camera
+    # that crept, show as steps and not as skating (footlock.py; FORGE_FOOT_LOCK=0 leaves them, to compare).
+    import footlock
+
+    feet = {"locked": footlock.wanted(), "slid_cm_per_s": footlock.slide(sk, motion)["cm_per_s"]}
+    if feet["locked"]:
+        motion, done = footlock.lock(sk, motion)
+        feet.update({"slides_cm_per_s": footlock.slide(sk, motion)["cm_per_s"], **done})
     motion["segments"] = segments
     motion["made_by"] = {"model": "GEM-X body motion (native77), from a video", "clip": name, "joined": "the hips' place and facing carried across each cut; pose blended over a few frames"}
     for piece, segment in zip(used, segments):
@@ -309,7 +317,7 @@ def build(folder: str, shot_dir: str, sk: Skeleton = None) -> dict:
     clip_file.write(os.path.join(shot_dir, "plan.json"), plan)
     clip_file.write(os.path.join(shot_dir, "shotlist.json"), shotlist)
     card = clip_file.read(os.path.join(folder, "clip.json")) or {}
-    source = {"format": "forge-video-shot/1", "clip": name, "clip_sha256": (card.get("clip") or {}).get("sha256"), "frames": len(motion["root"]), "pieces": used, "joins": joins, "converted": reports, "choice": choice}
+    source = {"format": "forge-video-shot/1", "clip": name, "clip_sha256": (card.get("clip") or {}).get("sha256"), "frames": len(motion["root"]), "pieces": used, "joins": joins, "converted": reports, "feet": feet, "choice": choice}
     clip_file.write(os.path.join(shot_dir, "source.json"), source)
     return source
 

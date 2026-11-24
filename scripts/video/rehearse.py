@@ -140,12 +140,12 @@ def rehearse(plan_file: str, folder: str, answer=None, log=print) -> dict:
                 log(f"REHEARSE {name or 'the shot'}, {piece['name']}: person {piece['person']} of {piece['clip']}, frames {piece['clip_frames'][0]}-{piece['clip_frames'][1]}; starts {piece['starts_from_its_mark_cm']} cm from its mark"
                     + (f" at {form['starts_at']}" if form else "") + f", ends {piece['ends_from_its_mark_cm']} cm from its mark" + (f" at {form['ends_at']}" if form else ""))
                 # Feet are only worth measuring in the part that is real: a pretend walk glides.
-                import checks
-
-                where = os.path.join(folder, take["roles"][name]["folder"]) if name else folder
-                real = clip_file.read(timeline.cache_path(where, piece["video"]))
-                slide = max(foot["slide_speed_cm_per_s"] for foot in checks.feet(sk, real, checks.world_positions(sk, real)).values())
-                log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet on the floor slide {slide} cm a second at most")
+                feet = piece.get("feet") or {}
+                if feet.get("locked"):
+                    log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet held where they are down; while the model calls them down they slid {json.dumps(feet['slid_cm_per_s'])} cm a second, now {json.dumps(feet['slides_cm_per_s'])}"
+                        + (f"; hips up to {feet['from_its_place_in_the_group_cm_at_most']} cm from their place in the group" if "from_its_place_in_the_group_cm_at_most" in feet else ""))
+                elif feet:
+                    log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet left as they are (not locked): they slide {json.dumps(feet['slid_cm_per_s'])} cm a second while down")
         log(f"REHEARSE {name or 'the shot'}: {made['checks']['frames']} frames; asked of the pretend models: {made['asked'].count('text')} sentences, {made['asked'].count('inbetween')} poses and joins")
     if len(roles) > 1:
         out["together"] = together(sk, roles)
