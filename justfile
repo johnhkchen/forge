@@ -220,19 +220,40 @@ fight fight left right out="":
     done
     wait
 
-# A character as flat cards, one a bone: cut a rigged version (one with a walk) into rigid parts and picture each from all around, into <run>/profiles/<version>-impostor/. more: bake_impostor.py's flags (--views 26,62 --px 128; --look pixel or --look joe for the sheet of another look). The gallery then shows it at #/cards/<run>, and a field of them at #/tag/<run>. A few seconds a view set; never touches the open Blender
+# A character as flat cards, one a bone: cut a rigged version (one with a walk) into rigid parts and picture each from all around, into <run>/profiles/<version>-impostor-<look>-joined/ (the comic look unless told). more: bake_impostor.py's flags (--views 26,62 --px 128; --look pixel or --look joe for the sheet of another look; a pixel sheet of a model that has a face recipe in scripts/impostor/faces/ gets a finer head and a drawn face; --lap, --ball and --smooth-cm for how the joints are cut). The gallery then shows it at #/cards/<run>, and a field of them at #/tag/<run>. Half a minute a view set; never touches the open Blender
 impostor run version="painted" *more:
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" "{{version}}" {{ if more == "" { "--views 26,62,114" } else { more } }} 2>&1 | grep -E '^IMPOSTOR|^RESULT \{"folder|Error|Traceback'
 
-# Cards pictured from a character's detailed mesh (final.glb, some 290,000 triangles) instead of a rigged version: the detailed mesh is given that version's skeleton (weights taken from the nearest place on its surface), then pictured as pixel art (96 pixels a metre) and in the comic look. The cards play the rigged version's clips; the gallery offers it as "Detailed model"
+# Cards pictured from a character's detailed mesh (final.glb, some 290,000 triangles) instead of a rigged version: the detailed mesh is given that version's skeleton (weights taken from the nearest place on its surface), then pictured as pixel art (96 pixels a metre, the head at 192 with its folds drawn in, into detailed-impostor-pixel-clear/), in the comic look and for bold ink. The cards play the rigged version's clips; the gallery offers it as "Detailed model"
 impostor-detailed run from="painted":
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/rig_detailed.py -- "{{run}}" --from "{{from}}" 2>&1 | grep -E '^RIG|^RESULT|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --look pixel --px 96 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
     "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/bake_impostor.py -- "{{run}}" detailed --look joe --views 26 --soften 512 --plays "{{from}}" --title "Detailed model" 2>&1 | grep -E '^IMPOSTOR views .*sheet|Error|Traceback'
+
+# Stills of a take's faces on the watch page (pixel cards, and meshes drawn small), from the set's camera and close on each, and how many pixels each face gets, into out as <tag>-*.png and <tag>-faces.json (the gallery must be running on that port; needs Chrome)
+face-shots take="crew-candy-shop" tag="after" port="8028" out="evidence/faces" at="12":
+    python3 scripts/impostor/face_shots.py --base "http://localhost:{{port}}/" --take "{{take}}" --tag "{{tag}}" --out "{{out}}" --at "{{at}}" | grep -E '^FACES|Error|Traceback'
+
+# Count how much of each face is left when a take's cast is drawn as cards, against the real models posed the same: eyes, brows, mouth, spectacles, a patch, in bold ink and in "Pixels, both", through the set's crew camera, from 2 m and from 1 m. Writes faces[-tag].json into out. more: judge_faces.py's flags (--pixel old for the pixel look as it was before the head had a grid of its own; --why to say where a face is lost; --stills frontman@24:crew,... for pictures)
+impostor-faces take="crew-candy-shop" tag="after" out="evidence/clear" *more:
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_faces.py -- --take "{{take}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^FACES .*\||^RESULT \{"out|Error|Traceback'
+
+# Stills of a take's heads on the watch page in bold ink and in "Pixels, both", through the set's camera, from 2 m and from 1 m, each head cut out and blown up, into out as <tag>-*.png (the gallery must be running on that port; needs Chrome). Then `python3 scripts/impostor/clear_shots.py --sides joe:after,pixel-both:before,pixel-both:after` lays them side by side
+clear-shots take="crew-candy-shop" tag="after" port="8028" out="evidence/clear" at="24":
+    python3 scripts/impostor/clear_shots.py --base "http://localhost:{{port}}/" --take "{{take}}" --tag "{{tag}}" --out "{{out}}" --at "{{at}}" | grep -E '^SHOTS|Error|Traceback'
 
 # Judge a character's flat cards against the real model, with no browser: the same frames drawn both ways from the same eye, and how far apart they are (outline, colour, gaps at the joints, how often a picture is swapped). Writes judge.json, stills and films into out. clips: name=file.glb pairs; more: any of judge_impostor.py's flags
 impostor-judge run version="painted" out="evidence/impostor" *more:
-    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_impostor.py -- "{{run}}/profiles/{{version}}-impostor" --out "{{out}}" --clip "walk={{run}}/profiles/{{version}}-walk.glb" {{more}} 2>&1 | grep -E '^JUDGE|^RESULT|Error|Traceback'
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_impostor.py -- "{{run}}/profiles/{{version}}-impostor-comic-joined" --out "{{out}}" --clip "walk={{run}}/profiles/{{version}}-walk.glb" {{more}} 2>&1 | grep -E '^JUDGE|^RESULT|Error|Traceback'
+
+# Count what shows at the joints of a take's cast drawn as cards, against the real models posed the same and drawn the same way: dark lines that are not there, and see-through gaps, in every look, from the set's crew camera and from 2 m, in the dance and in a walk. Writes seams[-tag].json into out. more: judge_seams.py's flags (--sheets old for the sheets as they were before the joints were mended; --why to say what the gaps come from; --stills left@24:close,... for pictures)
+impostor-seams take="crew-candy-shop" tag="after" out="evidence/seams" *more:
+    "{{blender_bin}}" -b --factory-startup -P scripts/impostor/judge_seams.py -- --take "{{take}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^SEAMS (dance|walk)\||^WHY|^RESULT \{"out|Error|Traceback'
+
+# Stills of a take's joints on the watch page: the stage from the set's camera, close on each of the cast, and closer still on an elbow and a knee, as cards in every look, and the stage as meshes, into out as <tag>-*.png (the gallery must be running on that port; needs Chrome)
+seam-shots take="crew-candy-shop" tag="after" port="8028" out="evidence/seams" at="24":
+    python3 scripts/impostor/seam_shots.py --base "http://localhost:{{port}}/" --take "{{take}}" --tag "{{tag}}" --out "{{out}}" --at "{{at}}" | grep -E '^SHOTS|Error|Traceback'
 
 # The flat cards' own tests: the arithmetic, a ball drawn from between its pictures, the page's arithmetic against Python's (in node), and a baked character if runs has one
 impostor-test runs="runs":

@@ -1,0 +1,907 @@
+{
+ "about": "Pixel cards on the tag field (Pixels, both), 1080 by 608, poses shared, headless Chrome on this Mac's GPU: the gallery before this work and after, turn about, 3 goes each; work is the middle go's ms in a frame",
+ "galleries": {
+  "before": "http://localhost:8030/",
+  "after": "http://localhost:8041/"
+ },
+ "table": {
+  "painted|card-batch|100|before": {
+   "work": 3.300000011920929,
+   "low": 3.300000011920929,
+   "high": 3.5,
+   "frame": 16.5,
+   "frame_slow": 18.587500005960464,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "painted|card-batch|100|after": {
+   "work": 3.100000023841858,
+   "low": 3.100000023841858,
+   "high": 3.300000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.512500002980232,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "painted|card-batch|1000|before": {
+   "work": 7,
+   "low": 6.799999952316284,
+   "high": 7.199999988079071,
+   "frame": 16.5,
+   "frame_slow": 18.62500000745058,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "painted|card-batch|1000|after": {
+   "work": 7.199999988079071,
+   "low": 7.099999964237213,
+   "high": 7.399999976158142,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.5,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "painted|card-far|100|before": {
+   "work": 2.899999976158142,
+   "low": 2.600000023841858,
+   "high": 3,
+   "frame": 16.400000035762787,
+   "frame_slow": 18.62500000745058,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "painted|card-far|100|after": {
+   "work": 2.700000047683716,
+   "low": 2.699999988079071,
+   "high": 2.800000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.55000000447035,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "painted|card-far|1000|before": {
+   "work": 5,
+   "low": 4.600000023841858,
+   "high": 5.099999964237213,
+   "frame": 16.5,
+   "frame_slow": 18.475000001490116,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "painted|card-far|1000|after": {
+   "work": 4.900000035762787,
+   "low": 4.800000011920929,
+   "high": 5.300000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.30000000447035,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  "detailed|card-batch|100|before": {
+   "work": 4.199999988079071,
+   "low": 3.899999976158142,
+   "high": 4.300000011920929,
+   "frame": 16.5,
+   "frame_slow": 18.44999999552965,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  "detailed|card-batch|100|after": {
+   "work": 3.899999976158142,
+   "low": 3.800000011920929,
+   "high": 4,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.462499998509884,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  "detailed|card-batch|1000|before": {
+   "work": 7.5,
+   "low": 7.5,
+   "high": 8.399999976158142,
+   "frame": 16.599999964237213,
+   "frame_slow": 18.525000005960464,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  "detailed|card-batch|1000|after": {
+   "work": 8.099999964237213,
+   "low": 8,
+   "high": 8.5,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.5625,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  "detailed|card-far|100|before": {
+   "work": 3.100000023841858,
+   "low": 2.899999976158142,
+   "high": 3.199999988079071,
+   "frame": 16.5,
+   "frame_slow": 18.625,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  "detailed|card-far|100|after": {
+   "work": 2.900000035762787,
+   "low": 2.800000011920929,
+   "high": 3,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.575000002980232,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  "detailed|card-far|1000|before": {
+   "work": 5.299999952316284,
+   "low": 5.100000023841858,
+   "high": 5.600000023841858,
+   "frame": 16.599999964237213,
+   "frame_slow": 18.56250000745058,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  "detailed|card-far|1000|after": {
+   "work": 5.5,
+   "low": 5.100000023841858,
+   "high": 5.600000023841858,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.56249999254942,
+   "sheet": [
+    1024,
+    660
+   ]
+  }
+ },
+ "rows": [
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.5,
+   "frame": 16.5,
+   "frame_slow": 18.487499997019768,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.199999988079071,
+   "frame": 16.5,
+   "frame_slow": 18.62500000745058,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 3,
+   "frame": 16.400000035762787,
+   "frame_slow": 18.549999989569187,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.099999964237213,
+   "frame": 16.5,
+   "frame_slow": 18.42500000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4.300000011920929,
+   "frame": 16.5,
+   "frame_slow": 18.400000005960464,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.5,
+   "frame": 16.599999964237213,
+   "frame_slow": 18.525000005960464,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.199999988079071,
+   "frame": 16.5,
+   "frame_slow": 18.625,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.600000023841858,
+   "frame": 16.599999964237213,
+   "frame_slow": 18.5625,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.100000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.12500000745058,
+   "frames": 157,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.199999988079071,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.287499994039536,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.700000047683716,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.73750001192093,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 4.800000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.17500000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.462499998509884,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8,
+   "frame": 16.400000035762787,
+   "frame_slow": 18.5625,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3,
+   "frame": 16.5,
+   "frame_slow": 18.575000002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 0,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.100000023841858,
+   "frame": 16.399999976158142,
+   "frame_slow": 18.56249999254942,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.600000023841858,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.200000002980232,
+   "frames": 157,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.800000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.037499986588955,
+   "frames": 157,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.825000002980232,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.899999976158142,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.19999998807907,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.300000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.30000000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.699999988079071,
+   "frame": 16.399999976158142,
+   "frame_slow": 18.55000000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.399999976158142,
+   "frame": 16.30000001192093,
+   "frame_slow": 18.5,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.100000023841858,
+   "frame": 16.399999976158142,
+   "frame_slow": 18.512500002980232,
+   "frames": 157,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.299999952316284,
+   "frame": 16.600000023841858,
+   "frame_slow": 17.987499989569187,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.73750000447035,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.399999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.899999998509884,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.899999976158142,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.049999989569187,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.974999994039536,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.600000023841858,
+   "frame": 16.69999998807907,
+   "frame_slow": 17.837500005960464,
+   "frames": 157,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7,
+   "frame": 16.69999998807907,
+   "frame_slow": 18.412499994039536,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 1,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.300000011920929,
+   "frame": 16.5,
+   "frame_slow": 18.587500005960464,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.300000011920929,
+   "frame": 16.5,
+   "frame_slow": 18.49999999254942,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 6.799999952316284,
+   "frame": 16.399999976158142,
+   "frame_slow": 18.587499998509884,
+   "frames": 157,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.899999976158142,
+   "frame": 16.30000001192093,
+   "frame_slow": 18.62500000745058,
+   "frames": 157,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 4.600000023841858,
+   "frame": 16.5,
+   "frame_slow": 18.475000001490116,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 4.199999988079071,
+   "frame": 16.5,
+   "frame_slow": 18.44999999552965,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.5,
+   "frame": 16.599999964237213,
+   "frame_slow": 18.424999989569187,
+   "frames": 157,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 3.100000023841858,
+   "frame": 16.399999976158142,
+   "frame_slow": 18.462500005960464,
+   "frames": 157,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "before",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.100000023841858,
+   "frame": 16.5,
+   "frame_slow": 18.56250000745058,
+   "frames": 156,
+   "sheet": [
+    1024,
+    568
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.300000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.23750000447035,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 7.099999964237213,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.212499998509884,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.800000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.23750001192093,
+   "frames": 157,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "painted",
+   "way": "card-far",
+   "count": 1000,
+   "work": 4.900000035762787,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.025000005960464,
+   "frames": 156,
+   "sheet": [
+    512,
+    348
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 100,
+   "work": 3.800000011920929,
+   "frame": 16.600000023841858,
+   "frame_slow": 17.912500001490116,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-batch",
+   "count": 1000,
+   "work": 8.099999964237213,
+   "frame": 16.600000023841858,
+   "frame_slow": 17.899999991059303,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 100,
+   "work": 2.900000035762787,
+   "frame": 16.600000023841858,
+   "frame_slow": 17.987499997019768,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  },
+  {
+   "round": 2,
+   "gallery": "after",
+   "model": "detailed",
+   "way": "card-far",
+   "count": 1000,
+   "work": 5.5,
+   "frame": 16.600000023841858,
+   "frame_slow": 18.075000010430813,
+   "frames": 156,
+   "sheet": [
+    1024,
+    660
+   ]
+  }
+ ]
+}

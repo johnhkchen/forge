@@ -1,0 +1,22 @@
+{
+ "about": "Roosevelt: small round spectacles over the walrus moustache. The spectacles, the moustache and the face are his texture's own, with the folds drawn in by the bake; pictured at 192 pixels a metre the rims hold together. Only an eye is drawn behind each lens, where the texture has a pale smudge. Nothing is laid on his low-poly mesh: it models its own spectacles. (Until faces were made clear the band his eyes sit in was painted skin and big round rims were drawn over it; that read as goggles.)",
+ "drawn_on": "detailed",
+ "half_wide": 0.085,
+ "middle": 0.0,
+ "colours": {
+  "ink": [28, 23, 33]
+ },
+ "marks": [
+  {"name": "eye_r", "kind": "block", "at": [-0.039, 0.041], "size": [0.016, 0.016], "mesh": false, "colour": "ink"},
+  {"name": "eye_l", "kind": "block", "at": [0.04, 0.041], "size": [0.016, 0.016], "mesh": false, "colour": "ink"}
+ ],
+ "features": [
+  {"name": "bridge", "kind": "block", "at": [0.0, 0.045], "size": [0.03, 0.012]},
+  {"name": "glass_r", "kind": "ring", "at": [-0.039, 0.041], "size": [0.057, 0.057]},
+  {"name": "glass_l", "kind": "ring", "at": [0.04, 0.041], "size": [0.057, 0.057]},
+  {"name": "eye_r", "kind": "block", "at": [-0.039, 0.041], "size": [0.016, 0.016]},
+  {"name": "eye_l", "kind": "block", "at": [0.04, 0.041], "size": [0.016, 0.016]},
+  {"name": "moustache", "kind": "block", "at": [0.0, 0.0], "size": [0.09, 0.022]},
+  {"name": "mouth", "kind": "block", "at": [0.0, -0.03], "size": [0.03, 0.012]}
+ ]
+}

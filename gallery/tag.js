@@ -23,9 +23,9 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { eyeInBone, choose, place, corners, marchSteps } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture } from "./impostor.js";
-import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, Screen } from "./looks.js";
+import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms } from "./impostor.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, FINE_FROM, withoutHeads } from "./looks.js";
 
 // name: where its poses come from.
 //   glb      a file in the run's folder ("profiles/...") or anywhere the gallery serves ("shots/...")
@@ -396,10 +396,18 @@ uniform int partCount;
 uniform int partBone[20];
 uniform vec3 centers[20];
 uniform float depths[20];
-uniform float pxPerM;
+uniform float fine[20];
 uniform float marchPx;
 uniform float marchMax;
 uniform float farAway;
+uniform float ids;
+uniform float headPass;   // a head on a finer grid (looks.js: Screen): 0 draws the small picture, 1 only the heads that go on the finer one
+uniform vec2 fineSize;    // the finer picture's size in its own pixels; 0 when the look has no finer grid
+uniform float fineFrom;   // a head goes there once a metre at it is this many big pixels
+uniform float fineTimes;
+uniform int headPart;
+flat out float keepDark;
+flat out float who;
 flat out vec4 cell;
 flat out vec2 anchor;
 flat out vec2 heights;
@@ -408,6 +416,7 @@ flat out vec2 lean;
 flat out vec3 deep;
 flat out float size;
 flat out float depthM;
+flat out float pxPerM;
 flat out int steps;
 flat out mat3 facingToEye;
 varying vec2 vSheet;
@@ -415,9 +424,18 @@ varying vec3 vView;
 void main() {
   if (putAway()) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   int part = gl_InstanceID % partCount;
+  if (headPass > 0.5 && part != headPart) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  // this card's number, for a look that draws its line on the finished picture (looks.js: cardNumber)
+  who = ids > 0.5 ? (1.0 + float((gl_InstanceID / partCount) % 15) * 16.0 + float(part % 16)) / 255.0 : 1.0;
+  pxPerM = fine[part];
   mat4 bone = feet() * fromTable(partBone[part] * 12, runner.w);
   mat3 turn = mat3(bone);
   vec3 head = bone[3].xyz;
+  // a head near enough goes on the finer grid: left out of the small picture, drawn in the heads' own drawing
+  vec4 headClip = projectionMatrix * viewMatrix * vec4(head, 1.0);
+  bool finer = part == headPart && fineSize.y > 0.0 && headClip.w > 0.0 && fineSize.y / fineTimes * 0.5 * projectionMatrix[1][1] / headClip.w >= fineFrom;
+  if ((headPass > 0.5) != finer) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  keepDark = finer ? 1.0 : 0.0;
   vec3 middle = head + turn * centers[part];
   vec3 toward = normalize(cameraPosition - middle);
   vec3 v = toward * turn;
@@ -463,9 +481,13 @@ void main() {
   size = 1.0;
   depthM = depths[part];
   gl_Position = projectionMatrix * vec4(vView, 1.0);
+  if (finer) { // slid so the bone's head lands on a corner of a fine pixel: his face then moves a whole pixel at a time
+    vec2 at = (headClip.xy / headClip.w * 0.5 + 0.5) * fineSize;
+    gl_Position.xy += (floor(at + 0.5) - at) * 2.0 / fineSize * gl_Position.w;
+  }
 }`;
 // The cards page's own pixel shader, told that what was one card's settings now comes with each card.
-const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "int steps", "mat3 facingToEye"]
+const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who", "float keepDark"]
   .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT);
 
 // Every runner's meshes in one draw a piece: each point is moved by its bones' rows of the table.
@@ -800,9 +822,9 @@ class Field {
         shape.setIndex([0, 1, 2, 0, 2, 3]);
         const quad = new THREE.Mesh(shape, new THREE.ShaderMaterial({ vertexShader: CARD_VERTEX, fragmentShader: CARD_FRAGMENT, side: THREE.DoubleSide, uniforms: {
           colourMap: { value: sheet.colour }, dataMap: { value: sheet.data }, facingToEye: { value: new THREE.Matrix3() }, sheetSize: { value: new THREE.Vector2(...sheet.size) },
-          pxPerM: { value: card.px_per_m }, cell: { value: new THREE.Vector4() }, anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() },
+          pxPerM: { value: density(card, part) }, cell: { value: new THREE.Vector4() }, anchor: { value: new THREE.Vector2() }, heights: { value: new THREE.Vector2() },
           back: { value: new THREE.Vector4() }, lean: { value: new THREE.Vector2() }, deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m },
-          steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...this.shade } }));
+          steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ...this.shade } }));
         quad.frustumCulled = false;
         quad.matrixAutoUpdate = false;
         group.add(quad);
@@ -813,6 +835,7 @@ class Field {
       layer.place = () => {
         const eye = this.camera.position.toArray();
         const own = this.sharing() ? null : this.ownRunners();
+        const told = cardLine(card, this.look); // what this look does with the sheet's ink line
         for (let i = 0; i < n; i++) {
           const at = this.row(i) * this.table.wide * 4;
           if (!own) root.makeRotationY(game.heading[i]).setPosition(game.x[i], 0, game.z[i]);
@@ -822,7 +845,7 @@ class Field {
             const view = choose(sheet.dirs, eyeInBone(world.elements, part.center, eye), null, 0, card.blend_deg).first;
             const cell = sheet.cells[part.name][view];
             const where = place(sheet.views[view], world.elements, part.center, eye);
-            const spots = corners(where, cell, card.px_per_m, true);
+            const spots = corners(where, cell, density(card, part), true);
             const pos = quad.geometry.attributes.position, uv = quad.geometry.attributes.uv;
             spots.world.forEach((s, k) => pos.setXYZ(k, s[0], s[1], s[2]));
             spots.sheet.forEach((s, k) => uv.setXY(k, s[0], s[1]));
@@ -834,7 +857,9 @@ class Field {
             u.back.value.set(...where.back);
             u.lean.value.set(...where.lean);
             u.deep.value.set(...where.deep);
-            u.steps.value = marchSteps(where, cell, card.px_per_m, card.march);
+            u.steps.value = marchSteps(where, cell, density(card, part), card.march);
+            u.line.value = told.line;
+            u.who.value = told.ids ? cardNumber(i, p) : 1;
             u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, world));
           });
         }
@@ -902,14 +927,23 @@ class Field {
       partBone: { value: pad(parts.map((part) => this.table.names.indexOf(part.bone)), () => 0) },
       centers: { value: pad(parts.map((part) => new THREE.Vector3(...part.center)), () => new THREE.Vector3()) },
       depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
-      sheetSize: { value: new THREE.Vector2(...sheet.size) }, pxPerM: { value: card.px_per_m }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
-      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 } } });
+      fine: { value: pad(parts.map((part) => density(card, part)), () => 0) },
+      sheetSize: { value: new THREE.Vector2(...sheet.size) }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
+      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ids: { value: 0 },
+      headPass: this.screen.told.headPass, fineSize: { value: new THREE.Vector2() }, fineFrom: { value: FINE_FROM }, fineTimes: { value: 1 }, headPart: { value: parts.findIndex((part) => part.name === "head") } } });
     const mesh = new THREE.Mesh(shape, paint);
+    mesh.layers.enable(1); // its heads may go on the finer grid
     mesh.frustumCulled = false;
     group.add(mesh);
     return {
       place: () => {
         const from = this.boneSource();
+        const told = cardLine(card, this.look); // what this look does with the sheet's ink line
+        paint.uniforms.line.value = told.line;
+        paint.uniforms.ids.value = told.ids ? 1 : 0;
+        const times = this.look.screen?.heads || 0, [wide, tall] = this.screen.small(this.look);
+        paint.uniforms.fineSize.value.set(wide * times, tall * times);
+        paint.uniforms.fineTimes.value = times || 1;
         paint.uniforms.poseTex.value = from.tex;
         for (let i = 0; i < n; i++) for (let p = 0; p < parts.length; p++) from.runner(i, spots.array, (i * parts.length + p) * 4);
         spots.needsUpdate = true;
@@ -948,7 +982,7 @@ class Field {
     this.marker.position.set(game.x[it], 0, game.z[it]);
     layer.hull?.(this.look.hull !== false); // bold ink draws its lines on the finished picture, for cards and meshes alike
     const t2 = performance.now();
-    this.screen.render(this.scene, this.camera, this.look);
+    this.screen.render(this.scene, this.camera, /^(card|mix)/.test(state.way) ? this.look : withoutHeads(this.look));
     const t3 = performance.now();
     let t4 = t3;
     if (this.measuring) { // wait for the graphics card to finish, so its share is in the time
@@ -981,7 +1015,7 @@ class Field {
     return {
       ready: Boolean(this.game && this.table), count: this.game?.count, way: this.state.way, look: this.state.look, model: this.state.model, shared: this.state.shared, views: this.state.views,
       frame_ms: mean(t.frame), slow_ms: slow(t.frame), fps: 1000 / Math.max(mean(t.frame), 1e-6), anim_ms: mean(t.anim), place_ms: mean(t.place), draw_ms: mean(t.draw), work_ms: mean(t.work),
-      work_slow_ms: slow(t.work), calls: this.info?.calls, triangles: this.info?.triangles, memory: this.table ? this.memory() : null, pixels: [size.x, size.y], tags: this.game?.tags, it: this.game?.it,
+      work_slow_ms: slow(t.work), calls: this.info?.calls, triangles: this.info?.triangles, memory: this.table && this.sheet ? this.memory() : null, pixels: [size.x, size.y], tags: this.game?.tags, it: this.game?.it,
       error: this.error || null,
     };
   }
@@ -1070,7 +1104,7 @@ export function tagPage({ run, sets, h, loader }) {
   const again = h("button", { class: "toggle clay-button clay-button--soft", type: "button", onclick: () => field.restart() }, "Start again");
 
   const show = () => {
-    if (!field?.game || !field.table) return;
+    if (!field?.game || !field.table || !field.sheet) return;
     const r = field.reading();
     facts.replaceChildren(
       fact("Frames a second", r.fps.toFixed(0), `${r.frame_ms.toFixed(1)} ms a frame, ${r.slow_ms.toFixed(1)} in the slow 5%`),

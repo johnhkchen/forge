@@ -1,0 +1,102 @@
+{
+ "take": "crew-candy-shop",
+ "seconds": 12.0,
+ "eye": "crew",
+ "face_m": 0.15,
+ "eye_m": 0.03,
+ "views": {
+  "crew pixel-both-cards": [
+   {
+    "role": "frontman",
+    "away_m": 4.83,
+    "px_per_m": 118.0,
+    "face_px": 17.7,
+    "eye_px": 3.5
+   },
+   {
+    "role": "left",
+    "away_m": 6.5,
+    "px_per_m": 87.7,
+    "face_px": 13.2,
+    "eye_px": 2.6
+   },
+   {
+    "role": "right",
+    "away_m": 6.45,
+    "px_per_m": 88.4,
+    "face_px": 13.3,
+    "eye_px": 2.7
+   }
+  ],
+  "close pixel-both-cards": [
+   {
+    "role": "frontman",
+    "away_m": 1.3,
+    "px_per_m": 359.4,
+    "face_px": 53.9,
+    "eye_px": 10.8
+   },
+   {
+    "role": "left",
+    "away_m": 1.3,
+    "px_per_m": 359.4,
+    "face_px": 53.9,
+    "eye_px": 10.8
+   },
+   {
+    "role": "right",
+    "away_m": 1.3,
+    "px_per_m": 359.4,
+    "face_px": 53.9,
+    "eye_px": 10.8
+   }
+  ],
+  "crew pixel-screen-meshes": [
+   {
+    "role": "frontman",
+    "away_m": 4.83,
+    "px_per_m": 118.0,
+    "face_px": 17.7,
+    "eye_px": 3.5
+   },
+   {
+    "role": "left",
+    "away_m": 6.5,
+    "px_per_m": 87.7,
+    "face_px": 13.2,
+    "eye_px": 2.6
+   },
+   {
+    "role": "right",
+    "away_m": 6.45,
+    "px_per_m": 88.4,
+    "face_px": 13.3,
+    "eye_px": 2.7
+   }
+  ],
+  "close pixel-screen-meshes": [
+   {
+    "role": "frontman",
+    "away_m": 1.3,
+    "px_per_m": 359.4,
+    "face_px": 53.9,
+    "eye_px": 10.8
+   },
+   {
+    "role": "left",
+    "away_m": 1.3,
+    "px_per_m": 359.4,
+    "face_px": 53.9,
+    "eye_px": 10.8
+   },
+   {
+    "role": "right",
+    "away_m": 1.3,
+    "px_per_m": 359.4,
+    "face_px": 53.9,
+    "eye_px": 10.8
+   }
+  ]
+ },
+ "rows": 304
+}

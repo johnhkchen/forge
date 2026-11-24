@@ -1,0 +1,123 @@
+{
+ "folder": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-impostor-comic-joined",
+ "size": [
+  480,
+  540
+ ],
+ "eye_away_m": 4.4,
+ "relief": true,
+ "clips": {
+  "walk": {
+   "glb": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-walk.glb",
+   "frames": 27,
+   "seconds": 0.87,
+   "triangles": 9926,
+   "eyes": {
+    "front": {
+     "26": {
+      "frames_measured": 27,
+      "outline": 0.9793,
+      "outline_worst": 0.9734,
+      "colour": 6.0,
+      "gap_cm": 1.44,
+      "gap_cm_worst": 3.06,
+      "seam_cm": 1.28,
+      "seam_cm_worst": 3.06,
+      "spill_cm": 1.31,
+      "spill_cm_worst": 2.18,
+      "gap_pct": 1.26,
+      "spill_pct": 0.82,
+      "pops_per_s": 32.31,
+      "pop_pct": 3.22,
+      "pop_pct_worst": 9.3
+     }
+    },
+    "quarter": {
+     "26": {
+      "frames_measured": 27,
+      "outline": 0.9701,
+      "outline_worst": 0.9569,
+      "colour": 7.0,
+      "gap_cm": 1.41,
+      "gap_cm_worst": 2.18,
+      "seam_cm": 1.18,
+      "seam_cm_worst": 1.31,
+      "spill_cm": 2.44,
+      "spill_cm_worst": 3.93,
+      "gap_pct": 1.28,
+      "spill_pct": 1.76,
+      "pops_per_s": 30.0,
+      "pop_pct": 4.15,
+      "pop_pct_worst": 7.13
+     }
+    },
+    "side": {
+     "26": {
+      "frames_measured": 27,
+      "outline": 0.9585,
+      "outline_worst": 0.9514,
+      "colour": 6.3,
+      "gap_cm": 1.96,
+      "gap_cm_worst": 3.06,
+      "seam_cm": 1.67,
+      "seam_cm_worst": 2.18,
+      "spill_cm": 4.45,
+      "spill_cm_worst": 6.55,
+      "gap_pct": 1.75,
+      "spill_pct": 2.5,
+      "pops_per_s": 0.0,
+      "pop_pct": 0.0,
+      "pop_pct_worst": 0.0
+     }
+    },
+    "back": {
+     "26": {
+      "frames_measured": 27,
+      "outline": 0.9614,
+      "outline_worst": 0.9508,
+      "colour": 6.9,
+      "gap_cm": 2.28,
+      "gap_cm_worst": 3.93,
+      "seam_cm": 2.15,
+      "seam_cm_worst": 3.93,
+      "spill_cm": 2.7,
+      "spill_cm_worst": 4.8,
+      "gap_pct": 2.36,
+      "spill_pct": 1.56,
+      "pops_per_s": 54.23,
+      "pop_pct": 4.29,
+      "pop_pct_worst": 9.41
+     }
+    }
+   }
+  },
+  "rom": {
+   "glb": "/Users/johnchen/swe/ai/experiments/3d/runpod_trellis2_blender_claude/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s/profiles/painted-rom.glb",
+   "frames": 313,
+   "seconds": 10.4,
+   "triangles": 9926,
+   "eyes": {
+    "quarter": {
+     "26": {
+      "frames_measured": 313,
+      "outline": 0.9603,
+      "outline_worst": 0.9336,
+      "colour": 8.0,
+      "gap_cm": 2.14,
+      "gap_cm_worst": 4.8,
+      "seam_cm": 1.68,
+      "seam_cm_worst": 4.8,
+      "spill_cm": 3.34,
+      "spill_cm_worst": 6.55,
+      "gap_pct": 1.83,
+      "spill_pct": 2.24,
+      "pops_per_s": 18.56,
+      "pop_pct": 4.73,
+      "pop_pct_worst": 13.75
+     }
+    }
+   }
+  }
+ },
+ "seconds": 151.2
+}
