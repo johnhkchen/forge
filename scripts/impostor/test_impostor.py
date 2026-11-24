@@ -20,12 +20,23 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             the middle, never smaller than the least size; from the side the near one is narrower and the far one
             is not drawn, from behind neither is; a turned face keeps its far eye; a hat's brim well in front
             hides the eyes, and one close over them hides only marks told to keep within 3 cm; a wash paints the front and leaves the back; every recipe in faces/ reads. With RUNS_DIR
-            holding a sheet baked with a face (profiles/*-impostor-pixel-faces): its head is pictured finer
+            holding a sheet baked with a face (profiles/*-impostor-pixel-joined, or the older *-pixel-faces): its head is pictured finer
             than its body, both eyes are in a good share of its pictures, and its head draws the size the
             plain pixel sheet's does
-  baked     with RUNS_DIR holding a baked character (profiles/*-impostor): its sheets are the size its card
-            says, every part has every picture, a bone's frame in the file is where its skin was bound, and
-            a frame of its walk draws as one whole figure
+  joints    a limb whose two parts' weights meet in a fringe of splinters is cut along one clean ring, and
+            each part laps the other by the same share of the limb's radius all the way round; the joint gets a
+            ball as big as fits; two parts drawn
+            side by side, each with its own ink line all round it, show no line where they meet (the line is a
+            shell behind the surface, and the part next door covers it) and keep it round the outside; with the
+            line drawn on the finished picture instead, it is one pixel wide, wholly outside the figure, and
+            never between two parts at the same depth; an arm in front of a chest still gets its line, and so
+            does one figure in front of another; bold ink leaves a small step between two cards of one figure
+            alone and still inks a real one; gallery/looks.js has the same numbers
+  baked     with RUNS_DIR holding a baked character (profiles/*-impostor-comic-joined, or the older
+            *-impostor): its sheets are the size its card says, every part has every picture, a bone's frame in
+            the file is where its skin was bound, and a frame of its walk draws as one whole figure; a sheet
+            baked since the joints were mended marks its ink line, says how every joint was lapped, and its
+            walk shows no ink where two parts meet
 """
 
 import glob
@@ -257,8 +268,149 @@ def test_page():
     check("... and puts every card's corners in the same place, and reads its picture the same way", worst < 1e-9, "worst %.2g" % worst)
 
 
+def tube(rng, radius=0.05, around=48, rings=61):
+    """A limb: a tube along y, a ring of points every centimetre, two parts whose weights meet near the middle in
+    a fringe of teeth 8 cm long and 2 cm wide, the way weights borrowed from a coarse mesh do. Every point is
+    there twice, as a mesh from a .glb has its points along a seam."""
+    ys = np.linspace(-0.3, 0.3, rings)
+    angles = 2.0 * np.pi * np.arange(around) / around
+    points = np.array([[radius * math.cos(a), y, radius * math.sin(a)] for y in ys for a in angles])
+    line = np.where((np.arange(around) // 3) % 2 == 0, 0.04, -0.04) + rng.normal(size=around) * 0.004
+    upper = (points[:, 1] > np.tile(line, rings)).astype(np.float32)
+    pull = np.stack([1.0 - upper, upper], axis=1)
+    faces = [(r * around + k, r * around + (k + 1) % around, (r + 1) * around + (k + 1) % around, (r + 1) * around + k) for r in range(rings - 1) for k in range(around)]
+    edges = [(f[i], f[(i + 1) % 4]) for f in faces for i in range(4)]
+    twice = len(points)  # the second copy of every point: odd faces use it, so the mesh is in pieces until its points are welded
+    faces = [tuple(c + twice for c in f) if i % 2 else f for i, f in enumerate(faces)]
+    return np.concatenate([points, points]), np.concatenate([pull, pull]), np.array(edges), np.array(faces).reshape(-1), np.arange(len(faces)) * 4, np.full(len(faces), 4), radius
+
+
+def two_plates(folder, radius=0.1, ppm=192.0, line_px=3):
+    """Two parts, each a round plate through its own bone's head and facing its picture's eye, baked with an ink
+    line all round and the line marked: the cut end of a limb, as its neighbour's picture has it."""
+    views = impostor.views_of("26")
+    half = int(math.ceil(radius * ppm)) + line_px + 2
+    side = 2 * half
+    ys, xs = np.mgrid[0:side, 0:side]
+    x, y = (xs + 0.5 - half) / ppm, (ys + 0.5 - half) / ppm
+    there = x * x + y * y < radius * radius
+    line = ~there & (x * x + y * y < (radius + line_px / ppm) ** 2)
+    z = np.zeros_like(x)
+    depth_m = radius + 0.02
+    cols = 6
+    rows = (len(views) + cols - 1) // cols
+    colour = np.zeros((rows * (side + 2) + 2, cols * (side + 2) + 2, 4), dtype=np.uint8)
+    data = np.zeros(colour.shape[:2] + (3,), dtype=np.uint8)
+    cells = []
+    for i, view in enumerate(views):
+        x0, y0 = 2 + (i % cols) * (side + 2), 2 + (i // cols) * (side + 2)
+        normal = np.broadcast_to(np.array(view["d"]), x.shape + (3,))
+        packed = np.concatenate([impostor.pack_normal(normal), np.clip(z / depth_m * 0.5 + 0.5, 1 / 255.0, 1.0)[..., None]], axis=-1)
+        packed[~there] = (0.5, 0.5, 0.0)
+        packed[line] = (0.0, 0.0, 0.5)  # the line: marked, and as high as the surface beside it
+        colour[y0:y0 + side, x0:x0 + side] = np.where((there | line)[..., None], (200, 200, 200, 255), (0, 0, 0, 0))
+        data[y0:y0 + side, x0:x0 + side] = np.round(packed * 255.0)
+        cells.append([x0, y0, side, side, half, half, 0.0, 0.01])
+    impostor.write_png(os.path.join(folder, "c.png"), colour)
+    impostor.write_png(os.path.join(folder, "d.png"), data)
+    card = {"px_per_m": ppm, "default_views": "26", "line_marked": True, "parts": [{"name": n, "bone": n, "center": [0, 0, 0], "depth_m": depth_m} for n in "ab"],
+            "sets": {"26": {"color": "c.png", "data": "d.png", "size": [colour.shape[1], colour.shape[0]], "views": views, "cells": {"a": cells, "b": cells}}}}
+    with open(os.path.join(folder, "impostor.json"), "w") as f:
+        json.dump(card, f)
+    return radius
+
+
+def test_joints():
+    # the cut
+    rng = np.random.default_rng(11)
+    points, pull, edges, corners, begin, sides, radius = tube(rng)
+    middle = np.add.reduceat(points[corners], begin, axis=0)[:, 1] / 4.0
+    joint = [(0, 1, np.array([0.01, 0.0, 0.0]))]  # the joint a centimetre off the limb's middle
+    raw, _, _, _ = impostor.round_cut(points, pull, edges, corners, begin, sides, joint, 0.85, 0.0)
+    owner, lapped, rings, balls = impostor.round_cut(points, pull, edges, corners, begin, sides, joint, 0.85, 0.02)
+    ragged = middle[raw == 0].max() - middle[raw == 1].min()
+    clean = middle[owner == 0].max() - middle[owner == 1].min()
+    check("a limb whose weights meet in a fringe of splinters is cut along one clean ring", ragged > 0.06 and clean < 0.012, "the two parts' faces run %.1f cm into each other as the weights have them, %.1f cm cut" % (ragged * 100, clean * 100))
+    check("... and the ring's radius is the limb's", abs(rings[(0, 1)] - radius) < 0.004, "%.1f cm" % (rings[(0, 1)] * 100))
+    line = 0.5 * (middle[owner == 0].max() + middle[owner == 1].min())
+    column = (np.arange(len(owner)) % 48)
+    reach = [(float((middle[lapped[0] & (column == k)]).max() - line), float(line - (middle[lapped[1] & (column == k)]).min())) for k in range(48)]
+    check("each part laps the other by 0.85 of the radius, all the way round, and takes nothing of its own", not (lapped[0] & (owner == 0)).any() and not (lapped[1] & (owner == 1)).any()
+          and all(0.03 < r < 0.055 for pair in reach for r in pair), "%.1f to %.1f cm" % (100 * min(min(p) for p in reach), 100 * max(max(p) for p in reach)))
+
+    size, made = balls[(0, 1)]
+    check("the joint's ball is as big as fits inside the limb there, and is made of the faces round the ring, both parts'", 0.03 < size < 0.04 and (owner[made] == 0).any() and (owner[made] == 1).any()
+          and float(np.abs(middle[made] - line).max()) < 0.065, "%.1f cm across, faces within %.1f cm of the ring" % (200 * size, 100 * np.abs(middle[made] - line).max()))
+
+    # the line round a part, where two parts meet
+    folder = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        radius = two_plates(folder)
+        character = impostor.Character(folder)
+        pose = {"a": np.eye(4), "b": np.eye(4)}
+        pose["a"][:3, 3], pose["b"][:3, 3] = (-0.06, 1.0, 0.0), (0.06, 1.0, 0.0)
+        eye = impostor.Eye([0.0, 1.0, 3.0], [0.0, 1.0, 0.0], 8.0, (240, 240))
+        per_px = eye.m_per_px([0.0, 1.0, 0.0])
+        ys, xs = np.mgrid[0:240, 0:240]
+        disc = lambda cx, grow_px: (xs + 0.5 - 120 - cx / per_px) ** 2 + (ys + 0.5 - 120) ** 2 < (radius / per_px + grow_px) ** 2
+        well_in, outside = disc(-0.06, -3) | disc(0.06, -3), ~(disc(-0.06, 1.5) | disc(0.06, 1.5))
+        dark = lambda picture: (picture[..., 3] > 0) & (picture[..., :3].max(axis=-1) < 60)
+        picture, _, _ = impostor.draw(character, pose, eye)
+        check("two parts side by side, each with its own line all round: no line shows where they meet", int((dark(picture) & well_in).sum()) == 0, "%d dark pixels inside" % (dark(picture) & well_in).sum())
+        check("... and the line is still there round the outside of the two", int((dark(picture) & outside).sum()) > 150, "%d pixels of line" % (dark(picture) & outside).sum())
+        keep = impostor.LINE_BACK_M
+        impostor.LINE_BACK_M = 0.0
+        at_surface, _, _ = impostor.draw(character, pose, eye)
+        impostor.LINE_BACK_M = keep
+        check("(drawn at the surface's own depth, as it used to be, each part's line crosses the other)", int((dark(at_surface) & well_in).sum()) > 40, "%d dark pixels inside" % (dark(at_surface) & well_in).sum())
+        # the same, with the line drawn on the finished picture
+        small = impostor.Eye([0.0, 1.0, 3.0], [0.0, 1.0, 0.0], 8.0, (80, 80))
+        who = np.zeros((80, 80), dtype=np.int32)
+        picture, depth, _ = impostor.draw(character, pose, small, line="off", who=who)
+        got = picture[..., 3] > 0
+        lines = impostor.grid_line(depth, who, small)
+        beside = np.zeros_like(got)
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            beside |= np.roll(got, (dy, dx), axis=(0, 1))
+        check("left out of the cards (the sheet's line is not drawn), the two parts are bare discs", int(dark(picture).sum()) == 0 and set(np.unique(who)) == {0, 1, 2})
+        check("the line drawn on the finished picture is one pixel wide, just outside the figure, all the way round", bool((lines == (beside & ~got)).all()), "%d pixels of line" % lines.sum())
+        # an arm in front of a chest, and one figure in front of another
+        flat = np.full((40, 40), np.inf)
+        flat[5:35, 5:35] = 4.0
+        cards = np.where(np.isfinite(flat), 1, 0)
+        step = flat.copy()
+        step[5:35, 20:35] = 4.2
+        chest_arm = cards.copy()
+        chest_arm[5:35, 20:35] = 2
+        inside = np.zeros_like(cards, dtype=bool)
+        inside[8:32, 8:32] = True
+        check("one part behind another of the same figure by 20 cm gets a line, on the further one", bool(impostor.grid_line(step, chest_arm, small)[8:32, 20].all()) and not impostor.grid_line(step, chest_arm, small)[8:32, 19].any())
+        step[5:35, 20:35] = 4.03
+        check("... by 3 cm, the cards not quite agreeing, none", not (impostor.grid_line(step, chest_arm, small) & inside).any())
+        other = chest_arm.copy()
+        other[5:35, 20:35] = 1 + impostor.PARTS_A_FIGURE
+        check("... and another figure 3 cm behind does get one: it is somebody else", bool(impostor.grid_line(step, other, small)[8:32, 20].all()))
+        slope = np.where(np.isfinite(flat), 4.0 + 0.08 * np.arange(40)[None, :], np.inf)
+        check("a surface sloping steeply away is not a step", not (impostor.grid_line(slope, cards, small) & inside).any())
+        # bold ink
+        big = impostor.Eye([0.0, 1.0, 3.0], [0.0, 1.0, 0.0], 8.0, (40, 40))
+        step[5:35, 20:35] = 4.06
+        check("bold ink: a 6 cm step between two cards of one figure is left alone, and inked when nobody says who is who", not (impostor.bold_lines(step, chest_arm, big) & inside).any() and bool((impostor.bold_lines(step, None, big) & inside).any()))
+        step[5:35, 20:35] = 4.2
+        check("... a 20 cm step between them is inked", bool((impostor.bold_lines(step, chest_arm, big) & inside).any()))
+    finally:
+        shutil.rmtree(folder)
+    with open(os.path.join(REPO, "gallery", "looks.js")) as f:
+        page = f.read()
+    with open(os.path.join(REPO, "gallery", "impostor.js")) as f:
+        page += f.read()
+    check("the page has the same numbers: how far a line must step, the seam bold ink forgives, sixteen parts a figure, the line's colour", all(text in page for text in (
+        "breakM: { value: %g }" % impostor.BREAK_M, "seamM: { value: %g }" % impostor.SEAM_M, "1 + %d * (figure %% 15) + (part %% %d)" % (impostor.PARTS_A_FIGURE, impostor.PARTS_A_FIGURE),
+        "lineInk: { value: new THREE.Color(0x%02x%02x%02x) }" % tuple(int(round(c * 255)) for c in impostor.INK))))
+
+
 def test_baked(runs):
-    folders = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor", "impostor.json")))
+    folders = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-comic-joined", "impostor.json"))) or sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor", "impostor.json")))
     if not folders:
         print("    skipped  a baked character (none in %s: just impostor <run> <version> makes one)" % runs)
         return
@@ -270,6 +422,16 @@ def test_baked(runs):
         complete = all(len(sheet["cells"][p["name"]]) == len(sheet["views"]) and all(c[2] > 0 and c[0] + c[2] <= sheet["size"][0] and c[1] + c[3] <= sheet["size"][1] for c in sheet["cells"][p["name"]]) for p in card["parts"])
         check("view set %s: the sheet is the size the card says, and every part has every picture on it" % name, list(colour.shape[1::-1]) == sheet["size"] and complete)
     check("it is cut into about fifteen parts, each with triangles of its own", 12 <= len(card["parts"]) <= 20 and all(p["own_triangles"] > 0 for p in card["parts"]), "%d parts" % len(card["parts"]))
+    if card.get("line_marked"):
+        joints = card.get("joints") or []
+        check("every joint has a ring where its two parts meet, a lap and a ball", len(joints) == len(card["parts"]) - 1 and all(j["ring_cm"] > 1 and 0 < j["lap_cm"] < j["ring_cm"] and j["ball_cm"] > 1 for j in joints),
+              "; ".join("%s %.0f/%.0f/%.0f" % (j["bone"], j["ring_cm"], j["lap_cm"], j["ball_cm"]) for j in joints[:4]) + " cm ...")
+        sheet = card["sets"][card["default_views"]]
+        data = impostor.read_png(os.path.join(folder, sheet["data"]))
+        colour = impostor.read_png(os.path.join(folder, sheet["color"]))
+        line = (data[..., 0] == 0) & (data[..., 1] == 0) & (data[..., 2] > 0)
+        check("the ink line's pixels are marked in the data sheet, and the colour sheet holds no ink of its own there", 0.02 < line.sum() / float((data[..., 2] > 0).sum()) < 0.35 and bool((colour[line][:, 3] == 255).all())
+              and float(colour[line][:, :3].max(axis=1).mean()) > 60, "%.0f%% of the sheet's pixels are line" % (100.0 * line.sum() / (data[..., 2] > 0).sum()))
     glb = os.path.join(os.path.dirname(folder), card["source"])
     if not os.path.isfile(glb):
         return
@@ -410,13 +572,14 @@ def test_faces(runs):
     check("a run's recipe is found by the run's name without its date", pixel_face.recipe_for("/somewhere/runs/2026-11-20T14-02-45-roosevelt-wrestler-1890s") is not None and pixel_face.recipe_for("/somewhere/runs/2026-01-01T00-00-00-nobody") is None)
 
     # a sheet baked with a face
-    folders = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-pixel-faces", "impostor.json")))
+    folders = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-pixel-joined", "impostor.json")) + glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-pixel-faces", "impostor.json")))
+    folders = [path for path in folders if "face" in json.load(open(path))]
     if not folders:
         print("    skipped  a sheet baked with a face (none in %s: just impostor-detailed <run> makes one for a character with a recipe)" % runs)
         return
     for path in folders:
         folder = os.path.dirname(path)
-        who = os.path.basename(os.path.dirname(os.path.dirname(folder))).split("-", 5)[-1]
+        who = os.path.basename(os.path.dirname(os.path.dirname(folder))).split("-", 5)[-1] + (", joints mended" if folder.endswith("-joined") else "")
         character = impostor.Character(folder)
         card = character.card
         head = next(p for p in card["parts"] if p["name"] == "head")
@@ -424,7 +587,7 @@ def test_faces(runs):
         check("%s: the head is pictured finer than the body, a whole number of times" % who, times > 1 and abs(times - round(times)) < 1e-9, "%g times" % times)
         eyes = {k: v for k, v in card["face"]["pictures_with"].items() if k.startswith("eye")}
         check("%s: every eye is in at least 8 of the head's %d pictures" % (who, len(character.views)), bool(eyes) and min(eyes.values()) >= 8, str(eyes))
-        plain = folder[:-len("-faces")]
+        plain = folder[:-len("-joined" if folder.endswith("-joined") else "-faces")]  # the sheet with the head as coarse as the body
         glb = os.path.join(os.path.dirname(folder), card["plays"] + "-walk.glb")
         if not (os.path.isfile(os.path.join(plain, "impostor.json")) and os.path.isfile(glb)):
             continue
@@ -434,19 +597,21 @@ def test_faces(runs):
         at = pose["head"][:3, 3]
         eye = impostor.Eye([at[0] + 0.4, at[1] + 0.1, at[2] + 3.0], [at[0], at[1] + 0.05, at[2]], 12.0, (200, 200))
         boxes = []
-        for which in (character, impostor.Character(plain)):
+        for which in (impostor.Character(plain), character):
             picture, _, _ = impostor.draw(which, pose, eye, only=["head"])
             ys, xs = np.where(picture[..., 3] > 0)
-            boxes.append((xs.min(), xs.max(), ys.min(), ys.max()))
+            if not boxes:
+                floor = ys.max() - 0.6 * (ys.max() - ys.min())  # the head itself: how far down the neck a sheet's head part reaches is the cut's business
+            boxes.append((xs[ys >= floor].min(), xs[ys >= floor].max(), ys.max()))
         off = max(abs(int(a) - int(b)) for a, b in zip(*boxes))
-        wide = boxes[1][1] - boxes[1][0]
+        wide = boxes[0][1] - boxes[0][0]
         check("%s: the finer head draws where and as big as the plain sheet's head does (within 4%% of its width)" % who, off <= max(2, 0.04 * wide), "%d pixels off on a head %d wide" % (off, wide))
 
 
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("faces", lambda: test_faces(runs)), ("baked", lambda: test_baked(runs))]
+             ("page", test_page), ("joints", test_joints), ("faces", lambda: test_faces(runs)), ("baked", lambda: test_baked(runs))]
     failed = 0
     for name, case in cases:
         print(name)

@@ -1,25 +1,37 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--head-px 2] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor]
+        [--look comic|pixel|joe] [--head-px 2] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
-its frame there) and writes <run>/profiles/<profile>-impostor/:
+its frame there) and writes <run>/profiles/<profile>-impostor-<look>-joined/ (pages older than the mended
+joints read <profile>-impostor/ and <profile>-impostor-<look>/, which this leaves alone):
 
     impostor.json            the parts, their bones, the view sets, where each picture is on its sheet
                              ("cells": x, y, wide, tall on the sheet from its bottom left; where the bone's
                              head is in the picture; the lowest and highest its surface stands, in metres)
-    views<N>-color.png       every part from every direction of set N: flat comic colour and the ink line
+    views<N>-color.png       every part from every direction of set N: flat comic colour (no line: the page
+                             paints the line's pixels itself)
     views<N>-data.png        the same pictures as numbers: which way the surface faces (red, green) and
-                             how far it stands toward the eye (blue; 0 means nothing is there)
+                             how far it stands toward the eye (blue; 0 means nothing is there). A pixel of the
+                             ink line round the part has 0 for both of its facing's numbers: that marks it
 
-How a part is cut. Every face goes to the part whose bones pull on it most (fingers fold into the hand,
-toes into the foot, shoulders and neck into the chest; a bone the list does not know folds into the
-nearest one above it that it does). Then each part also takes the faces next door that its bones pull
-on by at least --overlap, so two parts lap over each other at a joint and a bent elbow stays closed.
-The trunk's parts (hips, spine, chest, head) lap much further (--trunk-overlap): they are thick, so a card
-drawn a little off its true direction slides its front surface sideways by centimetres, and they hardly
-bend against each other, so a long lap never pokes out.
+How a part is cut (cut_round). Every face goes to the part whose bones pull on it most (fingers fold into the
+hand, toes into the foot, shoulders and neck into the chest; a bone the list does not know folds into the
+nearest one above it that it does), the pull first evened out along the surface over --smooth-cm so the line
+between two parts is a clean ring and not a fringe. Then two parts that meet at a joint each take everything
+of the other's within reach of the ring where they meet (--lap times the ring's own radius), and the part
+below the joint carries a ball in it: the faces round the ring pulled in onto a ball about the joint, --ball
+of the room there is inside the body. A bend opens the outside of a joint; the ball is what shows through,
+and it never pokes out, where a lap long enough to close a bent knee would stand out as a spur. --lap 0
+cuts the old way instead: each part takes the faces next door that its bones pull on by at least --overlap
+(--trunk-overlap for the hips, spine, chest and head), with nothing evened out.
+
+The line round a part. Every part is pictured with its own ink line all the way round it, and the line's
+pixels are marked in the data sheet. Drawn at the surface's own depth such a line crosses the figure at every
+joint, where one part's edge lies on the next part. So the page either stands the line a little behind the
+surface, where the part next door covers it, or leaves it out and draws one line round the whole figure on the
+finished picture (gallery/looks.js).
 
 How a part is pictured. The part is laid in its bone's own frame and drawn with no perspective from
 each direction of the set (impostor.py: views_of), by toon.py with the tones of light switched off:
@@ -33,14 +45,12 @@ given another version's skeleton (rig_detailed.py) is pictured, and the cards th
 routine and fights. --title is what the page calls this choice. --soften is how many pixels wide toon.py
 reads a texture at (smaller is flatter; a detailed mesh wants more than a painted one).
 
---look bakes a sheet for one of the page's other looks, into <version>-impostor-<look>/:
+--look bakes a sheet for one of the page's other looks, into <version>-impostor-<look>-joined/:
     pixel   pixel art: 48 pixels a metre, no smoothing, every colour snapped to the 32 this character is most
             made of, a line one pixel wide drawn round each picture; the page reads it without smoothing either.
             When the character has a recipe for a face drawn on this model (pixel_face.py), the head is
             pictured twice as fine as the body (--head-px says otherwise) and the face is drawn on purpose;
-            --face none leaves it as rendered. A sheet with either goes into
-            <version>-impostor-pixel-faces/, which pages older than it do not read. With no recipe the sheet
-            is as it always was.
+            --face none leaves it as rendered.
     joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
             screen however small the figure), and the lines inside a part drawn into its picture
 
@@ -161,9 +171,84 @@ def cut(objects, rig, overlap, trunk_overlap):
     return out, own
 
 
-def piece(obj, posed, faces, into):
+def joints_of(rig):
+    """[(a part, the part it hangs from, the bone whose head is the joint between them)], as the skeleton has them."""
+    folds = part_of_bone(rig)
+    out = []
+    for name, bones in PARTS:
+        for b in bones:
+            bone = rig.data.bones.get(b)
+            if bone is not None and bone.parent is not None and folds[bone.parent.name] != name:
+                out.append((name, folds[bone.parent.name], b))
+    return out
+
+
+def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, head_lap=0.3):
+    """The cut made fit for a joint to bend (impostor.py: round_cut has the account of it): {part name: [(object,
+    [face indices], lapped over from next door?, the ball these faces are pulled onto or None)]}, how many
+    triangles each part owns outright, and what each joint was given. The pull is evened out along the surface
+    over smooth_m; two parts that meet at a joint each reach `lap` times the ring's radius into the other; and the
+    part below the joint carries a ball in it, `ball` of the room there is. The chest takes less of the head than
+    `lap` (head_lap): a jaw that stayed behind when the head turned would show. Points are where they stand in
+    the baking pose."""
+    folds = part_of_bone(rig)
+    names = [name for name, _ in PARTS]
+    column = {name: i for i, name in enumerate(names)}
+    joints = [(a, b, bone, np.array((rig.matrix_world @ rig.pose.bones[bone].head)[:])) for a, b, bone in joints_of(rig)]
+    points, pulls, edges, corners, begin, sides, spans = [], [], [], [], [], [], []
+    for obj in objects:  # every object's faces, gathered into one mesh
+        me = obj.data
+        count, first_point, first_corner = len(me.vertices), sum(len(p) for p in points), sum(len(c) for c in corners)
+        pull = np.zeros((count, len(names)), dtype=np.float32)
+        groups = [folds.get(g.name) for g in obj.vertex_groups]
+        for v in me.vertices:
+            for g in v.groups:
+                part = groups[g.group]
+                if part is not None:
+                    pull[v.index, column[part]] += g.weight
+        at = np.empty(count * 3, dtype=np.float32)
+        posed[obj.name].vertices.foreach_get("co", at)
+        points.append(at.reshape(count, 3) @ np.array(obj.matrix_world.to_3x3()).T + np.array(obj.matrix_world.translation[:]))
+        pulls.append(pull)
+        got = np.empty(len(me.edges) * 2, dtype=np.int64)
+        me.edges.foreach_get("vertices", got)
+        edges.append(got.reshape(-1, 2) + first_point)
+        got = np.empty(len(me.loops), dtype=np.int64)
+        me.loops.foreach_get("vertex_index", got)
+        corners.append(got + first_point)
+        start, many = np.empty(len(me.polygons), dtype=np.int64), np.empty(len(me.polygons), dtype=np.int64)
+        me.polygons.foreach_get("loop_start", start)
+        me.polygons.foreach_get("loop_total", many)
+        spans.append((obj, sum(len(x) for x in sides), len(many)))
+        begin.append(start + first_corner)
+        sides.append(many)
+    sides = np.concatenate(sides)
+    owner, lapped, rings, balls = impostor.round_cut(np.concatenate(points), np.concatenate(pulls), np.concatenate(edges), np.concatenate(corners), np.concatenate(begin), sides,
+                                                     [(column[a], column[b], centre) for a, b, _, centre in joints], lap, smooth_m, {(column["chest"], column["head"]): head_lap}, ball)
+    out, own = {name: [] for name in names}, {name: 0 for name in names}
+    for obj, start, many in spans:
+        mine = owner[start:start + many]
+        for i, name in enumerate(names):
+            own[name] += int((sides[start:start + many][mine == i] - 2).sum())
+            if (mine == i).any():
+                out[name].append((obj, np.nonzero(mine == i)[0].tolist(), False, None))
+            if lapped[i, start:start + many].any():
+                out[name].append((obj, np.nonzero(lapped[i, start:start + many])[0].tolist(), True, None))
+        for a, b, _, centre in joints:  # the ball rides the part below the joint: that part turns about the ball's own middle
+            size, made = balls.get((column[a], column[b]), (0.0, None))
+            if made is not None and size > 0.005 and made[start:start + many].any():
+                out[a].append((obj, np.nonzero(made[start:start + many])[0].tolist(), True, (centre, size)))
+    said = [{"bone": bone, "between": [a, b], "ring_cm": round(rings[(column[a], column[b])] * 100, 1), "lap_cm": round(rings[(column[a], column[b])] * lap * 100, 1),
+             "ball_cm": round(balls.get((column[a], column[b]), (0.0, None))[0] * 100, 1)}
+            for a, b, bone, _ in joints if (column[a], column[b]) in rings]
+    return out, own, said
+
+
+def piece(obj, posed, faces, into, ball=None):
     """A copy of some of an object's faces, as they stand in the baking pose (`posed`: the mesh with the
-    skeleton's pull already in its points), moved by the matrix `into`."""
+    skeleton's pull already in its points), moved by the matrix `into`. ball (a middle and a radius, in the
+    scene): the faces' points are first pulled in onto that ball, the ones that were further out landing a hair
+    further out, so of two layers (a coat over a shirt) the outer one still shows."""
     data = posed.copy()
     bm = bmesh.new()
     bm.from_mesh(data)
@@ -172,6 +257,13 @@ def piece(obj, posed, faces, into):
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in keep], context="FACES")
     bm.to_mesh(data)
     bm.free()
+    if ball is not None:
+        middle, radius = Vector(ball[0]), ball[1]
+        back = obj.matrix_world.inverted()
+        for v in data.vertices:
+            out = obj.matrix_world @ v.co - middle
+            far = max(out.length, 1e-6)
+            v.co = back @ (middle + out * (radius * (1.0 + 0.03 * min(1.0, far / (4.0 * radius))) / far))
     data.transform(into)
     data.update()
     new = bpy.data.objects.new("part: " + obj.name, data)
@@ -278,6 +370,7 @@ def main():
     flag = lambda name, default: args[args.index(name) + 1] if name in args else default
     run, profile = os.path.abspath(args[0]), args[1]
     look = flag("--look", "comic")
+    lap, smooth_m, ball = float(flag("--lap", "0.4")), float(flag("--smooth-cm", "2")) / 100.0, float(flag("--ball", "0.9"))
     sets = flag("--views", "26,62" if look == "comic" else "26").split(",")
     ppm = float(flag("--px", "48" if look == "pixel" else "192"))
     overlap = float(flag("--overlap", "0.25"))
@@ -302,8 +395,7 @@ def main():
             recipe = json.load(f)
     head_px = float(flag("--head-px", "2" if recipe else "1"))  # a finer head comes with a drawn face, unless asked for
     finer = {"head": head_px} if head_px != 1.0 else {}
-    plain = "impostor" if look == "comic" else "impostor-" + look
-    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", plain + "-faces" if look == "pixel" and (finer or recipe) else plain)))))
+    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor-%s-joined" % look)))))
     os.makedirs(out, exist_ok=True)
     began = time.time()
 
@@ -319,7 +411,10 @@ def main():
     whole_triangles = sum(len(p.vertices) - 2 for o in bodies for p in o.data.polygons)
 
     # The parts, each in its bone's own frame.
-    chosen, own = cut(bodies, rig, overlap, trunk_overlap)
+    if lap > 0:
+        chosen, own, joints = cut_round(bodies, rig, posed, lap, smooth_m, ball)
+    else:
+        (chosen, own), joints = cut(bodies, rig, overlap, trunk_overlap), None
     parts, made = [], {}
     for name, bones in PARTS:
         if not chosen[name] or bones[0] not in rest:
@@ -328,9 +423,9 @@ def main():
         moved = rig.pose.bones[bones[0]].matrix @ rig.data.bones[bones[0]].matrix_local.inverted()
         into = Matrix(np.linalg.inv(rest[bones[0]]).tolist()) @ TO_GLB @ moved.inverted()
         objects = []
-        for obj, faces, lap in chosen[name]:
-            objects.append(piece(obj, posed[obj.name], faces, into))
-            objects[-1]["lap"] = lap
+        for obj, faces, borrowed, *onto in chosen[name]:
+            objects.append(piece(obj, posed[obj.name], faces, into, onto[0] if onto else None))
+            objects[-1]["lap"] = borrowed
         points = np.array([v.co[:] for o in objects for v in o.data.vertices])
         reach = float(np.linalg.norm(points, axis=1).max()) + ink_m
         lo, hi = points.min(axis=0), points.max(axis=0)
@@ -387,6 +482,7 @@ def main():
             if obj.get("lap"):
                 for mod in [m for m in obj.modifiers if m.name == "comic ink"]:
                     obj.modifiers.remove(mod)
+    shells = [m for obj in (o for objects in made.values() for o in objects) for m in obj.modifiers if m.name == "comic ink"]
     data_mat, data_ink = data_material("impostor data", False), data_material("impostor data ink", True)
     ink_group = bpy.data.node_groups.get("comic ink")
     ink_mat = bpy.data.materials.get("comic ink")
@@ -395,6 +491,7 @@ def main():
     tmp_colour, tmp_data = os.path.join(out, ".bake-colour.png"), os.path.join(out, ".bake-data.exr")
 
     card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "plays": flag("--plays", profile), "title": flag("--title", ""), "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
+            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, "line_marked": True, "line_back_m": impostor.LINE_BACK_M,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}
@@ -410,12 +507,13 @@ def main():
                 at = r * ((sx - wide / 2.0) / ppm) + u * ((sy - tall / 2.0) / ppm)
                 for obj in made[p["name"]]:
                     obj.matrix_world = Matrix.Translation(at) @ Matrix.Diagonal((finer.get(p["name"], 1.0),) * 3 + (1.0,))  # a finer part is pictured larger
-            # colour and line
+            # colour, without the line's shell: the line's pixels are marked in the numbers and painted by the page
             for obj in part_objects:
                 for i, mat in enumerate(painted[obj.name]):
                     obj.data.materials[i] = mat
+            for shell in shells:
+                shell.show_render = False
             if ink_group:
-                ink_group.nodes["Ink"].inputs["Material"].default_value = ink_mat
                 retag(ink_group, part_objects)
             # pixel art is not smoothed: a pixel is one colour of the surface under its middle
             scene.eevee.taa_render_samples, scene.render.filter_size = (1, 0.01) if look == "pixel" else (16, 0.8)
@@ -428,6 +526,8 @@ def main():
             for obj in part_objects:
                 for i in range(len(obj.data.materials)):
                     obj.data.materials[i] = data_mat
+            for shell in shells:
+                shell.show_render = True
             if ink_group:
                 ink_group.nodes["Ink"].inputs["Material"].default_value = data_ink
                 retag(ink_group, part_objects)
@@ -457,8 +557,6 @@ def main():
                     ring = grown & ~there
                     dat = dat.copy()
                     dat[ring] = (0.0, 0.0, 0.0, 1.0)  # marked as line, as the shell's pixels are: it takes its depth from the surface beside it
-                    col[..., :3] = np.where(ring[..., None], (0.11, 0.09, 0.13), col[..., :3])
-                    col[..., 3] = np.where(ring, 1.0, col[..., 3])
                     there = there | ring
                 col[..., :3] = spread(col[..., :3], col[..., 3] > 0.5, 3)
                 col[..., 3] = there
@@ -483,6 +581,9 @@ def main():
                 # blue 0 is kept to mean "nothing here": the page's search down a pixel's line must know air from surface
                 packed = np.concatenate([impostor.pack_normal(normal), np.clip(height * 0.5 + 0.5, 1.0 / 255.0, 1.0)[..., None]], axis=-1)
                 packed[~known] = (0.5, 0.5, 0.0)
+                # the line is marked: both of its facing's numbers are 0, and no pixel of the surface has that
+                packed[..., 0] = np.where(known & ~line & (packed[..., 0] < 0.5 / 255.0) & (packed[..., 1] < 0.5 / 255.0), 1.0 / 255.0, packed[..., 0])
+                packed[line, :2] = 0.0
                 if look == "joe":
                     # Bold ink: the lines inside a part are drawn here, into its picture: where the surface steps
                     # back by more than 2 cm from one pixel to the next (one fold of the body in front of another)
@@ -557,4 +658,5 @@ def main():
                                    "sets": {k: {"size": v["size"], "memory_mb": v["memory_mb"], "pictures": v["pictures"]} for k, v in card["sets"].items()}}))
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -40,8 +40,14 @@ MARCH_PX = 1.0       # sliding a pixel by its depth: the picture is searched in 
 MARCH_MAX = 32       # ... and never more steps than this (a longer search takes longer steps)
 REFINE = 5           # ... then the place found is halved in on this many times
 WALL_M = 0.04        # a pixel found this far below the surface it landed on is looking at nothing the picture saw
+GO_ON = True         # ... and the search then goes on under it to the next surface (False: it gives up there, as the page did before the joints were mended)
 BLEND_DEG = 7.0      # two views are mixed when the eye is within this of the line between them
 HOLD_DEG = 2.5       # a view is kept until another is nearer by this much (stops flicker on the line)
+INK = (0.11, 0.09, 0.13)  # the ink line's colour, as it looks on screen
+LINE_BACK_M = 0.03   # the ink line round a part stands this far behind the part's surface, as a mesh's ink shell does: the part next door covers it
+BREAK_M = 0.05       # lines drawn on the finished picture: within one figure, a line only where the surface steps back by more than this
+SEAM_M = 0.09        # ... and bold ink's thin lines leave a step smaller than this alone where two cards of one figure meet
+PARTS_A_FIGURE = 16  # a pixel's number in the finished picture: 1 + sixteen times which figure + which of its parts; 0 is not a card
 BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], dtype=np.float32) / 16.0 + 1.0 / 32.0
 # The comic look (toon.py's numbers): where the light is as the eye sees it (right, up, toward the eye),
 # what the middle and dark tones multiply a colour by, and how far a surface must face the light for each.
@@ -178,6 +184,88 @@ def march_steps(card, cell, px_per_m):
     """How many steps the search down a pixel's line takes: enough that none is longer than MARCH_PX of the picture."""
     reach = float(np.linalg.norm(card["back"] @ card["lean"])) * (cell[7] - cell[6]) * px_per_m
     return int(min(MARCH_MAX, max(1, math.ceil(reach / MARCH_PX))))
+
+
+# ---------- cutting a character into parts ----------
+
+def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m, less=None, ball=0.9, ball_reach=1.0):
+    """Which part owns each face of a mesh, and which faces each part also takes from next door, so that a
+    joint can bend without opening. The arithmetic of bake_impostor.py's cut, with no Blender in it.
+
+    points   Vx3, where every point of the mesh is (m)
+    pull     VxP, how much each part's bones pull on each point
+    edges    Ex2, the mesh's edges (two points each)
+    corners, begin, sides   the faces: every face's points one after another, where each face starts in
+             that list, and how many points it has
+    joints   [(part, part, where the joint is)]: the pairs of parts that meet at a joint, as columns of `pull`,
+             and the point the two turn about (None: no ball is worked out for it)
+    lap      how far a part reaches into its neighbour, as a share of the radius of the ring where they meet
+    smooth_m the pull is first evened out along the surface over about this far
+    less     {(taker, giver): share} for a pair that should lap less than `lap`
+    ball     how big the ball in a joint is, as a share of the room there is for it
+    ball_reach  the faces a ball is made of: the two parts' within this many ring radii of the ring
+
+    A part owns the faces its bones pull on most. But the pull is first evened out along the surface, so the
+    line between two parts is one clean ring round the limb. (A detailed mesh takes its weights from the nearest
+    place on a coarse one, and the line between two parts then follows the coarse mesh's triangles: a fringe of
+    splinters centimetres long, which comb apart as soon as the joint bends.) Then two parts that meet at a
+    joint each take everything of the other's within reach of the ring where they meet: `lap` times the ring's
+    own radius, so a thigh laps further than a wrist. A lap closes the outside of a bend only up to a point
+    (two tubes of radius r that lap by L meet on the outside until the bend passes 2 atan(L / r)), and a long lap
+    stands out as a spur when the joint bends only a little. So the lap is kept short and the joint gets a ball:
+    the faces round the ring, pulled in onto a ball about the point the joint turns on, as big as fits inside
+    the body there. However the joint turns, the ball is where it was; it shows only through the gap a bend
+    opens, in the colours of the skin that was there, and it shuts the open end of the limb.
+
+    Returns (owner: F, the part that owns each face; lapped: PxF, True where a part takes a face it does not
+    own; rings: {(part, part): the ring's radius in metres} for every joint whose two parts do meet; balls:
+    {(part, part): (the ball's radius in metres, F: True for the faces it is made of)})."""
+    points, pull = np.asarray(points, dtype=np.float64), np.asarray(pull, dtype=np.float32)
+    corners, begin, sides = np.asarray(corners, dtype=np.int64), np.asarray(begin, dtype=np.int64), np.asarray(sides, dtype=np.int64)
+    parts = pull.shape[1]
+    # points at the same place are one point: a mesh from a .glb is split along every seam of its texture
+    _, first, weld = np.unique(np.round(points / 1e-4).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+    weld = weld.reshape(-1)
+    spot = points[first]
+    merged = np.zeros((len(first), parts), dtype=np.float32)
+    np.add.at(merged, weld, pull)
+    merged /= np.maximum(merged.sum(axis=1, keepdims=True), 1e-9)
+    ends = weld[np.asarray(edges, dtype=np.int64).reshape(-1, 2)]
+    ends = ends[ends[:, 0] != ends[:, 1]]
+    if len(ends) and smooth_m > 0:
+        both = np.concatenate([ends, ends[:, ::-1]])
+        both = both[np.argsort(both[:, 0], kind="stable")]
+        starts = np.concatenate([[0], np.nonzero(np.diff(both[:, 0]))[0] + 1])
+        rows, many = both[starts, 0], np.diff(np.concatenate([starts, [len(both)]]))[:, None]
+        edge = float(np.median(np.linalg.norm(spot[ends[:, 0]] - spot[ends[:, 1]], axis=1)))
+        # one round spreads a point's pull about half an edge's length; rounds add up as squares do
+        for _ in range(int(min(400, round(4.0 * (smooth_m / edge) ** 2)))):
+            merged[rows] = 0.5 * merged[rows] + 0.5 * np.add.reduceat(merged[both[:, 1]], starts, axis=0) / many
+    corners = weld[corners]
+    owner = (np.add.reduceat(merged[corners], begin, axis=0) / sides[:, None]).argmax(axis=1)
+    middle = np.add.reduceat(spot[corners], begin, axis=0) / sides[:, None]
+    touched = np.zeros((len(first), parts), dtype=bool)  # which parts own a face at each point
+    touched[corners, np.repeat(owner, sides)] = True
+    lapped = np.zeros((parts, len(owner)), dtype=bool)
+    rings, balls = {}, {}
+    for a, b, centre in joints:
+        ring = spot[touched[:, a] & touched[:, b]]
+        if len(ring) < 3:
+            continue
+        radius = float(np.median(np.linalg.norm(ring - ring.mean(axis=0), axis=1)))
+        rings[(a, b)] = radius
+        some = ring[:: max(1, len(ring) // 96)]
+        theirs = np.nonzero((owner == a) | (owner == b))[0]
+        off = np.concatenate([np.linalg.norm(middle[theirs[i:i + 20000]][:, None, :] - some[None, :, :], axis=2).min(axis=1) for i in range(0, len(theirs), 20000)])
+        for taker, giver in ((a, b), (b, a)):
+            lapped[taker, theirs[(owner[theirs] == giver) & (off <= radius * (less or {}).get((taker, giver), lap))]] = True
+        if centre is not None and ball > 0:
+            # as big as fits: inside the nearest of the ring, and inside the nearest skin of all
+            room = min(float(np.percentile(np.linalg.norm(ring - centre, axis=1), 10)), float(np.percentile(np.linalg.norm(spot - centre, axis=1), 0.5)))
+            made = np.zeros(len(owner), dtype=bool)
+            made[theirs[off <= radius * ball_reach]] = True
+            balls[(a, b)] = (ball * room, made)
+    return owner, lapped, rings, balls
 
 
 # ---------- colours, and the two ways a picture's numbers are packed ----------
@@ -426,10 +514,12 @@ class Character:
         self.cells = sheet["cells"]
 
 
-def card_pixels(character, part, view_index, card, eye, relief=True):
+def card_pixels(character, part, view_index, card, eye, relief=True, line="shell"):
     """One card as the eye sees it: (x0, y0, colour HxWx3 as stored, cover HxW 0..1, normal HxWx3 in the bone's
     frame, distance in front HxW), or None when it is off the picture. The page's fragment shader, slowly.
-    relief: slide each pixel by the picture's depth (False: the picture is laid flat on the card)."""
+    relief: slide each pixel by the picture's depth (False: the picture is laid flat on the card).
+    line: what becomes of the ink line round the part, on a sheet that marks it (line_marked): "shell" stands it
+    LINE_BACK_M behind the surface, "off" leaves it out (the line is then drawn on the finished picture)."""
     cell = character.cells[part["name"]][view_index]
     x0, y0, w, h, ax, ay, low, high = cell
     if w <= 0 or h <= 0:
@@ -464,26 +554,37 @@ def card_pixels(character, part, view_index, card, eye, relief=True):
 
     if relief:
         # Down each pixel's line from above the picture's highest point to below its lowest: the first step
-        # that is under the surface, then halved in on.
+        # that is under the surface, then halved in on. A place found far under the surface is the side of
+        # something the picture never saw the back of: the search goes on from there, under it, to the next
+        # place the line comes down onto the surface.
         steps = march_steps(card, cell, ppm)
         top, bottom = high + 0.002, low - 0.002
         above, below = np.full(xs.shape, top), np.full(xs.shape, bottom)
-        found = np.zeros(xs.shape, dtype=bool)
+        found, was, over = np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool), np.zeros(xs.shape, dtype=bool)
         for i in range(1, steps + 1):
             at = top + (bottom - top) * i / steps
             there, height, _ = read((sheet - at * lean) @ back.T)
-            hit = ~found & there & (height >= at)
-            below[hit] = at
-            found |= hit
-            above[~found] = at
-        for _ in range(REFINE):
-            mid = (above + below) / 2.0
-            there, height, _ = read((sheet - mid[..., None] * lean) @ back.T)
-            under = there & (height >= mid)
-            below, above = np.where(under, mid, below), np.where(under, above, mid)
+            under = there & (height >= at)
+            new = under & ~was & ~found & ~over
+            if new.any():  # only the pixels whose line has just gone under
+                rows, cols = np.nonzero(new)
+                mine, a, b = sheet[rows, cols], above[rows, cols], np.full(len(rows), at)
+                for _ in range(REFINE):
+                    mid = (a + b) / 2.0
+                    there, height, _ = read((mine - mid[:, None] * lean) @ back.T)
+                    deep = there & (height >= mid)
+                    b, a = np.where(deep, mid, b), np.where(deep, a, mid)
+                there, height, _ = read((mine - b[:, None] * lean) @ back.T)
+                hit = there & (height - b < WALL_M + (top - bottom) / steps / 2 ** REFINE)
+                below[rows[hit], cols[hit]] = b[hit]
+                found[rows[hit], cols[hit]] = True
+                if not GO_ON:
+                    over[rows[~hit], cols[~hit]] = True
+            above[~under & ~found] = at
+            was = under
         xy = (sheet - below[..., None] * lean) @ back.T
         there, height, data = read(xy)
-        inside = found & there & (height - below < WALL_M + (top - bottom) / steps / 2 ** REFINE)
+        inside = found & there
     else:
         xy = sheet @ back.T
         inside, height, data = read(xy)
@@ -497,8 +598,20 @@ def card_pixels(character, part, view_index, card, eye, relief=True):
     tu, tv = (fu - iu)[..., None], (fv - iv)[..., None]
     grab = lambda a, b: character.colour[np.clip(b, 0, sheet_tall - 1), np.clip(a, 0, sheet_wide - 1)]
     rgba = (grab(iu, iv) * (1 - tu) + grab(iu + 1, iv) * tu) * (1 - tv) + (grab(iu, iv + 1) * (1 - tu) + grab(iu + 1, iv + 1) * tu) * tv
+    if character.card.get("nearest"):  # pixel art is read without smoothing: the one pixel it falls in
+        rgba = grab(np.floor(u).astype(int), np.floor(v).astype(int))
     # facing and depth: the one pixel it falls in
     normal = unpack_normal(data[..., :2])
+    if character.card.get("line_marked"):
+        # The ink line is marked in the data sheet (both of its facing's numbers are 0). It faces the eye, and it
+        # is a shell behind the surface: whatever of the figure is beside it, a hair nearer, covers it.
+        inked = (data[..., 0] < 0.5 / 255.0) & (data[..., 1] < 0.5 / 255.0)
+        normal = np.where(inked[..., None], np.asarray(card["turn"].T @ card["toward"], dtype=np.float32), normal)
+        if line == "off":
+            inside = inside & ~inked
+        rgba = rgba.copy()
+        rgba[..., :3] = np.where(inked[..., None], np.array(INK, dtype=np.float32), rgba[..., :3])  # the sheet holds no ink: the line is painted here
+        height = height - np.where(inked, LINE_BACK_M, 0.0)
     out = (xy[..., 0] * card["deep"][0] + xy[..., 1] * card["deep"][1] + height * card["deep"][2]) * card["size"]
     to_eye = eye.at - world
     reach = np.linalg.norm(to_eye, axis=-1)
@@ -517,7 +630,7 @@ def tones(normal_bone, turn, eye, light=LIGHT, shade=SHADE, edges=EDGES):
     return out
 
 
-def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, forced=None):
+def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, forced=None, line="shell", who=None, figure=0):
     """The character as cards, in one pose, through one eye.
 
     pose    {bone name: 4x4 matrix in the world}
@@ -526,6 +639,9 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
             kept until another is clearly nearer; None picks the nearest every time
     blend   mix each part's two nearest views near the line between them, by a fixed pattern of pixels
     only    part names to draw (None: all);  forced  {part name: view} to show whatever is nearest
+    line    the ink line round each part: "shell" (behind the surface) or "off" (card_pixels)
+    who     an HxW array of whole numbers to fill in: which card each pixel shows (1 + PARTS_A_FIGURE * figure +
+            the part's place in the list; 0 where there is none), for the lines drawn on the finished picture
 
     Returns (picture: rows from the bottom up, HxWx4 uint8; distance in front HxW, inf where empty;
     {part name: {"view", "next", "share", "off_deg"}})."""
@@ -534,7 +650,7 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
     depth = np.full((tall, wide), np.inf, dtype=np.float32)
     said = {}
     pattern = np.tile(BAYER, (tall // 4 + 1, wide // 4 + 1))[:tall, :wide]
-    for part in character.parts:
+    for index, part in enumerate(character.parts):
         name = part["name"]
         if only is not None and name not in only:
             continue
@@ -548,9 +664,9 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
         off = math.degrees(math.acos(max(-1.0, min(1.0, float(character.dirs[first] @ v)))))
         said[name] = {"view": first, "next": second, "share": share, "off_deg": off}
         showing = [(first, None)] if not blend or share >= 1.0 else [(first, share), (second, share)]
-        for n, (index, portion) in enumerate(showing):
-            card = place(character.views[index], bone, part["center"], eye.at)
-            got = card_pixels(character, part, index, card, eye, relief)
+        for n, (view, portion) in enumerate(showing):
+            card = place(character.views[view], bone, part["center"], eye.at)
+            got = card_pixels(character, part, view, card, eye, relief, line)
             if got is None:
                 continue
             x0, y0, rgb, cover, normal, ahead = got
@@ -563,7 +679,84 @@ def draw(character, pose, eye, relief=True, blend=False, held=None, only=None, f
             lit = to_linear(rgb) * tones(normal, card["turn"], eye)
             colour[y0:y0 + h, x0:x0 + w][keep] = lit[keep]
             depth[y0:y0 + h, x0:x0 + w][keep] = ahead[keep]
+            if who is not None:
+                who[y0:y0 + h, x0:x0 + w][keep] = 1 + PARTS_A_FIGURE * (figure % 15) + index % PARTS_A_FIGURE
     out = np.zeros((tall, wide, 4), dtype=np.uint8)
     out[..., :3] = np.round(to_screen(colour) * 255.0)
     out[..., 3] = np.where(np.isfinite(depth), 255, 0)
     return out, depth, said
+
+
+# ---------- lines drawn on the finished picture (gallery/looks.js does the same on the graphics card) ----------
+
+def _beside(a, dy, dx):
+    """Every pixel's neighbour dy up and dx to the right (the picture's own edge pixel past the edge)."""
+    tall, wide = a.shape[:2]
+    ys = np.clip(np.arange(tall) + dy, 0, tall - 1)
+    xs = np.clip(np.arange(wide) + dx, 0, wide - 1)
+    return a[ys][:, xs]
+
+
+def grid_line(depth, who, eye, break_m=BREAK_M):
+    """The pixel looks' line: True where a pixel of the finished picture is inked. One pixel wide, just outside
+    whatever a card shows, on the picture's own grid.
+
+    depth  how far in front each pixel is (m; inf where nothing is);  who  which card each pixel shows (draw)
+
+    A pixel is inked when the pixel beside it (left, right, above or below) shows a card and
+      - this one shows something else, or another figure, and is the further of the two: the outside line; or
+      - this one shows the same figure and is further by more than break_m (and by more than a pixel and a half
+        is across out there), and not just because the surface is sloping away: an arm in front of a chest.
+    Two cards of one figure that meet at a joint are at the same depth, so no line falls between them."""
+    figure = np.where(who > 0, (who - 1) // PARTS_A_FIGURE, -1)
+    per_px = 2.0 * eye.tan / eye.size[1]  # how big a pixel is a metre away
+    d = np.where(np.isfinite(depth), depth, eye.far)
+    inked = np.zeros(depth.shape, dtype=bool)
+    for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+        it, there = _beside(who, dy, dx), _beside(d, dy, dx)
+        drop = d - there
+        same = (who > 0) & (_beside(figure, dy, dx) == figure)
+        slope = np.where(_beside(figure, -dy, -dx) == figure, np.abs(_beside(d, -dy, -dx) - d), 0.0)
+        inked |= (it > 0) & ~same & (drop > 0.0)
+        inked |= (it > 0) & same & (drop > np.maximum(break_m, 1.5 * per_px * there)) & (drop > 2.5 * slope)
+    return inked
+
+
+def bold_lines(depth, who, eye, outer=3.2, inner=1.2, seam_m=SEAM_M):
+    """Bold ink's lines on the finished picture: True where a pixel is inked. A thick line just outside anything
+    that stands well in front of what is behind it, a thin one where one thing passes just in front of another,
+    and a thin one where the surface folds. `who` (which card each pixel shows; None: nobody says) keeps the thin
+    lines off the joints: where two cards of one figure meet, a step under seam_m is the cards not quite agreeing,
+    not one thing in front of another, and a bend in the depth there is not a fold."""
+    near, far = eye.near, eye.far
+    d = np.where(np.isfinite(depth), depth, far)
+    raw = (far + near - 2.0 * near * far / d) / (far - near) * 0.5 + 0.5  # what the depth buffer holds
+    figure = None if who is None else np.where(who > 0, (who - 1) // PARTS_A_FIGURE, -1)
+    inked = np.zeros(depth.shape, dtype=bool)
+    steps = [(math.cos(i * 0.7853982), math.sin(i * 0.7853982)) for i in range(8)]
+    at = lambda a, i, r: _beside(a, int(round(steps[i][1] * r)), int(round(steps[i][0] * r)))
+    for i in range(8):
+        wide, wide_past = at(d, i, outer), at(d, (i + 4) % 8, outer)
+        drop, slope = d - wide, np.abs(wide_past - d)
+        inked |= (drop > 0.3 + 0.03 * wide) & (drop > 2.5 * slope)
+        close, close_past = at(d, i, inner), at(d, (i + 4) % 8, inner)
+        drop, slope = d - close, np.abs(close_past - d)
+        thin = (drop > 0.04 + 0.004 * close) & (drop > 2.5 * slope)
+        if who is not None:
+            it = at(who, i, inner)
+            thin &= ~((who > 0) & (it > 0) & (at(figure, i, inner) == figure) & (it != who) & (drop < seam_m))
+        inked |= thin
+    r = max(1, int(round(inner)))
+    bend = np.abs(_beside(raw, 0, r) + _beside(raw, 0, -r) - 2.0 * raw) + np.abs(_beside(raw, r, 0) + _beside(raw, -r, 0) - 2.0 * raw)
+    fold = (d < 40.0) & (bend * d * d * (far - near) / (near * far) > 0.02 + 0.004 * d)
+    if who is not None:
+        for dy, dx in ((0, r), (0, -r), (r, 0), (-r, 0)):
+            fold &= ~((who > 0) & (_beside(figure, dy, dx) == figure) & (_beside(who, dy, dx) != who))
+    return inked | fold
+
+
+def with_lines(picture, lines, ink=(0x12, 0x0e, 0x16)):
+    """A drawn picture (draw) with lines put on it."""
+    out = picture.copy()
+    out[lines] = tuple(ink) + (255,)
+    return out
