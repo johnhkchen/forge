@@ -147,6 +147,13 @@ def rehearse(plan_file: str, folder: str, answer=None, log=print) -> dict:
                 elif feet:
                     log(f"REHEARSE {name or 'the shot'}, {piece['name']}: feet left as they are (not locked): they slide {json.dumps(feet['slid_cm_per_s'])} cm a second while down")
         log(f"REHEARSE {name or 'the shot'}: {made['checks']['frames']} frames; asked of the pretend models: {made['asked'].count('text')} sentences, {made['asked'].count('inbetween')} poses and joins")
+    crews = {}
+    for made in roles.values():
+        for piece in made["plan"].get("pieces") or []:
+            if (piece.get("formation") or {}).get("slides_as_one"):
+                crews[piece["name"]] = piece["formation"]["slides_as_one"]
+    for name, drift in crews.items():
+        log(f"REHEARSE {name}, the group as one: everyone's standing foot slides the same way {drift['slides_together_cm_in_all']} cm in all ({drift['slides_together_cm_per_s']} cm a second), over 5 cm a second on {round(100 * drift['share_of_frames_over_5_cm_per_s'], 1)}% of frames")
     if len(roles) > 1:
         out["together"] = together(sk, roles)
         near = out["together"]

@@ -281,8 +281,8 @@ video name again="" also="":
     python3 scripts/video/video.py "{{name}}" {{ if again != "" { "--again " + again } else { "" } }} {{ if also != "" { "--also " + also } else { "" } }}
 
 # Where several dancers of one clip stand relative to each other over some seconds (people: their numbers, with commas), read from the picture: where each starts and ends on a stage whose middle is origin (x,z), and the closest any two come
-video-formation clip people from to origin="0,0" spread="1.0":
-    python3 scripts/video/formation.py "{{clip}}" --people "{{people}}" --from {{from}} --to {{to}} --origin="{{origin}}" --spread {{spread}}
+video-formation clip people from to origin="0,0" spread="1.0" travel="1.0":
+    python3 scripts/video/formation.py "{{clip}}" --people "{{people}}" --from {{from}} --to {{to}} --origin="{{origin}}" --spread {{spread}} --travel {{travel}}
 
 # Play a shot or a take through with stand-ins for Kimodo and MotionBricks (no RunPod): its video beats are the real thing, everything is where and when it will be, and it says how close people come. Into a folder of your choosing, never shots/
 rehearse shot folder:

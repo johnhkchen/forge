@@ -619,6 +619,18 @@ def step(shot: str, sk: Skeleton = None) -> dict:
         if not todo:
             motion, notes = join(sk, plan, motions, [load_answer(shot, name) for name in names])
             notes["requests"] = {"pieces": {p["name"]: p.get("request") for p in plan["pieces"]}, "seams": {f"{s['from']} to {s['to']}": n for s, n in zip(plan["seams"], names)}}
+            if any(p["source"] == "video" for p in plan["pieces"]):
+                # A dancer from a video rarely stands exactly where the beats either side were planned, and a join
+                # that covers the difference slides the body there with its feet still called down (30 to 40 cm,
+                # on the crew). So the joined shot's feet are held where they are down, as the video's own are:
+                # the difference is taken in a step. (scripts/video/footlock.py; FORGE_FOOT_LOCK=0 leaves it.)
+                import_video_beat()
+                import footlock
+
+                if footlock.wanted(all((p.get("feet") or {}).get("locked", True) for p in plan["pieces"] if p["source"] == "video")):
+                    slid = footlock.slide(sk, motion)
+                    motion, held = footlock.lock(sk, motion)
+                    notes["feet"] = {"locked": True, "slid_cm_per_s": slid["cm_per_s"], "worst_stretch_was_cm": slid["worst_stretch_cm"], **held}
             with open(os.path.join(shot, "motion.json"), "w") as f:
                 json.dump(motion, f, separators=(",", ":"))
             with open(os.path.join(shot, "join.json"), "w") as f:

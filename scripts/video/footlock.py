@@ -56,6 +56,7 @@ ON_GROUND = 0.5  # the model's contact confidence above which a heel or toe coun
 LOW_M = 0.10  # ...if it is also within this of the floor
 SLOW_M_PER_S = 0.6  # ...and not travelling faster than this (a foot the model calls down while it flies is not pinned)
 LYING_STILL = (0.03, 0.12)  # within this of the floor (m) and slower than this (m/s): down, whatever the model says
+FURTHEST_HELD_M = 0.3  # a "stance" whose foot gets further than this from its middle is not held
 SHORTEST_STANCE = 3  # frames
 BRIDGE = 2  # frames: a stance broken for this long or less is one stance
 EASE = 6  # frames over which a pinned foot is let go, and taken hold of
@@ -167,6 +168,9 @@ def lock(sk: Skeleton, motion: dict) -> tuple:
 
             inside = [pivot_at(f) for f in range(first, last + 1)]
             pin = (sum(p[0] for p in inside) / len(inside), 0.0, sum(p[2] for p in inside) / len(inside))
+            if max(horizontal(p, pin) for p in inside) > FURTHEST_HELD_M:
+                stance["let_go"] = True  # it went too far for a foot that is down: whatever this is, holding it would wrench the leg
+                continue
             spots += 1
             for f in range(max(0, first - EASE), min(count, last + EASE + 1)):
                 edge = max(first - f, f - last, 0)
@@ -179,6 +183,7 @@ def lock(sk: Skeleton, motion: dict) -> tuple:
                 if not edge:
                     moved = max(moved, math.hypot(shift[0], shift[2]))
                 want[f] = (w, shift, turn.get(f) if not edge else None)
+        found[tag] = [s for s in found[tag] if not s.get("let_go")]
         held = set(f for s in found[tag] for f in range(s["first"], s["last"] + 1))
         said = [f for f in range(count) if max(motion["contacts"][f][SIDES[0 if tag == "l" else 1][2]], motion["contacts"][f][SIDES[0 if tag == "l" else 1][3]]) > ON_GROUND]
         feet[tag] = {"want": want, "ankle": ankle, "toe": toe, "spots": spots, "most_moved_cm": round(100.0 * moved, 1), "frames_down": len(held),
