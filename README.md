@@ -92,6 +92,8 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just cast <shot> <character run> [prop run] [clip]` | put a character (and what it carries) in a finished shot; `clip` names the cut (`hero`, or `hero-mixed` for a second one) |
 | `just video-add <file> [name] [start] [end]` | bring a video of yours (a dance, say): it is copied to `videos/<name>/`, which stays out of git. `start` and `end`, in seconds, keep only that stretch |
 | `just video <name>` | turn that clip into motion for the characters: does whatever comes next, and stops where it needs you to choose who to follow (see "From a video") |
+| `just video-formation <clip> <people> <from> <to>` | where several dancers of a clip stand relative to each other in those seconds, and the closest any two come |
+| `just rehearse <shot or take> <folder>` | play a shot or a take through with stand-ins for the motion models, free, before `just shoot` pays for it |
 | `just video-film <name> [clip]` | after `just cast video-<name> ...`: the character beside the clip, in step |
 | `just video-test [runs folder]` | try all of that with no GPU: a drawn clip, a stand-in for the model, then the film and a character in a background Blender |
 | `just gemx-endpoint`, `just gemx-health` | create the video worker's endpoint on RunPod (one time); is it up |
@@ -306,14 +308,30 @@ Everything a clip makes is in `videos/<name>/` (`clip.mp4`, `shots.json`, `peopl
  "clip": "candy-shop", "shot": 1, "from_s": 4.0, "to_s": 20.0, "at": "monologue", "drift": "flatten"}
 ```
 
-`from_s` and `to_s` are seconds of the clip, as a player shows them; `shot` is counted from 1, as the clip's page counts. Where the dancer stands is the shot's business, not the video's: `at` a mark of the set they stand on it, facing the way the mark faces, whichever way the camera saw them. What the video keeps is how they move about from there. `"drift": "flatten"` takes out whatever they wandered over the stretch (or the camera crept), so they end on the mark; from one mark `to` another, the stretch is turned to travel that way. A join's tween takes the place of about half a second at each end of a piece, so the beat brings that much more of the clip on either side, and the stretch you asked for stays whole. `motion/shots/crew-candy-shop.json` is an example: wait in the wings (a pose), walk on (a sentence), the routine (the clip), a bow (a sentence), stand (a pose). Once `just video candy-shop` has made the motion:
+`from_s` and `to_s` are seconds of the clip, as a player shows them; `shot` is counted from 1, as the clip's page counts. Where the dancer stands is the shot's business, not the video's: `at` a mark of the set they stand on it, facing the way the mark faces, whichever way the camera saw them. What the video keeps is how they move about from there. `"drift": "flatten"` takes out whatever they wandered over the stretch (or the camera crept), so they end on the mark; from one mark `to` another, the stretch is turned to travel that way. A join's tween takes the place of about half a second at each end of a piece, so the beat brings that much more of the clip on either side, and the stretch you asked for stays whole. `motion/shots/solo-candy-shop.json` is an example: wait in the wings (a pose), walk on (a sentence), the routine (the clip), a bow (a sentence), stand (a pose). Once `just video candy-shop` has made the motion:
 
 ```
-just shoot crew-candy-shop
-just cast crew-candy-shop runs/<character>
+just shoot solo-candy-shop
+just cast solo-candy-shop runs/<character>
 ```
 
-A clip with several dancers can become several characters: `just video candy-shop "" 1:2` also makes the motion for person 2 of shot 1, and a beat that says `"person": 2` uses it. The shot list is written by hand for now; Opus is told the source exists and not to use it. (`scripts/video/beat.py`)
+Where a clip was only split for its length (a take of over a minute, not a cut), a beat with no `shot` may run on from one part into the next.
+
+**A crew.** A clip with several dancers can become several characters. `just video candy-shop "" 1:2,1:3,2:2,2:3` also makes the motion for persons 2 and 3 of both shots, and a beat that says `"person": 2` uses it. For them to dance *together* they have to stand to each other as the dancers did, and the motions alone do not say that: each person's comes back in a world of their own, drifting its own way. The picture does say it. So a take's video beats can share a `formation`:
+
+```
+"person": 3, "formation": {"people": [1, 2, 3], "at": "centre", "spread": 1.15}
+```
+
+The middle of the group goes on that mark, facing the house the way the dancers faced the camera, and each role is placed from it by where their dancer was in the picture: how far off from the height of their box against the height of their pose, how far to the side from where the box is. Only each one's place *in the group* is taken from the picture, smoothed over a few seconds (a camera that pans or zooms moves everyone alike, and is ignored); the quick part of how each one moves is their own motion's. `spread` moves the places apart for characters broader than the dancers. `just video-formation candy-shop 1,2,3 5.4 53.0` prints where each one starts and ends and the closest any two come, which is what the set's marks for the walk on and the bow are written from. (`scripts/video/formation.py`)
+
+`motion/shots/crew-candy-shop.json` is that, as a take on the ninja's stage (the segment `motion/segments/candy-shop-crew.json`): Lincoln out front, Roosevelt on the left of the picture, the pirate on the right. They wait in the wings, walk on one after another, dance 47 seconds of the routine in the clip's own formation (the two at the front change places near the end, as in the clip), bow together and stand easy. It makes no sound: the song is not ours.
+
+```
+just rehearse crew-candy-shop /tmp/crew     # free: the whole take with stand-ins for Kimodo and MotionBricks, and how close anyone comes
+just shoot crew-candy-shop                  # the real one: 6 sentences and 18 poses-and-joins on RunPod; the routine itself costs nothing
+just cast crew-candy-shop runs "" crew      # Lincoln, Roosevelt and the pirate, filmed from the stage's cameras
+``` The shot list is written by hand for now; Opus is told the source exists and not to use it. (`scripts/video/beat.py`)
 
 **Joining across a cut.** A cut is the camera jumping, not the dancer. But each shot's motion comes back in a world of its own: where the dancer stands and which way they face start from nothing every time. So each shot is picked up whole and set down where the last one ended, facing the same way and still moving as it was, and the small jump in pose that is left is eased out over the next 8 frames. Inside a shot nothing is changed. Every frame of the film you kept is one frame of the motion, which is why the two can be watched side by side. `checks.json` lists each cut as a seam, with how big the jump was.
 
@@ -330,7 +348,8 @@ A clip with several dancers can become several characters: `just video candy-sho
 - *A camera that moves.* "The camera stays put" is taken at its word: a pan or a zoom then shows up as the dancer sliding. "The camera moves" has GEM-X guess the camera's turning from the background; it cannot tell a camera that travels. (GEM-X's better answer, ViPE, is not installed.)
 - *Several people.* The follower is simple. Two people who cross, in the same clothes, can swap boxes, and then the motion follows the wrong one from there to the end of the shot. Look at the "Early" and "Late" moments of a shot before you save.
 - *A clip in a mixed shot.* The joins into and out of a dance are MotionBricks going between a walk and a dance pose in half a second; it has seen little dancing, so expect those to look stiffer than the rest. With `"drift": "keep"`, a dancer who ends a metre from the mark leaves the next join a metre to cover in that half second, and every beat after it stands that far off its plan (`plan_shot.py` says so when it plans). `flatten` spreads the correction evenly, which shows as feet sliding a little all through the stretch.
-- *Feet and floor.* Feet slide more than in motion made from a sentence. Casting a character pins them where they stay still. Floor work (lying, rolling) will sit at the wrong height, because the floor is taken to be where the toes are lowest.
+- *A formation.* How far each dancer is from the camera is read from the height of a box, which is good to a few tens of centimetres, less when the picture cuts off their feet. Left and right is good; front and back is rough. Holding everyone to their place in the group slides the feet more than the motion alone does (on the candy-shop clip 19 to 25 cm a second against 13 to 18), and the group as a whole does not travel: its middle stays on its mark. The closest two dancers come is measured on a plain figure's joints, not on your characters' shoulders.
+- *Feet and floor.* GEM-X's own floor creeps (up to 85 cm in half a minute on the candy-shop clip), so the floor is taken to be under the lower toe as it was in the few seconds around each frame; a slow rise onto the toes for several seconds would be flattened. Feet slide more than in motion made from a sentence. Casting a character pins them where they stay still. Floor work (lying, rolling) will sit at the wrong height, because the floor is taken to be where the toes are lowest.
 - *Hands and face.* Not read. Fingers stay as they rest.
 
 ## World

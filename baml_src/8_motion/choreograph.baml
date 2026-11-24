@@ -645,8 +645,8 @@ test "a beat can be a stretch of a clip, and is told what it lacks" {
     assert.contains(video_beat_problems(open).join("\n"), "which seconds of the clip")
 }
 
-test "the candy-shop crew's shot list kept with its plan reads" {
-    let shot = baml.json.decode<ShotList>(baml.fs.read(`${SHOT_PLANS}/crew-candy-shop.shotlist.json`));
+test "the solo candy-shop shot list kept with its plan reads" {
+    let shot = baml.json.decode<ShotList>(baml.fs.read(`${SHOT_PLANS}/solo-candy-shop.shotlist.json`));
     assert.equal(
         shot.beats.map((b) -> {
             b.source

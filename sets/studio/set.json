@@ -495,6 +495,80 @@
    ],
    "facing_deg": 0.0,
    "about": "a group portrait: the end of the row, nearest the wings"
+  },
+  "wings_2": {
+   "kind": "stand",
+   "at": [
+    -5.0,
+    2.15
+   ],
+   "facing_deg": 90.0,
+   "offstage": true,
+   "about": "the way on, second in line: behind the wing flat with the others, waiting to come on"
+  },
+  "wings_3": {
+   "kind": "stand",
+   "at": [
+    -5.0,
+    1.5
+   ],
+   "facing_deg": 90.0,
+   "offstage": true,
+   "about": "the way on, third in line: behind the wing flat with the others, waiting to come on"
+  },
+  "crew_front": {
+   "kind": "stand",
+   "at": [
+    -0.33,
+    3.59
+   ],
+   "facing_deg": 0.0,
+   "about": "where the frontman starts, nearest the house in the crew's dance (the candy-shop routine, seconds 5.4 to 53 of the clip, the group's middle on centre, places 1.15 times as far apart as filmed; scripts/video/formation.py prints these)"
+  },
+  "crew_right": {
+   "kind": "stand",
+   "at": [
+    0.34,
+    2.37
+   ],
+   "facing_deg": 0.0,
+   "about": "where the dancer on the right of the picture starts in the crew's dance (the candy-shop routine, seconds 5.4 to 53 of the clip, the group's middle on centre, places 1.15 times as far apart as filmed; scripts/video/formation.py prints these)"
+  },
+  "crew_left": {
+   "kind": "stand",
+   "at": [
+    -1.14,
+    2.06
+   ],
+   "facing_deg": 0.0,
+   "about": "where the dancer on the left of the picture starts in the crew's dance (the candy-shop routine, seconds 5.4 to 53 of the clip, the group's middle on centre, places 1.15 times as far apart as filmed; scripts/video/formation.py prints these)"
+  },
+  "crew_front_after": {
+   "kind": "stand",
+   "at": [
+    0.33,
+    2.31
+   ],
+   "facing_deg": 0.0,
+   "about": "where the frontman ends: he and the right-hand dancer change places near the end in the crew's dance (the candy-shop routine, seconds 5.4 to 53 of the clip, the group's middle on centre, places 1.15 times as far apart as filmed; scripts/video/formation.py prints these)"
+  },
+  "crew_right_after": {
+   "kind": "stand",
+   "at": [
+    -0.38,
+    3.77
+   ],
+   "facing_deg": 0.0,
+   "about": "where the right-hand dancer ends, out front in the crew's dance (the candy-shop routine, seconds 5.4 to 53 of the clip, the group's middle on centre, places 1.15 times as far apart as filmed; scripts/video/formation.py prints these)"
+  },
+  "crew_left_after": {
+   "kind": "stand",
+   "at": [
+    -1.85,
+    2.27
+   ],
+   "facing_deg": 0.0,
+   "about": "where the left-hand dancer ends in the crew's dance (the candy-shop routine, seconds 5.4 to 53 of the clip, the group's middle on centre, places 1.15 times as far apart as filmed; scripts/video/formation.py prints these)"
   }
  },
  "paths": [
@@ -559,6 +633,36 @@
   {
    "from": "photographer",
    "to": "sitter"
+  },
+  {
+   "from": "wings",
+   "to": "crew_right"
+  },
+  {
+   "from": "wings_2",
+   "to": "crew_front"
+  },
+  {
+   "from": "wings_3",
+   "to": "crew_left",
+   "via": [
+    [
+     -4.5,
+     2.25
+    ]
+   ]
+  },
+  {
+   "from": "crew_front",
+   "to": "crew_front_after"
+  },
+  {
+   "from": "crew_right",
+   "to": "crew_right_after"
+  },
+  {
+   "from": "crew_left",
+   "to": "crew_left_after"
   }
  ],
  "cameras": {
@@ -623,6 +727,29 @@
     "couch_2"
    ],
    "about": "the couch"
+  },
+  "crew": {
+   "at": [
+    -0.4,
+    1.5,
+    8.8
+   ],
+   "aim": [
+    -0.4,
+    1.0,
+    2.9
+   ],
+   "lens_mm": 38,
+   "sees": [
+    "centre",
+    "crew_front",
+    "crew_right",
+    "crew_left",
+    "crew_front_after",
+    "crew_right_after",
+    "crew_left_after"
+   ],
+   "about": "front of house: three dancers across the middle of the stage"
   }
  },
  "lights": [
@@ -821,6 +948,11 @@
   ],
   "photographer": [
    "photographer"
+  ],
+  "crew": [
+   "crew_front",
+   "crew_right",
+   "crew_left"
   ]
  }
 }

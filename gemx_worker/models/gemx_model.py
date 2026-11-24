@@ -52,6 +52,12 @@ the router. Job kinds it answers:
                 held still against something (0..1)
       marks     per frame, where GEM-X's own hands, toes and head are, so the
                 conversion can be measured against them
+      camera_root
+                per frame, where the hips are in the camera's own space (x to
+                the right of the picture, y down, z away, metres). Everyone in
+                a clip shares the camera, so this is what says where several
+                people stand relative to each other (each one's `root` is in a
+                world of their own). Left out if it could not be worked out
 
   info       what is fetched and loaded, with revisions and sizes
 
@@ -675,6 +681,15 @@ def motion(params: dict) -> dict:
         }
         rest = body(**still, return_joints_only=True)
     joints = posed["joints"][0]  # [T, 77, 3]
+    seen_from_camera = None
+    try:  # the same body through the camera's own parameters: where the hips are as the camera sees them
+        incam = {k: v.detach().to(S.device).float() for k, v in result["pred_soma_params_incam"].items()}
+        with torch.inference_mode(), torch.autocast(torch.device(S.device).type, enabled=False):
+            hips = body(**incam, return_joints_only=True)["joints"][0][:, 0].cpu().numpy()
+        if hips.shape == (count, 3) and np.isfinite(hips).all():
+            seen_from_camera = hips.round(4).tolist()
+    except Exception as error:  # noqa: BLE001  nothing else in the answer depends on it
+        log.warning("no camera_root: %s", error)
     names = list(SOMA77_JOINT_NAMES)
     if joints.shape != (count, len(names), 3):
         raise RuntimeError(f"GEM-X answered joints shaped {tuple(joints.shape)}, expected ({count}, {len(names)}, 3)")
@@ -705,6 +720,7 @@ def motion(params: dict) -> dict:
         "contact_order": CONTACT_ORDER,
         "contacts": touching.round(3).tolist(),
         "marks": {name: joints[:, names.index(name)].cpu().numpy().round(4).tolist() for name in MARKS},
+        **({"camera_root": seen_from_camera} if seen_from_camera else {}),
         "boxes_seen": seen,
         "made_by": {
             "model": "GEM-X body motion (native77)",

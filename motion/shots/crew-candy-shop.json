@@ -1,32 +1,33 @@
 {
- "name": "crew-candy-shop",
- "brief": "All three ways of making motion in one shot, on the ninja's stage: someone waits in the wings (our pose), walks on to the spot where people stand and talk (a sentence), dances sixteen seconds of the candy-shop routine there (read off the video, the dancer chosen on the clip's page), takes a bow (a sentence) and stands easy (our pose). MotionBricks makes the join at every change. Needs the clip: `just video candy-shop` as far as the motion, first. For another of the three dancers, make their motion (`just video candy-shop \"\" 1:2`) and give the routine beat \"person\": 2.",
- "beats": [
-  {
-   "time": "0-1 s",
-   "action": "waits in the wings",
-   "driven_by": "stand, at the wings"
-  },
-  {
-   "time": "1-4.5 s",
-   "action": "walks on",
-   "driven_by": "text, wings to monologue"
-  },
-  {
-   "time": "4.5-21 s",
-   "action": "the routine, facing the house",
-   "driven_by": "video: candy-shop, shot 1, seconds 4 to 20, at monologue"
-  },
-  {
-   "time": "21-24.5 s",
-   "action": "takes a bow",
-   "driven_by": "text, at monologue"
-  },
-  {
-   "time": "24.5-25.5 s",
-   "action": "stands easy",
-   "driven_by": "stand, at monologue"
+  "name": "crew-candy-shop",
+  "brief": "Lincoln, Roosevelt and the pirate dance the candy-shop routine on the ninja's stage, about a minute, one take from the stage's cameras. All three ways of making motion are in it: they wait in the wings (our pose), walk on one after another (sentences, Kimodo), dance 47 seconds of the routine as the three in the clip did, Lincoln out front (read off the video by GEM-X, each his own dancer, the formation kept), bow to the house together (a sentence) and stand easy (our pose), with a MotionBricks join at every change. No sound: the song is not ours. Needs the clip's motion for all three: `just video candy-shop \"\" 1:2,1:3,2:2,2:3` after choosing person 1 on its page.",
+  "beats": [
+    {
+      "time": "0-7.3 s",
+      "action": "each waits in the wings, walks on in turn (the one going furthest first) and takes his place",
+      "driven_by": "poses: stand. text: three walks, each held to the set's path"
+    },
+    {
+      "time": "7.3-55.8 s",
+      "action": "the routine, seconds 5.4 to 53 of the clip, each role one of its three dancers, standing to each other as they did",
+      "driven_by": "video: candy-shop, persons 1 (front), 3 (left of the picture), 2 (right), one formation on the centre mark"
+    },
+    {
+      "time": "55.8-59.3 s",
+      "action": "a bow to the house, together",
+      "driven_by": "text, each where the dance left him"
+    },
+    {
+      "time": "59.3-60.2 s",
+      "action": "they stand easy",
+      "driven_by": "poses: stand"
+    }
+  ],
+  "set": "studio",
+  "segment": "candy-shop-crew",
+  "roles": {
+    "frontman": "young-lincoln-frontier-wrestler",
+    "left": "roosevelt-wrestler-1890s",
+    "right": "stocky-pirate-deckhand"
   }
- ],
- "set": "studio"
 }

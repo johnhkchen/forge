@@ -7,7 +7,9 @@ A shot list's beat can say `"source": "video"`:
 
     clip      a clip in videos/ that `just video` has made the motion for
     shot      which of its shots, counted from 1 as its page counts them. Left
-              out, it is the shot those seconds fall in
+              out, it is the shot those seconds fall in; and the stretch may
+              then run on from one shot into the next where the clip was only
+              split for its length (a take of over a minute), not cut
     from_s, to_s
               the stretch wanted, in seconds of the clip (what a player shows
               when you scrub clip.mp4)
@@ -32,6 +34,21 @@ is still a step to the left.
     from one mark      the stretch is turned so that it travels the way the
     to another         path runs between the two, and its end is eased onto
                        the far mark
+
+A crew. Several dancers filmed together are several roles of a take, each
+with a beat of its own for the same seconds, and they should stand to each
+other as they did in the clip. `formation` says so:
+
+    "person": 3, "formation": {"people": [1, 2, 3], "at": "crew", "spread": 1.0}
+
+Every role's beat carries the same `formation`. The middle of the group goes
+on that mark (the set fills in `origin` and `heading` from it; with no set,
+write them), facing the house the way the dancers faced the camera, and each
+person is placed from it by where they were in the picture (formation.py says
+how, and what that can and cannot know). `drift` does not apply: nobody's
+place is their own any more. The beat still says where the role's own walk
+on ends and where it stands afterwards (`from` and `to` marks); how far the
+formation puts them from those is in the plan, and the join covers it.
 
 Joins. A seam's tween takes the place of the next piece's first 13 frames or
 more, and of the last 12 of a piece like this one. So that the stretch you
@@ -99,19 +116,96 @@ def find(beat: dict, videos: str = None) -> dict:
     if not SHORTEST_SECONDS <= seconds <= LONGEST_SECONDS:
         raise ValueError(f"{where}: a video beat lasts {SHORTEST_SECONDS} to {LONGEST_SECONDS:.0f} seconds, not {seconds:.2f}")
     if beat.get("shot") is None:
-        shot = next((s for s in shots if s["first_frame"] <= first and last <= s["last_frame"]), None)
-        if shot is None:
+        inside = [s for s in shots if s["last_frame"] >= first and s["first_frame"] <= last]
+        whole = bool(inside) and inside[0]["first_frame"] <= first and last <= inside[-1]["last_frame"]
+        # One shot; or shots that are one take the clip was only split into for its length.
+        if not whole or (len(inside) > 1 and not all(s.get("part_of_a_long_shot") for s in inside)):
             raise ValueError(f"{where}: seconds {beat['from_s']} to {beat['to_s']} of \"{name}\" are not inside one shot (a cut falls between them)")
     else:
         number = int(beat["shot"])
         if not 1 <= number <= len(shots):
             raise ValueError(f"{where}: \"{name}\" has shots 1 to {len(shots)}, not {number}")
-        shot = shots[number - 1]
-        if not (shot["first_frame"] <= first and last <= shot["last_frame"]):
-            raise ValueError(f"{where}: shot {number} of \"{name}\" runs from {shot['first_frame'] / FPS:.2f} to {shot['last_frame'] / FPS:.2f} s of the clip; {beat['from_s']} to {beat['to_s']} is not inside it")
+        inside = [shots[number - 1]]
+        if not (inside[0]["first_frame"] <= first and last <= inside[0]["last_frame"]):
+            raise ValueError(f"{where}: shot {number} of \"{name}\" runs from {inside[0]['first_frame'] / FPS:.2f} to {inside[0]['last_frame'] / FPS:.2f} s of the clip; {beat['from_s']} to {beat['to_s']} is not inside it")
     person = int(beat["person"]) if beat.get("person") is not None else None
-    path, record = motion_file(folder, shot["index"], person)
-    return {"clip": name, "folder": folder, "shot": shot, "first": first, "last": last, "file": path, "person": record.get("person", person), "made_as": record.get("request")}
+    files = [motion_file(folder, shot["index"], person) for shot in inside]
+    return {"clip": name, "folder": folder, "shots": inside, "first": first, "last": last, "files": [path for path, _ in files], "person": files[0][1].get("person", person)}
+
+
+def joined(sk, want: dict, name: str) -> tuple:
+    """The motion of the shots a beat reaches into, on our skeleton, as one: (motion, first clip frame, report).
+
+    More than one shot here is one take the clip was split into for its length. The camera did not cut, so the
+    second part's world faces the way the first's did; only its middle starts from nothing again. So the second
+    is slid (not turned) to carry on where the first was heading, and the pose at the split is eased."""
+    import timeline
+
+    out, reports, camera = None, [], []
+    for shot, path in zip(want["shots"], want["files"]):
+        answer = clip_file.read(path)
+        motion, report = soma77.convert(answer, sk)
+        camera = None if camera is None or not answer.get("camera_root") else camera + list(answer["camera_root"])
+        if len(motion["root"]) != shot["last_frame"] - shot["first_frame"] + 1:
+            raise ValueError(f"beat \"{name}\": the motion for shot {shot['index'] + 1} of \"{want['clip']}\" has {len(motion['root'])} frames, the shot has {shot['last_frame'] - shot['first_frame'] + 1}: the cuts changed since it was made")
+        motion = {**motion, "root": [list(r) for r in motion["root"]], "rotations": [list(r) for r in motion["rotations"]], "contacts": [list(c) for c in motion["contacts"]]}
+        reports.append(report)
+        if out is None:
+            out = motion
+            continue
+        last = len(out["root"]) - 1
+        step = [(out["root"][last][a] - out["root"][last - 3][a]) / 3.0 for a in (0, 2)]
+        motion = timeline.moved(motion, 0.0, out["root"][last][0] + step[0] - motion["root"][0][0], out["root"][last][2] + step[1] - motion["root"][0][2])
+        soma77.blend_in(motion, out)
+        for key in ("root", "rotations", "contacts"):
+            out[key] = out[key] + motion[key]
+    report = {
+        "size_ours_over_theirs": round(sum(r["size_ours_over_theirs"] for r in reports) / len(reports), 4),
+        "ours_vs_gemx_cm": {mark: {"typical": max(r["ours_vs_gemx_cm"][mark]["typical"] for r in reports), "worst": max(r["ours_vs_gemx_cm"][mark]["worst"] for r in reports)} for mark in reports[0]["ours_vs_gemx_cm"]},
+        "floor_followed_cm": max(r.get("floor_followed_cm", 0.0) for r in reports),
+        "camera_root": camera,  # where the camera saw the hips, if the worker said (newer ones do)
+    }
+    return out, want["shots"][0]["first_frame"], report
+
+
+def handles_for(beat: dict, want: dict, before: int, after: int) -> tuple:
+    """How many frames of the clip the beat brings either side of the stretch asked for, for the joins to use up."""
+    on = beat.get("handles", True) is not False
+    return min(before if on else 0, want["first"] - want["shots"][0]["first_frame"]), min(after if on else 0, want["shots"][-1]["last_frame"] - want["last"])
+
+
+CREWS: dict = {}  # a crew is worked out once, however many of its roles are planned in one go
+
+
+def crew(sk, beat: dict, before: int, after: int, videos: str = None) -> dict:
+    """Everyone in a beat's `formation`, set down together on the stage for the beat's frames (with its handles)."""
+    import formation
+    import timeline
+
+    form = beat.get("formation") or {}
+    people = [int(p) for p in form.get("people") or []]
+    if len(people) < 2 or len(set(people)) != len(people):
+        raise ValueError(f"beat \"{beat['name']}\": a formation names the people in it, two or more (\"people\": [1, 2, 3])")
+    if form.get("origin") is None:
+        raise ValueError(f"beat \"{beat['name']}\": a formation says where the middle of the group goes: `at` a mark of the set, or `origin` [x, z] and `heading`")
+    wants = {p: find({**beat, "person": p}, videos) for p in people}
+    one = wants[people[0]]
+    lead, tail = handles_for(beat, one, before, after)
+    first, last = one["first"] - lead, one["last"] + tail
+    key = timeline.digest({"clip": one["clip"], "frames": [first, last], "form": form, "files": {str(p): [os.path.getmtime(f) for f in wants[p]["files"]] for p in people}})
+    if key in CREWS:
+        return CREWS[key]
+    motions, sizes, reports, seen = {}, {}, {}, {}
+    for p in people:
+        whole, base, report = joined(sk, wants[p], beat["name"])
+        motions[p] = timeline.cut(whole, first - base, last - base)
+        sizes[p], reports[p] = report["size_ours_over_theirs"], report
+        seen[p] = report["camera_root"][first - base : last - base + 1] if report.get("camera_root") else None
+    where, notes = formation.measure(one["folder"], people, first, last, motions, sizes, sk, camera=seen if all(seen.values()) else None)
+    placed = formation.stand(sk, motions, where, sizes, tuple(form["origin"]), float(form.get("heading") or 0.0), float(form.get("spread") or 1.0))
+    CREWS[key] = {"placed": placed, "people": people, "frames": [first, last], "handles": [lead, tail], "reports": reports, "notes": notes, "closest": formation.closest(sk, placed),
+                  "places_in_the_group_m": {str(p): {"at_the_start": [round(c, 2) for c in where[p][lead]], "at_the_end": [round(c, 2) for c in where[p][len(where[p]) - 1 - tail]]} for p in people}}
+    return CREWS[key]
 
 
 def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, after: int = 0, videos: str = None) -> tuple:
@@ -119,50 +213,55 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
     will replace. Fills in `piece_card` (what plan.json keeps); returns (the motion, placed; the marks; its frames)."""
     import timeline
 
-    want = find(beat, videos)
-    answer = clip_file.read(want["file"])
-    whole, report = soma77.convert(answer, sk)
-    shot = want["shot"]
-    if len(whole["root"]) != shot["last_frame"] - shot["first_frame"] + 1:
-        raise ValueError(f"beat \"{beat['name']}\": the motion for shot {shot['index'] + 1} of \"{want['clip']}\" has {len(whole['root'])} frames, the shot has {shot['last_frame'] - shot['first_frame'] + 1}: the cuts changed since it was made")
-    # Handles: frames of the clip either side of the stretch, for the seams' tweens to take the place of.
-    handles = beat.get("handles", True) is not False
-    lead = min(before if handles else 0, want["first"] - shot["first_frame"])
-    tail = min(after if handles else 0, shot["last_frame"] - want["last"])
-    motion = timeline.cut(whole, want["first"] - lead - shot["first_frame"], want["last"] + tail - shot["first_frame"])
-    motion = {**motion, "root": [list(r) for r in motion["root"]], "rotations": [list(r) for r in motion["rotations"]], "contacts": [list(c) for c in motion["contacts"]]}
-    count = len(motion["root"]) - 1
-    a, b = lead, count - tail  # the stretch asked for, as frames of the piece
-
-    # Where the shot wants it: the stretch begins at from_m on the path, and ends (if it travels) at to_m.
     path = stage.path
     if beat.get("from_m") is None or beat.get("to_m") is None:
         raise ValueError(f"beat \"{beat['name']}\": a video beat says where it is on the path (from_m, to_m), or names a mark (at, or from and to)")
     x0, z0, h0 = path.at(float(beat["from_m"]))
     x1, z1, _ = path.at(float(beat["to_m"]))
     travels = math.hypot(x1 - x0, z1 - z0) > 0.05
-    went = (motion["root"][b][0] - motion["root"][a][0], motion["root"][b][2] - motion["root"][a][2])
-    if travels:
-        if math.hypot(*went) < 0.05:
-            raise ValueError(f"beat \"{beat['name']}\": it is asked to go somewhere, but the dancer stays on the spot in those seconds; put it `at` a mark")
-        # Turned so that the way it went is the way the path goes.
-        turn = math.degrees(math.atan2(x1 - x0, z1 - z0) - math.atan2(went[0], went[1]))
-    else:
-        turn = h0 + float(beat.get("facing_deg") or 0.0) - timeline.facing(sk, motion, a)
-    motion = timeline.moved(motion, turn, 0.0, 0.0)
-    motion = timeline.moved(motion, 0.0, x0 - motion["root"][a][0], z0 - motion["root"][a][2])
     drift = beat.get("drift") or "keep"
     if drift not in ("keep", "flatten"):
         raise ValueError(f"beat \"{beat['name']}\": drift is keep or flatten")
-    off = (x1 - motion["root"][b][0], z1 - motion["root"][b][2])  # from where it ends to where the shot wants it
-    if travels or drift == "flatten":
-        for f, root in enumerate(motion["root"]):
-            share = min(1.0, max(0.0, (f - a) / float(max(1, b - a))))
-            root[0], root[2] = round(root[0] + off[0] * share, 5), round(root[2] + off[1] * share, 5)
-        eased, off = off, (0.0, 0.0)
+    eased, turn, group = (0.0, 0.0), 0.0, None
+    if beat.get("formation"):
+        # One of a crew: everyone is set down together, each where the picture had them in the group.
+        if beat.get("person") is None or int(beat["person"]) not in [int(p) for p in beat["formation"].get("people") or []]:
+            raise ValueError(f"beat \"{beat['name']}\": in a formation the beat says which of its people this role is (\"person\")")
+        want = find(beat, videos)
+        group = crew(sk, beat, before, after, videos)
+        lead, tail = group["handles"]
+        placed = group["placed"][int(beat["person"])]
+        motion = {**placed, "root": [list(r) for r in placed["root"]], "rotations": [list(r) for r in placed["rotations"]], "contacts": [list(c) for c in placed["contacts"]]}
+        report = group["reports"][int(beat["person"])]
+        count = len(motion["root"]) - 1
+        a, b = lead, count - tail
     else:
-        eased = (0.0, 0.0)
-    ends = motion["root"][b]
+        want = find(beat, videos)
+        whole, base, report = joined(sk, want, beat["name"])
+        # Handles: frames of the clip either side of the stretch, for the seams' tweens to take the place of.
+        lead, tail = handles_for(beat, want, before, after)
+        motion = timeline.cut(whole, want["first"] - lead - base, want["last"] + tail - base)
+        motion = {**motion, "root": [list(r) for r in motion["root"]], "rotations": [list(r) for r in motion["rotations"]], "contacts": [list(c) for c in motion["contacts"]]}
+        count = len(motion["root"]) - 1
+        a, b = lead, count - tail  # the stretch asked for, as frames of the piece
+        # Where the shot wants it: the stretch begins at from_m on the path, and ends (if it travels) at to_m.
+        went = (motion["root"][b][0] - motion["root"][a][0], motion["root"][b][2] - motion["root"][a][2])
+        if travels:
+            if math.hypot(*went) < 0.05:
+                raise ValueError(f"beat \"{beat['name']}\": it is asked to go somewhere, but the dancer stays on the spot in those seconds; put it `at` a mark")
+            # Turned so that the way it went is the way the path goes.
+            turn = math.degrees(math.atan2(x1 - x0, z1 - z0) - math.atan2(went[0], went[1]))
+        else:
+            turn = h0 + float(beat.get("facing_deg") or 0.0) - timeline.facing(sk, motion, a)
+        motion = timeline.moved(motion, turn, 0.0, 0.0)
+        motion = timeline.moved(motion, 0.0, x0 - motion["root"][a][0], z0 - motion["root"][a][2])
+        off = (x1 - motion["root"][b][0], z1 - motion["root"][b][2])  # from where it ends to where the shot wants it
+        if travels or drift == "flatten":
+            for f, root in enumerate(motion["root"]):
+                share = min(1.0, max(0.0, (f - a) / float(max(1, b - a))))
+                root[0], root[2] = round(root[0] + off[0] * share, 5), round(root[2] + off[1] * share, 5)
+            eased = off
+    begins, ends = motion["root"][a], motion["root"][b]
     marks = [
         {
             "name": f"{beat['name']}: ends",
@@ -183,7 +282,8 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
     piece_card.update(
         {
             "clip": want["clip"],
-            "clip_shot": shot["index"] + 1,
+            "clip_shot": want["shots"][0]["index"] + 1,
+            "clip_shots": [shot["index"] + 1 for shot in want["shots"]],
             "person": want["person"],
             "clip_frames": [want["first"] - lead, want["last"] + tail],
             "asked_for": [a, b],
@@ -191,9 +291,13 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
             "placement": {"x": round(x0, 4), "z": round(z0, 4), "turned_deg": round(turn, 2), "travels": travels},
             "drift": drift,
             "drift_taken_out_cm": round(100.0 * math.hypot(*eased), 1),
+            "starts_from_its_mark_cm": round(100.0 * math.hypot(begins[0] - x0, begins[2] - z0), 1),
             "ends_from_its_mark_cm": round(100.0 * math.hypot(ends[0] - x1, ends[2] - z1), 1),
             "ours_vs_gemx_cm": report["ours_vs_gemx_cm"],
             "video": timeline.digest({"root": motion["root"], "rotations": motion["rotations"], "contacts": motion["contacts"]}),
         }
     )
+    if group:
+        piece_card["formation"] = {**beat["formation"], "starts_at": [round(begins[0], 3), round(begins[2], 3)], "ends_at": [round(ends[0], 3), round(ends[2], 3)],
+                                   "places_in_the_group_m": group["places_in_the_group_m"], "closest": group["closest"], "read_from": group["notes"]}
     return motion, marks, count

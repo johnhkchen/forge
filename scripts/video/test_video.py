@@ -702,6 +702,176 @@ def test_a_dancer_who_drifts_is_kept_put_or_walked_to_a_mark_on_request():
             os.environ["FORGE_VIDEOS"] = saved
 
 
+# ---- a crew: several dancers of one clip, in formation ---------------------------
+
+
+def test_where_people_stand_is_read_from_their_boxes():
+    import formation
+
+    width, height, focal = 960, 540, math.hypot(960, 540)
+    camera, horizon = 0.8, 250.0  # a low camera, tilted a little
+
+    def box(x_left: float, far: float, tall: float, pan: float = 0.0):
+        cx = width / 2.0 - x_left * focal / far + pan
+        top, bottom = horizon + focal * (camera - tall) / far, horizon + focal * camera / far
+        wide = 0.25 * tall * focal / far
+        return [cx - wide, top, cx + wide, min(bottom, height - 1.0)]
+
+    people, truth = {1: {"boxes": [], "top": [], "tall": []}, 2: {"boxes": [], "top": [], "tall": []}, 3: {"boxes": [], "top": [], "tall": []}}, {1: [], 2: [], 3: []}
+    for f in range(240):
+        t = f / 30.0
+        pan = 60.0 * math.sin(0.5 * t)  # the camera swings: everyone moves across the picture together
+        spots = {1: (0.1 * math.sin(t), 2.4 + 0.2 * math.sin(0.7 * t)),  # out front: so near that the picture cuts their feet off
+                 2: (-0.9, 4.2 + 0.3 * math.sin(0.4 * t)), 3: (0.8 + 0.2 * math.sin(0.3 * t), 5.4)}
+        for p, (x, z) in spots.items():
+            tall = 1.7 - (0.5 * abs(math.sin(1.3 * t)) if p == 2 else 0.0)  # person 2 keeps crouching: no further away for it
+            people[p]["boxes"].append(box(x, z, tall, pan))
+            people[p]["tall"].append(tall)
+            people[p]["top"].append(tall)
+            truth[p].append((x, z))
+    assert all(b[3] >= height - 3 for b in people[1]["boxes"]), "person 1's feet are out of the picture"
+    seen, notes = formation.seen_from_boxes(people, width, height)
+    assert abs(notes["camera_height_m"] - camera) < 0.05 and notes["feet_cut_off_share"]["1"] == 1.0, notes
+    for p in (2, 3):  # whole in the picture: how far is exact, crouching or not
+        assert max(abs(s[1] - z) for s, (_, z) in zip(seen[p], truth[p])) < 0.02
+    assert max(abs(s[1] - z) for s, (_, z) in zip(seen[1], truth[1])) < 0.15, "cut off at the feet, read from the top of the box"
+    # Places in the group: the camera's swing is gone (it moved everyone alike); who is left, right, front and back is kept.
+    where = formation.places(seen, reach=5)
+    for f in range(20, 220, 10):
+        mx, mz = sum(truth[p][f][0] for p in truth) / 3.0, sum(truth[p][f][1] for p in truth) / 3.0
+        for p in truth:
+            # The swing shifts everyone sideways by the same pixels, which is a little more metres the further off they are.
+            assert abs(where[p][f][0] - (truth[p][f][0] - mx)) < 0.12 and abs(where[p][f][1] - (truth[p][f][1] - mz)) < 0.12, (p, f, where[p][f])
+    assert where[1][100][1] < where[2][100][1] and where[2][100][0] < where[1][100][0] < where[3][100][0]
+
+
+def test_the_floor_follows_the_feet_when_the_models_floor_creeps():
+    truth = stub_worker.dance(SK, 0, 239)
+    raw = stub_worker.as_gemx(SK, CARD, truth, 0)
+    for f, root in enumerate(raw["root"]):
+        root[1] += 0.6 * f / 239.0  # GEM-X's world climbs 60 cm in eight seconds, as it does on a long shot
+    motion, report = soma77.convert(raw, SK, CARD)
+    toes = (SK.index["LeftToeBase"], SK.index["RightToeBase"])
+    rest = min(SK.rest_world_pos[t][1] for t in toes)
+    off = [min(positions(motion, f)[t][1] for t in toes) - rest for f in range(0, 240, 6)]
+    assert max(abs(v) for v in off) < 0.03, off  # feet that never left the floor are on it from first frame to last
+    assert 40.0 < report["floor_followed_cm"] < 60.0, report
+
+
+def crew_of_two(routine: dict) -> tuple:
+    """A segment for two roles on the studio set (a wait, a walk on, the routine in formation, a stand) and its take."""
+    def stand(tokens):
+        return {"pose": "stand", "at_m": 0, "side_m": 0, "facing_deg": 0, "speed_mps": 0, "tokens": tokens, "early_frames": 0, "pins": [], "hold_pins_frames": 0}
+
+    def part(person, wings, place, wait, walk, hold, more):
+        return {"title": f"person {person}", "start_pose": "stand", "start_mark": wings, "path": [], "beats": [
+            {"name": "Waits", "seconds": 1.0, "source": "poses", "at": wings, "moves": [stand(wait)]},
+            {"name": "Walks on", "seconds": walk / 30.0, "source": "text", "moves": [], "frames": walk, "to": place, "prompt": "{walk_on}", "keys": [{"pose": "stand", "at_seconds": 0, "at_m": 0, "side_m": 0, "facing_deg": 0, "only": [], "where": "start"}]},
+            {"name": "Takes his place", "seconds": 1.0, "source": "poses", "at": place, "moves": [stand(hold)]},
+            {"name": "The routine", "seconds": 0.5, "source": "video", "moves": [], "clip": "drawn-clip", "person": person, "from": place, "to": place + "_after",
+             "formation": {"people": [1, 2], "at": "centre", "spread": 1.0}, **routine, **more},
+            {"name": "Stands easy", "seconds": 1.0, "source": "poses", "at": place + "_after", "moves": [stand(9)]}]}
+
+    segment = {"name": "two-dancers", "title": "Two dancers", "about": "Two walk on and dance as the two in the clip did.",
+               "needs": {"roles": ["front", "side"], "marks": ["wings", "wings_2", "centre", "crew_front", "crew_right", "crew_front_after", "crew_right_after"]},
+               "sentences": {"walk_on": "A person walks forward and stops."}, "together": ["The routine"], "beats": [],
+               "roles": {"front": part(1, "wings_2", "crew_front", 13, 134, 12, {}), "side": part(2, "wings", "crew_right", 9, 150, 12, {})}}
+    take = {"name": "two-dancers", "brief": "a test", "beats": [], "set": "studio", "segment": os.path.join(TEMP, "takes", "two-dancers.json"), "roles": {"front": "plain-young-villager", "side": "plain-young-villager"}}
+    return segment, take
+
+
+def test_a_take_dances_a_clip_in_the_formation_it_was_filmed_in():
+    import formation
+    import rehearse
+    import segment as segment_file
+
+    bench = Bench.get()
+    assert os.path.exists(os.path.join(bench.folder, "motion", "shot-001-person-2.json")), "an earlier case made person 2 of shot 2"
+    folder = os.path.join(TEMP, "takes")
+    os.makedirs(folder, exist_ok=True)
+    saved = os.environ.get("FORGE_VIDEOS")
+    os.environ["FORGE_VIDEOS"] = bench.videos
+    try:
+        # Shot 2 of the clip is frames 60 to 104; the routine is its seconds 2.5 to 3.0, for both roles.
+        template, take = crew_of_two({"from_s": 2.5, "to_s": 3.0})
+        clip_file.write(os.path.join(folder, "two-dancers.json"), template)
+        plan_file = os.path.join(folder, "take-plan.json")
+        clip_file.write(plan_file, take)
+        made = rehearse.rehearse(plan_file, os.path.join(folder, "rehearsal"), log=QUIET)
+        front, side = made["roles"]["front"], made["roles"]["side"]
+        # Both roles are the same length, the routine on the same frames, and neither asked a worker for it.
+        assert len(front["motion"]["root"]) == len(side["motion"]["root"]) == made["frames"] == clip_file.read(os.path.join(folder, "rehearsal", "take.json"))["frames"]
+        a, b = front["plan"]["pieces"][3], side["plan"]["pieces"][3]
+        assert (a["first_frame"], a["last_frame"], a["clip_frames"]) == (b["first_frame"], b["last_frame"], b["clip_frames"]) and a["clip_frames"] == [62, 102]
+        assert (a["person"], b["person"]) == (1, 2) and front["asked"].count("text") == 1
+        # One formation: the same middle (the set's centre mark) and heading for both, and each placed from it by
+        # where the picture had them. The stand-in's dancers stay on their own spot, so where they stand is the picture's doing alone.
+        with open(os.path.join(REPO, "sets", "studio", "set.json")) as f:
+            centre = json.load(f)["marks"]["centre"]["at"]
+        assert a["formation"]["origin"] == b["formation"]["origin"] == centre and a["formation"]["heading"] == b["formation"]["heading"] == 0.0
+        places = a["formation"]["places_in_the_group_m"]
+        assert places == b["formation"]["places_in_the_group_m"]
+        start = a["first_frame"] + 13
+        size = 0.9346
+        for f in range(start + 1, start + 15, 3):
+            between = (front["motion"]["root"][f][0] - side["motion"]["root"][f][0], front["motion"]["root"][f][2] - side["motion"]["root"][f][2])
+            # Facing the house (heading 0) from the camera's side (heading 180): the camera's left is the stage's -X, its far side the stage's -Z.
+            want = (-(places["1"]["at_the_start"][0] - places["2"]["at_the_start"][0]) * size, -(places["1"]["at_the_start"][1] - places["2"]["at_the_start"][1]) * size)
+            assert math.hypot(between[0] - want[0], between[1] - want[1]) < 0.06, (f, between, want)
+            middle = ((front["motion"]["root"][f][0] + side["motion"]["root"][f][0]) / 2.0, (front["motion"]["root"][f][2] + side["motion"]["root"][f][2]) / 2.0)
+            assert math.hypot(middle[0] - centre[0], middle[1] - centre[1]) < 0.06, middle
+        # They were turned together, not each to face the front on their own.
+        assert abs((timeline.facing(SK, front["motion"], start + 5) - timeline.facing(SK, side["motion"], start + 5) + 180.0) % 360.0 - 180.0) < 1.0
+        # How close they come is measured, in the formation and over the whole take.
+        assert a["formation"]["closest"]["hips_cm"] > 30.0 and made["together"]["hips_cm"] > 30.0 and "The routine" in made["together"]["by_beat"]
+        assert os.path.exists(os.path.join(folder, "rehearsal", "front", "motion.glb")) and os.path.exists(os.path.join(folder, "rehearsal", "side", "checks.json"))
+        # A rehearsal is not let near the real shots (its pretend answers would be taken for real ones).
+        assert "somewhere other than shots/" in str(_fails(lambda: rehearse.rehearse(plan_file, os.path.join(REPO, "shots", "two-dancers"), log=QUIET)))
+        # Roles that do not mean the same formation are told so, as is a role that is nobody in it.
+        for change, said in (({"from_s": 2.6}, "do not ask for the same clip, seconds, people and mark"), ({"person": 7}, "is not one of the formation's people"), ({"person": 1}, "two roles are the same person")):
+            broken, _ = crew_of_two({"from_s": 2.5, "to_s": 3.0})
+            broken["roles"]["side"]["beats"][3].update(change)
+            assert said in str(_fails(lambda: segment_file.expand(broken, take))), said
+        missing, _ = crew_of_two({"from_s": 2.5, "to_s": 3.0})
+        for part in missing["roles"].values():
+            part["beats"][3]["formation"] = {"people": [1, 3], "at": "centre"}
+        missing["roles"]["side"]["beats"][3]["person"] = 3
+        clip_file.write(os.path.join(folder, "two-dancers.json"), missing)
+        assert "has motion for person 1, not 3" in str(_fails(lambda: rehearse.rehearse(plan_file, os.path.join(folder, "rehearsal-3"), log=QUIET)))
+    finally:
+        if saved is None:
+            del os.environ["FORGE_VIDEOS"]
+        else:
+            os.environ["FORGE_VIDEOS"] = saved
+
+
+def test_a_stretch_runs_on_through_a_split_that_is_not_a_cut():
+    import beat as video_beat
+
+    bench = Bench.get()
+    # The same clip, as if its first two shots were one long take that was only split for its length.
+    videos = os.path.join(TEMP, "long-take-videos")
+    shutil.copytree(bench.videos, videos)
+    record = clip_file.read(os.path.join(videos, "drawn-clip", "shots.json"))
+    for shot in record["shots"][:2]:
+        shot["part_of_a_long_shot"] = True
+    clip_file.write(os.path.join(videos, "drawn-clip", "shots.json"), record)
+    want = video_beat.find({"name": "r", "clip": "drawn-clip", "from_s": 1.5, "to_s": 2.6}, videos)
+    assert [s["index"] for s in want["shots"]] == [0, 1] and (want["first"], want["last"]) == (45, 78)
+    whole, base, report = video_beat.joined(SK, want, "r")
+    assert base == 0 and len(whole["root"]) == 105
+    # One dance through the split: no jump in place, and each joint turned as the dance has it, either side.
+    truth = stub_worker.dance(SK, 0, 104)
+    assert max(math.dist(whole["root"][f], whole["root"][f + 1]) for f in range(55, 65)) < 0.03
+    for f in (50, 59, 72, 100):
+        worst = max(abs(abs(sum(whole["rotations"][f][4 * j + k] * truth["rotations"][f][4 * j + k] for k in range(4))) - 1.0) for j in range(1, len(SK.joints)))
+        assert worst < 1e-4, (f, worst)
+    # And the second part was not turned to "carry on facing": a camera that did not cut has not turned the world.
+    assert abs((timeline.facing(SK, whole, 80) - timeline.facing(SK, soma77.convert(clip_file.read(want["files"][1]), SK)[0], 20) + 180.0) % 360.0 - 180.0) < 0.01
+    # A real cut between the two is still refused (the unchanged clip).
+    assert "a cut falls between them" in str(_fails(lambda: video_beat.find({"name": "r", "clip": "drawn-clip", "from_s": 1.5, "to_s": 2.6}, bench.videos)))
+
+
 def film_blender() -> str:
     import film
 
