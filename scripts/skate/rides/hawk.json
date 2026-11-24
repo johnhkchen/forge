@@ -1,0 +1,65 @@
+{
+ "name": "hawk",
+ "title": "Tricks from the X Games",
+ "about": "Lincoln's run with his body in each trick taken from a real one: the clip of a 2021 X Games halfpipe run (videos/halfpipe, through GEM-X). The ride, the board and where he is stay ours; only his body during each trick comes from the clip. Two plain airs of his own (the second pass and the sixth) are there to build the speed the clip's airs need: they are sized to give each stretch of the clip its time. A test, kept private: the clip belongs to its makers.",
+ "set": "halfpipe",
+ "rider": {
+  "character": "young-lincoln-frontier-wrestler",
+  "version": "lowpoly"
+ },
+ "passes": [
+  {
+   "trick": "kickturn"
+  },
+  {
+   "trick": "air",
+   "height_m": 0.35
+  },
+  {
+   "trick": "air",
+   "height_m": 0.6,
+   "pose_from": {
+    "video": "halfpipe",
+    "shot": 1,
+    "from_s": 4.0,
+    "to_s": 5.5
+   }
+  },
+  {
+   "trick": "air",
+   "height_m": 0.9,
+   "pose_from": {
+    "video": "halfpipe",
+    "shot": 2,
+    "from_s": 12.1,
+    "to_s": 13.6
+   }
+  },
+  {
+   "trick": "handplant",
+   "pose_from": {
+    "video": "halfpipe",
+    "shot": 4,
+    "from_s": 21.9,
+    "to_s": 24.0
+   }
+  },
+  {
+   "trick": "air",
+   "height_m": 1.0
+  },
+  {
+   "trick": "air grab",
+   "height_m": 1.0,
+   "pose_from": {
+    "video": "halfpipe",
+    "shot": 8,
+    "from_s": 37.1,
+    "to_s": 39.0
+   }
+  },
+  {
+   "trick": "kickturn"
+  }
+ ]
+}
