@@ -112,6 +112,16 @@ set-from-marble world set splats="500k":
     "{{blender_bin}}" -b --factory-startup -P scripts/sets/from_marble.py -- "{{world}}" "{{set}}" --splats "{{splats}}" 2>&1 | grep -E '^MARBLE|Error|Traceback'
     python3 scripts/sets/standing.py check "{{set}}" | tail -1
 
+# Put a Marble world of a room inside the building made for it (a set with `room` and `marble_seat`, like casting-office): turned, sized and moved to fit, its picture's eye checked against the set's camera. The building itself is kept
+marble-seat world set="casting-office" splats="500k":
+    "{{blender_bin}}" -b --factory-startup -P scripts/sets/from_marble.py -- "{{world}}" "{{set}}" --splats "{{splats}}" --seat 2>&1 | grep -E '^MARBLE|Error|Traceback'
+    python3 scripts/sets/standing.py check "{{set}}" | tail -1
+
+# Write the casting office's set.json and build.json from its numbers, then build it
+casting-office:
+    python3 scripts/sets/casting_office.py
+    just set-build casting-office
+
 # Pictures of a Marble place's page in the gallery at each sharpness, and how fast it draws on this Mac, into evidence/marble/ (the gallery must be running on that port, started with --marble if the world's files are in another checkout)
 marble-shots set port="8028" camera="bar":
     python3 scripts/sets/marble_shots.py "{{set}}" --port {{port}} --camera "{{camera}}"

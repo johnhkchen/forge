@@ -12,6 +12,8 @@ What it shows:
            the story says; the ninja's stage has its sitter, its group and its photographer, and a real
            place to hang behind them
   load     the first view of the world is small: few files, low-poly, nothing that needs a decoder
+  planned  a place built but not yet in the story (the casting office) is checked like a place and kept out
+           of the epoch; put down on top of the stage, it is told
 
 `cases()` hands the same checks to scripts/test_tools.py.
 """
@@ -225,7 +227,26 @@ def test_load():
           any("ring/set.glb" in p for p in later["list"]) and any("kettle" in p for p in later["list"]) and not any("kettle" in p for p in first["list"]))
 
 
-TESTS = [test_places, test_epochs, test_house, test_toons, test_load]
+def test_planned():
+    """a place built but not yet in the story stands in the world as planned: checked like a place, kept out of the epoch."""
+    world = world_file.load()
+    planned = world.get("planned") or {}
+    check("the casting office is planned, not a place yet", "casting-office" in planned and "casting-office" not in world["places"])
+    problems, seen = world_file.check(world)
+    check("it is a sound set, on the ground, on nobody else's footprint: %s" % seen.get("planned"), not problems and "casting-office" in seen["planned"], problems[:3])
+    check("the epoch does not save it", all("casting-office" not in e["places"] for e in world_file.epochs()))
+    door, _ = world_file.where(dict(world, places=dict(world["places"], **planned)), "casting-office", "door")
+    stage, _ = world_file.where(world, "ninja-stage", "office_door")
+    apart = ((door[0] - stage[0]) ** 2 + (door[1] - stage[1]) ** 2) ** 0.5
+    check("its door is a few steps from the stage's way off (%.1f m)" % apart, apart < 8.0)
+    moved = copy.deepcopy(world)
+    moved["planned"]["casting-office"]["at"] = [45.0, 6.0]
+    said = "\n".join(world_file.check(moved)[0])
+    check("put down on the stage, it is told", "the footprints of planned \"casting-office\" and \"ninja-stage\" overlap" in said, said[:300])
+    check("its building is fetched with the first view of the world", "sets/casting-office/set.glb" in world_file.overview_files(world)["overview"]["list"])
+
+
+TESTS = [test_places, test_epochs, test_house, test_toons, test_load, test_planned]
 
 
 def cases():

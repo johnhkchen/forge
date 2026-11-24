@@ -263,7 +263,8 @@ def the_world():
         if epoch and epoch.get("places"):
             epochs.append(epoch)
     epochs.sort(key=lambda e: e.get("number", 0))
-    return {"title": world.get("title"), "about": world.get("about"), "now": world.get("epoch"), "epochs": epochs}
+    # Planned places (built, not in the story yet) are shown with the world as it is now, never saved in an epoch.
+    return {"title": world.get("title"), "about": world.get("about"), "now": world.get("epoch"), "epochs": epochs, "planned": world.get("planned") or {}}
 
 
 def all_takes():

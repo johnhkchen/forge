@@ -188,6 +188,19 @@
    "about": "A plywood ramp on the open ground north of the ninja's stage and east of the settlement. Lincoln has taken to it: patient on the way up, honest about the way down."
   }
  },
+ "planned": {
+  "casting-office": {
+   "set": "casting-office",
+   "at": [
+    45.0,
+    12.8
+   ],
+   "facing_deg": 180.0,
+   "label": "The casting office",
+   "whose": "ninja",
+   "about": "Planned: not in the story yet. The ninja's back room, a few steps from his photo stage, where he holds auditions: a backdrop and a taped X at one end, a table and three chairs for whoever is watching at the other. Its door faces the stage."
+  }
+ },
  "artifacts": [
   {
    "name": "gachapon",

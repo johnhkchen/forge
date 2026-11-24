@@ -469,8 +469,16 @@ function worldCard() {
   );
 }
 
+// The world as it is now also shows what is planned (built, not in the story yet: world.json's `planned`), marked so.
+function withPlanned(epoch) {
+  const planned = Object.entries(world.planned || {});
+  if (epoch.name !== world.now || !planned.length) return epoch;
+  return { ...epoch, places: { ...epoch.places, ...Object.fromEntries(planned.map(([name, p]) => [name, { ...p, planned: true }])) } };
+}
+
 function worldPage(wantedEpoch, wantedPlace, wantedWalker) {
-  const epoch = world.epochs.find((e) => e.name === wantedEpoch) || world.epochs.find((e) => e.name === world.now) || world.epochs[world.epochs.length - 1];
+  const saved = world.epochs.find((e) => e.name === wantedEpoch) || world.epochs.find((e) => e.name === world.now) || world.epochs[world.epochs.length - 1];
+  const epoch = withPlanned(saved);
   const state = { place: epoch.places[wantedPlace] ? wantedPlace : null, marks: false, walking: false };
   const press = (btn, on) => btn.setAttribute("aria-pressed", String(on));
   const link = () => history.replaceState(null, "", `#/world/${epoch.name}${state.walking ? "/walk" : state.place ? `/${encodeURIComponent(state.place)}` : ""}`);
@@ -478,16 +486,16 @@ function worldPage(wantedEpoch, wantedPlace, wantedWalker) {
   const card = h("div", {});
   const loadLine = h("p", { class: "load-line" });
   // The timeline: every saved epoch, and room for the next.
-  const at = world.epochs.indexOf(epoch);
+  const at = world.epochs.indexOf(saved);
   const go = (e) => { location.hash = `#/world/${e.name}`; };
   const timeline = h("div", { class: "timeline", role: "group", "aria-label": "Epochs" },
     world.epochs.length > 1 ? h("button", { class: "chip clay-chip step", type: "button", disabled: at === 0, "aria-label": "Earlier", onclick: () => go(world.epochs[at - 1]) }, "←") : null,
-    world.epochs.map((e) => h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(e === epoch), onclick: () => go(e) }, `Epoch ${e.number} · ${e.title}`)),
+    world.epochs.map((e) => h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(e === saved), onclick: () => go(e) }, `Epoch ${e.number} · ${e.title}`)),
     world.epochs.length > 1 ? h("button", { class: "chip clay-chip step", type: "button", disabled: at === world.epochs.length - 1, "aria-label": "Later", onclick: () => go(world.epochs[at + 1]) }, "→") : null,
     h("button", { class: "chip clay-chip", type: "button", disabled: true, title: "Saved when the world next changes" }, `Epoch ${world.epochs[world.epochs.length - 1].number + 1} · not yet`),
   );
   const placeNames = Object.keys(epoch.places);
-  const chips = [[null, "The whole world"], ...placeNames.map((name) => [name, epoch.places[name].label || words(name)])];
+  const chips = [[null, "The whole world"], ...placeNames.map((name) => [name, `${epoch.places[name].label || words(name)}${epoch.places[name].planned ? " · planned" : ""}`])];
   const chipEls = chips.map(([name, label]) => h("button", { class: "chip clay-chip", type: "button", "aria-pressed": String(state.place === name), onclick: () => choose(name) }, label));
   function choose(name, jump = false) {
     if (state.walking) walk(false);
@@ -790,7 +798,7 @@ class WorldViewer extends Miniature {
         pick.userData.place = name;
         inner.add(pick);
         this.picks.push(pick);
-        const label = labelSprite(place.label || set.title || words(name));
+        const label = labelSprite(`${place.label || set.title || words(name)}${place.planned ? " · planned" : ""}`);
         label.material.sizeAttenuation = false;
         label.scale.multiplyScalar(place.inside ? 0.022 : 0.028);
         label.position.set((lo[0] + hi[0]) / 2, tall + (place.inside ? 0.6 : 1.6), (lo[1] + hi[1]) / 2);
@@ -927,7 +935,8 @@ class WorldViewer extends Miniature {
     if (!entry) return this.home();
     const { lo, hi, tall, inner } = entry;
     const middle = inner.localToWorld(new THREE.Vector3((lo[0] + hi[0]) / 2, tall * 0.25, (lo[1] + hi[1]) / 2));
-    const d = this.back(Math.max(hi[0] - lo[0], (hi[1] - lo[1]) * 0.9) * (this.camera.aspect < 1 ? 1.12 : 0.82));
+    const d = this.back(Math.max(hi[0] - lo[0], (hi[1] - lo[1]) * 0.9, 10) * // a small place (a one-room building) is framed as if 10 m, so its roof and what is round it show
+      (this.camera.aspect < 1 ? 1.12 : 0.82));
     // From out front of the place (its own +z) and a little to one side, looking down into it.
     const from = inner.localToWorld(new THREE.Vector3((lo[0] + hi[0]) / 2 + d * 0.3, d * 0.5, (lo[1] + hi[1]) / 2 + d * 0.8));
     return [from, middle];

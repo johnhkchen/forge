@@ -100,6 +100,7 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just set-check [set]` | is a standing set sound? Marks on the floor and clear of the furniture, seats the right height, every camera holding its marks (see "Sets") |
 | `just set-build <set>`, `just set-backdrop <set>`, `just set-card <set>` | build a set's block-out from its data, have Codex paint its backdrop, take its picture for the gallery |
 | `just set-from-run <set> <run folder>` | use an object you already made as a set's geometry |
+| `just casting-office`, `just marble-seat <world folder>` | write and build the ninja's casting office; later, put a Marble world of its room inside it (see "The casting office") |
 | `just shoot <take>`, then `just cast <take> runs "" <clip>` | a take on a set with several people in it (`studio-guest-entrance`): every role's motion, then the cast, filmed from every camera of the set |
 | `just fight <fight> <left run> <right run>` | stage a fight from its script in `scripts/fight/fights/`: both fighters on one timeline, each baked through the same skeleton and limits as a walk, filmed from every camera of the set with hitstop, camera shake and flashes (see "Fights"). `just fight-test` tries the kit without Blender |
 | `just skate <ride> <character run> [versions]` | put a character on the skateboard and have it ride a run on the halfpipe, from its script in `scripts/skate/rides/`: the board kept on the ramp, the rider baked on the board, filmed from every camera of the set (see "The halfpipe"). `just skate-test` tries the kit without Blender; `just skate-plan <ride>` only lays a run out |
@@ -380,6 +381,8 @@ just buy-house flamenco-dancer
 
 Around them is the developer's plain grey floor, with a few grey one-metre cubes and a "TODO" or two: what hasn't been built yet.
 
+**Planned, not in the story yet.** A place can be built and put down before the story takes it in. It goes under `planned` in `world.json`, in the same one line a place has. `just world-check` checks it like any other place: a sound set, on the ground, on nobody else's footprint. The world page shows it with the world as it is now, its name marked "· planned". An epoch never saves it: when the story takes it in, it moves over to `places` and a new epoch is saved. Planned now: the ninja's casting office, just south of his stage (see The casting office, below).
+
 **`world.json` says where things are, and nothing else does.** Each place is an ordinary set (see Sets, below), and a set never knows where it stands. `world.json` puts each one down with one line, `{"set": "grass", "at": [0, 13], "facing_deg": 0}`: turn the set until its front faces that way, slide its origin there. Marks, cameras, blocks and the mesh all move together. It also says who stands on which mark, in which pose, and where the story's wondrous artifacts are. `just world-check` reads it and says what is wrong in words: two footprints that overlap, a place off the edge of the ground, a toon on a mark that isn't there.
 
 **Epochs.** An epoch is the whole world saved at one moment, with a title and a one-line caption: `world/epochs/epoch-0.json`. When the world changes, `just world-epoch epoch-1 "A title" "A caption"` saves a new file. Old ones are never edited, so the gallery's timeline can step through them like a time-lapse.
@@ -524,6 +527,7 @@ What a set keeps, in `sets/<name>/set.json`:
 | `rooftop` | the roof, ledge and wall of the hero shots | the blocks that used to be written inside each shot. Both hero shots now say `"set": "rooftop"`, and plan to the same requests as before, byte for byte |
 | `ring` | the 1890s wrestling ring | the ring object from `runs/`: the floor is the mat, the ropes and posts are in the way, the corners and centre are marks, the steps are the way in |
 | `studio` | the ninja's stage: desk and chair, a couch for two, a way on from the wings, a band riser, a sitter's mark and a photographer's, a big window | built from data. `just set-build studio` makes its block-out from the boxes in `set.json` and a few extra pieces in `build.json`, in flat colors, in a background Blender. No TRELLIS, one picture from Codex |
+| `casting-office` | the ninja's back room for auditions: a small building with a door, a window and a pitched roof, a backdrop and a taped X inside, a table for three | built from data the same way. `scripts/sets/casting_office.py` writes its `set.json` and `build.json` from a few numbers; `just casting-office` writes them and builds it |
 
 **Blocking by marks.** A beat in a shot list says `"to": "meet_left"` (walk there) or `"at": "couch_1"` (stay there: stand, sit down, get up, shake hands). The set then supplies what a shot used to write by hand: the path over the ground, how far along it each pose stands, which way it faces, how high the seat is, where the hand goes. Sitting is our own `sit` pose reached from our own `stand` pose; walking is one sentence to Kimodo, held to the set's path. A shot list that names no marks works exactly as before.
 
@@ -543,6 +547,41 @@ A take can also swap a sentence (`"sentences": {"guest_walks_on": "A person stri
 In the gallery, **Places** has a page per set: the set in 3D with its marks and cameras labelled, a row to look through each fixed camera, its dressing as chips, and a button for each shot filmed there that brings the cast on and plays it.
 
 **What is weak.** Everyone on a set is brought to the same hip height, which is how they all land on the same marks; so short-legged Roosevelt comes out bigger than long-legged Lincoln, who was the taller man. The handshake only puts two wrists near one spot: the hands lie flat the way a hand rests on a wall, nobody grips, nothing pumps, and a short arm comes up short. A seat is a box, solid down to the floor: a body is kept out of it and can float a few centimetres above it, nothing pulls it down onto the cushion, and nothing knows about the chair's back. The floor is flat, so the ring's steps are a mark at mat height and its ropes have a gap where people come in. Where a walk meets a turn (leaving the handshake) the join is the roughest part of the motion. Nothing keeps two people out of each other, only out of the set. The cameras never move and nobody picks the cut: you get three films. Only the template has been shot; Opus has been shown how to block by marks but has not yet laid out a set shot for real. Filming is slow, about four minutes a camera.
+
+## The casting office
+
+The ninja's back room, where he holds auditions. From the outside it is a small building beside his photo stage, in the stage's own colors: off-white walls, steel-blue trim and a steel-blue pitched roof, a little porch over the door. The door faces the stage. Inside is one plain room, the room all nine concept pictures show (`world/marble/casting-office/concepts/round1/`): a backdrop and two stand lamps at the far end with a taped X on open floor, a folding table and three odd chairs at the near end, the box camera on a tripod beside the table, a window in one side wall and the door in the other. A Marble world of that room will fill it later; for now it is boxes in flat colors.
+
+```
+just casting-office                      # write set.json and build.json from the numbers, then build it
+just set-card casting-office             # its card: the room through the panel's eye
+just marble-seat <world folder>          # later: put a Marble world of the room inside it
+```
+
+**The size.** The room inside is 6 m long, 5 m across and 3 m to the ceiling, with walls 20 cm thick. Three people stand side by side on the X, 80 cm apart, with room to spare between the lamps. The panel's table is 2.2 m long with a chair behind it for each of three. Outside, with the porch and the roof's overhang, it takes up 7.2 by 7.2 m.
+
+**Where it stands.** At (45, 12.8), facing north (180), just south of the stage, past its desk end. Its footprint runs from 41.4 to 48.6 east and from 8.7 to 15.9 south: 20 cm clear of the stage, well clear of the halfpipe (north of the stage) and of the dancer's house (west of 37.2). It is `planned` in `world.json`, not a place yet: the story hasn't taken it in.
+
+**The way through.** The stage now has a door mark, `office_door`, at the end of the stage by the desk. It leads to the office's `door` mark and that one leads back, so `just set-check` is happy with both. From one to the other is 5 m: off the stage, across the grass, onto the porch and in. The stage itself is unchanged, besides that one mark (it is offstage, so no camera has to hold it).
+
+**Its marks.**
+
+| Mark | What it is for |
+|---|---|
+| `audition` | the taped X, facing the table, the backdrop behind |
+| `lineup_left`, `lineup_right` | either side of the X, for a chemistry read; with the X they are the group `lineup` |
+| `panel_1`, `panel_2`, `panel_3` | the three seats at the table, facing the X (the group `panel`) |
+| `box_camera` | behind the box camera on its tripod: where the ninja stands to take a test picture |
+| `door` | just inside the door, facing in; leads to the stage's `office_door` |
+| `porch` | out on the porch, looking toward the stage |
+
+And three cameras: `panel_eye`, seated at the middle of the table 1.2 m up, looking down the room at the X (the eye the concept pictures were drawn from); `lens`, through the box camera; `back`, from up by the backdrop looking back at the table.
+
+**How the Marble room goes in.** `set.json` writes down the room inside the walls (`room`: from -3 to 3 along x, 0 to 3 up, -2.5 to 2.5 across; the middle of the floor is the set's origin, the backdrop end is +x, the door's wall +z) and how a Marble world of it goes in (`marble_seat`). A Marble world's own origin is where the picture was taken from. `just marble-seat` turns it so that eye looks toward the backdrop, then to the nearest quarter turn that squares its walls up with ours; sizes it so the floor Marble measured is the size of our room; slides the middle of that floor onto ours; and then says how far the picture's eye landed from `panel_eye`. If the picture was taken where the concept pictures were, it lands on it. The building's own mesh is kept; the Marble mesh is written beside it as `marble.glb`, and `marble` in `set.json` says how the dots stand in the room, the way the saloon's does. `python3 scripts/sets/test_marble.py` tries all of this on a made-up room a tenth too big and taken 12 degrees askew: it comes back to the inside within 3 cm and its eye lands on `panel_eye`.
+
+**Pictures** (in `evidence/casting-office/`): the world from above with it beside the stage (`overview-desktop.png`), the place itself on the world page (`casting-office-desktop.png`), the room through the panel's eye on its set page (`set-page-panel-eye.png`), a plan from above with the marks named (`plan-marks.png`), and Blender's own view from the porch side (`blender-outside.png`) and from the panel's eye (`blender-panel-eye.png`).
+
+**What is weak.** It is a block-out: the lamps, the table and the box camera are boxes to bump into with a few sticks and cones on top, the backdrop is a flat. The roof and the ceiling are on, so from above the world page can't see in, and a set page's marks are under the roof. The furniture is our guess at the concept pictures; once a Marble world is chosen, the table, chairs and lamps should be moved to where Marble put them. Nothing has been filmed here yet. On the world page the stage's tall back wall stands between you and the porch when you arrive at the place.
 ## Fights
 
 A fight is animated the way fighting games and WoW do it: a few held poses and fast snaps between them, readable before it is real. Nothing is simulated and nothing is generated; it is our own poses on the `rig.py` skeleton, played by `animate.py` like a walk.
@@ -1227,7 +1266,9 @@ The world's files are read from `world/marble/` beside the gallery; from another
 
 **The way back to a mesh, ready and not run.** The test we want: Marble, a picture, Codex tidying the picture, TRELLIS, and a clean mesh that is still the same room. `just marble-diorama` makes the pictures: the room opened like a doll's house (the ceiling off, and the walls on the camera's side), from high up at three quarters, on white, five views, each as the painted mesh and as the dots through the same camera (`evidence/marble/diorama/`). `just marble-fit <set> <mesh.glb>` is the measuring: it lays a mesh of any size and facing over the set's (sixteen starts, then closest points until it settles) and says how far apart the surfaces are, both ways, as a median and a 90th percentile for the floor, the walls, the ceiling and things. Tried on Marble's own raw collision mesh, it finds the scale to a tenth of a percent and puts the surfaces 2 mm apart.
 
-**Doors.** A mark can be a `door`: a place to stand just inside a way out, that names the set it leads into and the door it comes out at there. `just set-check` wants the two to name each other; `"built": false` says the other side is still to come. The saloon's door leads to `niantic-cove`, which is not built.
+**Doors.** A mark can be a `door`: a place to stand just inside a way out, that names the set it leads into and the door it comes out at there. `just set-check` wants the two to name each other; `"built": false` says the other side is still to come. The saloon's door leads to `niantic-cove`, which is not built. The casting office's door leads to the ninja's stage, and the stage's leads back.
+
+**A Marble world inside a building of ours.** The saloon is all Marble, walls and all. The casting office goes the other way: we built the building, and a Marble world fills only the room inside it. `just marble-seat <world folder> casting-office` (`from_marble.py --seat`) puts it in by what the set writes down in `room` and `marble_seat`, and leaves the building as it is (see The casting office).
 
 **What is weak.** The painted mesh is only as good as Marble's collision mesh, and that is coarse: fine for where the floor and walls are, poor to look at. Sitting is not marked, because the chairs are part of a lump. The dots look best from standing height; from near the floor they fray. Roosevelt is lit by three lamps we placed by eye, not by the room, and nothing of him shows in the bar's glass. Walking in the saloon is first person only, and the world map does not know the place yet.
 

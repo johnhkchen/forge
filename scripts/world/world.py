@@ -18,6 +18,11 @@ world.json is the world as it is now:
     artifacts  [{name, title, about, whose}] and where: `place` + `slot` (dressing on a set's slot), or
                `held_by` a toon with an `offset` [x, y, z] from their feet, and its own `glb`
     toons      [{toon, name, glb, place, mark, pose}]: who stands where, on a mark of a place
+    planned    {name: {set, at, facing_deg, label, about}}: places that are built and put down but are not
+               in the story yet (canon/CANON.md says what has happened). They are checked like places (a
+               sound set, on the ground, not on top of anything) and shown on the world page with the
+               world as it is now, marked as planned, but an epoch does not save them: when the story takes
+               one in, it moves to `places` and a new epoch is saved
     epoch      the newest saved state, by name
 
 An epoch (world/epochs/<name>.json) is that same state, saved whole, with a
@@ -155,6 +160,32 @@ def check(world):
                 say("a scale cube at %s stands in \"%s\"" % (cube["at"], name))
     seen["places"] = {name: {"at": world["places"][name]["at"], "across_m": round(max(p[0] for p in o) - min(p[0] for p in o), 1), "deep_m": round(max(p[1] for p in o) - min(p[1] for p in o), 1)}
                       for name, o in outlines.items()}
+
+    # Planned places: built and put down, not in the story yet. The same rules, against everything else.
+    planned = {}
+    for name, place in (world.get("planned") or {}).items():
+        if name in world["places"]:
+            say("\"%s\" is both a place and planned: a place that is in the story is no longer planned" % name)
+            continue
+        try:
+            st = place_set(place)
+        except standing.SetProblem as e:
+            say("planned place \"%s\": %s" % (name, e))
+            continue
+        wrong, _ = standing.check(st)
+        for line in wrong:
+            say("planned place \"%s\" (the %s set): %s" % (name, place["set"], line))
+        planned[name] = outline_of(place, st)
+        if not within(planned[name], floor):
+            say("planned place \"%s\" runs off the ground" % name)
+        for other, outline in list(outlines.items()) + [(n, o) for n, o in planned.items() if n != name]:
+            if crosses(planned[name], outline):
+                say("the footprints of planned \"%s\" and \"%s\" overlap" % (name, other))
+        for cube in ground.get("cubes") or []:
+            if standing.inside(planned[name], *cube["at"]):
+                say("a scale cube at %s stands in planned \"%s\"" % (cube["at"], name))
+    seen["planned"] = {name: {"at": world["planned"][name]["at"], "across_m": round(max(p[0] for p in o) - min(p[0] for p in o), 1), "deep_m": round(max(p[1] for p in o) - min(p[1] for p in o), 1)}
+                       for name, o in planned.items()}
 
     taken = {}
     toons = {t["toon"]: t for t in world["toons"]}
@@ -308,7 +339,7 @@ def backdrops(world, stage="studio"):
 def overview_files(world):
     """The files the gallery fetches to show the whole world, before anyone comes close, and what waits for that."""
     first, later = [], []
-    for name, place in world["places"].items():
+    for name, place in list(world["places"].items()) + list((world.get("planned") or {}).items()):
         st = place_set(place)
         if place.get("inside"):
             continue  # drawn by the place it stands in, as dressing
@@ -358,6 +389,9 @@ def main():
         place = world["places"][name]
         print("WORLD %s: the %s set at (%g, %g), facing %g, %s x %s m%s" % (name, place["set"], place["at"][0], place["at"][1], place.get("facing_deg", 0), card["across_m"], card["deep_m"],
                                                                          ", inside the " + place["inside"] if place.get("inside") else ""))
+    for name, card in (seen.get("planned") or {}).items():
+        place = world["planned"][name]
+        print("WORLD %s (planned, not in the story yet): the %s set at (%g, %g), facing %g, %s x %s m" % (name, place["set"], place["at"][0], place["at"][1], place.get("facing_deg", 0), card["across_m"], card["deep_m"]))
     for toon, spot in (seen.get("toons") or {}).items():
         print("WORLD toon %s: %s" % (toon, spot))
     if args[0] == "map":

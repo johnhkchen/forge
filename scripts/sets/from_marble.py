@@ -2,6 +2,8 @@
 
     Blender -b --factory-startup -P scripts/sets/from_marble.py -- <world folder> <set name> [--splats 500k] [--finer 1] [--turn degrees]
     (`just set-from-marble <world folder> <set name>`)
+    Blender -b --factory-startup -P scripts/sets/from_marble.py -- <world folder> <set name> --seat
+    (`just marble-seat <world folder> <set name>`: into a building already built for it; see `seat`)
 
 A Marble world is a place grown by a world model from one picture. What it
 hands over (the folder, kept out of git) is
@@ -435,6 +437,94 @@ def convert(folder: str, set_dir: str, name: str, splats: str = "500k", times: i
             "nearest_splat_cm": {"typical": round(100 * float(np.median(far)), 1), "p90": round(100 * float(np.percentile(far, 90)), 1)}}
 
 
+def out_of_set(points, marble: dict):
+    """The other way from `into_set`: points of a set's frame as Marble's raw numbers (what a test needs to make a world)."""
+    p = np.asarray(points, np.float64) - np.asarray(marble["move"], np.float64)
+    turn = math.radians(marble.get("turn_deg", 0.0))
+    c, s = math.cos(turn), math.sin(turn)
+    x, z = p[:, 0] * c - p[:, 2] * s, p[:, 0] * s + p[:, 2] * c
+    return np.stack([x / marble["scale"], (marble["ground"] - p[:, 1]) / marble["scale"], -z / marble["scale"]], axis=1)
+
+
+def wrap(degrees: float) -> float:
+    return (degrees + 180.0) % 360.0 - 180.0
+
+
+def seat(folder: str, set_dir: str, splats: str = "500k", times: int = 1) -> dict:
+    """Put a Marble world of a room inside a building we built for it: a set whose set.json has `room` (the inside,
+    in its own frame) and `marble_seat` (how to line the two up). Only the set's `marble` block is written, and the
+    Marble mesh as its own file (`marble_seat.mesh`, marble.glb): the building's set.glb, marks and footprint stay.
+
+        turn    Marble's origin is the picture's eye, looking along its raw +z. It is turned to look toward
+                `looks_toward_deg` (the far end of the room), then to the nearest quarter turn that squares its
+                walls with x and z
+        size    Marble's metres, then scaled so the floor it measures is the size of the inside (the mean of the
+                two ways, with `scale_to_inside`; without it Marble's own metres stand)
+        move    the middle of that floor onto the middle of the inside, floor on floor
+
+    Then the picture's eye should be where the set's camera `eye` is: the report says how far off it landed, and
+    whether that is within `eye_within_m`. Returns the report."""
+    world = read_world(folder)
+    path = os.path.join(set_dir, "set.json")
+    with open(path) as f:
+        st = json.load(f)
+    how, room = st.get("marble_seat"), (st.get("room") or {}).get("inside")
+    if not how or not room:
+        raise SystemExit("%s has no marble_seat and room.inside: nothing says where a Marble world goes in it" % os.path.relpath(path, REPO))
+    camera = (st.get("cameras") or {}).get(how["eye"])
+    if camera is None:
+        raise SystemExit("marble_seat names the camera %r, which the set does not have" % how["eye"])
+    if splats not in world["splats"]:
+        raise SystemExit("no splats-%s.spz in %s (there: %s)" % (splats, folder, ", ".join(world["splats"]) or "none"))
+    raw, triangles = read_glb(os.path.join(folder, "collider.glb"))
+    marble = {"scale": world["scale"], "ground": world["ground"], "turn_deg": 0.0, "move": [0.0, 0.0, 0.0]}
+    height, floor, _ = floor_of(into_set(raw, marble), triangles)
+    if floor is None:
+        raise SystemExit("the collision mesh has no level floor within %.2f m of where world.json says the ground is" % FLOOR_BAND)
+    marble["ground"] = world["ground"] - height
+    # Raw forward (+z) is our -z, so turned by T it faces T + 180: the eye's own turn is looks_toward - 180.
+    eye_turn = wrap(float(how.get("looks_toward_deg", 0.0)) - 180.0)
+    squared = square_turn(into_set(raw, marble), triangles)
+    marble["turn_deg"] = round(wrap(min((squared + 90.0 * k for k in range(-4, 5)), key=lambda t: abs(wrap(t - eye_turn)))), 2)
+    _, floor, _ = floor_of(into_set(raw, marble), triangles)
+    want = [room["max"][0] - room["min"][0], room["max"][2] - room["min"][2]]
+    measured = [floor[2] - floor[0], floor[3] - floor[1]]
+    off = [measured[i] / want[i] for i in range(2)]
+    fit = 2.0 / (off[0] + off[1]) if how.get("scale_to_inside", True) else 1.0
+    marble["scale"], marble["ground"] = marble["scale"] * fit, marble["ground"] * fit
+    _, floor, _ = floor_of(into_set(raw, marble), triangles)
+    middle = [(room["min"][0] + room["max"][0]) / 2.0, (room["min"][2] + room["max"][2]) / 2.0]
+    marble["move"] = [middle[0] - (floor[0] + floor[2]) / 2.0, 0.0, middle[1] - (floor[1] + floor[3]) / 2.0]
+    corners = into_set(raw, marble)
+    height, floor, area = floor_of(corners, triangles)
+    eye = into_set(np.zeros((1, 3)), marble)[0]
+    looks = into_set(np.array([[0.0, 0.0, 1.0]]), marble)[0] - eye
+    eye_off = math.hypot(eye[0] - camera["at"][0], eye[2] - camera["at"][2])
+    tall = float(np.percentile(corners[:, 1], 99.8))
+
+    spz = read_spz(os.path.join(folder, world["splats"][splats]))
+    fine_corners, fine_triangles = finer(corners, triangles, times)
+    rgb, _ = colors_from(fine_corners, into_set(spz["at"], marble), spz["rgb"], spz["alpha"])
+    mesh = how.get("mesh", "marble.glb")
+    size = write_glb(os.path.join(set_dir, mesh), fine_corners, fine_triangles, rgb, st.get("name", "room"))
+    seated = {
+        "eye": how["eye"], "eye_at": [round(float(v), 3) for v in eye], "eye_off_m": round(eye_off, 3), "eye_height_off_m": round(float(eye[1]) - camera["at"][1], 3),
+        "eye_looks_deg": round(math.degrees(math.atan2(looks[0], looks[2])), 1), "eye_within": eye_off <= float(how.get("eye_within_m", 0.6)),
+        "scaled_by": round(fit, 4), "marble_was_off": {"long": round(off[0], 4), "across": round(off[1], 4)},
+        "floor": [[round(floor[0], 3), round(floor[1], 3)], [round(floor[2], 3), round(floor[3], 3)]], "tall_m": round(tall, 3), "floor_height_left_m": round(height, 4),
+    }
+    st["marble"] = {
+        "world": os.path.basename(os.path.abspath(folder)), "id": world["id"], "model": world["model"],
+        "scale": marble["scale"], "ground": round(marble["ground"], 5), "ground_as_given": world["ground"], "turn_deg": marble["turn_deg"],
+        "move": [round(v, 4) for v in marble["move"]], "splats": world["splats"], "mesh": mesh, "seated": seated,
+        "about": "how the raw files stand in this set: point = turn_y(turn_deg) * [x * scale, ground - y * scale, -z * scale] + move. Seated in the building by marble_seat (from_marble.py --seat); the folder is world/marble/<world>/, kept out of git",
+    }
+    with open(path, "w") as f:
+        json.dump(st, f, indent=1)
+        f.write("\n")
+    return dict(seated, set=st.get("name"), mesh=mesh, mesh_bytes=size, triangles=int(len(fine_triangles)), turn_deg=marble["turn_deg"])
+
+
 def main() -> None:
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     opt = lambda flag, default: args[args.index(flag) + 1] if flag in args else default
@@ -443,6 +533,12 @@ def main() -> None:
         sys.exit(__doc__.split("\n\n")[1])
     folder, name = os.path.abspath(named[0]), named[1]
     set_dir = name if os.path.isabs(name) else os.path.join(REPO, "sets", name)
+    if "--seat" in args:
+        done = seat(folder, set_dir, opt("--splats", "500k"), int(opt("--finer", "1")))
+        print("MARBLE %s" % json.dumps(done))
+        print("MARBLE seated in %s: scaled by %.3f, the picture's eye %.2f m from the camera \"%s\" (%s)" % (
+            os.path.relpath(set_dir, REPO), done["scaled_by"], done["eye_off_m"], done["eye"], "within reach" if done["eye_within"] else "too far: the room is not the one drawn"))
+        return
     done = convert(folder, set_dir, os.path.basename(set_dir), opt("--splats", "500k"), int(opt("--finer", "1")), float(opt("--turn", "0")) if "--turn" in args else None)
     print("MARBLE %s" % json.dumps(done))
     print("MARBLE wrote %s (%.1f MB, %d triangles) and set.json" % (os.path.relpath(os.path.join(set_dir, "set.glb"), REPO), done["glb_bytes"] / 1e6, done["triangles"]))

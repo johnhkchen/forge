@@ -32,7 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 SIZES = {"phone": (430, 932, 2, True), "desktop": (1280, 1100, 1, False)}  # wide, tall, pixels per px, a phone?
-DEBUG_PORT = 9347
+DEBUG_PORT = int(os.environ.get("FORGE_DEBUG_PORT", "9347"))  # another, when someone else is taking pictures too
 WAIT_S = 60
 
 

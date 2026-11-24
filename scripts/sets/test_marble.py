@@ -13,6 +13,8 @@ What it shows:
   conversion   the set's mesh is the room's true size, squared up, its floor at 0, its middle at the origin
   colors       every corner took the color of the splats beside it: floor red, ceiling blue
   set          the set.json written for it passes set-check; made again, it keeps its marks and its turn
+  seat         a Marble world of the casting office, a tenth too big and askew, goes into the building made
+               for it: the room fills the inside, the picture's eye lands on the camera, the building is kept
   fit          a copy of the room at another size, turned and upside down, is laid back over it; a copy with
                no ceiling is too, and the report says the ceiling is the part that is missing
   the saloon   sets/niantic-saloon is as the conversion leaves a set: floor at 0, colors on, small enough to keep
@@ -208,6 +210,73 @@ def test_fit():
               report["room_to_made"]["ceiling"]["median_cm"] > 50.0 and report["room_to_made"]["floor"]["median_cm"] < 3.0, report["room_to_made"])
 
 
+def test_seat():
+    """a Marble world of the casting office, a tenth too big and its eye a little askew, goes inside the building
+    made for it: the room fills the inside, the picture's eye lands on the panel's camera, the building is kept."""
+    shell = standing.load("casting-office")
+    inside, eye_cam = shell["room"]["inside"], shell["cameras"][shell["marble_seat"]["eye"]]
+    big, askew = 1.1, 12.0  # Marble's metres a tenth out; the picture taken 12 degrees off the room's own line
+    lo, hi = [v * big for v in inside["min"]], [v * big for v in inside["max"]]
+    eye = [v * big for v in eye_cam["at"]]
+    # The room in the building's frame, a tenth too big, as Marble would hand it over: its own origin the eye.
+    c = np.array([[x, y, z] for y in (lo[1], hi[1]) for z in (lo[2], hi[2]) for x in (lo[0], hi[0])])
+    quads = [((0, 1, 3, 2), RED), ((4, 6, 7, 5), BLUE), ((0, 4, 5, 1), GREEN), ((2, 3, 7, 6), GREEN), ((0, 2, 6, 4), GREEN), ((1, 5, 7, 3), YELLOW)]
+    triangles, colors = [], []
+    for (a, b, d, e), color in quads:
+        for tri in ((a, b, d), (a, d, e)):
+            n = np.cross(c[tri[1]] - c[tri[0]], c[tri[2]] - c[tri[0]])
+            if n @ (c.mean(axis=0) - c[tri[0]]) < 0:
+                tri = (tri[0], tri[2], tri[1])
+            triangles.append(tri)
+            colors.append(color)
+    triangles, colors = np.array(triangles), np.array(colors)
+    taken = {"scale": SCALE, "ground": eye[1], "turn_deg": -90.0 + askew, "move": [eye[0], 0.0, eye[2]]}
+    raw = from_marble.out_of_set(c, taken)
+    check("out_of_set is into_set the other way round", float(np.abs(from_marble.into_set(raw, taken) - c).max()) < 1e-9)
+    check("in the raw files the eye is the origin", float(np.abs(from_marble.out_of_set(np.array([eye]), taken)).max()) < 1e-9)
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = os.path.join(tmp, "world")
+        os.makedirs(folder)
+        with open(os.path.join(folder, "world.json"), "w") as f:
+            json.dump({"world_id": "made-up", "display_name": "A made-up casting office", "model": "none",
+                       "assets": {"splats": {"semantics_metadata": {"metric_scale_factor": SCALE, "ground_plane_offset": eye[1]}}}}, f)
+        fine, fine_triangles = from_marble.finer(raw, triangles, 3)
+        from_marble.write_glb(os.path.join(folder, "collider.glb"), fine, fine_triangles, np.full((len(fine), 3), 0.5), "collider")
+        rng = np.random.default_rng(5)
+        at, rgb = [], []
+        for tri, color in zip(triangles, colors):
+            u, v = rng.random(400), rng.random(400)
+            flip = u + v > 1
+            u[flip], v[flip] = 1 - u[flip], 1 - v[flip]
+            at.append(raw[tri[0]] + (raw[tri[1]] - raw[tri[0]]) * u[:, None] + (raw[tri[2]] - raw[tri[0]]) * v[:, None])
+            rgb.append(np.tile(color, (400, 1)))
+        from_marble.pack_spz(os.path.join(folder, "splats-500k.spz"), np.concatenate(at), np.concatenate(rgb))
+        set_dir = os.path.join(tmp, "casting-office")
+        os.makedirs(set_dir)
+        for name in ("set.json", "set.glb"):
+            with open(os.path.join(shell["dir"], name), "rb") as f, open(os.path.join(set_dir, name), "wb") as g:
+                g.write(f.read())
+        before = open(os.path.join(set_dir, "set.glb"), "rb").read()
+        done = from_marble.seat(folder, set_dir, times=0)
+        st = standing.load(set_dir)
+        check("scaled by %.3f, which takes the tenth back off (it was %.3f long, %.3f across)" % (done["scaled_by"], done["marble_was_off"]["long"], done["marble_was_off"]["across"]),
+              abs(done["scaled_by"] * big - 1.0) < 0.01, done)
+        (x0, z0), (x1, z1) = done["floor"]
+        check("its floor lies on the inside of the building, to 3 cm (%s)" % done["floor"],
+              max(abs(x0 - inside["min"][0]), abs(z0 - inside["min"][2]), abs(x1 - inside["max"][0]), abs(z1 - inside["max"][2])) < 0.03, (done["floor"], inside))
+        check("floor at 0 and the ceiling where the building's is (%.2f m)" % done["tall_m"], abs(done["floor_height_left_m"]) < 0.005 and abs(done["tall_m"] - inside["max"][1]) < 0.05, done)
+        check("the picture's eye lands on the camera \"%s\": %.1f cm off, %.1f cm high or low" % (done["eye"], 100 * done["eye_off_m"], 100 * done["eye_height_off_m"]),
+              done["eye_within"] and done["eye_off_m"] < 0.03 and abs(done["eye_height_off_m"]) < 0.03, done)
+        check("turned the quarter that squares its walls, it looks down the room toward the backdrop, %.0f degrees off as it was taken" % (done["eye_looks_deg"] - 90.0),
+              abs(done["eye_looks_deg"] - (90.0 + askew)) < 1.0 and abs(from_marble.wrap(st["marble"]["turn_deg"] - (-90.0 + askew))) < 1.0, done)
+        mesh, _ = from_marble.read_glb(os.path.join(set_dir, done["mesh"]))
+        check("the Marble room is written beside the building as %s, and the building's own set.glb is untouched" % done["mesh"],
+              len(mesh) > 0 and open(os.path.join(set_dir, "set.glb"), "rb").read() == before)
+        problems, _ = standing.check(st)
+        check("the set says how the raw files stand in it, keeps its marks, and is still sound",
+              st["marble"]["seated"]["eye"] == "panel_eye" and set(st["marks"]) == set(shell["marks"]) and not problems, problems)
+
+
 def test_the_saloon():
     """sets/niantic-saloon is as the conversion leaves a set: floor at 0, colors on, small enough to keep."""
     st = standing.load("niantic-saloon")
@@ -224,7 +293,7 @@ def test_the_saloon():
     check("it has a door that says where it leads", any(m.get("kind") == "door" and m.get("leads_to") for m in st["marks"].values()))
 
 
-TESTS = [test_spz, test_axes, test_conversion, test_colors, test_set, test_fit, test_the_saloon]
+TESTS = [test_spz, test_axes, test_conversion, test_colors, test_set, test_fit, test_seat, test_the_saloon]
 
 
 def cases():

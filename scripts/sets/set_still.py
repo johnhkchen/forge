@@ -6,7 +6,8 @@
 The set is stood up exactly as it is filmed (its geometry, backdrop, dressing
 and lights: scripts/motion/set_contact.py) and looked at through one of its
 own cameras: the one named, or its first. A set with no cameras (the rooftop,
-whose camera follows the character) is looked at from out front and above.
+whose camera follows the character) is looked at from out front and above, and so
+is any set asked for `--camera outside` (a building, seen from the street).
 Never touches an open Blender.
 
 `--stand` puts one character on one of the set's marks for the picture, at the
@@ -54,7 +55,7 @@ def main():
     wanted = args[args.index("--camera") + 1] if "--camera" in args else None
     if "--stand" in args:
         stand(st, scene, args[args.index("--stand") + 1], args[args.index("--stand") + 2], float(args[args.index("--second") + 1]) if "--second" in args else 0.0)
-    if cameras:
+    if cameras and wanted != "outside":
         cam = cameras.get(wanted) or next(iter(cameras.values()))
     else:
         lo, hi = standing.placed_bounds(st)
@@ -64,7 +65,10 @@ def main():
         data.lens = 35.0
         cam = bpy.data.objects.new("out front", data)
         scene.collection.objects.link(cam)
-        set_contact.look(cam, [mid[0] + 0.75 * reach, hi[1] + 0.45 * reach, mid[2] - 0.35 * reach], [mid[0], mid[1], mid[2]])
+        if wanted == "outside":  # out front of a building and to one side, from about head height on a slope
+            set_contact.look(cam, [mid[0] + 0.85 * reach, 0.45 * reach, mid[2] + 1.55 * reach], [mid[0], 0.4 * hi[1], mid[2]])
+        else:
+            set_contact.look(cam, [mid[0] + 0.75 * reach, hi[1] + 0.45 * reach, mid[2] - 0.35 * reach], [mid[0], mid[1], mid[2]])
     scene.camera = cam
     scene.render.engine = "BLENDER_EEVEE"
     scene.view_settings.view_transform = "Standard"
