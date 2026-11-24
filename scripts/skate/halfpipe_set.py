@@ -71,6 +71,8 @@ def build() -> dict:
                      "about": "side-on from out front, level with the middle of the flat: the whole ramp and the air above both lips"},
             "low": {"at": [-1.2, 0.45, half - 0.5], "aim": [w, h + 0.9, RIDE_LINE_Z - 0.4], "lens_mm": 20, "sees": ["deck_right"],
                     "about": "low on the flat bottom, looking up the right wall"},
+            "across": {"at": [deck_x + 0.2, h + 1.75, half - 0.6], "aim": [-w, h + 0.7, RIDE_LINE_Z], "lens_mm": 45, "sees": ["deck_left"],
+                       "about": "from the right platform, a long lens across the pipe on the left lip: an air or a handplant on that wall, close"},
             "deck": {"at": [-(deck_x + 0.2), h + 1.75, half - 0.6], "aim": [1.2, 1.9, RIDE_LINE_Z - 0.6], "lens_mm": 18, "sees": ["flat", "deck_right"],
                      "about": "from the left platform, looking down into the pipe and across to the other lip"},
         },
