@@ -168,6 +168,8 @@ function setPage(set, wantedTake, wantedCamera) {
     behind.length ? h("div", { class: "gear", role: "group", "aria-label": "Through the window" }, h("span", { class: "hint" }, "Through the window"), behindChips) : null,
     stage,
     film,
+    filmed.length ? h("p", { class: "about" }, filmed.map((take, i) => [i ? " · " : "", h("a", { href: `#/watch/${encodeURIComponent(take.id)}/${encodeURIComponent(take.clip || "")}` }, `Watch ${take.title} as pixel cards`)]).flat(),
+      ": the take played here in the browser, the cast drawn as flat cards or as meshes, with a bar to wind it back and forth.") : null,
     h("section", { class: "making" },
       h("h2", {}, "What's here"),
       h("div", { class: "notes clay-surface" }, h("h3", {}, "Marks"), h("ul", {}, marks.map(([name, m]) =>
@@ -1922,6 +1924,18 @@ async function route() {
     viewer?.dispose();
     const { cardsPage } = await import("./impostor.js");
     const page = cardsPage({ run: carded, sets, h, loader });
+    viewer = { dispose: () => page.dispose() };
+    app.replaceChildren(page);
+    window.scrollTo(0, 0);
+    return;
+  }
+  // #/watch/<take>[/<clip>]: a cast take played here on its set, the cast as flat cards or as meshes.
+  const atWatch = location.hash.match(/^#\/watch\/([^/]+)(?:\/([^/]*))?$/);
+  const watched = atWatch && (takes.find((t) => t.id === decodeURIComponent(atWatch[1]) && (!atWatch[2] || t.clip === decodeURIComponent(atWatch[2]))) || takes.find((t) => t.id === decodeURIComponent(atWatch[1])));
+  if (watched) {
+    viewer?.dispose();
+    const { watchPage } = await import("./watch.js");
+    const page = watchPage({ take: watched, sets, runs, h, loader });
     viewer = { dispose: () => page.dispose() };
     app.replaceChildren(page);
     window.scrollTo(0, 0);

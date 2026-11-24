@@ -286,7 +286,12 @@ def all_takes():
                 if not card.get("glb") or not os.path.isfile(os.path.join(folder, card["glb"])):
                     continue
                 mid = card["glb"].replace("lowpoly-", "midpoly-")
-                roles.append({"role": role, "character": os.path.basename(os.path.dirname(card.get("character", ""))), "size": 1.0 if card.get("true_size") else card.get("size_against_soma", 1.0),
+                where = card.get("character", "").replace("\\", "/").split("/")
+                roles.append({"role": role, "character": os.path.basename(os.path.dirname(card.get("character", ""))),
+                              # the run this character is, whichever of its versions was cast (runs/<run>/lowpoly.glb, runs/<run>/profiles/painted.glb)
+                              "run": where[where.index("runs") + 1] if "runs" in where[:-1] else None,
+                              # a fight stands each fighter on a mark of the set, facing the other (fight.json); other takes have the places played in
+                              "mark": ((read_json(os.path.join(folder, "fight.json")) or {}).get("marks") or {}).get(role), "size": 1.0 if card.get("true_size") else card.get("size_against_soma", 1.0),
                               "glb": card["glb"], "midpoly": mid if mid != card["glb"] and os.path.isfile(os.path.join(folder, mid)) else None})
             out.append({
                 "id": name, "clip": cast.get("clip"), "set": cast.get("set"), "title": take.get("title") or name.replace("-", " ").capitalize(),

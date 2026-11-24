@@ -776,6 +776,12 @@ The world's files are read from `world/marble/` beside the gallery; from another
 
 **What is weak.** The painted mesh is only as good as Marble's collision mesh, and that is coarse: fine for where the floor and walls are, poor to look at. Sitting is not marked, because the chairs are part of a lump. The dots look best from standing height; from near the floor they fray. Roosevelt is lit by three lamps we placed by eye, not by the room, and nothing of him shows in the bar's glass. Walking in the saloon is first person only, and the world map does not know the place yet.
 
+## Watch a take as cards
+
+A take that has been cast can be played in the browser, on its set: `#/watch/<take>` ("Watch ... as pixel cards" on the set's page). `gallery/watch.js` stands the set up, brings every role's file on, and plays them from one clock, with Play, a bar to wind it back and forth, the set's own cameras or a free eye, Cards or Meshes, and the looks. Each of the cast whose run has baked cards is drawn as cards riding the skeleton his cast file carries; one with none stays a mesh. A fight's two are stood on their marks as the film stands them.
+
+For the candy-shop routine all three (Lincoln, Roosevelt, the pirate) have cards pictured from their detailed meshes (`just impostor-detailed <run> lowpoly`: the detailed mesh on the low-poly skeleton the cast uses, 96 pixels a metre as pixel art and 192 in the comic look). The cast's skeletons are the low-poly walk files' own to the last digit for Lincoln and Roosevelt and to a tenth of a millimetre for the pirate; Roosevelt's cards, cut on his painted skeleton, are half a millimetre off, and were kept. The detailed mesh lies 0.8 cm from the low-poly one at a typical point on Lincoln, 1.0 on Roosevelt and 2.2 on the pirate, whose coat and hat are the loosest fit. Stills, cards against meshes from the crew camera and close on each: `evidence/watch/`.
+
 ## Comics
 
 Webcomics got cheap by a few habits: one drawing "hand" used on everything, the same poses and framings again and again, plain backgrounds, a sheet of faces to swap, and words doing the work. We have 3D characters that can already stand, walk and vault a wall, so a panel is a frozen moment of one of them, drawn in one style. A panel takes about a quarter of a second to draw.
