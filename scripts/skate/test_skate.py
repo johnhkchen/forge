@@ -17,6 +17,10 @@ test_bodies.json: a short thick man, a tall thin one). What it shows:
   honest      a trick with too little speed is done lower and says so; a trick nobody knows is refused
   video       a pose from a clip is read in the skater's own frame, so it is the same pose upside down; a clip
               that has not been made yet changes nothing; a stretch outside its shot is refused
+  way out     anything in the ramp is told the short way back out (what keeps a borrowed pose off the wood)
+  borrowed    an air with a borrowed pose is made high enough to play the clip at no more than 1.3 times its
+              speed, or says how fast it had to; the hips stay where both feet can stay flat on the bolts; in
+              a grab and a handplant the hand the trick needs is still ours, on its spot
 """
 
 from __future__ import annotations
@@ -100,8 +104,9 @@ def test_set():
     check("each piece starts where the last one ended", all(math.dist(a, b) < 1e-6 for a, b in ends))
     problems, seen = standing.check(st)
     check("the set is sound", not problems, "; ".join(problems))
+    check("each lip has a camera that holds it: deck the right one, across the left", "deck_right" in st["cameras"]["deck"]["sees"] and "deck_left" in st["cameras"]["across"]["sees"])
     check("it has a side-on camera, a low one and one on a deck, and marks on both decks and the flat",
-          set(st["cameras"]) == {"side", "low", "deck"} and set(st["marks"]) == {"deck_left", "deck_right", "flat"})
+          set(st["cameras"]) == {"side", "low", "deck", "across"} and set(st["marks"]) == {"deck_left", "deck_right", "flat"})
 
 
 def test_surface():
@@ -269,7 +274,7 @@ def test_video():
         differs = lambda f, key: m[key][f] != o[key][f]  # noqa: E731
         check("in the air his arm is the clip's", differs(middle, "hips") or m["turns"]["upper_arm_l"][middle] != o["turns"]["upper_arm_l"][middle])
         check("outside the trick nothing is changed, and it eases on from his own pose",
-              all(m["turns"][n][f] == o["turns"][n][f] for n in video_pose.TAKEN for f in list(range(0, event["from_frame"] + 1)) + list(range(event["to_frame"], m["frames"] + 1))))
+              all(m["turns"][n][f] == o["turns"][n][f] for n in video_pose.TAKEN for f in list(range(0, event["from_frame"] - video_pose.LEAD_FRAMES + 1)) + list(range(event["to_frame"] + video_pose.LEAD_FRAMES, m["frames"] + 1))))
         check("his feet stay on the bolts and the board's path is the same", m["feet"] == o["feet"] and with_clip["ride"]["frames_list"] == own["ride"]["frames_list"])
         worst = {}
         for f in range(event["from_frame"], event["to_frame"] + 1):
@@ -284,9 +289,80 @@ def test_video():
         except ValueError as e:
             check("a stretch that runs past its shot is refused, with the shot's own times", "shot 2" in str(e) and "3.30" in str(e), str(e))
 
+def test_way_out():
+    """anything in the ramp is told the short way back out."""
+    import random
+
+    rng, worst, tried = random.Random(7), 0.0, 0
+    for again in range(4000):
+        x, y = rng.uniform(-PIPE.end_x, PIPE.end_x), rng.uniform(-0.3, PIPE.height + 0.3)
+        deep, way = PIPE.way_out(x, y)
+        if deep <= 0.0:
+            continue
+        tried += 1
+        worst = max(worst, PIPE.inside(x + way[0] * (deep + 0.002), y + way[1] * (deep + 0.002)))
+    check("from %d points in the wood, going that way by that much comes out into the air (%.1f mm left at worst)" % (tried, 1000 * worst), tried > 500 and worst < 0.003)
+    check("in the open air there is nothing to get out of", PIPE.way_out(0.0, 1.0)[0] == 0.0 and PIPE.way_out(PIPE.wall_x + 0.5, PIPE.height + 0.1)[0] == 0.0)
+    check("under a deck the way out is up; just inside a wall it is into the pipe; under the curve it is toward the curve's middle",
+          PIPE.way_out(PIPE.wall_x + 0.8, PIPE.height - 0.1)[1] == (0.0, 1.0) and PIPE.way_out(PIPE.wall_x + 0.05, PIPE.height - 0.2)[1] == (-1.0, 0.0)
+          and PIPE.way_out(-(PIPE.half_flat + 1.5), 0.1)[1][0] > 0.3 and PIPE.way_out(PIPE.half_flat + 1.5, 0.1)[1][1] > 0.8)
+
+
+def clip_in(shots, name="a-clip", frames=100):
+    """A made-up clip's motion in a folder of shots: one shot, the SOMA body stood up straight, raising an arm."""
+    folder = os.path.join(shots, "video-" + name)
+    os.makedirs(folder)
+    with open(os.path.join(folder, "motion.json"), "w") as f:
+        json.dump(soma_piece(frames=frames), f)
+    with open(os.path.join(folder, "source.json"), "w") as f:
+        json.dump({"pieces": [{"shot": 0, "first_frame": 0, "last_frame": frames - 1, "clip_first_frame": 0, "clip_last_frame": frames - 1}]}, f)
+
+
+def test_borrowed():
+    """a borrowed pose gets the time it needs, keeps our feet on the deck, and leaves a trick's own hand ours."""
+    body = moves.Body(CARDS["lanky"])
+    stretch = {"video": "a-clip", "shot": 1, "from_s": 0.5, "to_s": 2.0}
+    check("ride.py and video_pose.py agree how fast a clip may play and how far its pose laps onto the wall",
+          (ride.AIM_SPEED, ride.LEAD_FRAMES) == (video_pose.AIM_SPEED, video_pose.LEAD_FRAMES))
+    with tempfile.TemporaryDirectory() as shots:
+        clip_in(shots)
+        run = ride.build({"set": "halfpipe", "passes": [{"trick": "kickturn"}, {"trick": "air", "height_m": 0.3, "pose_from": stretch}, {"trick": "air", "height_m": 0.3, "pose_from": stretch},
+                                                        {"trick": "air grab", "height_m": 0.3, "pose_from": stretch}, {"trick": "handplant", "pose_from": dict(stretch, to_s=2.6)}]}, body, PIPE, shots=shots)
+        short, sized, grab, plant = run["ride"]["events"][1:5]
+        m = run["motion"]
+        # Time.
+        check("an air with a borrowed pose is made as high as the clip's stretch needs: asked 0.3 m, a 1.5 s stretch needs %.2f, he goes %.2f" % (
+              sized["sized_for_the_clip"]["air_it_needs_m"], sized["top_over_lip_m"]), abs(sized["top_over_lip_m"] - sized["sized_for_the_clip"]["air_it_needs_m"]) < 0.06)
+        check("and the stretch then plays at %.2f times its own speed: no more than %.1f" % (sized["pose_from_result"]["played_at"], ride.AIM_SPEED), sized["pose_from_result"]["played_at"] <= ride.AIM_SPEED + 0.05)
+        check("with too little speed for that he goes as high as he can, and both the ride and the pose say so (%.2f times)" % short["pose_from_result"]["played_at"],
+              "the clip's stretch needs" in short.get("note", "") and "faster than" in short["pose_from_result"]["said"] and short["pose_from_result"]["played_at"] > ride.AIM_SPEED)
+        check("a handplant takes as long as its stretch (2.1 s, inside 1.6 to 2.6): played at %.2f" % plant["pose_from_result"]["played_at"], abs(plant["pose_from_result"]["played_at"] - 1.0) < 0.05)
+        # Feet.
+        feet = rider.feet_of(body)
+        moved = 0.0
+        for e in (short, sized, grab, plant):
+            a, b = e["pose_from_result"]["frames"]
+            for f in range(a, b + 1):
+                at = tuple(c * body.leg for c in m["hips"][f])
+                moved = max(moved, abs(video_pose.hips_the_legs_can_follow(body, at, tuple(m["turns"]["hips"][f]), feet)[2] - at[2]))
+        check("on every borrowed frame the hips are where both legs can hold their feet flat on the bolts (%.1f cm from it at most)" % (100 * moved), moved < 0.02)
+        check("both feet are still planted on the bolts on every frame", all(row == rows[0] and row[5] == 1 for rows in m["feet"].values() for row in rows))
+        tall = video_pose.hips_the_legs_can_follow(body, (0.0, 0.0, -0.9 * body.leg), (1.0, 0.0, 0.0, 0.0), feet)[2]
+        check("hips asked for lower than a knee can fold are brought up (%.0f cm under standing, not 90%% of the leg)" % (-100 * tall), tall > -0.75 * body.leg)
+        # Hands.
+        check("in a borrowed grab the grabbing hand is ours: %.1f cm from its spot on the board's edge, though the clip's skater stands straight" % grab["grab"]["hand_from_the_edge_cm"],
+              grab["grab"]["hand_from_the_edge_cm"] < 3.0 and grab["pose_from_result"]["hand"]["hand"] == "r" and grab["pose_from_result"]["hand"]["trunk_given_back"] > 0.0)
+        middle = grab["grab"]["frame"]
+        check("the hand is still pinned to the deck for animate.py, and the free arm is the clip's", m["hands"]["r"][middle] is not None and m["hands"]["r"][middle][3] == 1.0)
+        own = ride.build({"set": "halfpipe", "passes": [{"trick": "kickturn"}, {"trick": "air", "height_m": 0.3}, {"trick": "air", "height_m": sized["top_over_lip_m"]},
+                                                        {"trick": "air grab", "height_m": 0.3}, {"trick": "handplant"}]}, body, PIPE)["motion"]
+        check("his head in that grab is the clip's, not ours", m["turns"]["head"][middle] != own["turns"]["head"][middle] if len(own["hips"]) == len(m["hips"]) else True)
+        low = [f for f in range(plant["from_frame"], plant["to_frame"] + 1) if plant["hand_on_from_frame"] <= f <= plant["hand_off_at_frame"]]
+        check("in a borrowed handplant the planting hand is ours too (the %s one)" % plant["pose_from_result"]["hand"]["hand"], plant["pose_from_result"]["hand"]["hand"] == plant["hand"] and len(low) > 10)
+
 
 def main():
-    cases = [test_pipe, test_set, test_surface, test_energy, test_tricks, test_feet, test_limits, test_hands, test_honest, test_video]
+    cases = [test_pipe, test_set, test_surface, test_energy, test_tricks, test_feet, test_limits, test_hands, test_honest, test_video, test_way_out, test_borrowed]
     only = sys.argv[1] if len(sys.argv) > 1 else ""
     failed = 0
     for case in cases:

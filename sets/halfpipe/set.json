@@ -399,6 +399,23 @@
    ],
    "about": "low on the flat bottom, looking up the right wall"
   },
+  "across": {
+   "at": [
+    6.9,
+    5.449999999999999,
+    5.4
+   ],
+   "aim": [
+    -5.9,
+    4.3999999999999995,
+    2.0
+   ],
+   "lens_mm": 45,
+   "sees": [
+    "deck_left"
+   ],
+   "about": "from the right platform, a long lens across the pipe on the left lip: an air or a handplant on that wall, close"
+  },
   "deck": {
    "at": [
     -6.9,

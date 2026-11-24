@@ -31,6 +31,7 @@ board leaving the ramp does.
                        (minus: behind the surface)
     Pipe.inside(x, y, z)   how deep a point is in the ramp itself (surface,
                        walls and decks; 0 in the open air)
+    Pipe.way_out(x, y, z)  that depth, and the shortest way back out
 
 Plain Python: no Blender, no numpy.
 """
@@ -118,16 +119,32 @@ class Pipe:
         a = abs(x)
         if abs(z) > self.width / 2.0 or a > self.end_x:
             return 0.0
-        if y < 0.0:
-            return -y
         if a <= self.half_flat:
-            return 0.0
+            return max(0.0, -y)
         under_arc = math.hypot(a - self.half_flat, self.radius - y) - self.radius  # past the transition's curve by this much
         if a < self.wall_x:
             return max(0.0, under_arc) if y < self.radius else 0.0
         if y >= self.height:
             return 0.0
         return min(a - self.wall_x, self.height - y) if y >= self.radius else min(self.height - y, under_arc)
+
+    def way_out(self, x: float, y: float, z: float = 0.0) -> tuple:
+        """(how deep a point is in the ramp, the way out of it: the shortest way back to the open air, as (x, y) of length 1).
+        Under the curve that is toward the curve's middle; in a wall, into the pipe; under a deck, up. (0, (0, 1)) in the open air."""
+        deep = self.inside(x, y, z)
+        if deep <= 0.0:
+            return 0.0, (0.0, 1.0)
+        side, a = (-1.0 if x < 0 else 1.0), abs(x)
+        if a <= self.half_flat:
+            return deep, (0.0, 1.0)
+        to_middle = (-(a - self.half_flat), self.radius - y)
+        far = math.hypot(*to_middle) or 1.0
+        curve = (side * to_middle[0] / far, to_middle[1] / far)
+        if a < self.wall_x:
+            return deep, curve
+        if y >= self.radius:
+            return deep, ((-side, 0.0) if a - self.wall_x < self.height - y else (0.0, 1.0))
+        return deep, ((0.0, 1.0) if self.height - y < far - self.radius else curve)
 
     def coping(self, side: float) -> tuple:
         """The middle of the tube on one lip (side -1 or 1), in the cut: (x, y)."""

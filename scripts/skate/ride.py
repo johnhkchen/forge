@@ -78,6 +78,8 @@ NOSE_UP_DEG = 9.0        # how far the nose lifts in a kickturn (the back wheels
 LEAST_AIR = 0.2          # an air lower than this is not an air: it is done as a kickturn
 AIR_TILT_DEG = 32.0      # at the top of an air the board has tipped this far toward level
 AIR_IN = 0.14            # and drifted this far in over the pipe, per metre of height (at most 0.25 m)
+MOST_AIR = 2.0           # an air sized for a clip goes no higher than this over the lip
+AIM_SPEED, LEAD_FRAMES = 1.3, 4   # as video_pose.py has them: how fast a clip may be played, and how far its pose laps onto the wall
 PLANT_S = 1.9            # how long a handplant takes, hand down to hand up
 PLANT_TILT_DEG = 84.0    # how far over the board goes: nearly upside down
 PLANT_SPEED = 1.5        # he comes to the lip at about this speed for it (m/s)
@@ -173,6 +175,18 @@ def simulate(script, pipe):
     for n, card in enumerate(passes):
         asked, did, note = card["trick"], card["trick"], None
         want = float(card.get("height_m", 0.8))
+        sized = None
+        if card.get("pose_from") and asked in ("air", "air grab"):
+            # A borrowed pose needs time: the air is made high enough to play the clip's stretch at no more than
+            # AIM_SPEED times its own speed (its first and last frames are on the wall), as far as MOST_AIR allows.
+            long = float(card["pose_from"]["to_s"]) - float(card["pose_from"]["from_s"])
+            in_air = max(0.2, long / AIM_SPEED - 2.0 * LEAD_FRAMES / FPS)
+            needs = G * in_air ** 2 / 8.0
+            sized = {"clip_seconds": round(long, 2), "air_it_needs_m": round(needs, 2), "asked_m": want}
+            want = max(want, min(needs, MOST_AIR))
+        plant_s = PLANT_S
+        if card.get("pose_from") and asked == "handplant":
+            plant_s = moves.clamp(float(card["pose_from"]["to_s"]) - float(card["pose_from"]["from_s"]), 1.6, 2.6)
         if asked == "kickturn":
             target = pipe.lip - float(card.get("below_m", KICKTURN_BELOW))
         elif asked == "handplant":
@@ -185,7 +199,7 @@ def simulate(script, pipe):
                 "a handplant" if asked == "handplant" else "an air", abs(top - pipe.lip), "over" if top > pipe.lip else "under")
             pump, top = pump_for(pipe, s, v, toward, min(top, pipe.lip - KICKTURN_BELOW))
         elif asked in ("air", "air grab") and top < target - 0.05:
-            note = "asked for %.2f m of air, had the speed for %.2f" % (want, top - pipe.lip)
+            note = "%s %.2f m of air, had the speed for %.2f" % ("the clip's stretch needs" if sized and want > sized["asked_m"] else "asked for", want, top - pipe.lip)
         first = len(steps)
         trail, top, over = one_pass(pipe, s, v, toward, pump, stop_at_lip=(did == "handplant"))
         steps += [(a, b, None) for a, b in trail]
@@ -195,8 +209,10 @@ def simulate(script, pipe):
             event["note"] = note
         if card.get("pose_from"):
             event["pose_from"] = card["pose_from"]
+        if sized:
+            event["sized_for_the_clip"] = dict(sized, got_m=round(top - pipe.lip, 2))
         if did == "handplant":
-            count = int(round(PLANT_S / DT))
+            count = int(round(plant_s / DT))
             steps += [(toward * pipe.lip, 0.0, (n, (k + 1) / float(count))) for k in range(count)]
             event["speed_at_the_lip_m_s"] = round(over, 2)
             s, v = toward * pipe.lip, -toward * over
