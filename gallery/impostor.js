@@ -121,7 +121,7 @@ uniform float ballBackM;
 varying vec2 vSheet;
 varying vec3 vView;
 // A pixel's own line through the picture (impostor-math.js: fan): where it starts and how it leans, and how far
-// along the eye's line a metre square off the card is. With `fan` 0 they are the card's own, the same for every pixel.
+// along the eye's line a metre square off the card is. With fan 0 they are the card's own, the same for every pixel.
 vec2 sheetP;
 vec2 leanP;
 float per;

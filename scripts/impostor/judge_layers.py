@@ -23,8 +23,8 @@ the middle of his head (a hat is there):
 
 --before and --after name a look's folder outright (a path, or a name under the run's profiles). --before-how and
 --after-how say how each is drawn: switches of impostor.py by name (FAN=0: every line of a card runs the same way,
-as before the eye's own fan; LAYERS=0; AROUND=0: no second picture from the next direction round), so the same sheets
-can be counted drawn two ways.
+as before the eye's own fan; LAYERS=0; AROUND=2: two more pictures from the next directions round; DOTS=head: the head
+as a cloud of dots), so the same sheets can be counted drawn two ways.
 
 Writes <out>/layers[-tag].json and, for --stills, <tag>-<role>-<seconds>-<eye>-<look>.png: the real model, the
 cards before, the cards after, and the cards after again with what the layers filled marked green, what is still
@@ -90,13 +90,13 @@ def main():
     stills = set(flag("--stills", "").split(",")) - {""}
     named = {way: dict(pair.split("=") for pair in flag("--" + way, "").split(",") if pair) for way in ("before", "after")}
     round_m = float(flag("--round", "0.32"))
-    how = {way: {k: float(v) if "." in v else int(v) for k, v in (pair.split("=") for pair in flag("--%s-how" % way, "").split(",") if pair)} for way in ("before", "after")}
+    how = {way: dict(pair.split("=") for pair in flag("--%s-how" % way, "").split(",") if pair) for way in ("before", "after")}
     usual = {k: getattr(impostor, k) for way in how for k in how[way]}
 
     def drawn_as(way, look):
         """A look's cards drawn one of the two ways, with that way's switches set (and put back after)."""
         for k, v in {**usual, **how[way]}.items():
-            setattr(impostor, k, type(usual[k])(v))
+            setattr(impostor, k, v if v is usual[k] else tuple(n for n in v.split("+") if n) if isinstance(usual[k], tuple) else type(usual[k])(float(v)))
         characters[look, way].use(characters[look, way].set_name) if "LAYERS" in usual else None
         try:
             return cards(characters[look, way], pose, eye, LOOKS[look][3])

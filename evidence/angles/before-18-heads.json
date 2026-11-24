@@ -1,0 +1,74 @@
+{
+ "joe|crew|frontman": {
+  "away_m": 5.54,
+  "px_per_m": 206.0
+ },
+ "joe|crew|left": {
+  "away_m": 6.53,
+  "px_per_m": 174.7
+ },
+ "joe|crew|right": {
+  "away_m": 6.56,
+  "px_per_m": 173.9
+ },
+ "joe|two|frontman": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "joe|two|left": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "joe|two|right": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "joe|close|frontman": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ },
+ "joe|close|left": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ },
+ "joe|close|right": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ },
+ "pixel-both|crew|frontman": {
+  "away_m": 5.54,
+  "px_per_m": 206.0
+ },
+ "pixel-both|crew|left": {
+  "away_m": 6.53,
+  "px_per_m": 174.7
+ },
+ "pixel-both|crew|right": {
+  "away_m": 6.56,
+  "px_per_m": 173.9
+ },
+ "pixel-both|two|frontman": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "pixel-both|two|left": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "pixel-both|two|right": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "pixel-both|close|frontman": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ },
+ "pixel-both|close|left": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ },
+ "pixel-both|close|right": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ }
+}

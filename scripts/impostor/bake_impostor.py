@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150] [--layers 2] [--round-the-back]
+        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150] [--layers 2] [--round-the-back] [--eyes 20,40] [--eyes-round 6]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor-<look>-joined/ (pages older than the mended
@@ -67,7 +67,9 @@ shells, and most of what lies behind a surface is the inside of one). A layer's 
 holds and goes on the same two sheets; a view set's "behind" lists them as "cells" lists the first, which is
 pictured exactly as it is without --layers. --round-the-back also keeps what faces away from the picture's eye
 (the strip of a limb just round its edge): it filled a few more pixels, made a tenth more stick out round the
-figure and the sheet much bigger, and is not what the pages have. A third layer (--layers 3) found next to nothing on the three dancers.
+figure and the sheet much bigger, and is not what the pages have. --eyes and --eyes-round say which eyes a place
+behind may be seen by: rings of them, so many degrees off the direction pictured, so many round each ring (20 and 40
+degrees, 6 round each: 12 eyes; 15,30,45,60 with 12 round each is 48 eyes out to 60 degrees). A third layer (--layers 3) found next to nothing on the three dancers.
 
 --bent pictures knees or elbows bent as well: for each, a card of its own at each of --bends degrees (the skin
 of its two parts round the joint, as the real model has it bent so far, in the frame of the bone above), listed
@@ -605,6 +607,8 @@ def main():
     # pixel art: the line is one pixel of the sheet. bold ink: no line round the part at all (the page draws it)
     ink_m = float(flag("--ink-cm", str(100.0 / ppm) if look == "pixel" else "0" if look == "joe" else "1.4")) / 100.0
     colours = int(flag("--colours", "32" if look == "pixel" else "0"))
+    global BEHIND_TILTS, BEHIND_AROUND
+    BEHIND_TILTS, BEHIND_AROUND = tuple(float(t) for t in flag("--eyes", ",".join("%g" % t for t in BEHIND_TILTS)).split(",")), int(flag("--eyes-round", str(BEHIND_AROUND)))
     layers = max(1, int(flag("--layers", "1")))  # how many surfaces deep every picture goes: 1 is the first the eye meets and no more
     source = flag("--source", os.path.join(run, "profiles", profile + "-walk.glb"))
     # Pixel art: the head finer than the body, and a face drawn on purpose from the character's recipe.
@@ -789,7 +793,7 @@ def main():
     last = {}  # the layer just pictured, for the one behind it: {part: (how high each pixel stands, where there is one)}
 
     card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "plays": flag("--plays", profile), "title": flag("--title", ""), "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
-            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, **({"bent": {"joints": bent}} if bent else {}), "line_marked": True, "layers": layers, "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
+            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, **({"bent": {"joints": bent}} if bent else {}), "line_marked": True, "layers": layers, **({"eyes": {"deg": list(BEHIND_TILTS), "round": BEHIND_AROUND}} if layers > 1 else {}), "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}
