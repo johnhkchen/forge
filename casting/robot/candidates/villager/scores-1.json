@@ -1,0 +1,90 @@
+{
+  "seams": {
+    "comic": {
+      "dark": 14.6,
+      "open": 12.3,
+      "holes": 5.2,
+      "frames": 26
+    },
+    "pixel-both": {
+      "dark": 19.0,
+      "open": 12.3,
+      "holes": 2.4,
+      "frames": 26
+    },
+    "joe": {
+      "dark": 5.1,
+      "open": 16.7,
+      "holes": 3.2,
+      "frames": 26
+    }
+  },
+  "joints": {
+    "joe": {
+      "shoulder": {
+        "likeness": 0.395,
+        "blots": 0.126,
+        "joints": 26
+      },
+      "all": {
+        "likeness": 0.424,
+        "blots": 0.122,
+        "joints": 104
+      },
+      "elbow": {
+        "likeness": 0.391,
+        "blots": 0.148,
+        "joints": 22
+      },
+      "hip": {
+        "likeness": 0.532,
+        "blots": 0.126,
+        "joints": 30
+      },
+      "knee": {
+        "likeness": 0.356,
+        "blots": 0.091,
+        "joints": 26
+      }
+    },
+    "pixel-both": {
+      "shoulder": {
+        "likeness": 0.38,
+        "blots": 0.085,
+        "joints": 26
+      },
+      "all": {
+        "likeness": 0.408,
+        "blots": 0.085,
+        "joints": 104
+      },
+      "elbow": {
+        "likeness": 0.315,
+        "blots": 0.125,
+        "joints": 22
+      },
+      "hip": {
+        "likeness": 0.549,
+        "blots": 0.082,
+        "joints": 30
+      },
+      "knee": {
+        "likeness": 0.352,
+        "blots": 0.056,
+        "joints": 26
+      }
+    }
+  },
+  "faces": null,
+  "looks": {
+    "comic": "Comic",
+    "pixel-baked": "Pixels, baked",
+    "pixel-both": "Pixels, both",
+    "joe": "Bold ink"
+  },
+  "made": "2026-11-24 13:50",
+  "role": "right",
+  "face_recipe": false,
+  "joint_pieces": false,
+  "why": "Judged as cards alone: the pieces in its joints need its cloth bones (cloth_linen_tunic_1_1), which this clip has not got."
+}

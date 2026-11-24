@@ -12,10 +12,16 @@ request, so a new run, comic or take shows up on reload. Binds to all
 interfaces so a phone on the same Wi-Fi (or on your tailnet)
 can open it; nothing here is meant for the internet.
 
-Read-only, with one exception: POST /api/videos/<name>/choice keeps who you
+Read-only, with two exceptions. POST /api/videos/<name>/choice keeps who you
 chose to follow in each shot of a clip. It can write videos/<name>/choice.json
 and no other file, and only a choice that fits the people found in that clip
-(scripts/video/people.py checks it). Everything else that is not a GET is refused.
+(scripts/video/people.py checks it). And casting (/api/casting, casting/):
+POST /api/casting/<role>/<candidate>/note gives a candidate a note,
+.../status shortlists, lets go or casts it, /api/casting/<role>/shortlist
+makes a headshot a candidate, and /api/casting/<role>/plan says what a step
+would do and cost without doing it. They write only casting/<role>/candidates/
+<candidate>/candidate.json, through scripts/casting/casting.py, which checks
+every word. Nothing here starts a paid step. Everything else that is not a GET is refused.
 """
 import argparse
 import json
@@ -43,7 +49,12 @@ sys.path.insert(0, os.path.join(ROOT, "scripts", "diorama"))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "video"))
 import diorama as diorama_file  # noqa: E402  (what a diorama is, and its card for the front page)
 import people as video_people  # noqa: E402  (a clip's people, and the one thing this server may write: who you chose)
+sys.path.insert(0, os.path.join(ROOT, "scripts", "casting"))
+import casting as casting_file  # noqa: E402  (roles, candidates and their takes; the notes you give)
+CASTING = casting_file.CASTING
 CHOICE_PATH = re.compile(r"^/api/videos/([a-z0-9][a-z0-9-]{0,63})/choice$")
+# /api/casting/robot/plan, /api/casting/robot/shortlist, /api/casting/robot/villager/note, .../status
+CASTING_PATH = re.compile(r"^/api/casting/([a-z0-9][a-z0-9-]{0,47})(?:/([a-z0-9][a-z0-9-]{0,47}))?/(note|status|shortlist|plan)$")
 CHOICE_BYTES = 64 * 1024  # a choice is a few hundred bytes; nothing bigger is read
 PROFILE_ORDER = ["hero", "quads", "web", "game", "mobile", "midpoly", "lowpoly"]
 
@@ -269,37 +280,43 @@ def the_world():
 def all_takes():
     """Every shot filmed on a standing set with a cast (shots/<name>/cast-<clip>.json, from render_take.py): who is in
     it, each one's file and size, and the film from each camera."""
-    out = []
     if not os.path.isdir(SHOTS):
-        return out
-    for name in sorted(os.listdir(SHOTS)):
-        folder = os.path.join(SHOTS, name)
-        take = read_json(os.path.join(folder, "take.json")) or {}
-        for file in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
-            if not (file.startswith("cast-") and file.endswith(".json")):
+        return []
+    return [t for name in sorted(os.listdir(SHOTS)) for t in takes_in(os.path.join(SHOTS, name), name)]
+
+
+def takes_in(folder, name):
+    """The takes cast in one shot folder (shots/<name>/), as /api/takes gives them; name is the take's id, the
+    folder under shots/ (a casting take is shots/casting/<role>/<candidate>-<n>/, scripts/casting)."""
+    out = []
+    take = read_json(os.path.join(folder, "take.json")) or {}
+    for file in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        if not (file.startswith("cast-") and file.endswith(".json")):
+            continue
+        cast = read_json(os.path.join(folder, file))
+        if not cast:
+            continue
+        roles = []
+        for role, card in (cast.get("roles") or {}).items():
+            if not card.get("glb") or not os.path.isfile(os.path.join(folder, card["glb"])):
                 continue
-            cast = read_json(os.path.join(folder, file))
-            if not cast:
-                continue
-            roles = []
-            for role, card in (cast.get("roles") or {}).items():
-                if not card.get("glb") or not os.path.isfile(os.path.join(folder, card["glb"])):
-                    continue
-                mid = card["glb"].replace("lowpoly-", "midpoly-")
-                where = card.get("character", "").replace("\\", "/").split("/")
-                roles.append({"role": role, "character": os.path.basename(os.path.dirname(card.get("character", ""))),
-                              # the run this character is, whichever of its versions was cast (runs/<run>/lowpoly.glb, runs/<run>/profiles/painted.glb)
-                              "run": where[where.index("runs") + 1] if "runs" in where[:-1] else None,
-                              # a fight stands each fighter on a mark of the set, facing the other (fight.json); other takes have the places played in
-                              "mark": ((read_json(os.path.join(folder, "fight.json")) or {}).get("marks") or {}).get(role), "size": 1.0 if card.get("true_size") else card.get("size_against_soma", 1.0),
-                              "glb": card["glb"], "midpoly": mid if mid != card["glb"] and os.path.isfile(os.path.join(folder, mid)) else None})
-            out.append({
-                "id": name, "clip": cast.get("clip"), "set": cast.get("set"), "title": take.get("title") or name.replace("-", " ").capitalize(),
-                "about": take.get("about"), "seconds": cast.get("seconds"), "roles": roles,
-                "films": {camera: film.get("mp4") for camera, film in (cast.get("films") or {}).items() if film.get("mp4") and os.path.isfile(os.path.join(folder, film["mp4"]))},
-                "handshakes": cast.get("handshakes") or [],
-            })
+            mid = card["glb"].replace("lowpoly-", "midpoly-")
+            where = card.get("character", "").replace("\\", "/").split("/")
+            roles.append({"role": role, "character": os.path.basename(os.path.dirname(card.get("character", ""))),
+                          # the run this character is, whichever of its versions was cast (runs/<run>/lowpoly.glb, runs/<run>/profiles/painted.glb)
+                          "run": where[where.index("runs") + 1] if "runs" in where[:-1] else None,
+                          # a fight stands each fighter on a mark of the set, facing the other (fight.json); other takes have the places played in
+                          "mark": ((read_json(os.path.join(folder, "fight.json")) or {}).get("marks") or {}).get(role), "size": 1.0 if card.get("true_size") else card.get("size_against_soma", 1.0),
+                          "glb": card["glb"], "midpoly": mid if mid != card["glb"] and os.path.isfile(os.path.join(folder, mid)) else None})
+        out.append({
+            "id": name, "clip": cast.get("clip"), "set": cast.get("set"), "title": take.get("title") or name.replace("-", " ").capitalize(),
+            "about": take.get("about"), "seconds": cast.get("seconds"), "roles": roles,
+            "films": {camera: film.get("mp4") for camera, film in (cast.get("films") or {}).items() if film.get("mp4") and os.path.isfile(os.path.join(folder, film["mp4"]))},
+            "handshakes": cast.get("handshakes") or [],
+        })
     return out
+
+
 def all_videos():
     """Every clip in videos/ (`just video-add`), newest first: how far it has come, the shots and people found in it,
     who was chosen, and the film of the result beside the clip."""
@@ -333,6 +350,39 @@ def all_videos():
         })
     out.sort(key=lambda v: v.pop("_at"), reverse=True)
     return out
+
+
+def all_casting():
+    """Every role being cast (casting/<role>/role.json), as its page needs it; a take's chemistry read and sparring
+    bout come as the watch page takes them (takes_in), so they play there as any take does."""
+    cast = casting_file.Casting(CASTING, RUNS, SHOTS)
+    out = []
+    for role in cast.roles():
+        summary = cast.summary(role)
+        for candidate in summary["candidates"]:
+            for take in candidate["takes"]:
+                for key in ("chemistry", "fight"):
+                    found = takes_in(os.path.join(SHOTS, take[key]), take[key]) if take[key] else []
+                    take[key] = found[0] if found else None
+        out.append(summary)
+    return out
+
+
+def casting_write(role, candidate, action, body):
+    """The writes /api/casting takes, each one checked by scripts/casting/casting.py. Raises ValueError to refuse."""
+    cast = casting_file.Casting(CASTING, RUNS, SHOTS)
+    if not isinstance(body, dict):
+        raise ValueError("send an object")
+    if action == "plan":
+        return cast.plan(str(body.get("step", "")), role, body.get("candidate") or candidate)
+    if action == "shortlist":
+        return cast.shortlist(role, str(body.get("look", "")))
+    if not candidate:
+        raise ValueError("say which candidate")
+    if action == "note":
+        take = body.get("take")
+        return cast.add_note(role, candidate, str(body.get("text", "")), str(body.get("about", "look")), int(take) if take is not None else None)
+    return cast.set_status(role, candidate, str(body.get("status", "")))
 
 
 def all_comics():
@@ -414,6 +464,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_file(MARBLE, path[len("/marble/"):])
         if path.startswith("/world/"):
             return self.send_file(WORLD, path[len("/world/"):])
+        if path == "/api/casting":
+            return self.send_json(all_casting())
+        if path.startswith("/casting/"):
+            return self.send_file(CASTING, path[len("/casting/"):])
         if path == "/api/comics":
             return self.send_json(all_comics())
         if path == "/api/dioramas":
@@ -449,9 +503,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.close_connection = True
 
     def do_POST(self):
-        """The one thing this server writes: who to follow in each shot of a clip (videos/<name>/choice.json)."""
+        """The two things this server writes: who to follow in each shot of a clip (videos/<name>/choice.json), and
+        casting's notes and choices (casting/<role>/candidates/<candidate>/candidate.json)."""
         asked = CHOICE_PATH.match(urlparse(self.path).path)  # the path as sent: nothing is decoded, so nothing can hide in it
-        if not asked:
+        casting = CASTING_PATH.match(urlparse(self.path).path)
+        if not asked and not casting:
             return self.refuse(HTTPStatus.NOT_FOUND, "nothing here takes a POST")
         # A page from somewhere else cannot send JSON here without asking first, and is told no.
         origin = self.headers.get("Origin")
@@ -465,6 +521,13 @@ class Handler(SimpleHTTPRequestHandler):
             return self.refuse(HTTPStatus.LENGTH_REQUIRED, "say how long the choice is")
         if not 0 < length <= CHOICE_BYTES:
             return self.refuse(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "a choice is small")
+        if casting:
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+                done = casting_write(casting.group(1), casting.group(2), casting.group(3), body)
+            except (ValueError, TypeError, UnicodeDecodeError) as error:
+                return self.refuse(HTTPStatus.NOT_FOUND if str(error).startswith("no such") else HTTPStatus.BAD_REQUEST, str(error))
+            return self.send_json({"saved": casting.group(3) != "plan", "result": done})
         try:
             body = json.loads(self.rfile.read(length).decode("utf-8"))
             video_people.save_choice(VIDEOS, asked.group(1), body)

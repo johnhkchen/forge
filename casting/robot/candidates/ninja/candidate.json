@@ -1,0 +1,12 @@
+{
+  "name": "The shadow ninja",
+  "stand_in": true,
+  "why": "Already made, so every stage can be tried before anything is spent. Not trying out for the part.",
+  "look": null,
+  "picture": {"run": "2026-11-20T13-52-48-shadow-ninja", "file": "image.png"},
+  "status": "shortlisted",
+  "takes": [
+    {"n": 1, "run": "2026-11-20T13-52-48-shadow-ninja", "made": "2026-11-20", "how": "An existing run, standing in.", "answers": []}
+  ],
+  "notes": []
+}

@@ -126,12 +126,18 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just recipe <run folder>` | for a run from before recipes were kept: get its block-out's recipe back from the transcript, so `midpoly` can be made |
 | `just auto-body <run folder> <out folder>` | give a finished character a body with anatomy, without Claude: its landmarks are found, a body is built from them, and its own head and gear go back on. Writes into the out folder, never the run |
 | `just anatomy-check <run folder> <out.png> low=<file.glb>…` | measure low-poly and mid-poly bodies against the detailed mesh: landmarks, proportions, outlines, cross-sections, and a sheet to look at |
-| `just gallery` | the newest diorama out front, then the world, every object raw vs cleaned-up, the comics, and the clips you brought, on this Mac or a phone on the same Wi-Fi |
+| `just gallery` | the newest diorama out front, then the world, the comics, the parts being cast, every object raw vs cleaned-up, and the clips you brought, on this Mac or a phone on the same Wi-Fi |
 | `just impostor <run folder> [version]` | cut a rigged character into flat cards, one a bone, and picture each part from all around (`profiles/<version>-impostor-comic-joined/`); the gallery shows it at `#/cards/<run>` |
 | `just impostor <run folder> painted --look pixel` (or `joe`) | the cards' sheet for another look: pixel art (small, few colours) or bold ink (`profiles/<version>-impostor-<look>-joined/`) |
 | `just impostor-detailed <run folder>` | cards pictured from the detailed mesh instead: it is given the painted version's skeleton, then baked as pixel art, in the comic look and for bold ink |
 | `just impostor-seams [take] [tag] [out]` | count what shows where two cards meet (dark lines, see-through gaps) against the real models posed the same, in every look; `--sheets old` for how it was, `--why` for what a gap comes from |
 | `just seam-shots [take] [tag] [port]` | stills of a take's joints on the watch page: the stage, close on each of the cast, closer on an elbow and a knee, in every look |
+| `just casting [role]` | how far each part being cast has come, and everyone trying out for it (see "Casting") |
+| `just casting-plan <step> <role> [candidate]` | what a casting step would do and cost; starts nothing |
+| `just casting-headshots <role> go`, `just casting-take <role> <candidate> go` | PAID: draw the headshots; build a shortlisted one into a character (then tape and judge it, free). Without `go` they only print the cost |
+| `just casting-tape <role> <candidate>`, `just casting-judge <role> <candidate>` | free: a take's reel and chemistry read; its camera test |
+| `just casting-revise <role> <candidate> [go]` | your notes become the next take: free for notes on moves or cards, PAID (with `go`) for a note on the look |
+| `just tidy <run folder> sides` | the audition sides on a character: standing easy, a wave, a head turn, an arm overhead, a deep squat |
 | `just impostor-judge <run folder> [version] [out]` | the same frames drawn as cards and as the real model, and how far apart they are; stills and films into `evidence/impostor/` |
 | `just transcript <run folder> <step>` | read the Blender code Claude ran in a step (`polish`, `parts`, `lowpoly`) |
 | `just test-tools` | try the Blender scripts on real runs in a background Blender (your open Blender is left alone) |
@@ -1118,6 +1124,59 @@ The world's files are read from `world/marble/` beside the gallery; from another
 A take that has been cast can be played in the browser, on its set: `#/watch/<take>` ("Watch ... as pixel cards" on the set's page). `gallery/watch.js` stands the set up, brings every role's file on, and plays them from one clock, with Play, a bar to wind it back and forth, the set's own cameras or a free eye, Cards or Meshes, and the looks. Each of the cast whose run has baked cards is drawn as cards riding the skeleton his cast file carries; one with none stays a mesh. A fight's two are stood on their marks as the film stands them.
 
 For the candy-shop routine all three (Lincoln, Roosevelt, the pirate) have cards pictured from their detailed meshes (`just impostor-detailed <run> lowpoly`: the detailed mesh on the low-poly skeleton the cast uses, 96 pixels a metre as pixel art and 192 in the comic look). Their joints have been cut again since ("Where two cards meet", above). The cast's skeletons are the low-poly walk files' own to the last digit for Lincoln and Roosevelt and to a tenth of a millimetre for the pirate; Roosevelt's cards, cut on his painted skeleton, are half a millimetre off, and were kept. The detailed mesh lies 0.8 cm from the low-poly one at a typical point on Lincoln, 1.0 on Roosevelt and 2.2 on the pirate, whose coat and hat are the loosest fit. Stills, cards against meshes from the crew camera and close on each: `evidence/watch/`. All three have a face drawn for the pixel look (Looks, above): stills before and after, at the crew camera and from 1.3 m, cards and meshes, in `evidence/faces/`. Since then "Pixels, both" draws their heads on a finer grid from sheets of their own ("Faces as clear as bold ink", under Looks): `evidence/clear/`. And every knee, elbow, hip and shoulder is a piece of the real model that bends, not two pictures meeting ("A knee that bends", above): `evidence/knees/`.
+
+## Casting
+
+New members of the cast are found the way a casting director finds an actor, on the gallery's Casting page (`#/casting`, or "Casting" under the title). The first part being cast is a robot.
+
+```
+just casting                              # where every part stands, and everyone trying out
+just casting-plan take robot              # what a step would do and what it costs; starts nothing
+just casting-headshots robot go           # PAID: draw the headshots
+just casting-take robot tin-toy go        # PAID: build a shortlisted headshot, then tape and judge it (free)
+just casting-revise robot tin-toy [go]    # your notes become the next take (free for moves and cards; PAID for the look)
+```
+
+| Real casting | Here |
+|---|---|
+| **The breakdown**: who the part is, the look, the must-haves, where they fit | `casting/<role>/role.json`, written by hand. It also holds the canon options for you to choose from (none goes in canon until you do) and the looks to draw, each a whole brief |
+| **Submissions**: headshots, narrowed to a shortlist | one Codex picture a look (`casting/<role>/headshots/`); "Put on the shortlist" makes it a candidate |
+| **Sides**: the same short scenes for everyone | the reel (`casting/reel.json`): stand easy, walk, run, a wave, a head turn, an arm overhead, a deep squat, eight seconds of the candy-shop routine, the tag moves, a sparring bout. Chosen to push the cards where they are weakest (knees, shoulders, the neck) |
+| **Self-tapes** | each take plays the reel as flat cards beside the real model, in every look (the cards page, inside this one) |
+| **Callbacks with adjustments** | "Give a note" (about the look, the moves or the cards). The next take answers it; every take is kept, with its scores |
+| **Chemistry reads** | a height chart beside Lincoln, Roosevelt and the pirate; the five colours each is made of beside theirs; the crew's dance with the candidate in the pirate's place, and a sparring bout with Lincoln, both on the watch page |
+| **Screen test** | the camera test: the renderer's own judges (`judge_seams`, `judge_joints`, and `judge_faces` once the face has a recipe) on the candidate in the crew's dance, set beside the pirate judged the same way in the same place |
+| **Cast** | "Cast in the part". The canon entry, a place in the world and the arrival by gachapon stay yours to write |
+
+**Where things are.** `casting/reel.json` (the sides), `casting/<role>/role.json` (the breakdown), `casting/<role>/candidates/<id>/candidate.json` (status, takes, notes), `candidates/<id>/scores-<n>.json` (a take's camera test, summed up), `casting/<role>/baseline.json` (the cast member it is measured against). A take is a run folder in `runs/`; what the reel needs beyond the run's own clips is made into `shots/casting/<role>/<id>-<n>/` (the tag moves, the crew's dance with one dancer swapped, the bout, the judges' full output), out of git like the rest of `shots/`. `scripts/casting/casting.py` reads and writes all of it, `gallery/casting.js` is the page, `baml_src/12_casting/` the paid steps.
+
+**The sides.** Most of the reel is clips a character already has (its walk, its run, the warm-up of the range-of-motion routine). The wave, the head turn, the arm overhead, the deep squat and standing easy are a new routine of the same kind, `sides.py` in the tidy-mesh skill (`just tidy <run> sides`, four seconds, free): turns of whole body parts, nothing tuned per character, so everyone does exactly the same thing and `animate.py` reports which joints it asked too much of. The squat goes deeper than the warm-up's (0.55 of the hip height against 0.38).
+
+**What it costs.** Each paid step says so before it runs: on the page ("See what it would cost" asks the server and starts nothing; the paid buttons only ever show the command), and in Terminal (the recipes print the plan and stop unless told `go`).
+
+| Step | Paid? | Cost |
+|---|---|---|
+| Headshots | yes | one Codex picture a look (four looks are written; on your ChatGPT plan). Opus writes more looks only if asked (`more=3`), about $0.05 to $0.20 |
+| A first take | yes | about $2.80 to $4.50: Claude finishing it in Blender, measured from the eight characters' own logs ($2.61 to $4.20, typically $3.31; the villager's three steps were $4.20, and the brief, the gait and retries took it to about $7), plus how it walks, about $0.08 of RunPod GPU for the mesh, and a few cents for its run |
+| Tape the reel | free | about a minute of background Blender (more the first time: its cards are baked from the detailed mesh, a minute and a half) |
+| Camera test | free | about five minutes of background Blender |
+| A revised take | notes on moves or cards: free; a note on the look: as a first take | |
+
+The GPU price is an assumption written in `casting.py` (`RUNPOD_USD_PER_S`); check it against your bill.
+
+**Tried with stand-ins.** The villager and the ninja stand in as candidates (`stand_in: true`; they cannot be cast), so every stage can be clicked through without spending. Both were taped and judged for real. Their first bakes, with none of the hand-tuning the crew's cards have had, score well below the pirate, which is the kind of thing the camera test is for (bold ink, crew camera and close: how well a bent joint reads, 1 is the model's own):
+
+| | stray lines ‰ | see-through ‰ | joints | knees |
+|---|---|---|---|---|
+| the pirate, in his own place | 2.9 | 5.1 | 0.67 | 0.84 |
+| the villager in it | 5.1 | 16.7 | 0.42 | 0.36 |
+| the ninja in it | 0.6 | 11.3 | 0.50 | 0.49 |
+
+The audition also found a fault before anyone was cast: a character with loose cloth (the villager's tunic) has cloth bones in its walk but not in a shot's clip, and the pieces of the real model that `bake_joints.py` puts in its joints are weighted to them, so the judges stopped. The camera test now judges such a candidate as cards alone and says so on the page. The robot's breakdown asks for nothing loose.
+
+**The robot's breakdown, in short.** A small, earnest toy-shop robot, 1.45 m (the shortest in the cast), a boxy head with two round lamp eyes and a grille mouth on a dark face plate, a barrel chest with one red dial, short round limbs with a real ball at every joint, matte mustard enamel with steel-blue joints, because nobody in the cast wears yellow and three of them wear navy. Rigid parts and real ball joints are what flat cards are made of, so it should read as cards better than anyone; if it does not, that is a note for the cards. Four ways it could arrive in canon are written out for you to choose from: the developer's helper (a capsule nobody ordered), Lincoln's counter, the Square Deal crew's first hire, or the first toon brewed in the teahouse.
+
+Screenshots of every stage, phone and desktop: `evidence/casting/`. `just casting-test` tries the files, the board, the costs, the notes and the API with no Blender and no model.
 
 ## Comics
 

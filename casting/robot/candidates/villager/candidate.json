@@ -1,0 +1,49 @@
+{
+  "name": "The villager",
+  "stand_in": true,
+  "why": "Already made, so every stage can be tried before anything is spent. Not trying out for the part.",
+  "look": null,
+  "picture": {
+    "run": "2026-11-20T22-46-17-plain-young-villager",
+    "file": "image.png"
+  },
+  "status": "shortlisted",
+  "takes": [
+    {
+      "n": 1,
+      "run": "2026-11-20T22-46-17-plain-young-villager",
+      "made": "2026-11-20",
+      "how": "An existing run, standing in.",
+      "answers": []
+    },
+    {
+      "n": 2,
+      "run": "2026-11-20T22-46-17-plain-young-villager",
+      "made": "2026-11-24",
+      "how": "The same build, taped and judged again for notes 1.",
+      "answers": [
+        1
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "id": 1,
+      "take": 1,
+      "about": "cards",
+      "text": "The knees blot in the deep squat in bold ink, and the tunic leaves the joints without their pieces. Try the joint pieces again once the dance clip keeps its cloth bones.",
+      "at": "2026-11-24 14:00",
+      "answered_by": 2,
+      "by": "Claude, trying a callback on a stand-in"
+    },
+    {
+      "id": 2,
+      "take": 1,
+      "about": "look",
+      "text": "Warmer, rounder eyes, and a little shorter.",
+      "at": "2026-11-24 14:00",
+      "answered_by": null,
+      "by": "Claude, trying a callback on a stand-in"
+    }
+  ]
+}

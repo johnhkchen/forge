@@ -44,6 +44,7 @@ check:
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
     python3 scripts/impostor/test_impostor.py | tail -1
+    python3 scripts/casting/test_casting.py | tail -1
     python3 scripts/video/test_video.py 2>/dev/null | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
@@ -493,6 +494,71 @@ diorama-load name:
 # Pictures of the gallery's front page at phone and desktop width, and every byte it fetched, into evidence/diorama/ (the gallery must be running on that port)
 diorama-shots port="8028":
     python3 scripts/diorama/shots.py --port {{port}}
+
+# Casting (scripts/casting, casting/<role>/): how far each part has come, and everyone trying out for it
+casting role="":
+    python3 scripts/casting/casting.py status {{role}}
+
+# What a casting step would do and cost, without doing it (step: headshots, take, tape, judge, revise)
+casting-plan step role candidate="":
+    python3 scripts/casting/casting.py plan "{{step}}" "{{role}}" {{candidate}} | sed '/^RESULT/d'
+
+# PAID (Codex pictures; Opus too with more): a headshot for every look in casting/<role>/role.json that has none, and first `more` new looks written by Opus. Prints the cost and stops unless go is "go"
+casting-headshots role go="" more="0":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/casting/casting.py plan headshots "{{role}}" | sed '/^RESULT/d'
+    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was started. To spend it: just casting-headshots {{role}} go"; exit 0; }
+    baml run casting_headshots -- --role "{{role}}" --more {{more}}
+    python3 scripts/casting/casting.py status "{{role}}"
+
+# PAID (a few dollars: TRELLIS.2, Claude in Blender, Kimodo): a shortlisted headshot built into a character, then its reel taped and its camera test run (both free). Prints the cost and stops unless go is "go"
+casting-take role candidate go="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/casting/casting.py plan take "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was started. To spend it: just casting-take {{role}} {{candidate}} go"; exit 0; }
+    baml run casting_take -- --role "{{role}}" --candidate "{{candidate}}"
+    python3 scripts/casting/casting.py tape "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+    python3 scripts/casting/casting.py judge "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+
+# Free: a take's reel and chemistry read, in background Blender: the sides and the warm-up on its skeleton, its cards, the tag moves, the crew's dance in one dancer's place, a sparring bout (into shots/casting/<role>/<candidate>-<n>/). Skips what is there
+casting-tape role candidate:
+    python3 scripts/casting/casting.py tape "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+
+# Free: the camera test, the renderer's judges on a take in the crew's dance, summed up into casting/<role>/candidates/<candidate>/scores-<n>.json (about five minutes). again=yes runs judges already run
+casting-judge role candidate again="":
+    python3 scripts/casting/casting.py judge "{{role}}" "{{candidate}}" {{ if again != "" { "--again" } else { "" } }} | sed '/^RESULT/d'
+
+# Free: the same judges on the cast member a candidate stands in for (the crew's own take), so a score has something to beat
+casting-baseline role:
+    python3 scripts/casting/casting.py baseline "{{role}}" | sed '/^RESULT/d'
+
+# A callback: the open notes become new takes. Notes on moves or cards are answered first, free (the same build, taped and judged again); notes on the look are PAID (Opus rewrites the brief, Codex redraws it from the last picture, it is built again) and wait unless go is "go"
+casting-revise role candidate go="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/casting/casting.py plan revise "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+    if python3 scripts/casting/casting.py has-free-notes "{{role}}" "{{candidate}}"; then
+        python3 scripts/casting/casting.py retake "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+        python3 scripts/casting/casting.py tape "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+        python3 scripts/casting/casting.py judge "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+    fi
+    if python3 scripts/casting/casting.py has-look-notes "{{role}}" "{{candidate}}"; then
+        if python3 scripts/casting/casting.py is-stand-in "{{role}}" "{{candidate}}"; then echo "A stand-in is not rebuilt: its notes on the look stay open."; exit 0; fi
+        [ "{{go}}" = "go" ] || { echo "Notes on the look wait: nothing paid was started. To spend it: just casting-revise {{role}} {{candidate}} go"; exit 0; }
+        baml run casting_revise -- --role "{{role}}" --candidate "{{candidate}}"
+        python3 scripts/casting/casting.py tape "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+        python3 scripts/casting/casting.py judge "{{role}}" "{{candidate}}" | sed '/^RESULT/d'
+    fi
+
+# Pictures of the casting pages, every stage, at phone and desktop width, into evidence/casting/ (the gallery must be running on that port; needs Chrome)
+casting-shots port="8028" candidate="villager":
+    python3 scripts/casting/shots.py --port {{port}} --candidate "{{candidate}}"
+
+# Casting's own tests: the files, the board, the costs, the notes, and the gallery's casting API (no Blender, no models)
+casting-test:
+    python3 scripts/casting/test_casting.py
 
 # Vendor the b28 clay style kit into the gallery
 sync-kit:

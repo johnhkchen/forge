@@ -1864,6 +1864,14 @@ function videoPage(video) {
   );
 }
 
+// The parts being cast, on the front page (filled in once gallery/casting.js and /api/casting have come).
+function castingSlot() {
+  const slot = h("div", { class: "casting-slot" });
+  Promise.all([import("./casting.js"), fetch("api/casting").then((r) => r.json()).catch(() => [])])
+    .then(([casting, roles]) => { const card = casting.castingCard(roles, h); if (card) slot.replaceChildren(card); });
+  return slot;
+}
+
 // ---------- routing ----------
 
 async function route() {
@@ -1953,6 +1961,23 @@ async function route() {
     window.scrollTo(0, 0);
     return;
   }
+  // #/casting[/<role>[/<candidate>[/<take>]]]: finding a new member of the cast (gallery/casting.js, fetched when asked for).
+  const atCasting = location.hash.match(/^#\/casting(?:\/([^/]+))?(?:\/([^/]+))?(?:\/(\d+))?$/);
+  if (atCasting) {
+    viewer?.dispose();
+    viewer = null;
+    const casting = await import("./casting.js");
+    const roles = await fetch("api/casting").then((r) => r.json()).catch(() => []);
+    const role = atCasting[1] && roles.find((r) => r.id === decodeURIComponent(atCasting[1]));
+    const candidate = role && atCasting[2] && role.candidates.find((c) => c.id === decodeURIComponent(atCasting[2]));
+    const refresh = async () => { const y = window.scrollY; await route(); window.scrollTo(0, y); };
+    const page = candidate ? casting.candidatePage({ role, candidate, wantedTake: atCasting[3], runs, sets, h, loader, refresh })
+      : role ? casting.rolePage({ role, h, refresh }) : casting.castingList(roles, h);
+    if (page.dispose) viewer = { dispose: () => page.dispose() };
+    app.replaceChildren(page);
+    window.scrollTo(0, 0);
+    return;
+  }
   // #/run/<run id>[/<version>]: a link can open a given version. #/set/<set name>[/<shot>[/<camera>]]: a standing set.
   const match = location.hash.match(/^#\/run\/([^/]+)(?:\/([a-z]+))?$/);
   const onSet = location.hash.match(/^#\/set\/([^/]+)(?:\/([^/]+))?(?:\/([a-z_]+))?$/);
@@ -1960,7 +1985,7 @@ async function route() {
   viewer = null;
   const run = match && runs.find((r) => r.id === decodeURIComponent(match[1]));
   const set = onSet && sets.find((x) => x.id === decodeURIComponent(onSet[1]));
-  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [stateOfTheWorld(), comicShelf(), shelfHeading(), shelf(), videoShelf()];
+  const page = set ? [setPage(set, onSet[2] && decodeURIComponent(onSet[2]), onSet[3])] : run ? [objectPage(run, match[2])] : [stateOfTheWorld(), comicShelf(), castingSlot(), shelfHeading(), shelf(), videoShelf()];
   app.replaceChildren(...page.filter(Boolean));
   window.scrollTo(0, 0);
 }
