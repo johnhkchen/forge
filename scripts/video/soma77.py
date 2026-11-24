@@ -62,6 +62,7 @@ from soma_bridge import Bridge  # noqa: E402
 FPS = 30
 BLEND_FRAMES = 8  # frames of a new shot over which the jump in pose at a cut is eased out
 GROUND_SHARE = 0.03  # the floor is where the lowest toe is, leaving out this share of the lowest frames
+INVERTED_SHARE = 0.9  # refuse a shot as the wrong way up only when the body is upside down in more than this share of it
 CONTACT_ORDER = ["left_heel", "left_toe", "right_heel", "right_toe"]
 TOP_SPEED = 4.0  # m/s; the hips are not carried across a cut faster than this
 STEADY_DEG_PER_FRAME = 12.0  # a joint turning less than this a frame is carried on across a cut at the rate it was turning
@@ -121,8 +122,11 @@ def convert(raw: dict, sk: Skeleton, card: dict = None) -> tuple:
             theirs = [(raw["marks"][name][f][a] - raw["root"][f][a]) * size for a in range(3)]
             apart[name].append(math.dist(sub(pos[sk.index[name]], pos[0]), theirs))
     upright = sorted(ups)[count // 2]
-    if upright < 0.0:
-        raise clip_file.Stop("the motion came back upside down: the worker's world is not Y-up the way this conversion expects")
+    # A person can be upside down for a while (a handplant, a cartwheel, a flip), so only a shot that is upside
+    # down nearly all the way through says the worker's world is the wrong way up.
+    inverted = sum(u < 0.0 for u in ups) / count
+    if inverted > INVERTED_SHARE:
+        raise clip_file.Stop("the motion came back upside down (%d%% of its frames): the worker's world is not Y-up the way this conversion expects" % round(100 * inverted))
     floor = sorted(lows)[min(count - 1, int(GROUND_SHARE * count))]
     for row in root_rows:
         row[1] -= floor
