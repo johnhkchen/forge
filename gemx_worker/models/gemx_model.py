@@ -297,6 +297,24 @@ def boot() -> None:
         onnxruntime.preload_dlls()  # find CUDA and cuDNN among PyTorch's own packages
     import gem  # noqa: F401  fail at boot, not in a job, if the code did not arrive
     from gem.inference.body_video import load_body_video_config
+    from gem.common.soma.body import SomaFixedGs1ShapeSpec
+
+    # SOMA's adapter wants the body's overall scale exactly 1.0 (it is fixed by design) and refuses anything
+    # else. On long shots GEM-X's own steps hand it values a hair off (float32 rounding when windows are
+    # blended), inside its code where we cannot set it first. Snap values within 1e-3 of one to exactly one
+    # before the check; anything further off is still refused. BOOT records the largest slip seen.
+    exact_check = SomaFixedGs1ShapeSpec.split_external_scale
+
+    def split_external_scale(self, scale57):
+        if torch.is_tensor(scale57) and scale57.shape[-1:] == (self.external_scale_dim,):
+            slip = (scale57[..., :1].float() - 1.0).abs()
+            if slip.numel() and bool((slip > 0).any()) and bool((slip < 1e-3).all()):
+                BOOT["scale_slip_snapped"] = max(BOOT.get("scale_slip_snapped", 0.0), float(slip.max()))
+                scale57 = scale57.clone()
+                scale57[..., 0] = 1.0
+        return exact_check(self, scale57)
+
+    SomaFixedGs1ShapeSpec.split_external_scale = split_external_scale
 
     seconds["imports"] = round(time.time() - t, 1)
     if not torch.cuda.is_available():
