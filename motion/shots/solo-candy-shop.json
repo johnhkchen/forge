@@ -1,5 +1,5 @@
 {
- "name": "crew-candy-shop",
+ "name": "solo-candy-shop",
  "brief": "All three ways of making motion in one shot, on the ninja's stage: someone waits in the wings (our pose), walks on to the spot where people stand and talk (a sentence), dances sixteen seconds of the candy-shop routine there (read off the video, the dancer chosen on the clip's page), takes a bow (a sentence) and stands easy (our pose). MotionBricks makes the join at every change. Needs the clip: `just video candy-shop` as far as the motion, first. For another of the three dancers, make their motion (`just video candy-shop \"\" 1:2`) and give the routine beat \"person\": 2.",
  "beats": [
   {

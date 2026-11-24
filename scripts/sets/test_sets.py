@@ -149,7 +149,7 @@ def test_cameras():
                         raise AssertionError("%s: camera %s does not hold the %s at %s" % (name, cam_name, part, seen))
             check("%s: the %s camera (%d mm) holds %s; the furthest point is %.0f%% of the way to the frame's edge" % (name, cam_name, cam["lens_mm"], ", ".join(cam["sees"]), 100 * worst), worst <= 1.0 - standing.FRAME_MARGIN)
     studio = standing.load("studio")
-    check("the studio's three cameras are the wide, the host's and the guests'", list(studio["cameras"]) == ["wide", "host", "guest"])
+    check("the studio's cameras are the wide, the host's, the guests' and the front-of-house one for a crew", list(studio["cameras"]) == ["wide", "host", "guest", "crew"])
     turned = copy.deepcopy(studio)
     turned["cameras"]["host"]["aim"] = [-3.0, 1.0, 1.2]
     turned["cameras"]["guest"]["at"] = [-0.1, 0.9, 0.3]  # behind the couch

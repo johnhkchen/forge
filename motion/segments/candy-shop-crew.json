@@ -1,0 +1,530 @@
+{
+  "name": "candy-shop-crew",
+  "title": "The candy-shop routine, three across",
+  "about": "Three come on from the wings one after another, take their places, and dance the routine together as the three in the clip did: the same places in the group, the same change of places near the end. Then a bow to the house, together.",
+  "needs": {
+    "roles": [
+      "frontman",
+      "left",
+      "right"
+    ],
+    "marks": [
+      "wings",
+      "wings_2",
+      "wings_3",
+      "centre",
+      "crew_front",
+      "crew_left",
+      "crew_right",
+      "crew_front_after",
+      "crew_left_after",
+      "crew_right_after"
+    ]
+  },
+  "sentences": {
+    "walk_on": "A person walks forward at an easy, confident pace, then slows to a stop and stands upright.",
+    "bow": "A person bows deeply from the waist with their arms at their sides, then straightens up and stands still."
+  },
+  "together": [
+    "The routine",
+    "Takes a bow"
+  ],
+  "beats": [
+    {
+      "time": "0-7.3 s",
+      "action": "each waits in the wings, walks on in turn (the one going furthest first) and takes his place",
+      "driven_by": "poses: stand. text: three walks, each held to the set's path"
+    },
+    {
+      "time": "7.3-55.8 s",
+      "action": "the routine, seconds 5.4 to 53 of the clip, each role one of its three dancers, standing to each other as they did",
+      "driven_by": "video: candy-shop, persons 1 (front), 3 (left of the picture), 2 (right), one formation on the centre mark"
+    },
+    {
+      "time": "55.8-59.3 s",
+      "action": "a bow to the house, together",
+      "driven_by": "text, each where the dance left him"
+    },
+    {
+      "time": "59.3-60.2 s",
+      "action": "they stand easy",
+      "driven_by": "poses: stand"
+    }
+  ],
+  "roles": {
+    "frontman": {
+      "title": "The candy-shop routine: the frontman",
+      "start_pose": "stand",
+      "start_mark": "wings_2",
+      "path": [],
+      "props": [],
+      "camera": [],
+      "beats": [
+        {
+          "name": "Waits in the wings",
+          "seconds": 1.5,
+          "source": "poses",
+          "at": "wings_2",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 13,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "Walks on",
+          "seconds": 4.47,
+          "source": "text",
+          "moves": [],
+          "frames": 134,
+          "to": "crew_front",
+          "prompt": "{walk_on}",
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.2,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            },
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Takes his place",
+          "seconds": 1.37,
+          "source": "poses",
+          "at": "crew_front",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 12,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "The routine",
+          "seconds": 47.6,
+          "source": "video",
+          "moves": [],
+          "clip": "candy-shop",
+          "from_s": 5.4,
+          "to_s": 53.0,
+          "person": 1,
+          "from": "crew_front",
+          "to": "crew_front_after",
+          "formation": {
+            "people": [
+              1,
+              2,
+              3
+            ],
+            "at": "centre",
+            "spread": 1.15
+          }
+        },
+        {
+          "name": "Takes a bow",
+          "seconds": 3.5,
+          "source": "text",
+          "moves": [],
+          "frames": 105,
+          "at": "crew_front_after",
+          "prompt": "{bow}",
+          "from_m": 0.0,
+          "to_m": 0.0,
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.0,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            },
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Stands easy",
+          "seconds": 0.97,
+          "source": "poses",
+          "at": "crew_front_after",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        }
+      ]
+    },
+    "left": {
+      "title": "The candy-shop routine: on the left of the picture",
+      "start_pose": "stand",
+      "start_mark": "wings_3",
+      "path": [],
+      "props": [],
+      "camera": [],
+      "beats": [
+        {
+          "name": "Waits in the wings",
+          "seconds": 1.9,
+          "source": "poses",
+          "at": "wings_3",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 16,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "Walks on",
+          "seconds": 3.93,
+          "source": "text",
+          "moves": [],
+          "frames": 118,
+          "to": "crew_left",
+          "prompt": "{walk_on}",
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.2,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            },
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Takes his place",
+          "seconds": 1.5,
+          "source": "poses",
+          "at": "crew_left",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 13,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "The routine",
+          "seconds": 47.6,
+          "source": "video",
+          "moves": [],
+          "clip": "candy-shop",
+          "from_s": 5.4,
+          "to_s": 53.0,
+          "person": 3,
+          "from": "crew_left",
+          "to": "crew_left_after",
+          "formation": {
+            "people": [
+              1,
+              2,
+              3
+            ],
+            "at": "centre",
+            "spread": 1.15
+          }
+        },
+        {
+          "name": "Takes a bow",
+          "seconds": 3.5,
+          "source": "text",
+          "moves": [],
+          "frames": 105,
+          "at": "crew_left_after",
+          "prompt": "{bow}",
+          "from_m": 0.0,
+          "to_m": 0.0,
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.0,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            },
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Stands easy",
+          "seconds": 0.97,
+          "source": "poses",
+          "at": "crew_left_after",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        }
+      ]
+    },
+    "right": {
+      "title": "The candy-shop routine: on the right of the picture",
+      "start_pose": "stand",
+      "start_mark": "wings",
+      "path": [],
+      "props": [],
+      "camera": [],
+      "beats": [
+        {
+          "name": "Waits in the wings",
+          "seconds": 0.97,
+          "source": "poses",
+          "at": "wings",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "Walks on",
+          "seconds": 5.0,
+          "source": "text",
+          "moves": [],
+          "frames": 150,
+          "to": "crew_right",
+          "prompt": "{walk_on}",
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.2,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            },
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Takes his place",
+          "seconds": 1.37,
+          "source": "poses",
+          "at": "crew_right",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 12,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        },
+        {
+          "name": "The routine",
+          "seconds": 47.6,
+          "source": "video",
+          "moves": [],
+          "clip": "candy-shop",
+          "from_s": 5.4,
+          "to_s": 53.0,
+          "person": 2,
+          "from": "crew_right",
+          "to": "crew_right_after",
+          "formation": {
+            "people": [
+              1,
+              2,
+              3
+            ],
+            "at": "centre",
+            "spread": 1.15
+          }
+        },
+        {
+          "name": "Takes a bow",
+          "seconds": 3.5,
+          "source": "text",
+          "moves": [],
+          "frames": 105,
+          "at": "crew_right_after",
+          "prompt": "{bow}",
+          "from_m": 0.0,
+          "to_m": 0.0,
+          "speed_in_mps": 0.0,
+          "speed_out_mps": 0.0,
+          "lead_frames": 0,
+          "tail_frames": 0,
+          "keys": [
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "start"
+            },
+            {
+              "pose": "stand",
+              "at_seconds": 0,
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "only": [],
+              "where": "end"
+            }
+          ],
+          "seed": 0
+        },
+        {
+          "name": "Stands easy",
+          "seconds": 0.97,
+          "source": "poses",
+          "at": "crew_right_after",
+          "moves": [
+            {
+              "pose": "stand",
+              "at_m": 0,
+              "side_m": 0,
+              "facing_deg": 0,
+              "speed_mps": 0,
+              "tokens": 9,
+              "early_frames": 0,
+              "pins": [],
+              "hold_pins_frames": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

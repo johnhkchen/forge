@@ -174,6 +174,17 @@ function shoot_take(run: Run, plan_file: string) -> string {
     for (let role in take.roles.keys()) {
         log.info(`take: the ${role}`);
         let part = Run { dir: `${run.dir}/${role}` };
+        // A beat from a video needs its clip's motion made first; say so in plain words before anything is planned.
+        let from_clips = part.load<ShotList>("shotlist.json").beats
+            .filter((b) -> {
+                b.source == "video"
+            })
+            .flat_map((b) -> {
+                video_beat_problems(b)
+            });
+        if (from_clips) {
+            throw ShotFailed { step: `plan the ${role}`, reason: from_clips.join("; ") }
+        }
         make_motion(part, plan_file);
     }
     //# 3. Film it from every camera
@@ -275,7 +286,7 @@ test "a set says its marks and walks in words" {
     assert.contains(card, "- couch_1: a seat.");
     assert.contains(card, "- meet_left: a spot to stand on, with a spot for a hand.");
     assert.contains(card, "desk_chair to meet_right");
-    assert.equal(studio.cameras.keys(), ["wide", "host", "guest"])
+    assert.equal(studio.cameras.keys(), ["wide", "host", "guest", "crew"])
 }
 
 test "every set in the repo reads" {
@@ -388,7 +399,47 @@ test "a take names its set, its segment and who plays whom" {
     let brief = baml.json.decode<ShotBrief>(baml.fs.read(`${SHOT_PLANS}/studio-guest-entrance.json`));
     assert.equal(brief.segment, "guest-entrance");
     assert.equal(brief.roles?.get("guest"), "roosevelt-wrestler-1890s");
-    assert.equal(standing_set_of(brief)?.cameras.keys().length(), 3)
+    assert.equal(standing_set_of(brief)?.cameras.keys().length(), 4)
+}
+
+test "the candy-shop crew is three roles, each a dancer of the clip, in one formation" {
+    let studio = StandingSet.load("studio");
+    let segment = baml.json.decode<SegmentCard>(baml.fs.read("motion/segments/candy-shop-crew.json"));
+    assert.equal(segment.roles.keys(), ["frontman", "left", "right"]);
+    assert.equal(segment.together, ["The routine", "Takes a bow"]);
+    let people: int[] = [];
+    for (let role in segment.roles.keys()) {
+        let shot = segment.roles.get(role) ?? throw "a key without a value";
+        // Everything but the clip itself is sound on the stage (the clip is on whoever's Mac added it, not in the
+        // repo; a template's prompts are filled in from its sentences when a take is made).
+        let problems = shot_problems(shot, stage = studio).filter((problem) -> {
+            !problem.includes("the prompt should start") && !problem.includes("candy-shop")
+        });
+        assert.equal(problems, []);
+        assert.equal(
+            shot.beats.map((b) -> {
+                b.source
+            }),
+            ["poses", "text", "poses", "video", "text", "poses"],
+        );
+        let routine = shot.beats.at(3) ?? throw "no routine";
+        assert.equal(routine.formation?.people, [1, 2, 3]);
+        assert.equal(routine.formation?.at, "centre");
+        people.push(routine.person ?? 0);
+        // They walk on one after another and are all in place on the same frame.
+        let before = shot.beats.slice(0, 3).reduce(
+            (total, b) -> {
+                total + beat_frames(b)
+            },
+            0,
+        );
+        assert.equal(before, 220);
+    }
+    assert.equal(people, [1, 3, 2]);
+    let brief = baml.json.decode<ShotBrief>(baml.fs.read(`${SHOT_PLANS}/crew-candy-shop.json`));
+    assert.equal(brief.segment, "candy-shop-crew");
+    assert.equal(brief.roles?.get("frontman"), "young-lincoln-frontier-wrestler");
+    assert.equal(standing_set_of(brief)?.cameras.keys().includes("crew"), true)
 }
 
 test "a backdrop is asked for as one wide painted picture" {
