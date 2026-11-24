@@ -32,6 +32,15 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             never between two parts at the same depth; an arm in front of a chest still gets its line, and so
             does one figure in front of another; bold ink leaves a small step between two cards of one figure
             alone and still inks a real one; gallery/looks.js has the same numbers
+  clear     a face kept clear in "Pixels, both": a head far off stays on the body's grid and a near one goes on a
+            grid twice as fine, slid so the bone's head sits on a corner of a pixel; drawn that way a head is twice
+            the pixels across, its line is still one big pixel wide and wholly outside it, and a body drawn
+            beside it stays in whole big pixels; the line on a finer picture of big pixels falls where it fell on
+            the small one; a dark line one sheet pixel wide, shown at half size, is kept wherever the grid sits
+            (and read plainly is dropped somewhere); a fold is found where a surface steps back or turns, on the
+            further pixel; the page has the same numbers. With RUNS_DIR holding a sheet baked for it
+            (profiles/*-impostor-pixel-clear): its head is pictured at 192 pixels a metre, has folds drawn in,
+            and the sheet has no more colours than it may
   baked     with RUNS_DIR holding a baked character (profiles/*-impostor-comic-joined, or the older
             *-impostor): its sheets are the size its card says, every part has every picture, a bone's frame in
             the file is where its skin was bound, and a frame of its walk draws as one whole figure; a sheet
@@ -613,10 +622,112 @@ def test_faces(runs):
         check("%s: the finer head draws where and as big as the plain sheet's head does (within 4%% of its width)" % who, off <= max(2, 0.04 * wide), "%d pixels off on a head %d wide" % (off, wide))
 
 
+def test_clear(runs):
+    folder = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        radius = ball(folder)
+        with open(os.path.join(folder, "impostor.json")) as f:
+            card = json.load(f)
+        card["parts"][0]["name"] = "head"
+        card["sets"]["26"]["cells"] = {"head": card["sets"]["26"]["cells"]["ball"]}
+        card.update(nearest=True, line_marked=True)
+        colour = impostor.read_png(os.path.join(folder, "c.png")).copy()
+        for x0, y0, w, h, ax, ay, _, _ in card["sets"]["26"]["cells"]["head"]:
+            colour[y0 + ay - 3:y0 + ay + 4, x0 + ax, :3] = (20, 20, 20)  # a line one pixel of the sheet wide, in the middle of every picture
+        impostor.write_png(os.path.join(folder, "c.png"), colour)
+        with open(os.path.join(folder, "impostor.json"), "w") as f:
+            json.dump(card, f)
+        head = impostor.Character(folder)
+        bone = np.eye(4)
+        bone[:3, 3] = (0.013, 1.6, 0.007)
+        # the grid: a metre is 96 big pixels at 2 m with this eye, 24 at 8 m
+        near = impostor.Eye(bone[:3, 3] + np.array([0.0, 0.0, 2.0]), bone[:3, 3] + np.array([0.011, 0.004, 0.0]), 2.0 * math.degrees(math.atan(0.5)), (192, 192))
+        far = impostor.Eye(bone[:3, 3] + np.array([0.0, 0.0, 8.0]), bone[:3, 3], near.fov_deg, (192, 192))
+        finer, fine_eye = impostor.head_grid(near, bone[:3, 3])
+        at, _ = fine_eye.to_pixels(bone[:3, 3])
+        check("a head 96 big pixels a metre goes on a grid twice as fine, and one 24 a metre stays with the body", finer and fine_eye.size == (384, 384) and not impostor.head_grid(far, bone[:3, 3])[0])
+        check("... slid by less than a pixel, so the bone's head sits on a corner of one", float(np.abs(at - np.round(at)).max()) < 1e-6 and max(abs(c) for c in fine_eye.shift) <= 0.5 + 1e-9, "at %s, slid %s" % (np.round(at, 3), np.round(fine_eye.shift, 3)))
+        picture, depth, who, lines = impostor.draw_fine_heads(head, {"b": bone}, near, paint=impostor.PAINTS["pixel"])
+        plain, _, _ = impostor.draw(head, {"b": bone}, near, line="off")
+        cover, small = (who > 0), plain[..., 3] > 0
+        check("drawn that way a head is twice the pixels across", picture.shape[:2] == (384, 384) and abs(cover.sum() / 4.0 / small.sum() - 1.0) < 0.03, "%d fine pixels where the small picture has %d" % (cover.sum(), small.sum()))
+        ys, xs = np.nonzero(cover)
+        ring = math.pi * (xs.max() - xs.min() + 1)
+        check("its line is one big pixel wide (two fine ones) and wholly outside it", not (lines & cover).any() and 1.7 < lines.sum() / ring < 2.6, "%d pixels of line round a head %d round" % (lines.sum(), ring))
+        # the line on a picture of big pixels blown up is the line of the small picture blown up
+        rng = np.random.default_rng(5)
+        who_s, depth_s = np.zeros((40, 48), dtype=np.int32), np.full((40, 48), np.inf, dtype=np.float32)
+        for n in range(14):
+            y, x, h, w = rng.integers(2, 30), rng.integers(2, 36), rng.integers(3, 9), rng.integers(3, 9)
+            who_s[y:y + h, x:x + w], depth_s[y:y + h, x:x + w] = 1 + 16 * (n % 3) + n % 5, 3.0 + 0.04 * n + 0.01 * np.arange(w)[None, :]
+        eye_s = impostor.Eye([0, 1, 5], [0, 1, 0], 30.0, (48, 40))
+        eye_f = impostor.Eye([0, 1, 5], [0, 1, 0], 30.0, (96, 80))
+        big = lambda a: np.repeat(np.repeat(a, 2, axis=0), 2, axis=1)
+        check("the line on a finer picture made of big pixels falls just where it fell on the small one", bool((impostor.grid_line(big(depth_s), big(who_s), eye_f, fine=2) == big(impostor.grid_line(depth_s, who_s, eye_s))).all()))
+        # a mark one sheet pixel wide, the head shown at half the size it was pictured: 96 pixels a metre
+        kept, plainly = [], []
+        for sx in (0.0, 0.25, 0.5, 0.75):
+            for sy in (0.0, 0.25, 0.5, 0.75):
+                eye = impostor.Eye(near.at, near.aim, near.fov_deg, near.size, shift=(sx, sy))
+                for keep, counts in ((True, kept), (False, plainly)):
+                    got, _, _ = impostor.draw(head, {"b": bone}, eye, line="off", keep_dark=keep)
+                    counts.append(int(((got[..., :3].max(axis=-1) < 60) & (got[..., 3] > 0)).sum()))
+        check("a dark line one sheet pixel wide, shown at half size, is kept wherever the grid sits, and is never over two pixels wide", min(kept) >= 3 and max(kept) <= 8, "%d to %d pixels" % (min(kept), max(kept)))
+        check("... where reading only the middle of each pixel drops it somewhere", min(plainly) == 0, "%d to %d pixels" % (min(plainly), max(plainly)))
+        check("shown as big as it was pictured or bigger, nothing is added", int(((impostor.draw(head, {"b": bone}, fine_eye, line="off", keep_dark=True)[0][..., :3].max(axis=-1) < 60)).sum()) == int(((impostor.draw(head, {"b": bone}, fine_eye, line="off")[0][..., :3].max(axis=-1) < 60)).sum()))
+    finally:
+        shutil.rmtree(folder)
+    # folds
+    height = np.zeros((9, 12))
+    height[:, 6:] = 0.03
+    normal = np.zeros((9, 12, 3))
+    normal[..., 2] = 1.0
+    normal[4, :3] = (1.0, 0.0, 0.0)
+    known = np.ones((9, 12), dtype=bool)
+    known[:, [0, -1]] = False
+    found = impostor.folds(height, normal, known)
+    check("a fold is found where the surface steps back by more than 2 cm, on the further pixel only", bool(found[:, 5].all()) and not found[:, 6:].any())
+    check("... and where it turns by more than about 70 degrees", bool(found[4, 1:3].all()) and not found[0, :5].any())
+    with open(os.path.join(REPO, "gallery", "looks.js")) as f:
+        page = f.read()
+    with open(os.path.join(REPO, "gallery", "impostor.js")) as f:
+        shader = f.read()
+    check("the page has the same numbers: a grid twice as fine from 40 big pixels a metre, how much darker a kept pixel must be, how near in depth", all(text in page for text in ("heads: %d" % impostor.FINE, "FINE_FROM = %g" % impostor.FINE_FROM))
+          and all(text in shader for text in ("middle - %g" % impostor.KEEP_DARK, "< %g &&" % impostor.KEEP_M)))
+    # sheets baked for it
+    folders = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-pixel-clear", "impostor.json")))
+    if not folders:
+        print("    skipped  a sheet baked for the clear look (none in %s: just impostor-detailed <run> makes one)" % runs)
+        return
+    for path in folders:
+        folder = os.path.dirname(path)
+        who = "%s, %s" % (os.path.basename(os.path.dirname(os.path.dirname(folder))).split("-", 5)[-1], os.path.basename(folder).split("-impostor")[0])
+        with open(path) as f:
+            card = json.load(f)
+        head = next(p for p in card["parts"] if p["name"] == "head")
+        check("%s: the head is pictured at 192 pixels a metre, a whole number of times the body's, with its folds drawn in" % who,
+              head.get("px_per_m") == 192.0 and (192.0 / card["px_per_m"]) % 1 == 0 and card.get("creases") == "head", "the body at %g" % card["px_per_m"])
+        check("%s: the sheet has no more colours than it may: 32, and 16 more for the head" % who, 8 <= len(card["palette"]) <= 48, "%d colours" % len(card["palette"]))
+        glb = os.path.join(os.path.dirname(folder), card["plays"] + "-walk.glb")
+        if os.path.isfile(glb):
+            character = impostor.Character(folder)
+            pose = impostor.Glb(glb).pose(0.2)
+            at = pose["hips"][:3, 3]
+            eye = impostor.Eye([at[0] + 1.0, 1.3, at[2] + 4.0], [at[0], 0.95, at[2]], 30.0, (160, 180))
+            picture, depth, shows, lines = impostor.draw_fine_heads(character, pose, eye, paint=impostor.PAINTS["pixel"])
+            part = (shows - 1) % impostor.PARTS_A_FIGURE
+            body = (shows > 0) & (part != [p["name"] for p in card["parts"]].index("head"))
+            blocks = body.reshape(180, 2, 160, 2)
+            whole = blocks.all(axis=(1, 3)) | ~blocks.any(axis=(1, 3))
+            face = (shows > 0) & ~body
+            check("%s: a frame of his walk draws with the head on the finer grid and the body in whole big pixels, bar where the head covers part of one" % who,
+                  face.sum() > 300 and (~whole).sum() < 0.6 * math.sqrt(face.sum()) * 4, "%d fine pixels of head; %d big pixels are part body" % (face.sum(), (~whole).sum()))
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("faces", lambda: test_faces(runs)), ("baked", lambda: test_baked(runs))]
+             ("page", test_page), ("joints", test_joints), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
     failed = 0
     for name, case in cases:
         print(name)

@@ -1,0 +1,38 @@
+{
+ "pixel-both|crew|frontman": {
+  "away_m": 5.17,
+  "px_per_m": 220.5
+ },
+ "pixel-both|crew|left": {
+  "away_m": 6.64,
+  "px_per_m": 171.7
+ },
+ "pixel-both|crew|right": {
+  "away_m": 6.09,
+  "px_per_m": 187.3
+ },
+ "pixel-both|two|frontman": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "pixel-both|two|left": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "pixel-both|two|right": {
+  "away_m": 1.99,
+  "px_per_m": 471.3
+ },
+ "pixel-both|close|frontman": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ },
+ "pixel-both|close|left": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ },
+ "pixel-both|close|right": {
+  "away_m": 1.0,
+  "px_per_m": 934.4
+ }
+}

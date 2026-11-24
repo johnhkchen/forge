@@ -1,11 +1,12 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--head-px 2] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined]
+        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor-<look>-joined/ (pages older than the mended
-joints read <profile>-impostor/ and <profile>-impostor-<look>/, which this leaves alone):
+joints read <profile>-impostor/ and <profile>-impostor-<look>/, which this leaves alone; pixel art goes into
+<profile>-impostor-pixel-clear/, and the -pixel-joined/ sheet from before faces were made clear is left alone too):
 
     impostor.json            the parts, their bones, the view sets, where each picture is on its sheet
                              ("cells": x, y, wide, tall on the sheet from its bottom left; where the bone's
@@ -47,11 +48,12 @@ routine and fights. --title is what the page calls this choice. --soften is how 
 reads a texture at (smaller is flatter; a detailed mesh wants more than a painted one).
 
 --look bakes a sheet for one of the page's other looks, into <version>-impostor-<look>-joined/:
-    pixel   pixel art: 48 pixels a metre, no smoothing, every colour snapped to the 32 this character is most
-            made of, a line one pixel wide drawn round each picture; the page reads it without smoothing either.
-            When the character has a recipe for a face drawn on this model (pixel_face.py), the head is
-            pictured twice as fine as the body (--head-px says otherwise) and the face is drawn on purpose;
-            --face none leaves it as rendered.
+    pixel   pixel art, into <version>-impostor-pixel-clear/: 48 pixels a metre, no smoothing, every colour snapped
+            to the 32 this character is most made of, a line one pixel wide drawn round each picture; the page
+            reads it without smoothing either. The head is pictured at 192 pixels a metre whatever the body's
+            (--head-px says how many times finer), has its folds drawn in one pixel wide (--creases none leaves
+            them out) and may have 16 colours of its own besides (--head-colours). When the character has a recipe
+            for a face drawn on this model (pixel_face.py) its marks are drawn on top; --face none leaves them off.
     joe     bold ink: no line round the parts (the page draws the outside line itself, the same width on the
             screen however small the figure), and the lines inside a part drawn into its picture
 
@@ -86,6 +88,8 @@ TO_GLB = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))  # Bl
 EYE_AWAY = 10.0   # how far off the eye stands while picturing (m); nothing depends on it
 GUTTER = 2        # empty pixels between pictures on a sheet
 ROW_PX = 1400     # how wide one render of all the parts may be
+HEAD_PPM = 192.0  # pixel art pictures a head this fine
+CREASE = 0.42     # a fold drawn into a pixel-art head is the colour under it times this
 TRUNK = ("hips", "spine", "chest", "head")  # thick parts that hardly bend against each other: they lap over each other much further
 HANG = ("shoulder", "upper_arm", "forearm", "hand")  # the bones that are pictured as they hang in the clip, not as they rest
 
@@ -395,9 +399,13 @@ def main():
     else:
         with open(face) as f:
             recipe = json.load(f)
-    head_px = float(flag("--head-px", "2" if recipe else "1"))  # a finer head comes with a drawn face, unless asked for
+    # Pixel art pictures the head at 192 pixels a metre whatever the body's (a face needs them: "Pixels, both" draws
+    # the head on a grid twice as fine as the body's), and draws the folds of the face into it, as bold ink does.
+    head_px = float(flag("--head-px", str(max(1.0, round(HEAD_PPM / ppm))) if look == "pixel" else "1"))
     finer = {"head": head_px} if head_px != 1.0 else {}
-    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor-%s-joined" % look)))))
+    creases = flag("--creases", "head" if look == "pixel" else "none")       # which parts get their folds drawn in: head, none
+    head_colours = int(flag("--head-colours", "16" if look == "pixel" else "0"))  # colours the head may have besides the sheet's own
+    out = os.path.abspath(flag("--out", os.path.join(run, "profiles", "%s-%s" % (profile, flag("--name", "impostor-pixel-clear" if look == "pixel" else "impostor-%s-joined" % look)))))
     os.makedirs(out, exist_ok=True)
     began = time.time()
 
@@ -493,7 +501,7 @@ def main():
     tmp_colour, tmp_data = os.path.join(out, ".bake-colour.png"), os.path.join(out, ".bake-data.exr")
 
     card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "plays": flag("--plays", profile), "title": flag("--title", ""), "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
-            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, "line_marked": True, "line_back_m": impostor.LINE_BACK_M,
+            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, "line_marked": True, "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}
@@ -597,6 +605,11 @@ def main():
                         inked |= known & near_k & ((near_h - metres_all > 0.02) | (((normal * near_n).sum(axis=-1) < 0.3) & (near_h >= metres_all)))
                     inked |= np.roll(inked, 1, axis=0) & known  # two pixels wide: about a centimetre
                     col[..., :3] = np.where(inked[..., None], (0.07, 0.055, 0.086), col[..., :3])
+                if look == "pixel" and creases == "head" and p["name"] == "head":
+                    # Pixel art: the folds of the head, one pixel wide, in the colour that is there made dark (a
+                    # nostril, the line of the jaw, a lock of hair), on the further pixel. Without them a face read
+                    # small is a patch of skin; bold ink has always had them.
+                    col[..., :3] = np.where(impostor.folds(dat[..., 2] * 2.0 - 1.0, normal, known & ~line)[..., None], col[..., :3] * CREASE, col[..., :3])
                 metres = (np.round(packed[..., 2][known] * 255.0) / 255.0 * 2.0 - 1.0) * p["depth_m"]
                 if marks and p["name"] == "head":
                     heads.append((vi, col[y0:y1, x0:x1], (dat[..., 2] * 2.0 - 1.0)[y0:y1, x0:x1], (known & ~line)[y0:y1, x0:x1], (hs - x0, hs - y0)))
@@ -621,6 +634,12 @@ def main():
             # Pixel art keeps to a few colours: the ones this character is most made of. Every pixel takes the nearest.
             seen = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None])
             palette = pixel_face.few_colours(seen[:: max(1, len(seen) // 200000)], colours, keep)
+            if head_colours:
+                # ... and the head some more of its own, picked from its pictures alone and closer together: a face is
+                # a tenth of the figure, and left to the whole sheet's count it gets one skin and one shadow.
+                of_head = np.concatenate([pic[2][pic[2][..., 3] > 0.5][:, :3] for pic in pictures if pic[2] is not None and pic[0]["name"] == "head"] or [seen[:0]])
+                if len(of_head):
+                    palette = pixel_face.few_colours(of_head[:: max(1, len(of_head) // 200000)], len(palette) + head_colours, list(palette), apart=10.0 / 255.0)
             drawn_as = pixel_face.folded(palette, (recipe or {}).get("same"))  # colours the recipe says are one thing
             for pic in pictures:
                 if pic[2] is not None:

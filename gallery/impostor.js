@@ -19,13 +19,20 @@ import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNum
 
 const PAPER = 0xebe6dc;
 
+// headPass, fineHead and nudge are for a head on a finer grid (looks.js: Screen): a card that goes there
+// (fineHead) is left out of the small picture and drawn in the heads' own drawing, slid by nudge.
 export const CARD_VERTEX = `
+uniform float headPass;
+uniform float fineHead;
+uniform vec2 nudge;
 varying vec2 vSheet;
 varying vec3 vView;
 void main() {
   vSheet = uv;
   vView = (viewMatrix * vec4(position, 1.0)).xyz;
   gl_Position = projectionMatrix * vec4(vView, 1.0);
+  if ((headPass > 0.5) != (fineHead > 0.5)) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+  else if (headPass > 0.5) gl_Position.xy += nudge * gl_Position.w;
 }`;
 
 // One card. The colour sheet holds flat colour and the ink line; the data sheet holds the facing (two numbers,
@@ -69,6 +76,7 @@ uniform float rim;
 uniform float line;
 uniform float who;
 uniform vec3 lineInk;
+uniform float keepDark;
 varying vec2 vSheet;
 varying vec3 vView;
 float pattern(vec2 at) {
@@ -133,6 +141,23 @@ void main() {
   if (inked && line < 0.0) discard;
   vec4 colour = textureLod(colourMap, (cell.xy + xy * pxPerM + anchor) / sheetSize, 0.0);
   if (colour.a < 0.5) discard;
+  if (keepDark > 0.5 && !inked) {
+    // Shown smaller than it was pictured (one pixel here covers more than one of the sheet's), a pixel takes the
+    // darkest of what it covers when that is a good deal darker than its middle and on the same surface: an eye
+    // or a fold one sheet pixel wide is kept, where reading only the middle would drop it every other frame.
+    float covers = pxPerM * length(dFdx(vSheet));
+    if (covers > 1.0) {
+      float reach = min(covers, 3.0) / 3.0, middle = dot(pow(colour.rgb, vec3(1.0 / 2.2)), vec3(0.2126, 0.7152, 0.0722)), best = middle;
+      for (int i = 0; i < 4; i++) {
+        vec2 c = xy * pxPerM + anchor + (i == 0 ? vec2(reach, 0.0) : i == 1 ? vec2(-reach, 0.0) : i == 2 ? vec2(0.0, reach) : vec2(0.0, -reach));
+        if (c.x < 0.0 || c.x >= cell.z || c.y < 0.0 || c.y >= cell.w) continue;
+        vec4 near = textureLod(colourMap, (cell.xy + c) / sheetSize, 0.0);
+        vec3 nearData = textureLod(dataMap, (cell.xy + c) / sheetSize, 0.0).rgb;
+        float grey = dot(pow(near.rgb, vec3(1.0 / 2.2)), vec3(0.2126, 0.7152, 0.0722));
+        if (near.a > 0.5 && nearData.z > 0.5 / 255.0 && nearData.x + nearData.y > 0.5 / 255.0 && abs((nearData.z * 2.0 - 1.0) * depthM - height) < 0.02 && grey < best && grey < middle - 0.12) { best = grey; colour = near; }
+      }
+    }
+  }
   if (mix_ == 1 && pattern(gl_FragCoord.xy) >= share) discard;
   if (mix_ == 2 && pattern(gl_FragCoord.xy) < share) discard;
   vec3 seen = inked ? vec3(0.0, 0.0, 1.0) : facingToEye * unfold(data.xy);
@@ -147,7 +172,17 @@ void main() {
   #include <colorspace_fragment>
 }`;
 // What every card's shader needs about the sheet's ink line, to go in with a material's other uniforms.
-export const lineUniforms = () => ({ line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) } });
+export const lineUniforms = () => ({ line: { value: 0 }, who: { value: 1 }, lineInk: { value: new THREE.Color(0x1c1721) }, headPass: { value: 0 }, fineHead: { value: 0 }, nudge: { value: new THREE.Vector2() }, keepDark: { value: 0 } });
+// Tell a head's card whether it goes on the finer grid this frame, and how far it is slid there (looks.js: headGrid).
+// `at` is the bone's head in the world, as place() gives it.
+const spot = new THREE.Vector3();
+export function setHeadGrid(quad, screen, look, camera, at, part) {
+  const slid = screen.headGrid(look, camera, spot.set(at[0], at[1], at[2]), part);
+  const u = quad.material.uniforms;
+  u.fineHead.value = slid ? 1 : 0;
+  u.keepDark.value = slid ? 1 : 0;
+  if (slid) u.nudge.value.set(slid[0], slid[1]);
+}
 
 // The real model the comic way (toon.py's paint, near enough): the texture read small and soft, its light-to-dark
 // snapped to a few steps, then one of three flat tones by how far the surface faces a light fixed to the eye.
@@ -320,6 +355,7 @@ class CardViewer {
         const quad = new THREE.Mesh(shape, paint);
         quad.frustumCulled = false;
         quad.matrixAutoUpdate = false;
+        if (part.name === "head") { quad.layers.enable(1); paint.uniforms.headPass = this.screen.told.headPass; } // it may go on the finer grid
         this.cards.add(quad);
         return quad;
       });
@@ -422,6 +458,7 @@ class CardViewer {
         u.facingToEye.value.setFromMatrix4(toEye).multiplyScalar(1 / where.size);
         u.share.value = pick.share;
         u.mix_.value = mixing ? n + 1 : 0;
+        if (part.name === "head") setHeadGrid(quad, this.screen, this.look, camera, where.head, this.el.classList.contains("stacked") ? { w: 1, h: 0.5 } : { w: 0.5, h: 1 });
       });
     }
     return swapped;

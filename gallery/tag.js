@@ -25,7 +25,7 @@ import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
 import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms } from "./impostor.js";
-import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, FINE_FROM, withoutHeads } from "./looks.js";
 
 // name: where its poses come from.
 //   glb      a file in the run's folder ("profiles/...") or anywhere the gallery serves ("shots/...")
@@ -401,6 +401,12 @@ uniform float marchPx;
 uniform float marchMax;
 uniform float farAway;
 uniform float ids;
+uniform float headPass;   // a head on a finer grid (looks.js: Screen): 0 draws the small picture, 1 only the heads that go on the finer one
+uniform vec2 fineSize;    // the finer picture's size in its own pixels; 0 when the look has no finer grid
+uniform float fineFrom;   // a head goes there once a metre at it is this many big pixels
+uniform float fineTimes;
+uniform int headPart;
+flat out float keepDark;
 flat out float who;
 flat out vec4 cell;
 flat out vec2 anchor;
@@ -418,12 +424,18 @@ varying vec3 vView;
 void main() {
   if (putAway()) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   int part = gl_InstanceID % partCount;
+  if (headPass > 0.5 && part != headPart) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   // this card's number, for a look that draws its line on the finished picture (looks.js: cardNumber)
   who = ids > 0.5 ? (1.0 + float((gl_InstanceID / partCount) % 15) * 16.0 + float(part % 16)) / 255.0 : 1.0;
   pxPerM = fine[part];
   mat4 bone = feet() * fromTable(partBone[part] * 12, runner.w);
   mat3 turn = mat3(bone);
   vec3 head = bone[3].xyz;
+  // a head near enough goes on the finer grid: left out of the small picture, drawn in the heads' own drawing
+  vec4 headClip = projectionMatrix * viewMatrix * vec4(head, 1.0);
+  bool finer = part == headPart && fineSize.y > 0.0 && headClip.w > 0.0 && fineSize.y / fineTimes * 0.5 * projectionMatrix[1][1] / headClip.w >= fineFrom;
+  if ((headPass > 0.5) != finer) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  keepDark = finer ? 1.0 : 0.0;
   vec3 middle = head + turn * centers[part];
   vec3 toward = normalize(cameraPosition - middle);
   vec3 v = toward * turn;
@@ -469,9 +481,13 @@ void main() {
   size = 1.0;
   depthM = depths[part];
   gl_Position = projectionMatrix * vec4(vView, 1.0);
+  if (finer) { // slid so the bone's head lands on a corner of a fine pixel: his face then moves a whole pixel at a time
+    vec2 at = (headClip.xy / headClip.w * 0.5 + 0.5) * fineSize;
+    gl_Position.xy += (floor(at + 0.5) - at) * 2.0 / fineSize * gl_Position.w;
+  }
 }`;
 // The cards page's own pixel shader, told that what was one card's settings now comes with each card.
-const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who"]
+const CARDS_FRAGMENT = ["vec4 cell", "vec2 anchor", "vec2 heights", "vec4 back", "vec2 lean", "vec3 deep", "float size", "float depthM", "float pxPerM", "int steps", "mat3 facingToEye", "float who", "float keepDark"]
   .reduce((text, what) => text.replace(`uniform ${what};`, `flat in ${what};`), CARD_FRAGMENT);
 
 // Every runner's meshes in one draw a piece: each point is moved by its bones' rows of the table.
@@ -913,8 +929,10 @@ class Field {
       depths: { value: pad(parts.map((part) => part.depth_m), () => 0) },
       fine: { value: pad(parts.map((part) => density(card, part)), () => 0) },
       sheetSize: { value: new THREE.Vector2(...sheet.size) }, marchPx: { value: card.march.px }, marchMax: { value: card.march.max },
-      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ids: { value: 0 } } });
+      wallM: { value: card.march.wall_m }, farAway: { value: farAway }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ids: { value: 0 },
+      headPass: this.screen.told.headPass, fineSize: { value: new THREE.Vector2() }, fineFrom: { value: FINE_FROM }, fineTimes: { value: 1 }, headPart: { value: parts.findIndex((part) => part.name === "head") } } });
     const mesh = new THREE.Mesh(shape, paint);
+    mesh.layers.enable(1); // its heads may go on the finer grid
     mesh.frustumCulled = false;
     group.add(mesh);
     return {
@@ -923,6 +941,9 @@ class Field {
         const told = cardLine(card, this.look); // what this look does with the sheet's ink line
         paint.uniforms.line.value = told.line;
         paint.uniforms.ids.value = told.ids ? 1 : 0;
+        const times = this.look.screen?.heads || 0, [wide, tall] = this.screen.small(this.look);
+        paint.uniforms.fineSize.value.set(wide * times, tall * times);
+        paint.uniforms.fineTimes.value = times || 1;
         paint.uniforms.poseTex.value = from.tex;
         for (let i = 0; i < n; i++) for (let p = 0; p < parts.length; p++) from.runner(i, spots.array, (i * parts.length + p) * 4);
         spots.needsUpdate = true;
@@ -961,7 +982,7 @@ class Field {
     this.marker.position.set(game.x[it], 0, game.z[it]);
     layer.hull?.(this.look.hull !== false); // bold ink draws its lines on the finished picture, for cards and meshes alike
     const t2 = performance.now();
-    this.screen.render(this.scene, this.camera, this.look);
+    this.screen.render(this.scene, this.camera, /^(card|mix)/.test(state.way) ? this.look : withoutHeads(this.look));
     const t3 = performance.now();
     let t4 = t3;
     if (this.measuring) { // wait for the graphics card to finish, so its share is in the time

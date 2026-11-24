@@ -71,9 +71,10 @@ def run_toon(**params):
     exec("import " + tail, space)
 
 
-def sheet_folder(profiles, model, sheet, which):
+def sheet_folder(profiles, model, sheet, which, look=""):
     """The baked cards a look reads, as gallery/looks.js picks them (bakedFor)."""
-    names = ["%s-impostor-%s-joined" % (model, sheet)] if which == "new" else []
+    names = ["%s-impostor-pixel-clear" % model] if which == "new" and look == "pixel-both" else []  # the head at 192 pixels a metre, for its finer grid
+    names += ["%s-impostor-%s-joined" % (model, sheet)] if which == "new" else []
     if sheet != "comic":
         names += ["%s-impostor-%s-faces" % (model, sheet), "%s-impostor-%s" % (model, sheet)]
     names += ["%s-impostor-comic-joined" % model] if which == "new" else []
@@ -85,7 +86,7 @@ class Real:
     """The real model in a background Blender: posed by a set of bone frames, drawn the comic way. And the same
     model cut into the cards' parts, each a rigid piece riding its bone."""
 
-    def __init__(self, glb, card, round_=None):
+    def __init__(self, glb, card, round_=None, pieces=True):
         bpy.ops.wm.read_factory_settings(use_empty=True)
         self.scene = scene = bpy.context.scene
         bpy.ops.import_scene.gltf(filepath=glb)
@@ -100,7 +101,9 @@ class Real:
         graph = bpy.context.evaluated_depsgraph_get()
         posed = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in self.bodies}
         round_ = round_ or card.get("cut")  # sheets baked since the joints were mended say how they were cut
-        if round_:
+        if not pieces:  # only the whole model is wanted (judge_faces.py): the cut is slow and not needed
+            chosen = {name: [] for name, _ in bake_impostor.PARTS}
+        elif round_:
             chosen, _, _ = bake_impostor.cut_round(self.bodies, rig, posed, round_["lap"], round_["smooth_m"], round_.get("ball", 0.0), round_.get("overlap", card["overlap"]), round_.get("trunk_overlap", card["trunk_overlap"]))
         else:
             chosen, _ = bake_impostor.cut(self.bodies, rig, card["overlap"], card["trunk_overlap"])
@@ -300,7 +303,7 @@ def main():
         profiles = os.path.join(runs, run, "profiles")
         characters = {}
         for look in looks:
-            folder = sheet_folder(profiles, model, LOOKS[look][0], which)
+            folder = sheet_folder(profiles, model, LOOKS[look][0], which, look)
             if folder not in characters:
                 characters[folder] = impostor.Character(folder)
             characters[look] = characters[folder]
@@ -342,10 +345,23 @@ def main():
                         card = character.card
                         eye = impostor.Eye(at, aim, fov, (SIZE[0] // k, SIZE[1] // k))
                         per_px = eye.m_per_px(hips)
+                        # "Pixels, both" with a sheet baked for it draws the head on a grid twice as fine, so its picture
+                        # is twice the size. To count in the same pixels as before it is brought back to big pixels: one
+                        # is covered when half of it or more is, and inked when half of it or more is.
+                        fine = impostor.FINE if look == "pixel-both" and which == "new" and character.folder.endswith("-pixel-clear") else 1
                         if k not in reals:
                             reals[k], bodies[k] = real.draw(eye, per_px if k > 1 else 0.014), real.body(eye)
 
                         def cards_now(inked=None):
+                            if fine > 1:
+                                picture, _, _, drawn = impostor.draw_fine_heads(character, pose, eye, fine=fine)
+                                blocks = lambda a: a.reshape(eye.size[1], fine, eye.size[0], fine, *a.shape[2:])
+                                cover = (blocks(picture[..., 3]) > 127).sum(axis=(1, 3)) * 2 >= fine * fine
+                                small = picture[::fine, ::fine].copy()
+                                small[..., 3] = np.where(cover, 255, 0)
+                                if inked is not None:
+                                    inked |= blocks(drawn).sum(axis=(1, 3)) * 2 >= fine * fine
+                                return small
                             who = np.zeros((eye.size[1], eye.size[0]), dtype=np.int32)
                             marked = bool(card.get("line_marked"))
                             picture, depth, _ = impostor.draw(character, pose, eye, line="off" if marked and lines else "shell", who=who, lines=inked)

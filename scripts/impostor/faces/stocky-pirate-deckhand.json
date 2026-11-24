@@ -1,19 +1,24 @@
 {
- "about": "The pirate: one eye under a thick brow, a black patch over the other, a set mouth in the beard. The hat, the bandana and the beard are his texture's own. His eye and brow are hidden wherever the hat's brim or his nose comes within 3 cm in front of them, as they truly would be.",
+ "about": "The pirate: one eye under a thick brow, a black patch over the other. The hat, the bandana, the beard and the mouth in it are his texture's own, with the folds drawn in by the bake (a mouth was drawn as a dark bar until faces were made clear; his own, a pale lower lip in the beard, is the one the model has). His eye and brow are hidden wherever the hat's brim or his nose comes within 3 cm in front of them, as they truly would be.",
  "drawn_on": "detailed",
  "half_wide": 0.095,
  "middle": 0.0,
  "colours": {
   "ink": [28, 23, 33],
   "hair": [70, 48, 34],
-  "patch": [34, 30, 40],
-  "mouth": [52, 34, 28]
+  "patch": [34, 30, 40]
  },
  "marks": [
   {"name": "socket", "kind": "wash", "x": [-0.078, -0.012], "y": [0.032, 0.072], "colour": "found"},
   {"name": "brow_r", "kind": "block", "at": [-0.043, 0.063], "size": [0.036, 0.012], "reach": 0.03, "colour": "hair"},
   {"name": "eye_r", "kind": "block", "at": [-0.042, 0.045], "size": [0.016, 0.016], "reach": 0.03, "colour": "ink"},
-  {"name": "patch", "kind": "disc", "at": [0.059, 0.056], "size": [0.066, 0.066], "colour": "patch"},
-  {"name": "mouth", "kind": "block", "at": [0.0, -0.058], "size": [0.034, 0.012], "colour": "mouth"}
+  {"name": "patch", "kind": "disc", "at": [0.059, 0.056], "size": [0.066, 0.066], "colour": "patch"}
+ ],
+ "features": [
+  {"name": "brow_r", "kind": "block", "at": [-0.043, 0.063], "size": [0.036, 0.012]},
+  {"name": "eye_r", "kind": "block", "at": [-0.042, 0.045], "size": [0.016, 0.016]},
+  {"name": "patch", "kind": "disc", "at": [0.059, 0.056], "size": [0.066, 0.066]},
+  {"name": "nose", "kind": "block", "at": [0.0, 0.02], "size": [0.03, 0.02]},
+  {"name": "mouth", "kind": "block", "at": [0.0, -0.058], "size": [0.034, 0.012]}
  ]
 }

@@ -6,6 +6,9 @@
 //                         a one-pixel line, read without smoothing. Cards only.
 //                screen   the whole picture is drawn small and blown up, every pixel square and on one grid.
 //                         Cards and meshes alike.
+//                both     the two together, and a face kept clear: the cards' heads are pictured at 192 pixels a
+//                         metre with their folds drawn in ("...-impostor-pixel-clear") and drawn on a grid twice
+//                         as fine as the body's (FINE_FROM, below; Screen)
 //   joe        bold comic-book ink: two flat tones with a hard shadow, strong colour, a little light on the rim,
 //              a thick black line round every figure that stays the same width on the screen however small he
 //              gets, and thinner lines inside where one part passes in front of another or the surface folds
@@ -30,10 +33,24 @@ export const LOOKS = [
   { id: "comic", name: "Comic", sheet: "", shade: [[0.86, 0.85, 0.9], [0.62, 0.6, 0.74]], edges: [0.2, -0.2], punch: 1, rim: 0, screen: null },
   { id: "pixel-baked", name: "Pixels, baked", sheet: "pixel", shade: [[0.8, 0.78, 0.88], [0.58, 0.55, 0.72]], edges: [0.2, -0.2], punch: 1.1, rim: 0, screen: null, cardsOnly: true },
   { id: "pixel-screen", name: "Pixels, on screen", sheet: "", shade: [[0.8, 0.78, 0.88], [0.58, 0.55, 0.72]], edges: [0.2, -0.2], punch: 1.1, rim: 0, screen: { rows: 270, levels: 12 } },
-  { id: "pixel-both", name: "Pixels, both", sheet: "pixel", shade: [[0.8, 0.78, 0.88], [0.58, 0.55, 0.72]], edges: [0.2, -0.2], punch: 1.1, rim: 0, screen: { rows: 270, levels: 12 }, cardsOnly: true },
+  { id: "pixel-both", name: "Pixels, both", sheet: "pixel", first: "pixel-clear", shade: [[0.8, 0.78, 0.88], [0.58, 0.55, 0.72]], edges: [0.2, -0.2], punch: 1.1, rim: 0, screen: { rows: 270, levels: 12, heads: 2 }, cardsOnly: true },
   { id: "joe", name: "Bold ink", sheet: "joe", shade: [[0.5, 0.46, 0.66], [0.5, 0.46, 0.66]], edges: [0.08, -2], punch: 1.45, rim: 0.35, hull: false, screen: { lines: { outer: 3.2, inner: 1.2 } } },
 ];
 export const lookOf = (id) => LOOKS.find((look) => look.id === id) || LOOKS[0];
+// A head on a finer grid. "Pixels, both" draws every card but the head's on the picture's big pixels, and the head
+// on pixels half as big each way (screen.heads), once a metre at the head is at least FINE_FROM big pixels (a face
+// five or six wide; further off there is no face to show, and the head is drawn with the body). The head's picture
+// is slid by part of a fine pixel so the bone's head lands on a corner of one: as he moves his face moves a whole
+// pixel at a time, as a sprite does. scripts/impostor/impostor.py has the same numbers (FINE, FINE_FROM).
+export const FINE_FROM = 40;
+// The same look with no finer grid, for a picture that has no cards in it (meshes): the copy onto the finer
+// picture would be work for nothing.
+const plain = new Map();
+export function withoutHeads(look) {
+  if (!look.screen?.heads) return look;
+  if (!plain.has(look.id)) plain.set(look.id, { ...look, screen: { ...look.screen, heads: 0 } });
+  return plain.get(look.id);
+}
 
 // What a card's shader is told about its sheet's ink line in a look: `line` is how far behind the surface the
 // line stands (m), under 0 to leave it out, 0 for a sheet that marks none; `ids` is whether each card pixel
@@ -56,14 +73,15 @@ export function modelsOf(run) {
 
 // Which of a run's baked card sets a look reads, for one model: the look's own ("...-impostor-pixel"; for pixel
 // art the one with a finer head and a drawn face, "...-impostor-pixel-faces", when there is one), or the plain
-// one if that was never baked.
+// one if that was never baked. "Pixels, both" reads "...-impostor-pixel-clear" first: the head at 192 pixels a
+// metre with its folds drawn in, for the finer grid its head is drawn on.
 // Sheets baked since the joints were mended are in "...-impostor-<look>-joined" (the comic one too) and are
 // read first; the older ones stay where they were for pages older than this.
 export function bakedFor(run, look, model) {
   const mine = run.cards.filter((c) => c.profile === (model || modelsOf(run)[0].id));
   const ends = (tail) => mine.find((c) => c.folder.endsWith(tail));
   const plain = ends("-impostor-comic-joined") || ends("-impostor") || mine[0];
-  return (look.sheet && (ends(`-impostor-${look.sheet}-joined`) || ends(`-impostor-${look.sheet}-faces`) || ends(`-impostor-${look.sheet}`))) || plain;
+  return (look.first && ends(`-impostor-${look.first}`)) || (look.sheet && (ends(`-impostor-${look.sheet}-joined`) || ends(`-impostor-${look.sheet}-faces`) || ends(`-impostor-${look.sheet}`))) || plain;
 }
 
 const FULL_VERTEX = `
@@ -88,7 +106,8 @@ uniform float levels;    // colour steps a channel; 0 leaves colours alone
 uniform float outer;     // the outside line's width in pixels; 0 draws no lines
 uniform float inner;
 uniform vec3 ink;
-uniform float grid;      // over 0: a line one pixel wide round every figure drawn as cards
+uniform float grid;      // over 0: a line one big pixel wide round every figure drawn as cards
+uniform int fine;        // how many of the picture's pixels a big pixel is across (2 when heads are on a finer grid)
 uniform vec3 gridInk;
 uniform float pixelM;    // how big one pixel of the picture is, a metre away
 uniform float breakM;    // within one figure the grid's line needs the surface to step back by more than this
@@ -111,19 +130,26 @@ void main() {
   if (grid > 0.0) {
     // just outside a card: this pixel is not that figure and is the further of the two. Or inside one figure,
     // where the surface steps back by more than a slope would make it: an arm in front of a chest.
+    // The pixels beside it are looked at up to one big pixel off, so the line is one big pixel wide round a head
+    // on the finer grid too.
     float here = away(vUv), me = card(vUv), line = 0.0;
     for (int i = 0; i < 4; i++) {
-      vec2 step_ = (i == 0 ? vec2(1.0, 0.0) : i == 1 ? vec2(-1.0, 0.0) : i == 2 ? vec2(0.0, 1.0) : vec2(0.0, -1.0)) * pixel;
-      float it = card(vUv + step_);
-      if (it < 0.5) continue;
-      float there = away(vUv + step_), drop = here - there;
-      if (me < 0.5 || figureOf(me) != figureOf(it)) {
-        if (drop > 0.0) line = 1.0;
-        continue;
+      vec2 one = (i == 0 ? vec2(1.0, 0.0) : i == 1 ? vec2(-1.0, 0.0) : i == 2 ? vec2(0.0, 1.0) : vec2(0.0, -1.0)) * pixel;
+      for (int s = 1; s <= 2; s++) {
+        if (s > fine) break;
+        vec2 step_ = one * float(s);
+        float it = card(vUv + step_);
+        if (it < 0.5) continue;
+        float there = away(vUv + step_), drop = here - there;
+        if (me < 0.5 || figureOf(me) != figureOf(it)) {
+          if (drop > 0.0) line = 1.0;
+          continue;
+        }
+        if (s < fine) continue;
+        float past = card(vUv - step_);
+        float slope = past > 0.5 && figureOf(past) == figureOf(me) ? abs(away(vUv - step_) - here) : 0.0;
+        if (drop > max(breakM, 1.5 * pixelM * there) && drop > 2.5 * slope) line = 1.0;
       }
-      float past = card(vUv - step_);
-      float slope = past > 0.5 && figureOf(past) == figureOf(me) ? abs(away(vUv - step_) - here) : 0.0;
-      if (drop > max(breakM, 1.5 * pixelM * there) && drop > 2.5 * slope) line = 1.0;
     }
     colour.rgb = mix(colour.rgb, gridInk, line);
   }
@@ -168,6 +194,17 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+// The small picture copied onto the finer one, colour, card numbers and depth, before the heads are drawn there.
+const COPY_FRAGMENT = `
+uniform sampler2D picture;
+uniform sampler2D depths;
+varying vec2 vUv;
+void main() {
+  gl_FragColor = texture2D(picture, vUv);
+  gl_FragDepth = texture2D(depths, vUv).x;
+  #include <colorspace_fragment>
+}`;
+
 // Draws a scene the way a look wants its finished picture: straight to the screen, or by way of a picture of its
 // own that is then blown up or inked. `halves` are the parts of the canvas to draw (x, y, wide, tall as shares
 // of it, and a function to call before each), so a page with two views side by side goes through as one picture.
@@ -178,11 +215,30 @@ export class Screen {
       vertexShader: FULL_VERTEX, fragmentShader: FULL_FRAGMENT, depthTest: false, depthWrite: false,
       uniforms: { picture: { value: null }, depths: { value: null }, pixel: { value: new THREE.Vector2() }, near: { value: 0.1 }, far: { value: 100 },
         levels: { value: 0 }, outer: { value: 0 }, inner: { value: 0 }, ink: { value: new THREE.Color(0x120e16) },
-        grid: { value: 0 }, gridInk: { value: new THREE.Color(0x1c1721) }, pixelM: { value: 0 }, breakM: { value: 0.05 }, seamM: { value: 0.09 } } }));
+        grid: { value: 0 }, fine: { value: 1 }, gridInk: { value: new THREE.Color(0x1c1721) }, pixelM: { value: 0 }, breakM: { value: 0.05 }, seamM: { value: 0.09 } } }));
     this.quad.frustumCulled = false;
     this.flat = new THREE.Scene();
     this.flat.add(this.quad);
+    this.copy = new THREE.Mesh(this.quad.geometry, new THREE.ShaderMaterial({ vertexShader: FULL_VERTEX, fragmentShader: COPY_FRAGMENT, depthFunc: THREE.AlwaysDepth,
+      uniforms: { picture: { value: null }, depths: { value: null } } }));
+    this.copy.frustumCulled = false;
+    this.copied = new THREE.Scene();
+    this.copied.add(this.copy);
+    // What every card's shader is told about the finer grid (a page puts these among its cards' uniforms): which
+    // of the two drawings this is (0: the small picture, heads on the finer grid left out; 1: only those heads).
+    this.told = { headPass: { value: 0 } };
     this.eye = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.spot = new THREE.Vector3();
+  }
+
+  finer(wide, tall) {
+    if (!this.fine || this.fine.width !== wide || this.fine.height !== tall) {
+      this.fine?.dispose();
+      this.fine = new THREE.WebGLRenderTarget(wide, tall, { depthTexture: new THREE.DepthTexture(wide, tall), magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter });
+      this.fine.depthTexture.type = THREE.UnsignedIntType;
+      this.fine.texture.colorSpace = THREE.SRGBColorSpace;
+    }
+    return this.fine;
   }
 
   target(wide, tall, smooth) {
@@ -196,14 +252,38 @@ export class Screen {
     return this.held;
   }
 
+  // How big the small picture is for a look: [wide, tall, screen pixels to one of its own].
+  small(look, halves = [{ x: 0, y: 0, w: 1, h: 1 }]) {
+    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    const rows = (look.screen?.rows || 0) * (halves.some((p) => p.h < 1) ? 2 : 1);
+    // with heads on a grid twice as fine a big pixel is an even number of the screen's, so a head's pixel is a whole number of them
+    const k = !rows ? 1 : look.screen.heads ? 2 * Math.max(1, Math.round(size.y / (2 * rows))) : Math.max(2, Math.round(size.y / rows));
+    return [Math.max(1, Math.floor(size.x / k)), Math.max(1, Math.floor(size.y / k)), k];
+  }
+
+  // Whether a head at a place in the world goes on the finer grid in this look, and if so how far its card is
+  // slid, as a share of the view (x and y, -1 to 1 across it), to bring the bone's head onto a corner of a fine
+  // pixel: null, or [x, y]. `part` is the share of the picture this view is drawn in (a page with two views).
+  headGrid(look, camera, at, part = { w: 1, h: 1 }) {
+    const times = look.screen?.heads;
+    if (!times) return null;
+    const [wide, tall] = this.small(look, part.h < 1 || part.w < 1 ? [part] : undefined);
+    const w = Math.round(part.w * wide), h = Math.round(part.h * tall);
+    const p = this.spot.copy(at).applyMatrix4(camera.matrixWorldInverse);
+    if (p.z > -camera.near || h / (2 * -p.z * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) < FINE_FROM) return null;
+    p.applyMatrix4(camera.projectionMatrix);
+    const x = (p.x * 0.5 + 0.5) * w * times, y = (p.y * 0.5 + 0.5) * h * times;
+    return [(Math.round(x) - x) * 2 / (w * times), (Math.round(y) - y) * 2 / (h * times)];
+  }
+
   render(scene, camera, look, halves = [{ x: 0, y: 0, w: 1, h: 1 }]) {
     const renderer = this.renderer;
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     const ratio = renderer.getPixelRatio();
     const screen = look.screen;
-    const k = screen?.rows ? Math.max(2, Math.round(size.y / (screen.rows * (halves.some((p) => p.h < 1) ? 2 : 1)))) : 1;
-    const wide = Math.max(1, Math.floor(size.x / k)), tall = Math.max(1, Math.floor(size.y / k));
+    const [wide, tall] = this.small(look, halves);
     const target = screen ? this.target(wide, tall, false) : null;
+    this.told.headPass.value = 0;
     renderer.setRenderTarget(target);
     renderer.setScissorTest(false);
     renderer.clear();
@@ -223,13 +303,44 @@ export class Screen {
       renderer.render(scene, camera);
     }
     if (!target) return;
+    let shown = target, times = 1;
+    if (screen.heads) {
+      // Heads on a finer grid: the small picture is copied onto one `heads` times as big each way, depth and all,
+      // and the heads' cards (the things in layer 1 that answer to headPass) are drawn onto that, in front of or
+      // behind the body pixel by pixel.
+      times = screen.heads;
+      const finer = this.finer(wide * times, tall * times);
+      finer.scissorTest = false;
+      finer.viewport.set(0, 0, wide * times, tall * times);
+      renderer.setRenderTarget(finer);
+      this.copy.material.uniforms.picture.value = target.texture;
+      this.copy.material.uniforms.depths.value = target.depthTexture;
+      renderer.render(this.copied, this.eye);
+      this.told.headPass.value = 1;
+      const layers = camera.layers.mask, auto = renderer.autoClear;
+      camera.layers.set(1);
+      renderer.autoClear = false;
+      for (const part of halves) {
+        part.before?.();
+        finer.viewport.set(Math.round(part.x * wide) * times, Math.round(part.y * tall) * times, Math.round(part.w * wide) * times, Math.round(part.h * tall) * times);
+        finer.scissor.copy(finer.viewport);
+        finer.scissorTest = true;
+        renderer.setRenderTarget(finer);
+        renderer.render(scene, camera);
+      }
+      camera.layers.mask = layers;
+      renderer.autoClear = auto;
+      this.told.headPass.value = 0;
+      shown = finer;
+    }
     renderer.setRenderTarget(null);
     renderer.setScissorTest(false);
     renderer.setViewport(0, 0, size.x / ratio, size.y / ratio);
     const u = this.quad.material.uniforms;
-    u.picture.value = target.texture;
-    u.depths.value = target.depthTexture;
-    u.pixel.value.set(1 / wide, 1 / tall);
+    u.picture.value = shown.texture;
+    u.depths.value = shown.depthTexture;
+    u.pixel.value.set(1 / (wide * times), 1 / (tall * times));
+    u.fine.value = times;
     u.near.value = camera.near;
     u.far.value = camera.far;
     u.levels.value = screen.levels || 0;
@@ -242,6 +353,8 @@ export class Screen {
 
   dispose() {
     this.held?.dispose();
+    this.fine?.dispose();
+    this.copy.material.dispose();
     this.quad.geometry.dispose();
     this.quad.material.dispose();
   }

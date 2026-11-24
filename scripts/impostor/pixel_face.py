@@ -37,6 +37,9 @@ A recipe:
 [{"colours": [[84, 74, 65]], "as": [84, 65, 49]}] folds a grey that a texture has in brown hair into the brown.
 It is used on the whole sheet, so name only colours that are nowhere else on the character.
 
+"features" (optional) is not drawn at all: it says where the model's own features are (the same way a mark says
+where it goes), for judge_faces.py to count how much of each is left in a picture. Without it the marks are counted.
+
 "mesh": false on a mark keeps it off the character's mesh (gallery/face-marks.js lays the other marks on a mesh
 shown as pixel art): a low-poly head that already models its eyes or its spectacles would get them twice.
 

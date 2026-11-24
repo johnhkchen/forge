@@ -1,22 +1,22 @@
 {
- "about": "Young Lincoln: clean-shaven, deep-set eyes under heavy dark brows, a long nose, a plain mouth. The generated texture smears his eyes and mouth across the face, so the face is painted flat first. His texture also has a flat grey band across the back of his dark hair; it is folded into the brown. Nothing is laid on his low-poly mesh: it models dark eye sockets of its own, and marks under them read as a second pair of eyes.",
+ "about": "Young Lincoln: clean-shaven, deep-set eyes under heavy dark brows, a long nose, a plain mouth. His own face is kept as the model has it: the brows, the hollows of the eyes, the nose and the mouth are his texture's, with the folds drawn in by the bake. Only the eyes are drawn on purpose, a dark pupil in each hollow, because the texture has a smudge there. His texture also has a flat grey band across the back of his dark hair; it is folded into the brown. Nothing is laid on his low-poly mesh: it models dark eye sockets of its own. (Until faces were made clear the face was painted flat first and brows, a nose shadow and a mouth were drawn too; that read as a blank face with dots on it.)",
  "drawn_on": "detailed",
  "half_wide": 0.075,
  "middle": -0.003,
  "same": [{"colours": [[84, 74, 65], [128, 111, 98]], "as": [84, 65, 49]}],
  "colours": {
-  "ink": [28, 23, 33],
-  "hair": [58, 40, 30],
-  "shade": {"like": "face", "times": [0.82, 0.74, 0.72]},
-  "lip": {"like": "face", "times": [0.78, 0.6, 0.58]}
+  "ink": [28, 23, 33]
  },
  "marks": [
-  {"name": "face", "kind": "wash", "x": [-0.052, 0.046], "y": [-0.088, 0.03], "deep": 0.08, "colour": "found"},
-  {"name": "brow_r", "kind": "block", "at": [-0.034, 0.02], "size": [0.028, 0.012], "reach": 0.03, "mesh": false, "colour": "hair"},
-  {"name": "brow_l", "kind": "block", "at": [0.028, 0.02], "size": [0.028, 0.012], "reach": 0.03, "mesh": false, "colour": "hair"},
-  {"name": "eye_r", "kind": "block", "at": [-0.033, -0.006], "size": [0.016, 0.016], "mesh": false, "colour": "ink"},
-  {"name": "eye_l", "kind": "block", "at": [0.027, -0.006], "size": [0.016, 0.016], "mesh": false, "colour": "ink"},
-  {"name": "nose", "kind": "block", "at": [-0.003, -0.046], "size": [0.018, 0.012], "reach": 0.03, "mesh": false, "colour": "shade"},
-  {"name": "mouth", "kind": "block", "at": [-0.003, -0.073], "size": [0.028, 0.012], "mesh": false, "colour": "lip"}
+  {"name": "eye_r", "kind": "block", "at": [-0.032, 0.006], "size": [0.016, 0.016], "mesh": false, "colour": "ink"},
+  {"name": "eye_l", "kind": "block", "at": [0.027, 0.006], "size": [0.016, 0.016], "mesh": false, "colour": "ink"}
+ ],
+ "features": [
+  {"name": "brow_r", "kind": "block", "at": [-0.034, 0.02], "size": [0.028, 0.012]},
+  {"name": "brow_l", "kind": "block", "at": [0.028, 0.02], "size": [0.028, 0.012]},
+  {"name": "eye_r", "kind": "block", "at": [-0.032, 0.006], "size": [0.016, 0.016]},
+  {"name": "eye_l", "kind": "block", "at": [0.027, 0.006], "size": [0.016, 0.016]},
+  {"name": "nose", "kind": "block", "at": [-0.003, -0.046], "size": [0.018, 0.012]},
+  {"name": "mouth", "kind": "block", "at": [-0.003, -0.073], "size": [0.028, 0.012]}
  ]
 }

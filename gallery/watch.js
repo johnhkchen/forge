@@ -9,8 +9,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eyeInBone, choose, place, corners, marchSteps, density } from "./impostor-math.js";
-import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms } from "./impostor.js";
-import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen } from "./looks.js";
+import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid } from "./impostor.js";
+import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, withoutHeads } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
 
 const WATCH_LOOKS = ["pixel-both", "pixel-screen", "comic", "joe"];
@@ -237,6 +237,7 @@ class TakeViewer {
           deep: { value: new THREE.Vector3() }, size: { value: 1 }, wallM: { value: card.march.wall_m }, steps: { value: 0 }, depthM: { value: part.depth_m }, share: { value: 1 }, mix_: { value: 0 }, ...lineUniforms(), ...this.paint } }));
         quad.frustumCulled = false;
         quad.matrixAutoUpdate = false;
+        if (part.name === "head") { quad.layers.enable(1); quad.material.uniforms.headPass = this.screen.told.headPass; } // it may go on the finer grid
         actor.cards.add(quad);
         return quad;
       });
@@ -278,6 +279,7 @@ class TakeViewer {
       u.size.value = where.size;
       u.steps.value = marchSteps(where, cell, density(card, part), card.march);
       u.facingToEye.value.setFromMatrix4(toEye.multiplyMatrices(this.camera.matrixWorldInverse, bone.matrixWorld)).multiplyScalar(1 / where.size);
+      if (part.name === "head") setHeadGrid(quad, this.screen, this.look, this.camera, where.head);
     });
   }
 
@@ -298,7 +300,7 @@ class TakeViewer {
       if (actor.face) actor.face.visible = !cards && Boolean(this.look.screen?.rows); // the drawn face is for a mesh drawn small
       if (cards) this.setCards(actor);
     }
-    this.screen.render(this.scene, this.camera, this.look);
+    this.screen.render(this.scene, this.camera, this.state.cards ? this.look : withoutHeads(this.look));
     this.onTime?.(this.time, this.length);
   }
 
