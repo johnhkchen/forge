@@ -1,13 +1,13 @@
 """Serve the gallery on the local network: the newest diorama, the world, every run, before and after, and every set.
 
-    python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR] [--marble DIR]
+    python3 scripts/gallery.py [--port 8028] [--runs DIR] [--shots DIR] [--exports DIR] [--marble DIR]
 
 Serves gallery/ (the page), runs/ and comics/ (the files), sets/
 (the standing sets), world/ (the toons and props that stand in the world; /marble/ is world/marble/, the Marble worlds a place's splats are read from),
 dioramas/ (story moments on a base),
-shots/ (what was filmed on the sets) and videos/ (clips you brought for
+shots/ (what was filmed on the sets), exports/ (segments packed for an AI restyle, and what came back) and videos/ (clips you brought for
 `just video`), plus /api/runs, /api/comics, /api/sets,
-/api/takes, /api/dioramas (newest first), /api/videos and /api/world (world.json and every saved epoch), built from the folders on each
+/api/takes, /api/dioramas (newest first), /api/videos, /api/restyles and /api/world (world.json and every saved epoch), built from the folders on each
 request, so a new run, comic or take shows up on reload. Binds to all
 interfaces so a phone on the same Wi-Fi (or on your tailnet)
 can open it; nothing here is meant for the internet.
@@ -38,6 +38,7 @@ COMICS = os.path.join(ROOT, "comics")
 WORLD = os.path.join(ROOT, "world")
 DIORAMAS = os.path.join(ROOT, "dioramas")
 VIDEOS = os.environ.get("FORGE_VIDEOS") or os.path.join(ROOT, "videos")
+EXPORTS = os.path.join(ROOT, "exports")  # what goes out to an AI restyle and what comes back (scripts/video/omni.py); kept out of git
 MARBLE = os.path.join(WORLD, "marble")  # worlds from World Labs Marble as they were handed over: big, and kept out of git
 sys.path.insert(0, os.path.join(ROOT, "scripts", "diorama"))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "video"))
@@ -287,19 +288,41 @@ def all_takes():
                     continue
                 mid = card["glb"].replace("lowpoly-", "midpoly-")
                 where = card.get("character", "").replace("\\", "/").split("/")
-                roles.append({"role": role, "character": os.path.basename(os.path.dirname(card.get("character", ""))),
+                roles.append({"role": role, "character": os.path.basename(os.path.dirname(card.get("character", ""))) if os.path.basename(os.path.dirname(card.get("character", ""))) != "profiles" else os.path.basename(os.path.dirname(os.path.dirname(card["character"]))),  # a version in profiles/ belongs to the run above it
                               # the run this character is, whichever of its versions was cast (runs/<run>/lowpoly.glb, runs/<run>/profiles/painted.glb)
                               "run": where[where.index("runs") + 1] if "runs" in where[:-1] else None,
                               # a fight stands each fighter on a mark of the set, facing the other (fight.json); other takes have the places played in
                               "mark": ((read_json(os.path.join(folder, "fight.json")) or {}).get("marks") or {}).get(role), "size": 1.0 if card.get("true_size") else card.get("size_against_soma", 1.0),
                               "glb": card["glb"], "midpoly": mid if mid != card["glb"] and os.path.isfile(os.path.join(folder, mid)) else None})
+            # The shot's own cameras that move (scripts/sets/camera_path.py), from its plan (a take's: its first role's)
+            plan = read_json(os.path.join(folder, "plan.json")) or (read_json(os.path.join(folder, next(iter(take["roles"].values()))["folder"], "plan.json")) if take.get("roles") else None) or {}
             out.append({
-                "id": name, "clip": cast.get("clip"), "set": cast.get("set"), "title": take.get("title") or name.replace("-", " ").capitalize(),
+                "id": name, "clip": cast.get("clip"), "set": cast.get("set"), "title": take.get("title") or (read_json(os.path.join(folder, "shotlist.json")) or {}).get("title") or name.replace("-", " ").capitalize(),
+                "moving_cameras": plan.get("moving_cameras") or {},
+                "restyle": name if os.path.isfile(os.path.join(EXPORTS, "omni", name, "manifest.json")) else None,  # packed for an AI restyle: #/restyle/<name>
                 "about": take.get("about"), "seconds": cast.get("seconds"), "roles": roles,
                 "films": {camera: film.get("mp4") for camera, film in (cast.get("films") or {}).items() if film.get("mp4") and os.path.isfile(os.path.join(folder, film["mp4"]))},
                 "handshakes": cast.get("handshakes") or [],
             })
     return out
+def all_restyles():
+    """Every segment packed for an AI restyle (exports/omni/<name>/, scripts/video/omni.py): what was sent, and every
+    result that came back, to play side by side."""
+    out = []
+    folder = os.path.join(EXPORTS, "omni")
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        card = read_json(os.path.join(folder, name, "manifest.json"))
+        if not card:
+            continue
+        here = os.path.join(folder, name)
+        results = sorted(os.path.join("results", f) for f in os.listdir(os.path.join(here, "results")) if f.endswith(".mp4")) if os.path.isdir(os.path.join(here, "results")) else []
+        out.append({"id": name, "title": card.get("title") or name, "seconds": (card.get("stretch") or {}).get("seconds"), "fps": card.get("fps"),
+                    "source": "source.mp4" if os.path.isfile(os.path.join(here, "source.mp4")) else None,
+                    "variants": {k: v for k, v in (card.get("variants") or {}).items() if os.path.isfile(os.path.join(here, v))},
+                    "results": results, "notes": card.get("licence")})
+    return out
+
+
 def all_videos():
     """Every clip in videos/ (`just video-add`), newest first: how far it has come, the shots and people found in it,
     who was chosen, and the film of the result beside the clip."""
@@ -420,6 +443,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(diorama_file.shelf())
         if path == "/api/videos":
             return self.send_json(all_videos())
+        if path == "/api/restyles":
+            return self.send_json(all_restyles())
+        if path.startswith("/exports/"):
+            return self.send_file(EXPORTS, path[len("/exports/"):])
         if path.startswith("/videos/"):
             return self.send_file(VIDEOS, path[len("/videos/"):])
         if path.startswith("/dioramas/"):
@@ -489,12 +516,14 @@ if __name__ == "__main__":
     parser.add_argument("--runs", default=RUNS, help="the folder of runs to show (default: runs/)")
     parser.add_argument("--shots", default=SHOTS, help="the folder of shots, for takes filmed on a set (default: shots/)")
     parser.add_argument("--videos", default=VIDEOS, help="the folder of clips for `just video` (default: videos/)")
+    parser.add_argument("--exports", default=EXPORTS, help="the folder of segments packed for an AI restyle and what came back (default: exports/)")
     parser.add_argument("--marble", default=MARBLE, help="the folder of Marble worlds, for places shown as splats (default: world/marble/)")
     args = parser.parse_args()
     MARBLE = os.path.abspath(args.marble)
     RUNS = os.path.abspath(args.runs)
     SHOTS = os.path.abspath(args.shots)
     VIDEOS = os.path.abspath(args.videos)
+    EXPORTS = os.path.abspath(args.exports)
     server = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
     print("Forge gallery", flush=True)
     print("  on this Mac:   http://localhost:%d" % args.port)

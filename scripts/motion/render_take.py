@@ -4,6 +4,8 @@
         [--cast <clip>] [--version lowpoly] [--cameras wide,host] [--size 960x540] [--strip-only]
 
 A TV studio films with three cameras running and picks the cut afterwards.
+A shot can also bring cameras of its own that move (plan.json's
+moving_cameras, scripts/sets/camera_path.py); they film alongside the set's.
 So does this: the set stands still, its cameras and lights are where set.json
 puts them every time, and one take comes out as one film and one strip of
 stills per camera.
@@ -119,6 +121,7 @@ def main():
     scene = bpy.context.scene
     scene.render.fps = 30  # before any import, so keys land one per frame
     cameras = set_contact.stand_up(st, scene)
+    cameras.update(set_contact.moving_cameras(first, scene, first["frames"]))  # the shot's own cameras that move, if it has any
     if "--cameras" in args:
         wanted = args[args.index("--cameras") + 1].split(",")
         cameras = {name: cam for name, cam in cameras.items() if name in wanted}

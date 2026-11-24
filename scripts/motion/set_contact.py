@@ -175,6 +175,32 @@ def stand_up(st, scene):
     return cameras
 
 
+def place_camera(cam, where):
+    """Put a camera where a moving camera is at one moment (camera_path.sample: at, aim, lens_mm)."""
+    look(cam, where["at"], where["aim"])
+    cam.data.lens = float(where["lens_mm"])
+
+
+def moving_cameras(plan, scene, frames, fps=30):
+    """A shot's own cameras that move (plan.json's moving_cameras, scripts/sets/camera_path.py), keyed on every
+    frame so a film of the whole shot follows them. Returns {camera name: camera object}."""
+    import camera_path
+
+    out = {}
+    for name, path in (plan.get("moving_cameras") or {}).items():
+        data = bpy.data.cameras.new("camera: " + name)
+        data.sensor_width, data.clip_start, data.clip_end = standing.SENSOR_MM, 0.1, 200.0
+        cam = bpy.data.objects.new("camera: " + name, data)
+        scene.collection.objects.link(cam)
+        for f in range(frames):
+            place_camera(cam, camera_path.sample(path, f / float(fps)))
+            cam.keyframe_insert("location", frame=f)
+            cam.keyframe_insert("rotation_euler", frame=f)
+            data.keyframe_insert("lens", frame=f)
+        out[name] = cam
+    return out
+
+
 # ---- measuring, with everyone on the stage -----------------------------------------
 
 

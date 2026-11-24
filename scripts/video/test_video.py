@@ -700,6 +700,14 @@ def test_a_dancer_who_drifts_is_kept_put_or_walked_to_a_mark_on_request():
         # Facing: turned a quarter turn on the path, it faces a quarter turn round.
         side, motion = lay({"facing_deg": 90.0})
         assert abs(timeline.facing(SK, motion, a) - 90.0) < 0.5
+        # Facing taken at the stretch's end instead: the last frame is the one square on to the mark.
+        last, motion = lay({"facing_deg": 90.0, "facing_at": "end"})
+        assert abs(timeline.facing(SK, motion, b) - 90.0) < 0.5, timeline.facing(SK, motion, b)
+        try:
+            lay({"facing_at": "middle"})
+            raise AssertionError("facing_at middle was taken")
+        except ValueError as error:
+            assert "facing_at" in str(error)
         # That was with the feet left alone. This dancer's feet never leave the floor, so held where they are down
         # (as they are unless a beat says otherwise) the creep has nothing to carry it: it would take a step.
         # (That was with the feet left alone. Held where they are down, as they are unless a beat says otherwise, a

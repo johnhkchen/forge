@@ -6,7 +6,10 @@
 // (scripts/impostor/bake_impostor.py) can be drawn as cards riding the same skeleton: one card a bone, as on the
 // cards page, and in every knee, elbow, hip and shoulder a piece of the real model that bends as the skeleton
 // pulls it (scripts/impostor/bake_joints.py), when the cards have them. The eye can be any of the set's own
-// cameras, or free.
+// cameras, one of the shot's own cameras that move (plan.json's moving_cameras: gallery/camera-path.js), or free.
+//
+// For a film made from the page (scripts/video/watch_film.py), window.forgeWatch can fix the picture's size, draw
+// one moment at a time, and draw the background alone ("plate") or the cast alone in white on black ("mask").
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
@@ -14,6 +17,7 @@ import { eyeInBone, choose, place, corners, marchSteps, density } from "./impost
 import { CARD_VERTEX, CARD_FRAGMENT, TOON_FRAGMENT, INK_FRAGMENT, picture, lineUniforms, setHeadGrid, setBalls, sheetBalls, skinFor, skinMeshes } from "./impostor.js";
 import { LOOKS, lookOf, bakedFor, modelsOf, paintOf, setPaint, cardLine, cardNumber, Screen, withoutHeads } from "./looks.js";
 import { faceFolderOf, faceMarks } from "./face-marks.js";
+import { sample, fovOf } from "./camera-path.js";
 
 const WATCH_LOOKS = ["pixel-both", "pixel-screen", "comic", "joe"];
 const LIGHT = [-0.55, 0.5, 0.67];
@@ -85,10 +89,15 @@ class TakeViewer {
       cam.lookAt(new THREE.Vector3().fromArray(card.aim));
       this.fixed[name] = cam;
     }
+    this.moving = take.moving_cameras || {}; // the shot's own cameras that move: placed from the take's clock each frame
+    for (const name of Object.keys(this.moving)) this.fixed[name] = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 300);
     this.paint = paintOf(LIGHT);
     this.look = lookOf(state.look);
     setPaint(this.paint, this.look);
     this.cast = [];
+    this.stageSet = new THREE.Group(); // the set and its lights: everything that is not the cast
+    this.scene.add(this.stageSet);
+    this.mask = new THREE.MeshBasicMaterial({ color: 0xffffff });
     this.time = 0;
     this.length = 0.1;
     this.clock = new THREE.Clock();
@@ -106,13 +115,13 @@ class TakeViewer {
         const model = (await this.loader.loadAsync(`sets/${set.id}/${set.glb}`)).scene;
         model.position.fromArray(set.geometry?.move || [0, 0, 0]);
         model.rotation.y = THREE.MathUtils.degToRad(set.geometry?.turn_deg || 0);
-        this.scene.add(model);
+        this.stageSet.add(model);
       }
       if (set.ground) {
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(set.ground.size_m || 40, set.ground.size_m || 40), new THREE.MeshStandardMaterial({ color: new THREE.Color(...(set.ground.color || [0.8, 0.78, 0.74])), roughness: 0.9 }));
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = (set.ground.y || 0) - 0.004;
-        this.scene.add(ground);
+        this.stageSet.add(ground);
       }
       for (const flat of [set.backdrop, ...(set.signs || [])].filter(Boolean)) { // painted flats: the backdrop and any signs
         const map = await new THREE.TextureLoader().loadAsync(`sets/${set.id}/${flat.image}`);
@@ -120,20 +129,20 @@ class TakeViewer {
         const sheet = new THREE.Mesh(new THREE.PlaneGeometry(flat.width_m, flat.height_m), new THREE.MeshBasicMaterial({ map, toneMapped: false }));
         sheet.position.fromArray(flat.center);
         sheet.rotation.y = THREE.MathUtils.degToRad(flat.heading || 0);
-        this.scene.add(sheet);
+        this.stageSet.add(sheet);
       }
       for (const item of set.dressing || []) {
         const slot = set.slots[item.slot];
         const prop = (await this.loader.loadAsync(`sets/${set.id}/${item.detail || item.glb}`)).scene;
         prop.position.fromArray(slot.at);
         prop.rotation.y = THREE.MathUtils.degToRad(slot.heading || 0);
-        this.scene.add(prop);
+        this.stageSet.add(prop);
       }
       for (const light of set.lights || []) {
         const lamp = new THREE.DirectionalLight(new THREE.Color(...(light.color || [1, 1, 1])), light.kind === "sun" ? 0.9 : 0.4); // no tone mapping here (the looks draw by way of a picture of their own), so the lamps are gentler than on the set's page
         lamp.position.fromArray(light.at);
         lamp.target.position.fromArray(light.aim || [0, 0, 0]);
-        this.scene.add(lamp, lamp.target);
+        this.stageSet.add(lamp, lamp.target);
       }
     }
     const box = new THREE.Box3();
@@ -153,7 +162,8 @@ class TakeViewer {
 
   // One role: its file with the take played in, its meshes painted the comic way with an ink shell, its bones.
   async bringOn(role) {
-    const gltf = await this.loader.loadAsync(`shots/${this.take.id}/${role.glb}`);
+    const file = this.state.model === "midpoly" && role.midpoly ? role.midpoly : role.glb; // the mid-poly version, when asked for and cast
+    const gltf = await this.loader.loadAsync(`shots/${this.take.id}/${file}`);
     const holder = new THREE.Group();
     holder.scale.setScalar(1 / (role.size || 1));
     holder.add(gltf.scene);
@@ -165,7 +175,7 @@ class TakeViewer {
       holder.position.set(role.mark.at[0] - off.x, 0, role.mark.at[1] - off.z);
       holder.rotation.y = turn;
     }
-    const actor = { role, holder, bones: {}, meshes: [], lines: [], quads: [], held: {}, run: this.runs.find((r) => r.id === role.run || r.id === role.character) };
+    const actor = { role, file, holder, bones: {}, meshes: [], lines: [], quads: [], held: {}, run: this.runs.find((r) => r.id === role.run || r.id === role.character) };
     const ink = new THREE.ShaderMaterial({ vertexShader: BODY_VERTEX, fragmentShader: INK_FRAGMENT, side: THREE.BackSide, uniforms: { inkM: { value: 0.014 }, ink: { value: new THREE.Color(0x1c1721) } } });
     const found = [];
     gltf.scene.traverse((o) => {
@@ -295,12 +305,29 @@ class TakeViewer {
     actor.joined?.set(this.camera, this.look, card, this.cast.indexOf(actor));
   }
 
+  // Every moving camera where its path has it at the take's time.
+  placeMoving() {
+    for (const [name, path] of Object.entries(this.moving)) {
+      const cam = this.fixed[name], at = sample(path, this.time);
+      cam.position.fromArray(at.at);
+      cam.lookAt(new THREE.Vector3().fromArray(at.aim));
+      cam.fov = fovOf(at.lens_mm, cam.aspect);
+      cam.updateProjectionMatrix();
+    }
+  }
+
   tick() {
     this.frame = requestAnimationFrame(() => this.tick());
     const dt = Math.min(this.clock.getDelta(), 0.1);
     if (!this.cast.length || !this.cast[0].mixer) return;
     if (this.state.playing) this.time = (this.time + dt) % this.length;
+    this.draw();
+  }
+
+  // Draw the take at this.time. state.pass: "" (the look), "plate" (the set alone), "mask" (the cast alone, white on black).
+  draw() {
     for (const actor of this.cast) actor.mixer.setTime(Math.min(this.time, actor.seconds));
+    this.placeMoving();
     this.scene.updateMatrixWorld();
     if (this.camera === this.free) this.controls.update();
     this.camera.updateMatrixWorld();
@@ -311,19 +338,34 @@ class TakeViewer {
       for (const line of actor.lines) line.visible = !cards && this.look.hull !== false;
       if (actor.face) actor.face.visible = !cards && Boolean(this.look.screen?.rows); // the drawn face is for a mesh drawn small
       if (cards) this.setCards(actor);
+      if (this.state.pass === "plate") { actor.cards.visible = false; for (const o of [...actor.meshes, ...actor.lines]) o.visible = false; if (actor.face) actor.face.visible = false; }
+      if (this.state.pass === "mask") for (const line of actor.lines) line.visible = false;
     }
-    this.screen.render(this.scene, this.camera, this.state.cards ? this.look : withoutHeads(this.look));
+    this.stageSet.visible = this.state.pass !== "mask";
+    if (this.state.pass === "mask") {
+      const clear = this.renderer.getClearColor(new THREE.Color()), alpha = this.renderer.getClearAlpha();
+      this.scene.overrideMaterial = this.mask;
+      this.renderer.setRenderTarget(null);
+      this.renderer.setClearColor(0x000000, 1);
+      this.renderer.clear();
+      this.renderer.render(this.scene, this.camera);
+      this.scene.overrideMaterial = null;
+      this.renderer.setClearColor(clear, alpha);
+    } else {
+      this.screen.render(this.scene, this.camera, this.state.cards ? this.look : withoutHeads(this.look));
+    }
     this.onTime?.(this.time, this.length);
   }
 
   layout() {
-    this.renderer.setSize(this.el.clientWidth, this.el.clientHeight, false);
-    const aspect = this.el.clientWidth / Math.max(1, this.el.clientHeight);
+    const [wide, tall] = this.filmSize || [this.el.clientWidth, this.el.clientHeight];
+    this.renderer.setSize(wide, tall, Boolean(this.filmSize)); // a film's size is its own, whatever the page's
+    const aspect = wide / Math.max(1, tall);
     for (const cam of [this.free, ...Object.values(this.fixed)]) { cam.aspect = aspect; cam.updateProjectionMatrix(); }
   }
 
   report() {
-    return { ready: this.cast.length === this.take.roles.length && this.cast.every((c) => c.mixer), take: this.take.id, time: this.time, length: this.length, look: this.look.id, eye: this.state.eye || "free",
+    return { ready: this.cast.length === this.take.roles.length && this.cast.every((c) => c.mixer), take: this.take.id, time: this.time, length: this.length, look: this.look.id, eye: this.state.eye || "free", model: this.cast.length && this.cast.every((c) => /^midpoly-/.test(c.file)) ? "midpoly" : "lowpoly", pass: this.state.pass || "",
       cards: this.state.cards, cast: this.cast.map((c) => ({ role: c.role.role, run: c.run?.id || null, cards: c.folder || null, quads: c.quads.length, joints: c.joined ? c.skin.pieces.length : 0, meshes: c.meshes.length, face: c.face ? { marks: c.face.geometry.index.count / 6, dropped: c.face.userData.dropped } : null })), error: this.error || null };
   }
 
@@ -342,7 +384,12 @@ const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
 
 export function watchPage({ take, sets, runs, h, loader }) {
   const set = sets.find((s) => s.id === take.set);
-  const state = { look: "pixel-both", eye: set?.cameras?.crew ? "crew" : Object.keys(set?.cameras || {})[0] || "", cards: true, playing: true };
+  const moving = Object.keys(take.moving_cameras || {});
+  // Nobody in it with cards baked: drawn as meshes, so start in bold ink (the pixel look wants cards) and the mid-poly version
+  const anyCards = take.roles.some((r) => runs.find((x) => x.id === r.run || x.id === r.character)?.cards?.length);
+  const midpoly = take.roles.some((r) => r.midpoly);
+  const state = { look: anyCards ? "pixel-both" : "joe", eye: moving[0] || (set?.cameras?.crew ? "crew" : Object.keys(set?.cameras || {})[0] || ""), cards: true, playing: true,
+    model: !anyCards && midpoly ? "midpoly" : "lowpoly", pass: "" };
   const pane = h("div", { class: "pane watch-pane" }, h("div", { class: "status" }, "Setting the stage…"));
   const stage = h("div", { class: "stage clay-surface" }, pane);
   let viewer = null;
@@ -352,9 +399,11 @@ export function watchPage({ take, sets, runs, h, loader }) {
   const asChips = [chip("Cards", true, () => { press(asChips, 0); state.cards = true; }), chip("Meshes", false, () => { press(asChips, 1); state.cards = false; })];
   const looks = WATCH_LOOKS.map((id) => LOOKS.find((l) => l.id === id));
   const lookChips = looks.map((look, i) => chip(look.name, look.id === state.look, () => { press(lookChips, i); viewer.useLook(look.id); }));
-  const eyes = [...Object.keys(set?.cameras || {}), ""];
+  const eyes = [...moving, ...Object.keys(set?.cameras || {}), ""];
   const eyeName = (name) => (name ? `${name[0].toUpperCase()}${name.slice(1).replace(/_/g, " ")}` : "Look around");
   const eyeChips = eyes.map((name, i) => chip(eyeName(name), name === state.eye, () => { press(eyeChips, i); viewer.useEye(name); }));
+  const models = [["lowpoly", "Low poly"], ["midpoly", "Mid poly"]];
+  const modelChips = models.map(([id, label], i) => chip(label, state.model === id, () => { if (state.model === id) return; press(modelChips, i); state.model = id; begin(); }));
   const play = h("button", { class: "clay-button watch-play", type: "button", onclick: () => { state.playing = !state.playing; play.textContent = state.playing ? "Pause" : "Play"; } }, "Pause");
   const wind = h("input", { class: "watch-wind", type: "range", min: "0", max: "1000", value: "0", "aria-label": "Wind the take back and forth" });
   const told = h("span", { class: "watch-time" }, "0:00");
@@ -370,18 +419,40 @@ export function watchPage({ take, sets, runs, h, loader }) {
     group("Drawn as", asChips),
     group("In the look", lookChips),
     group("Seen from", eyeChips),
+    midpoly ? group("Model", modelChips) : null,
     stage,
     h("div", { class: "watch-bar" }, play, wind, told),
     note,
+    take.restyle ? h("p", { class: "about" }, h("a", { href: `#/restyle/${encodeURIComponent(take.restyle)}` }, "Ours beside the restyle"), ": this film as it was sent, next to what came back.") : null,
   );
-  queueMicrotask(() => {
+  // (Again, with the other model: the cast is brought on afresh.)
+  const begin = () => {
+    if (viewer) {
+      const time = viewer.time;
+      viewer.renderer.domElement.remove();
+      viewer.dispose();
+      state.time = time;
+      pane.prepend(h("div", { class: "status" }, "Bringing the cast on…"));
+    }
     viewer = new TakeViewer(pane, { take, set, runs, loader, state, onReady: () => {
       const drawn = viewer.cast.filter((c) => c.sheet).length;
       note.textContent = `${who}. As cards, each is a handful of flat pictures riding the same skeleton the meshes do${drawn < viewer.cast.length ? `; ${viewer.cast.length - drawn} of them has no cards baked yet and stays a mesh` : ""}. No sound.`;
     } });
+    if (state.time) viewer.time = state.time;
     viewer.onTime = (t, length) => { if (!winding) wind.value = String(Math.round((t / length) * 1000)); told.textContent = `${clock(t)} of ${clock(length)}`; };
     window.forgeWatch = { state: () => viewer.report(), viewer, look: (id) => viewer.useLook(id), eye: (name) => viewer.useEye(name),
       set: (what) => { Object.assign(state, what); if (what.time !== undefined) viewer.time = what.time; },
+      // For a film: the picture fixed at a size of its own, then one moment drawn at a time (the take stopped)
+      // (laid over the page's top left corner, one picture pixel a screen pixel, whatever the page's layout)
+      film: (wide, tall) => {
+        state.playing = false;
+        viewer.filmSize = [wide, tall];
+        viewer.layout();
+        const style = viewer.renderer.domElement.style;
+        for (const [k, v] of Object.entries({ position: "fixed", left: "0px", top: "0px", width: `${wide}px`, height: `${tall}px`, "max-width": "none", "max-height": "none", "z-index": "9999" })) style.setProperty(k, v, "important");
+        return viewer.renderer.domElement.getBoundingClientRect().width;
+      },
+      frame: (t) => { viewer.time = t; viewer.draw(); return t; },
       // the free eye brought up close to one of the cast, for a picture
       THREE,
       // the free eye stood in front of one of the cast's faces, a little to one side
@@ -404,7 +475,8 @@ export function watchPage({ take, sets, runs, h, loader }) {
         viewer.free.position.set(hips.x + away * 0.25, hips.y + 0.35, hips.z + away);
         viewer.controls.update();
       } };
-  });
+  };
+  queueMicrotask(begin);
   page.dispose = () => viewer?.dispose();
   return page;
 }

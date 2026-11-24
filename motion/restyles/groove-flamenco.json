@@ -1,0 +1,23 @@
+{
+ "name": "groove-flamenco",
+ "title": "The flamenco dancer's disco points",
+ "about": "Fourteen seconds of the groove clip's disco routine, danced by the flamenco dancer in the middle of the ninja's stage, filmed low and pushing in slowly, ready for a stop-motion restyle by Gemini Omni Flash.",
+ "shot": "groove-flamenco",
+ "camera": "push_in",
+ "cast": "groove",
+ "version": "midpoly",
+ "look": "joe",
+ "fps": 24,
+ "size": "1280x720",
+ "character_run": "2026-11-20T18-10-09-flamenco-dancer",
+ "model": "gemini-omni-1.2-flash",
+ "resolution": "720p",
+ "licence": "Source dance: a private test (a fitness class's disco routine, filmed by someone else); not for publishing. No song audio anywhere: every film here is silent, and anything that comes back has its sound stripped. The character, the set and the camera move are ours.",
+ "prompts": {
+  "edit": "Restyle this video as warm, handmade stop-motion animation: the dancer is a toy-like puppet of felt, clay and painted wood, and the stage is a little model set, softly lit with warm studio light and gentle shadows. Keep her motion, its timing, the framing and the slow, low camera push-in exactly as they are, frame for frame. She looks like the character in the first reference picture: black hair in a tight bun with a big red rose above her left ear, strong dark brows, red lips, a black sleeveless top, a long red skirt in three ruffled tiers with white polka dots, black heeled dance shoes. She dances proud and warm, like a star on her opening night. The stage looks like the second reference picture. One continuous shot, no cuts, no text. Sound: quiet room tone only, a soft hush and the faint tap of her shoes; no music. Keep everything else the same.",
+  "frames": "Warm, handmade stop-motion animation, in a single continuous shot with no cuts. The first picture is the opening frame and the second picture is the closing frame; make the whole video in a toy-like world of felt, clay and painted wood, with soft warm light. A proud flamenco dancer in a black top and a long red skirt with white polka dots dances a bright disco routine on a small stage: a wide low stance, a sway and a side-step out and back, a quarter-turn, then she points one hand up over her head and down again, again and again, and finishes on a held point, square to the camera. The camera starts low and wide and pushes in slowly, tilting up a little, to a low medium shot from the knees up. Sound: quiet room tone only, the faint tap of her shoes; no music, no dialogue.",
+  "generate": "Warm, handmade stop-motion animation, in a single continuous shot with no cuts and no text. A toy-like world of felt, clay and painted wood, softly lit with warm studio light. The dancer is the woman in the first four reference pictures (front, side, back, and her face): black hair in a tight bun with a big red rose, strong dark brows, red lips, a black sleeveless top, a long red skirt in three ruffled tiers with white polka dots, black heeled dance shoes. She is proud and warm, a star about to premiere. The place is the little stage in the last two reference pictures: a pale room with a big blue-framed window, a blue couch, a desk and a plant. The camera starts low and wide, a hand's height above the floor, and pushes in slowly and smoothly, tilting up a little, to a low medium shot from the knees up.\n[0-3s] She stands in a wide, low stance in the middle of the stage and sways from side to side.\n[3-6s] She side-steps out to her right, turning a quarter to face along the stage, then comes back to the middle.\n[6-9s] She turns to face the camera, stepping in rhythm.\n[9-13.5s] Disco points: she points one hand high over her head, then down across her body, again and again.\n[13.5-14s] She holds the final point, one hand high, square to the camera.\nSound: quiet room tone only, the faint tap of her shoes; no music, no dialogue."
+ },
+ "frames_route_seconds": 10,
+ "generate_route_seconds": 14
+}

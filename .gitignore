@@ -24,3 +24,6 @@ runs/*/card.jpg
 # Marble worlds as World Labs hands them over (splats, collision mesh, panorama): big, and fetched with credits
 world/marble/
 evidence/marble/diorama/cut/
+
+# Segments packed for an AI restyle and what comes back (scripts/video/omni.py): made from clips that stay on this Mac
+/exports/

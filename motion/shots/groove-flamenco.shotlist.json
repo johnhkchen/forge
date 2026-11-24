@@ -1,0 +1,23 @@
+{
+ "title": "Disco points",
+ "start_pose": "stand",
+ "start_mark": "centre",
+ "path": [],
+ "props": [],
+ "camera": [],
+ "beats": [
+  {
+   "name": "The routine",
+   "seconds": 14.0,
+   "source": "video",
+   "moves": [],
+   "clip": "groove",
+   "shot": 2,
+   "from_s": 68.47,
+   "to_s": 82.47,
+   "drift": "flatten",
+   "facing_at": "end",
+   "at": "centre"
+  }
+ ]
+}

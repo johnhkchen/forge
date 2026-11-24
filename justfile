@@ -45,6 +45,8 @@ check:
     python3 scripts/diorama/test_diorama.py | tail -1
     python3 scripts/impostor/test_impostor.py | tail -1
     python3 scripts/video/test_video.py 2>/dev/null | tail -1
+    python3 scripts/sets/test_camera_path.py | tail -1
+    python3 scripts/video/test_omni.py 2>/dev/null | tail -1
 
 # Would the Blender scripts get past the add-on's safe mode? (every skill script, or the files given)
 check-safe *files:
@@ -329,6 +331,30 @@ rehearse shot folder:
 # Film a character you cast in a clip's shot (`just cast video-<name> runs/<character>`) beside the clip, in step: videos/<name>/side-by-side-lowpoly-<clip>.mp4
 video-film name clip="hero":
     python3 scripts/video/film.py "videos/{{name}}" "shots/video-{{name}}" --cast "lowpoly-{{clip}}"
+
+# The best 10 to 15 seconds of a clip's shot for a short film: lively, arms up, a turn, still at both ends, clear of any seam (shot: video-<name>)
+video-stretch shot shortest="10" longest="15":
+    python3 scripts/video/pick_stretch.py "shots/{{shot}}" --shortest {{shortest}} --longest {{longest}}
+
+# What a shot's moving camera sees of the figure, second by second (motion/shots/<shot>.json's moving_cameras)
+camera-path shot camera="":
+    python3 scripts/sets/camera_path.py "shots/{{shot}}" {{camera}}
+
+# Draw every picture a restyle needs (motion/restyles/<name>.json): bold ink, its background and the dancer's mask from the gallery's own page (the gallery must be running on port), the shaded film, its background and depth from a background Blender, the character from the side and back. Free
+omni-film name port="8052":
+    python3 scripts/video/omni.py film "{{name}}" --port {{port}}
+
+# Pack a restyle into exports/omni/<name>/ (out of git): source.mp4 (bold ink) and the other passes, first and last pictures, reference pictures, the three prompts, manifest.json
+omni-pack name:
+    python3 scripts/video/omni.py pack "{{name}}"
+
+# Send a packed segment to Gemini Omni Flash: route edit (our film + 2 pictures, the default), frames (first and last pictures, 10 s) or generate (6 pictures). Without go it prints exactly what it would send and what it would cost, and stops. Needs GEMINI_API_KEY in .env
+omni-send export route="edit" go="":
+    python3 scripts/video/omni.py send "{{export}}" "{{route}}" {{go}}
+
+# Did a restyle keep our dance? GEM-X reads the dancer's motion off what came back (RunPod: costs) and it is compared with ours, joint by joint and in time. Without go it says what it would do and cost
+omni-drift export result go="":
+    python3 scripts/video/omni.py drift "{{export}}" "{{result}}" {{go}}
 
 # Try everything around the video model with no GPU: a drawn clip, a stand-in for GEM-X, then the film and a character from RUNS in a background Blender (a few minutes)
 video-test runs="runs":

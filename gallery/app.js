@@ -1941,6 +1941,20 @@ async function route() {
     window.scrollTo(0, 0);
     return;
   }
+  // #/restyle/<name>: a segment we filmed beside what an AI restyle made of it (exports/omni/<name>/).
+  const atRestyle = location.hash.match(/^#\/restyle\/([^/]+)$/);
+  if (atRestyle) {
+    const restyles = await fetch("api/restyles").then((r) => r.json()).catch(() => []);
+    const restyle = restyles.find((r) => r.id === decodeURIComponent(atRestyle[1]));
+    if (restyle) {
+      viewer?.dispose();
+      viewer = null;
+      const { restylePage } = await import("./restyle.js");
+      app.replaceChildren(restylePage({ restyle, h }));
+      window.scrollTo(0, 0);
+      return;
+    }
+  }
   // #/tag/<run id>: a field of that toon playing tag, drawn as meshes or as cards, to see what each costs.
   const atTag = location.hash.match(/^#\/tag\/([^/]+)$/);
   const tagged = atTag && runs.find((r) => r.id === decodeURIComponent(atTag[1]) && r.cards?.length);

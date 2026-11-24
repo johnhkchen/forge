@@ -1,0 +1,21 @@
+{
+ "name": "groove-flamenco",
+ "brief": "Fourteen seconds of the disco routine from the groove clip, danced by one person alone in the middle of the ninja's stage, the window behind her: a wide low stance, a sway and a side-step out and back, a quarter-turn, then the disco point, up over the head and down, again and again, and a held point to finish, square on to the house. Made for a short film with a camera that pushes in low (`just omni-film groove-flamenco`). Needs the clip's motion first (`just video groove`). The clip is a private test: never publish it, and no sound.",
+ "beats": [
+  {
+   "time": "0-14 s",
+   "action": "the routine's last stretch, ending on a held disco point facing the house",
+   "driven_by": "video: groove, shot 2, seconds 68.47 to 82.47, at centre, the last frame square on"
+  }
+ ],
+ "set": "studio",
+ "moving_cameras": {
+  "push_in": {
+   "about": "Low and wide to a low medium shot: the lens starts 38 cm off the floor, 5.6 m out, the whole stage in view, and pushes in slowly, easing in and out, to 2.9 m out and 50 cm up, knees to raised hand, tilting up from 6 to 16 degrees so she reads tall.",
+   "keys": [
+    {"at_s": 0.0, "at": [0.1, 0.38, 8.3], "aim": [-0.7, 1.0, 2.75], "lens_mm": 24},
+    {"at_s": 14.0, "at": [-0.25, 0.5, 5.6], "aim": [-0.4, 1.3, 2.75], "lens_mm": 32, "ease": "in_out"}
+   ]
+  }
+ }
+}
