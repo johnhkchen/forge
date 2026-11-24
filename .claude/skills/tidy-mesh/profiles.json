@@ -296,5 +296,24 @@
       "image_format": "WEBP",
       "draco": false
     }
+  },
+  "sides": {
+    "about": "The same character with its skeleton, playing the audition sides standing in place: standing easy, a wave, a head turn each way, the right arm raised overhead, a deep squat held. The same scenes for everyone trying out for a part (scripts/casting), chosen for what a walk never asks of the knees, shoulders and neck.",
+    "source": "sides.py",
+    "of": [
+      "lowpoly",
+      "midpoly",
+      "painted"
+    ],
+    "rig": {
+      "weights": "auto"
+    },
+    "sides": {
+      "fps": 30
+    },
+    "export": {
+      "image_format": "WEBP",
+      "draco": false
+    }
   }
 }

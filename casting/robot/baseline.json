@@ -1,0 +1,120 @@
+{
+  "seams": {
+    "comic": {
+      "dark": 5.6,
+      "open": 4.9,
+      "holes": 2.0,
+      "frames": 26
+    },
+    "pixel-both": {
+      "dark": 6.3,
+      "open": 1.9,
+      "holes": 0.3,
+      "frames": 26
+    },
+    "joe": {
+      "dark": 2.9,
+      "open": 5.1,
+      "holes": 1.0,
+      "frames": 26
+    }
+  },
+  "joints": {
+    "joe": {
+      "shoulder": {
+        "likeness": 0.525,
+        "blots": 0.076,
+        "joints": 26
+      },
+      "all": {
+        "likeness": 0.668,
+        "blots": 0.055,
+        "joints": 104
+      },
+      "elbow": {
+        "likeness": 0.512,
+        "blots": 0.049,
+        "joints": 22
+      },
+      "hip": {
+        "likeness": 0.758,
+        "blots": 0.059,
+        "joints": 30
+      },
+      "knee": {
+        "likeness": 0.838,
+        "blots": 0.034,
+        "joints": 26
+      }
+    },
+    "pixel-both": {
+      "shoulder": {
+        "likeness": 0.618,
+        "blots": 0.068,
+        "joints": 26
+      },
+      "all": {
+        "likeness": 0.695,
+        "blots": 0.054,
+        "joints": 104
+      },
+      "elbow": {
+        "likeness": 0.578,
+        "blots": 0.042,
+        "joints": 22
+      },
+      "hip": {
+        "likeness": 0.752,
+        "blots": 0.06,
+        "joints": 30
+      },
+      "knee": {
+        "likeness": 0.807,
+        "blots": 0.043,
+        "joints": 26
+      }
+    }
+  },
+  "faces": {
+    "joe": {
+      "crew": {
+        "kept": 0.727,
+        "likeness": 0.766
+      },
+      "two": {
+        "kept": 0.748,
+        "likeness": 0.774
+      },
+      "close": {
+        "kept": 0.718,
+        "likeness": 0.69
+      }
+    },
+    "pixel-both": {
+      "crew": {
+        "kept": 0.793,
+        "likeness": 0.813
+      },
+      "two": {
+        "kept": 0.834,
+        "likeness": 0.862
+      },
+      "close": {
+        "kept": 0.782,
+        "likeness": 0.757
+      }
+    }
+  },
+  "looks": {
+    "comic": "Comic",
+    "pixel-baked": "Pixels, baked",
+    "pixel-both": "Pixels, both",
+    "joe": "Bold ink"
+  },
+  "made": "2026-11-24 13:54",
+  "role": "right",
+  "face_recipe": true,
+  "joint_pieces": true,
+  "why": null,
+  "who": "the pirate"
+}

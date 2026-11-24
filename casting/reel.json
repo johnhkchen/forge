@@ -1,0 +1,34 @@
+{
+  "about": "The audition reel: the same short scenes for everyone trying out for any part, so they can be compared fairly. Each is chosen for what it asks of the flat cards as well as of the character, so a problem shows up here and not after someone is cast.",
+  "version": "lowpoly",
+  "sides": [
+    {"id": "idle", "name": "Stand easy", "clip": "sides", "scene": "stand easy",
+     "why": "Holding still. A card that keeps swapping its picture while nothing moves shows up as a shimmer."},
+    {"id": "walk", "name": "Walk", "clip": "walk",
+     "why": "What the world sees most. The hips and knees, over and over."},
+    {"id": "run", "name": "Run", "clip": "run",
+     "why": "The knees and elbows bend further and faster than in a walk."},
+    {"id": "wave", "name": "Wave", "clip": "sides", "scene": "wave",
+     "why": "A shoulder and an elbow up high, beside the face."},
+    {"id": "head-turn", "name": "Head turn", "clip": "sides", "scene": "head turn",
+     "why": "The neck, which is still being worked on. Does the face stay a face from the side?"},
+    {"id": "overhead", "name": "Arm overhead", "clip": "sides", "scene": "arm overhead",
+     "why": "A shoulder at its furthest. Cards open most here."},
+    {"id": "squat", "name": "Deep squat", "clip": "sides", "scene": "deep squat",
+     "why": "The knees broke here before. Held, so you can look."},
+    {"id": "dance", "name": "A beat of the candy-shop routine", "clip": "crew", "from": 690, "to": 930,
+     "why": "Eight seconds of the crew's dance, in the candidate's place in the line. Elbows and hips, in step with the others."},
+    {"id": "tag", "name": "Tag moves", "clip": "tag", "from": 222, "to": 392,
+     "why": "A dodge, a tag and being tagged: quick turns that make cards swap pictures fast."},
+    {"id": "fight", "name": "A sparring bout", "clip": "fight", "from": 60, "to": 300,
+     "why": "Jabs, a hook and a block from the fight kit, opposite Lincoln. Fists come close to faces."}
+  ],
+  "clips": {
+    "sides": {"from": "own", "file": "profiles/{version}-sides.glb", "made_by": "just tidy <run> sides", "free": true},
+    "walk": {"from": "own", "file": "profiles/{version}-walk.glb", "made_by": "just tidy <run> walk", "free": true},
+    "run": {"from": "own", "file": "profiles/{version}-run.glb", "made_by": "just runs (one sentence to Kimodo on RunPod, then free)", "free": false},
+    "crew": {"from": "chemistry", "file": "{swap}/{version}-crew.glb", "made_by": "the chemistry read", "free": true},
+    "tag": {"from": "tape", "file": "tag/{version}-tag.glb", "made_by": "the self-tape", "free": true},
+    "fight": {"from": "tape", "file": "fight/cast-left.glb", "made_by": "the self-tape", "free": true}
+  }
+}
