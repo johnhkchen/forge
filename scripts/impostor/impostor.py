@@ -22,6 +22,7 @@ Needs numpy and nothing else (Blender's Python has it; `python3` here may not: s
 import json
 import math
 import os
+import re
 import struct
 import zlib
 
@@ -992,6 +993,50 @@ def tint_place(joint_at, center, ring):
     the joint toward the middle of the part. All in the bone's frame."""
     joint_at, center = np.asarray(joint_at, dtype=np.float64), np.asarray(center, dtype=np.float64)
     return joint_at + unit(center - joint_at) * (TINT_IN * ring)
+
+
+# ---------- a dress: a garment swung by chains of bones that hang over the legs (bake_impostor.py, bake_joints.py) ----------
+
+CHAIN = re.compile(r"^cloth_(.+)_(\d+)_(\d+)$")  # a swing chain's bone, as cloth.py names it: cloth_<gear>_<chain>_<bone>
+DRESS_ROOTS = ("hips", "spine")    # chains hanging from a bone of these parts hang over the legs: a skirt, a dress, a robe, a coat's tails
+
+
+def slug_of(text):
+    """A garment's name as cloth.py writes it into its chains' bones."""
+    out = "".join(c if c.isalnum() else "_" for c in (text or "cloth").lower()).strip("_")
+    while "__" in out:
+        out = out.replace("__", "_")
+    return out[:18] or "cloth"
+
+
+def chains_of(names, parent_of, fold):
+    """The dress a skeleton has, from its bones' names: {"root": the body bone its chains hang from, "bones": every
+    chain bone, "chains": [[a chain's bones, top down], ...], "garments": [the slugs of the garments they swing]}, or
+    None when it has none. names: every bone; parent_of(name): its parent's name or None; fold(name): the part a body
+    bone belongs to. Only chains whose top hangs from a bone of DRESS_ROOTS count (a hood's hangs from the head: the
+    head's card has the face, and a hood does not tear between the legs). Several garments with such chains (a skirt
+    and a coat's tails) make one dress, about the lowest root."""
+    chains, root, slugs = {}, None, []
+    for name in names:
+        if not CHAIN.match(name):
+            continue
+        top = name
+        while parent_of(top) is not None and CHAIN.match(parent_of(top)):
+            top = parent_of(top)
+        hang = parent_of(top)
+        if hang is None or fold(hang) not in DRESS_ROOTS:
+            continue
+        chains.setdefault(top, []).append(name)
+        if root is None or fold(hang) == "hips":
+            root = hang
+        slug = CHAIN.match(top).group(1)
+        if slug not in slugs:
+            slugs.append(slug)
+    if not chains:
+        return None
+    depth = lambda n: int(CHAIN.match(n).group(3))
+    ordered = [sorted(bones, key=depth) for _, bones in sorted(chains.items())]
+    return {"root": root, "bones": [b for chain in ordered for b in chain], "chains": ordered, "garments": slugs}
 
 
 def part_balls(card):

@@ -2,7 +2,7 @@
 
     python3 scripts/video/watch_film.py <out folder> [--base http://localhost:8052/] [--take groove-flamenco]
         [--eye push_in] [--look joe] [--model midpoly] [--pass ""|plate|mask] [--fps 24] [--size 1280x720]
-        [--only 0,150,328]
+        [--only 0,150,328] [--cards]
 
 The gallery must be running on that port. The looks (bold ink above all) are
 drawn by the page itself (gallery/looks.js), so the truest film of a look is
@@ -13,6 +13,7 @@ drawn and kept: <out>/0000.png, 0001.png, ... and frames.json.
 
     --pass plate   the set alone, nobody on it
     --pass mask    the cast alone, white on black
+    --cards        the cast as their flat cards (scripts/impostor/), for those who have them; meshes otherwise
 
 ffmpeg makes the pictures a film (scripts/video/omni.py pack does). Prints
 FILM lines.
@@ -51,6 +52,7 @@ def main():
     model, kind, fps = flag("--model", "midpoly"), flag("--pass", ""), float(flag("--fps", "24"))
     wide, tall = (int(v) for v in flag("--size", "1280x720").split("x"))
     only = [int(v) for v in flag("--only", "").split(",") if v]
+    cards = "--cards" in args
     os.makedirs(out, exist_ok=True)
     page = test_walkabout.Page(base, gpu=True)
     try:
@@ -63,7 +65,7 @@ def main():
             page.value("[...document.querySelectorAll('.versions[aria-label=Model] button')].find((b) => b.textContent === %s).click(); 1" % json.dumps({"midpoly": "Mid poly", "lowpoly": "Low poly"}[model]))
             time.sleep(1.0)
             page.until("window.forgeWatch && window.forgeWatch.state().ready && window.forgeWatch.state().model === %s && !document.querySelector('.watch-pane .status')" % json.dumps(model), 180)
-        page.value("window.forgeWatch.set({ playing: false, cards: false, pass: %s }); 1" % json.dumps(kind))
+        page.value("window.forgeWatch.set({ playing: false, cards: %s, pass: %s }); 1" % (json.dumps(cards), json.dumps(kind)))
         page.value("window.forgeWatch.look(%s).then(() => 1)" % json.dumps(look), wait=True)
         page.value("window.forgeWatch.eye(%s); 1" % json.dumps(eye))
         page.value("window.forgeWatch.film(%d, %d)" % (wide, tall))
@@ -89,7 +91,7 @@ def main():
         if said:
             print("FILM the page said: %s" % said)
         with open(os.path.join(out, "frames.json"), "w") as f:
-            json.dump({"take": take, "camera": eye, "look": look, "model": model, "pass": kind or "look", "fps": fps, "size": [wide, tall], "frames": len(times),
+            json.dump({"take": take, "camera": eye, "look": look, "model": "cards" if cards else model, "pass": kind or "look", "fps": fps, "size": [wide, tall], "frames": len(times),
                        "seconds": state["length"], "drawn_by": "the gallery's watch page (gallery/watch.js, looks.js) in a headless Chrome"}, f, indent=1)
         print("FILM done: %d pictures in %.0f s -> %s" % (len(only or times), time.time() - began, out))
     finally:

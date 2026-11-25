@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150] [--layers 2] [--round-the-back] [--eyes 20,40] [--eyes-round 6]
+        [--look comic|pixel|joe] [--dress auto|off] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150] [--layers 2] [--round-the-back] [--eyes 20,40] [--eyes-round 6]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor-<look>-joined/ (pages older than the mended
@@ -41,6 +41,17 @@ the flat colours and the ink line, nothing else. Light and shade are not baked i
 out from the stored facing, so a forearm is lit from the same side whichever way it is turned.
 Every part of one direction is drawn in one render, each in its own square; the squares are then
 trimmed to what is in them and packed onto one sheet.
+
+A dress (chains_of, cut_round). Every part belongs to one bone, and a long skirt does not: it spans the hips and
+both legs, and cut into thigh and shin cards it tears apart between the legs whenever she side-steps or lunges,
+while the bones it really moves with (the swing chains cloth.py gives a loose garment, "cloth_<gear>_<chain>_<n>")
+are no part at all. So a garment whose chains hang from the hips or the spine (a skirt, a dress, a robe, a coat's
+tails: anything that hangs over the legs) is a part of its own, "dress", that rides the bone its chains hang from:
+the chains' pull on it, and on a garment that is a mesh of its own (rig_detailed.py: "gear: <name>") the hips' and
+the legs' pull too, count for the dress and not for the hips or the legs. Its card is a picture of the dress as it
+hangs at rest, for the looks and the crowd; what the pages draw near by is a piece of the model itself, swung by
+the chains (bake_joints.py), which the dress's card steps aside for. --dress off cuts the old way, the dress among
+the hips and the legs.
 
 --plays names the rigged version whose clips the cards play, when the one pictured is not it: a detailed mesh
 given another version's skeleton (rig_detailed.py) is pictured, and the cards then play that version's walk,
@@ -185,8 +196,9 @@ def run_toon(**params):
     exec("import " + tail, space)
 
 
-def part_of_bone(rig):
-    """{bone name: part name}: a bone no part names folds into the nearest bone above it that one does."""
+def part_of_bone(rig, dress=None):
+    """{bone name: part name}: a bone no part names folds into the nearest bone above it that one does. With a
+    dress (chains_of), its chains' bones are the dress's."""
     known = {bone: name for name, bones in PARTS for bone in bones}
     out = {}
     for bone in rig.data.bones:
@@ -194,19 +206,52 @@ def part_of_bone(rig):
         while up is not None and up.name not in known:
             up = up.parent
         out[bone.name] = known[up.name] if up is not None else "hips"
+    for bone in (dress or {}).get("bones", []):
+        out[bone] = "dress"
     return out
 
 
-def cut(objects, rig, overlap, trunk_overlap):
-    """{part name: [(object, [face indices], lapped over from next door?)]} and how many triangles each part owns outright."""
+# a swing chain's bone, the parts its chains may hang from, a garment's name as its chains carry it, and the dress
+# a skeleton has (impostor.py: chains_of, with no Blender in it)
+CHAIN, DRESS_ROOTS, slug_of, chains_of = impostor.CHAIN, impostor.DRESS_ROOTS, impostor.slug_of, impostor.chains_of
+DRESS_LEGS = ("thigh_l", "thigh_r", "shin_l", "shin_r")  # ... and on a garment that is a mesh of its own, the legs' pull on it is the dress's too
+
+
+def dress_of(rig):
+    """chains_of for a Blender skeleton."""
     folds = part_of_bone(rig)
-    names = [name for name, _ in PARTS]
+    return chains_of([b.name for b in rig.data.bones], lambda n: rig.data.bones[n].parent.name if rig.data.bones[n].parent else None, lambda n: folds.get(n))
+
+
+def worn_dress(obj, dress):
+    """Whether an object is a garment the dress's chains swing (a mesh of its own: "gear: ruffled skirt")."""
+    gear = obj.get("gear") or (obj.name[len("gear: "):].split(".")[0] if obj.name.startswith("gear: ") else None)
+    return bool(dress and gear and any(s == slug_of(gear) or s.startswith(slug_of(gear) + "_") for s in dress["garments"]))
+
+
+def groups_of(obj, folds, dress=None):
+    """The part each of an object's vertex groups pulls for. On a garment the dress swings, the hips' and the legs'
+    pull counts for the dress: the skirt rides them only as the dress does."""
+    worn = worn_dress(obj, dress)
+    root = folds.get(dress["root"]) if dress else None
+    return [("dress" if worn and folds.get(g.name) in (root, "dress") + DRESS_LEGS else folds.get(g.name)) for g in obj.vertex_groups]
+
+
+def parts_with(dress):
+    """The parts, and the dress's if there is one: it rides the bone its chains hang from."""
+    return PARTS + ([("dress", [dress["root"]] + dress["bones"])] if dress else [])
+
+
+def cut(objects, rig, overlap, trunk_overlap, dress=None):
+    """{part name: [(object, [face indices], lapped over from next door?)]} and how many triangles each part owns outright."""
+    folds = part_of_bone(rig, dress)
+    names = [name for name, _ in parts_with(dress)]
     column = {name: i for i, name in enumerate(names)}
     out, own = {name: [] for name in names}, {name: 0 for name in names}
     for obj in objects:
         me = obj.data
         pull = np.zeros((len(me.vertices), len(names)), dtype=np.float32)
-        groups = [folds.get(g.name) for g in obj.vertex_groups]
+        groups = groups_of(obj, folds, dress)
         for v in me.vertices:
             for g in v.groups:
                 part = groups[g.group]
@@ -242,16 +287,16 @@ def joints_of(rig):
     return out
 
 
-def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_overlap=0.04, head_lap=0.3):
+def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_overlap=0.04, head_lap=0.3, dress=None):
     """The cut made fit for a joint to bend (impostor.py: round_cut has the account of it): {part name: [(object,
     [face indices], lapped over from next door?, the ball these faces are pulled onto or None)]}, how many
     triangles each part owns outright, and what each joint was given. The pull is evened out along the surface
     over smooth_m; two parts that meet at a joint each reach `lap` times the ring's radius into the other; and the
     part below the joint carries a ball in it, `ball` of the room there is. The chest takes less of the head than
     `lap` (head_lap): a jaw that stayed behind when the head turned would show. Points are where they stand in
-    the baking pose."""
-    folds = part_of_bone(rig)
-    names = [name for name, _ in PARTS]
+    the baking pose. A dress (chains_of) is one part more, met at no joint: it neither laps nor takes a ball."""
+    folds = part_of_bone(rig, dress)
+    names = [name for name, _ in parts_with(dress)]
     column = {name: i for i, name in enumerate(names)}
     joints = [(a, b, bone, np.array((rig.matrix_world @ rig.pose.bones[bone].head)[:])) for a, b, bone in joints_of(rig)]
     points, pulls, edges, corners, begin, sides, spans = [], [], [], [], [], [], []
@@ -259,7 +304,7 @@ def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_
         me = obj.data
         count, first_point, first_corner = len(me.vertices), sum(len(p) for p in points), sum(len(c) for c in corners)
         pull = np.zeros((count, len(names)), dtype=np.float32)
-        groups = [folds.get(g.name) for g in obj.vertex_groups]
+        groups = groups_of(obj, folds, dress)
         for v in me.vertices:
             for g in v.groups:
                 part = groups[g.group]
@@ -644,6 +689,10 @@ def main():
     bent_kinds = [k for k in flag("--bent", "").split(",") if k]  # joints pictured bent as well: knee, elbow
     bends = [float(b) for b in flag("--bends", "0,45,90,120,150").split(",")]
     hinge = hinges(scene, rig, [bones[0] for name, bones in PARTS if BENT_KINDS.get(name[:-2]) in bent_kinds]) if bent_kinds else {}
+    # a garment swung by chains that hang over the legs is a part of its own (--dress off: cut among the hips and legs)
+    dress = dress_of(rig) if flag("--dress", "auto") != "off" else None
+    if dress:
+        print("IMPOSTOR dress: %s, %d chains of %d bones hanging from %s" % (", ".join(dress["garments"]), len(dress["chains"]), len(dress["bones"]), dress["root"]), flush=True)
     lowered = hang_arms(scene, rig) if "--rest-pose" not in args else {}
     graph = bpy.context.evaluated_depsgraph_get()
     posed = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in bodies}
@@ -653,11 +702,11 @@ def main():
 
     # The parts, each in its bone's own frame.
     if lap > 0:
-        chosen, own, joints = cut_round(bodies, rig, posed, lap, smooth_m, ball, overlap, trunk_overlap)
+        chosen, own, joints = cut_round(bodies, rig, posed, lap, smooth_m, ball, overlap, trunk_overlap, dress=dress)
     else:
-        (chosen, own), joints = cut(bodies, rig, overlap, trunk_overlap), None
+        (chosen, own), joints = cut(bodies, rig, overlap, trunk_overlap, dress), None
     parts, made = [], {}
-    for name, bones in PARTS:
+    for name, bones in parts_with(dress):
         if not chosen[name] or bones[0] not in rest:
             continue
         # where the bone's frame is in the baking pose: the bone's own move from rest, then its rest frame
@@ -675,6 +724,8 @@ def main():
         parts.append({"name": name, "bone": bones[0], "bones": bones, **({"px_per_m": ppm * finer[name]} if name in finer else {}), "center": [round(float(c), 4) for c in (lo + hi) / 2.0],
                       "depth_m": round(reach + 0.01, 4), "reach_m": round(reach, 4),
                       "triangles": sum(len(p.vertices) - 2 for o in objects for p in o.data.polygons), "own_triangles": own[name]})
+        if name == "dress":  # what swings it, for the piece of the model that is drawn in its place (bake_joints.py)
+            parts[-1].update(bones=[bones[0]], dress={"root": dress["root"], "chains": dress["chains"], "garments": dress["garments"]})
     # Joints pictured bent (--bent). A joint's own card: the skin of its two parts round the joint, as the real model
     # has it with the joint bent so far, pictured as any part is, in the frame of the bone above. One card for
     # each of --bends degrees. The page shows the one nearest to how far the joint is bent now, and the two parts'

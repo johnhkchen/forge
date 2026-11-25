@@ -1426,7 +1426,9 @@ def test_layers(runs):
         with open(os.path.join(before, "impostor.json")) as f:
             was = json.load(f)
         check("... the first layer is the sheet that was there before, picture for picture", {n: [c[2:] for c in row] for n, row in was["sets"][character.set_name]["cells"].items()} == {n: [c[2:] for c in row] for n, row in sheet["cells"].items()})
-    walk = impostor.Glb(os.path.join(os.path.dirname(folder), "%s-walk.glb" % character.card["plays"]))
+    # (the walk of the version the cards play, or the one they were pictured from when that is not there: the pirate's
+    # layered cards say they play a "painted" version he has not got)
+    walk = next(impostor.Glb(p) for p in (os.path.join(os.path.dirname(folder), "%s-walk.glb" % character.card["plays"]), os.path.join(os.path.dirname(folder), character.card["source"])) if os.path.isfile(p))
     pose = walk.pose(walk.seconds * 0.3)
     eye = impostor.Eye(pose["hips"][:3, 3] + np.array([1.6, 0.9, 3.2]), pose["hips"][:3, 3], 30.0, (300, 400))
     both = impostor.draw(character, pose, eye)[0][..., 3] > 0
@@ -1438,10 +1440,124 @@ def test_layers(runs):
     check("... a frame of the walk drawn with the layers covers all it covered without, and a little more", not (first & ~both).any() and both.sum() >= first.sum(), "%d pixels more" % (both.sum() - first.sum()))
 
 
+def test_dress(runs):
+    # which chains make a dress: the ones that hang from the hips or the spine, top down, whatever order they come in
+    parents = {"hips": None, "spine": "hips", "chest": "spine", "neck": "chest", "head": "neck", "thigh_l": "hips", "shin_l": "thigh_l"}
+    for chain in (1, 2):
+        parents.update({"cloth_ruffled_skirt_%d_1" % chain: "hips", "cloth_ruffled_skirt_%d_2" % chain: "cloth_ruffled_skirt_%d_1" % chain, "cloth_ruffled_skirt_%d_3" % chain: "cloth_ruffled_skirt_%d_2" % chain})
+    parents.update({"cloth_hood_and_mask_1_1": "head", "cloth_hood_and_mask_1_2": "cloth_hood_and_mask_1_1", "cloth_linen_tunic_9_1_1": "spine"})
+    fold = lambda name: {"neck": "chest"}.get(name, name)
+    names = sorted(parents, key=lambda n: hash(n[::-1]) % 97)
+    got = impostor.chains_of(names, parents.get, fold)
+    check("a dress is the chains that hang over the legs: from the hips or the spine, each top down; a hood's are not",
+          got is not None and got["root"] == "hips" and got["chains"] == [["cloth_linen_tunic_9_1_1"], ["cloth_ruffled_skirt_1_1", "cloth_ruffled_skirt_1_2", "cloth_ruffled_skirt_1_3"], ["cloth_ruffled_skirt_2_1", "cloth_ruffled_skirt_2_2", "cloth_ruffled_skirt_2_3"]]
+          and sorted(got["garments"]) == ["linen_tunic_9", "ruffled_skirt"] and not any("hood" in b for b in got["bones"]), json.dumps(got and got["chains"]))
+    check("... a skeleton with a hood's chains alone, or none, has no dress", impostor.chains_of([n for n in names if "skirt" not in n and "tunic" not in n], parents.get, fold) is None
+          and impostor.chains_of(["hips", "spine"], parents.get, fold) is None)
+    check("... and a garment is known by the name its chains carry", impostor.slug_of("Ruffled  Skirt!") == "ruffled_skirt" and impostor.slug_of("a very long garment name indeed") == "a_very_long_garmen")
+
+    # what the cards are told of it: the dress's card steps aside wholly where its piece is, about the chains' root
+    top = "cloth_ruffled_skirt_1_1"
+    card = {"parts": [{"name": n} for n in ("hips", "thigh_l", "dress")],
+            "joints": [{"bone": "thigh_l", "between": ["thigh_l", "hips"], "ring_cm": 8.0, "ball_cm": 5.0}, {"bone": top, "between": ["dress", "hips"], "ring_cm": 0.1, "ball_cm": 0.0, "dress": True}],
+            "skin": {"joints": [{"bone": top, "kind": "dress", "between": ["dress", "hips"], "zone_cm": 87.0, "reach_cm": 130.0, "about": "hips", "aside": ["dress"], "core_cm": 0.0}]}}
+    zones, abouts = impostor.part_zones(card), impostor.part_zones(card, about=True)
+    check("the dress's card has a zone as big as the dress about the chains' root, keeping nothing; the hips' and the legs' cards have none",
+          zones["dress"] == [(0.87, 0.0)] and abouts["dress"] == ["hips"] and zones["hips"] == [(0.0, 0.0), (0.0, 0.0)] and zones["thigh_l"] == [(0.0, 0.0)], str(zones))
+    node = shutil.which("node")
+    if not node:
+        print("    skipped  the page's dress against impostor.py (no node here)")
+    else:
+        script = """
+          import { partBalls } from %s;
+          const card = JSON.parse(await new Promise((done) => { let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => done(s)); }));
+          console.log(JSON.stringify(partBalls(card)));
+        """ % json.dumps("file://" + os.path.join(REPO, "gallery", "impostor-math.js"))
+        out = subprocess.run([node, "--input-type=module", "-e", script], input=json.dumps(card), capture_output=True, text=True)
+        if out.returncode:
+            raise AssertionError("node could not run the page's zones:\n" + out.stderr[-800:])
+        js = json.loads(out.stdout)
+        check("... and the page tells each card the same", [[(round(b["zone"], 9), round(b["core"], 9), b["about"]) for b in balls] for balls in js]
+              == [[(round(z, 9), round(c, 9), a) for (z, c), a in zip(zones.get(p["name"], []), abouts.get(p["name"], []))] for p in card["parts"]], out.stdout.strip())
+
+    # a dress's card drawn: gone wherever its piece is drawn, there as it is when the clip has not got the chains
+    folder = tempfile.mkdtemp(prefix="impostor-test-")
+    try:
+        ball(folder)
+        character = impostor.Character(folder)
+        eye = impostor.Eye([0.0, 0.0, 3.0], [0.0, 0.0, 0.0], 8.0, (120, 120))
+        character.balls, character.zones, character.abouts = {"ball": [(top, 0.001, 0.0)]}, {"ball": [(0.87, 0.0)]}, {"ball": ["b"]}
+        chain = np.eye(4)
+        chain[:3, 3] = (0.08, -0.02, 0.0)
+        shown = lambda pose: int((impostor.draw(character, pose, eye)[0][..., 3] > 0).sum())
+        swinging, plain = shown({"b": np.eye(4), top: chain}), shown({"b": np.eye(4)})
+        check("... nothing of the dress's card shows while its chains are there to swing its piece, and all of it when they are not", swinging == 0 and plain > 400, "%d and %d pixels" % (swinging, plain))
+    finally:
+        shutil.rmtree(folder)
+
+    # one skin cannot tear: a skirt hung on two chains, one swung forward and one back, stays whole between them
+    around, rings = 32, 13
+    angle = np.arange(around) * 2 * math.pi / around
+    hang = np.linspace(0.0, 1.0, rings)
+    points = np.array([[(0.12 + 0.18 * h) * math.cos(a), -0.6 * h, (0.12 + 0.18 * h) * math.sin(a)] for h in hang for a in angle])
+    tris = [[r * around + a, (r + 1) * around + a, r * around + (a + 1) % around] for r in range(rings - 1) for a in range(around)]
+    tris += [[r * around + (a + 1) % around, (r + 1) * around + a, (r + 1) * around + (a + 1) % around] for r in range(rings - 1) for a in range(around)]
+    front = np.clip(points[:, 2] / 0.3 * 0.5 + 0.5, 0.0, 1.0)  # the front chain pulls the front, the back chain the back
+    down = np.clip(hang.repeat(around) * 1.5, 0.0, 1.0)        # ... more the lower a point hangs, the waist with the hips
+    pull = np.stack([1.0 - down, down * front, down * (1.0 - front), 0.0 * down], axis=1)
+    skin = impostor.Skin.__new__(impostor.Skin)
+    skin.bones, skin.inverse = ["hips", "fore", "aft"], np.stack([np.eye(4)] * 3)
+    skin.pieces = {"fore": (points, np.full((len(points), 2), 0.5), np.tile([0, 1, 2, 0], (len(points), 1)), pull, np.array(tris))}
+    swung = lambda deg: (lambda m: (m.__setitem__((slice(0, 3), slice(0, 3)), impostor.about([1.0, 0.0, 0.0], math.radians(deg))), m)[1])(np.eye(4))
+    at, _ = skin.stood("fore", {"hips": np.eye(4), "fore": swung(-50.0), "aft": swung(40.0)})
+    edges = {tuple(sorted(e)) for t in tris for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0]))}
+    longest = max(np.linalg.norm(at[a] - at[b]) / max(1e-9, np.linalg.norm(points[a] - points[b])) for a, b in edges)
+    check("one skin cannot tear: a skirt with one chain swung forward 50 degrees and the other back 40 stretches, and no edge of it parts", longest < 4.0 and float(np.abs(at[:around] - points[:around]).max()) < 1e-9,
+          "the most any edge stretches is %.2f times" % longest)
+
+    # a dress baked
+    found = sorted(f for f in glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-joe-necked", "impostor.json")) if '"kind": "dress"' in open(f).read())
+    if not found:
+        print("    skipped  a baked dress (no profiles/*-impostor-joe-necked with one under %s)" % runs)
+        return
+    folder = os.path.dirname(found[0])
+    character = impostor.Character(folder)
+    said = next(j for j in character.card["skin"]["joints"] if j["kind"] == "dress")
+    dressed = next(p for p in character.parts if p["name"] == "dress")
+    rest = impostor.Glb(os.path.join(os.path.dirname(folder), character.card["source"])).pose(None)
+    check("a baked dress: one card riding the bone its chains hang from, its zone in the cards' joints and its piece's in the pieces'",
+          dressed["bone"] == said["about"] == dressed["dress"]["root"] and any(j["bone"] == said["bone"] and j.get("dress") for j in character.card["joints"])
+          and said["aside"] == ["dress"] and said["core_cm"] == 0.0 and said["bone"] in character.skin.pieces, "%d chains from %s" % (len(dressed["dress"]["chains"]), said["about"]))
+    pieces = character.skin.pieces[said["bone"]]
+    chains = [character.skin.bones.index(b) for chain in dressed["dress"]["chains"] for b in chain if b in character.skin.bones]
+    on_chains = float(np.isin(pieces[2], chains).astype(float).__mul__(pieces[3]).sum(axis=1).mean())
+    check("... its piece hangs on the chains: they pull on it a good deal, more the lower it hangs", on_chains > 0.2, "%.0f%% of the pull, on average" % (100 * on_chains))
+    at, _ = character.skin.stood(said["bone"], rest)
+    far = float(np.linalg.norm(at - rest[said["about"]][:3, 3], axis=1).max())
+    check("... and its zone holds the whole dress as it hangs", far < said["zone_cm"] / 100.0, "%.2f m out, a zone of %.2f" % (far, said["zone_cm"] / 100.0))
+    walk = impostor.Glb(os.path.join(os.path.dirname(folder), "%s-walk.glb" % character.card["plays"]))
+    pose = walk.pose(walk.seconds * 0.3)
+    eye = impostor.Eye(pose["hips"][:3, 3] + np.array([0.4, 0.1, 3.2]), pose["hips"][:3, 3] - np.array([0.0, 0.3, 0.0]), 34.0, (240, 320))
+    skin, character.skin = character.skin, None
+    alone = int((impostor.draw(character, pose, eye, only=["dress"])[0][..., 3] > 0).sum())  # (its zone is the cards' own: told it, the card steps aside)
+    character.skin = skin
+    shown = impostor.draw(character, pose, eye)[0][..., 3] > 0
+    reach = np.zeros_like(shown)
+    reach[0], reach[-1], reach[:, 0], reach[:, -1] = ~shown[0], ~shown[-1], ~shown[:, 0], ~shown[:, -1]
+    while True:  # the picture's background, as far as it reaches from the edge
+        more = (np.roll(reach, 1, 0) | np.roll(reach, -1, 0) | np.roll(reach, 1, 1) | np.roll(reach, -1, 1)) & ~shown & ~reach
+        if not more.any():
+            break
+        reach |= more
+    holes = int((~shown & ~reach).sum())
+    check("... a frame of the walk: the dress's card shows nothing while its piece is drawn, and the figure has no hole in it", alone == 0 and holes <= 0.005 * shown.sum(),
+          "%d pixels of the dress's card, %d shut in of %d" % (alone, holes, shown.sum()))
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("layers", lambda: test_layers(runs)), ("skin", lambda: test_skin(runs)), ("neck", lambda: test_neck(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs))]
+             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("layers", lambda: test_layers(runs)), ("skin", lambda: test_skin(runs)), ("neck", lambda: test_neck(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs)), ("dress", lambda: test_dress(runs))]
     failed = 0
     for name, case in cases:
         print(name)

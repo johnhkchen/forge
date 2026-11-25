@@ -512,7 +512,7 @@ export async function skinFor(folder, card, loader) {
   const pieces = [];
   gltf.scene.traverse((o) => {
     const joint = o.isSkinnedMesh && card.skin.joints.find((j) => `joint ${j.bone}` === o.material.name);
-    if (joint) pieces.push({ joint, geometry: o.geometry, bones: o.skeleton.bones.map((b) => b.name), inverses: o.skeleton.boneInverses, part: card.parts.findIndex((p) => p.name === joint.part) });
+    if (joint) pieces.push({ joint, geometry: o.geometry, bones: o.skeleton.bones.map((b) => b.name), parents: o.skeleton.bones.map((b) => (b.parent?.isBone ? b.parent.name : null)), inverses: o.skeleton.boneInverses, part: card.parts.findIndex((p) => p.name === joint.part) });
   });
   return { pieces, colour, data, inkM: card.ink_m || 0, dispose: () => { colour.dispose(); data.dispose(); pieces.forEach((p) => p.geometry.dispose()); } };
 }
@@ -520,11 +520,23 @@ export async function skinFor(folder, card, loader) {
 // paint uniforms. Returns null if the skeleton lacks a bone the pieces need, else { group, set, dispose }.
 // set(camera, look, card, figure) is for every frame: where each joint is as the eye has it, each piece's number,
 // and whether its ink shell shows.
+// A dress (scripts/impostor/bake_joints.py: a skirt's piece, swung by its own chains of bones) needs those bones: a
+// clip that has none of them (one made for another character) draws no dress piece, and the dress's card, which
+// steps aside for it, rides the hips as it is (its zone is told about the chain's top bone, which is not there).
+// Any other piece needs none of them, so a bone the clip has not got is stood in for by the nearest above it that
+// it has, carried rigidly: the knees are not lost with the chains.
 export function skinMeshes(skin, bones, paint) {
-  if (!skin || skin.pieces.some((piece) => piece.bones.some((name) => !bones[name]))) return null;
+  if (!skin) return null;
+  const standIn = (piece, i) => { // [the bone that moves slot i, and the slot whose rest it moves from]
+    for (let k = i; k >= 0; k = piece.bones.indexOf(piece.parents?.[k])) if (bones[piece.bones[k]]) return [bones[piece.bones[k]], k];
+    return null;
+  };
+  const pieces = skin.pieces.filter((piece) => piece.joint.kind !== "dress" || piece.bones.every((name) => bones[name]));
+  if (!pieces.length || pieces.some((piece) => piece.bones.some((_, i) => !standIn(piece, i)))) return null;
   const group = new THREE.Group();
-  const made = skin.pieces.map((piece) => {
-    const skeleton = new THREE.Skeleton(piece.bones.map((name) => bones[name]), piece.inverses);
+  const made = pieces.map((piece) => {
+    const stood = piece.bones.map((_, i) => standIn(piece, i));
+    const skeleton = new THREE.Skeleton(stood.map(([bone]) => bone), stood.map(([, k]) => piece.inverses[k]));
     return [0, 1].map((shell) => {
       const material = new THREE.ShaderMaterial({ vertexShader: JOINT_VERTEX, fragmentShader: JOINT_FRAGMENT, side: shell ? THREE.BackSide : THREE.FrontSide, uniforms: {
         atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, who: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 },
@@ -541,7 +553,7 @@ export function skinMeshes(skin, bones, paint) {
     group,
     set(camera, look, card, figure = 0) {
       const told = cardLine(card, look);
-      skin.pieces.forEach((piece, i) => {
+      pieces.forEach((piece, i) => {
         const bone = bones[piece.joint.about || piece.joint.bone]; // (the neck's piece is drawn in a ball about the foot of the neck)
         at.setFromMatrixPosition(bone.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
         const size = Math.cbrt(Math.abs(bone.matrixWorld.determinant()));
