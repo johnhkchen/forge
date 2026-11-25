@@ -96,6 +96,11 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just rehearse <shot or take> <folder>` | play a shot or a take through with stand-ins for the motion models, free, before `just shoot` pays for it |
 | `just video-film <name> [clip]` | after `just cast video-<name> ...`: the character beside the clip, in step |
 | `just video-test [runs folder]` | try all of that with no GPU: a drawn clip, a stand-in for the model, then the film and a character in a background Blender |
+| `just video-stretch video-<name>` | the best 10 to 15 seconds of a clip's dance for a short film: lively, arms up, a turn, still at both ends, clear of any seam (see "A dance, restyled") |
+| `just camera-path <shot> [camera]` | what a shot's moving camera sees of the figure, second by second |
+| `just omni-film <name>`, `just omni-pack <name>` | draw every picture a restyle needs, then pack them into `exports/omni/<name>/`: films, pictures, prompts, a manifest. Free |
+| `just omni-send <export> [edit, frames or generate] [go]` | send a packed segment to Gemini Omni Flash. Without `go` it prints exactly what it would send and what it would cost, and stops |
+| `just omni-drift <export> <result.mp4> [go]` | did the restyle keep our dance? GEM-X reads the motion back off it and it is compared with ours. Without `go` it says what it would do and cost |
 | `just gemx-endpoint`, `just gemx-health` | create the video worker's endpoint on RunPod (one time); is it up |
 | `just set-check [set]` | is a standing set sound? Marks on the floor and clear of the furniture, seats the right height, every camera holding its marks (see "Sets") |
 | `just set-build <set>`, `just set-backdrop <set>`, `just set-card <set>` | build a set's block-out from its data, have Codex paint its backdrop, take its picture for the gallery |
@@ -517,7 +522,7 @@ What a set keeps, in `sets/<name>/set.json`:
 - **Its own frame and footprint.** Everything in the file is measured from the set's own origin, with a front (where a stage's cameras are) and an outline of the ground it takes up. Nothing says where the set is in the world, so a set can be picked up and put down as one piece.
 - **Marks.** Named spots: a place to stand (`wings`, `monologue`, `centre`), a seat with its height and the spot in front of it you stand on (`desk_chair`, `couch_1`), a place to stand with a spot for a hand (`meet_left` and `meet_right`, which share one spot: a handshake). A shot names marks and never writes a coordinate.
 - **Paths.** Which marks people walk between, with a turning point or two where a straight line would cut a corner of the desk. Moves are short, across a shallow stage.
-- **Cameras that never move.** Three on the studio: `wide`, `host`, `guest`. One take is filmed from all of them at once, and you pick the cut afterwards.
+- **Cameras that never move.** Three on the studio: `wide`, `host`, `guest`. One take is filmed from all of them at once, and you pick the cut afterwards. A shot can bring a camera of its own that does move, a push-in say; it is filmed alongside these (see "A dance, restyled").
 - **Lights that never move**, so every shot on the set looks like the last one.
 - **A backdrop.** What shows through the studio's window is one flat picture, standing a metre and a half behind the glass. Nothing out there is modelled. On the ring it is a painting by Codex; on the studio it is a picture of a real place in the world, and it can be swapped for another (see World).
 - **Signs.** Small painted flats that belong to the place: the stall's sign, BUY HOUSE, the hall's painted wall.
@@ -1453,7 +1458,7 @@ The world's files are read from `world/marble/` beside the gallery; from another
 
 ## Watch a take as cards
 
-A take that has been cast can be played in the browser, on its set: `#/watch/<take>` ("Watch ... as pixel cards" on the set's page). `gallery/watch.js` stands the set up, brings every role's file on, and plays them from one clock, with Play, a bar to wind it back and forth, the set's own cameras or a free eye, Cards or Meshes, and the looks. Each of the cast whose run has baked cards is drawn as cards riding the skeleton his cast file carries; one with none stays a mesh. A fight's two are stood on their marks as the film stands them.
+A take that has been cast can be played in the browser, on its set: `#/watch/<take>` ("Watch ... as pixel cards" on the set's page). `gallery/watch.js` stands the set up, brings every role's file on, and plays them from one clock, with Play, a bar to wind it back and forth, the set's own cameras, the shot's own moving ones or a free eye, Cards or Meshes, the looks, and (when the take was cast in both) the low-poly or mid-poly model. Each of the cast whose run has baked cards is drawn as cards riding the skeleton his cast file carries; one with none stays a mesh. A fight's two are stood on their marks as the film stands them.
 
 For the candy-shop routine all three (Lincoln, Roosevelt, the pirate) have cards pictured from their detailed meshes (`just impostor-detailed <run> lowpoly`: the detailed mesh on the low-poly skeleton the cast uses, 96 pixels a metre as pixel art and 192 in the comic look). Their joints have been cut again since ("Where two cards meet", above). The cast's skeletons are the low-poly walk files' own to the last digit for Lincoln and Roosevelt and to a tenth of a millimetre for the pirate; Roosevelt's cards, cut on his painted skeleton, are half a millimetre off, and were kept. The detailed mesh lies 0.8 cm from the low-poly one at a typical point on Lincoln, 1.0 on Roosevelt and 2.2 on the pirate, whose coat and hat are the loosest fit. Stills, cards against meshes from the crew camera and close on each: `evidence/watch/`. All three have a face drawn for the pixel look (Looks, above): stills before and after, at the crew camera and from 1.3 m, cards and meshes, in `evidence/faces/`. Since then "Pixels, both" draws their heads on a finer grid from sheets of their own ("Faces as clear as bold ink", under Looks): `evidence/clear/`. And every knee, elbow, hip and shoulder is a piece of the real model that bends, not two pictures meeting ("A knee that bends", above): `evidence/knees/`.
 
@@ -1509,6 +1514,61 @@ The audition also found a fault before anyone was cast: a character with loose c
 **The robot's breakdown, in short.** A small, earnest toy-shop robot, 1.45 m (the shortest in the cast), a boxy head with two round lamp eyes and a grille mouth on a dark face plate, a barrel chest with one red dial, short round limbs with a real ball at every joint, matte mustard enamel with steel-blue joints, because nobody in the cast wears yellow and three of them wear navy. Rigid parts and real ball joints are what flat cards are made of, so it should read as cards better than anyone; if it does not, that is a note for the cards. Four ways it could arrive in canon are written out for you to choose from: the developer's helper (a capsule nobody ordered), Lincoln's counter, the Square Deal crew's first hire, or the first toon brewed in the teahouse.
 
 Screenshots of every stage, phone and desktop: `evidence/casting/`. `just casting-test` tries the files, the board, the costs, the notes and the API with no Blender and no model.
+
+## A dance, restyled
+
+Fourteen seconds of the groove clip's disco routine, danced by the flamenco dancer in the middle of the ninja's stage, filmed from low down with the camera creeping in, then packed up to be turned into stop-motion by Google's video model, Gemini Omni Flash. Everything up to the paid step is done and free; the paid step waits for you to say `go`.
+
+```
+just video-stretch video-groove            # which 10 to 15 seconds to use
+just shoot groove-flamenco                 # the stretch, on the stage (costs nothing: the motion is the clip's)
+just cast groove-flamenco runs/<the flamenco dancer> "" groove
+just omni-film groove-flamenco             # every picture the pack needs (the gallery must be running)
+just omni-pack groove-flamenco             # exports/omni/groove-flamenco/
+just omni-send exports/omni/groove-flamenco          # what it would send and cost; add go to send it
+```
+
+**Which fourteen seconds.** `just video-stretch` scores every 10 to 15 seconds of a clip's motion: how fast the hands and feet move, how much of the time a hand is over the head, how far the body turns, how still it is at the first and last moment, how far it wanders, and how far it is from a seam (where two pieces of the clip's motion were joined; the groove clip has one at 42.47 s, where the hands jump 11.6 cm). Each stretch's ends are moved to the stillest moment nearby. The picker liked 46 to 61 s best, but that one has hands-on-head waves rather than points, ends mid-step travelling sideways, and is 3.5 s from the seam. So it is 68.47 to 82.47 s, the routine's finale, picked by eye from a strip of the candidates (`shots/groove-flamenco/stretch-strip.png` and `stretch.json`, which stay out of git with the clip): a wide low stance, a sway and a side-step out and back with a quarter-turn, then the disco point (a hand thrown up over the head and pulled down across the body) five times, ending on a held point, dead still for half a second, square to the camera. It is 26 seconds from the seam.
+
+**On the stage.** `motion/shots/groove-flamenco.json` is a shot with one beat from the clip, `at` the stage's centre with the window behind her. A beat can now say `"facing_at": "end"`: the stretch is turned so its *last* moment faces the way the mark faces, so the final point is square to the house (she starts 39 degrees off it, as she did in the clip). With `"drift": "flatten"` she ends 1.2 cm from the mark. Her feet are held where they are down, as for every video beat: planted feet stray 0.9 cm at most. Casting her through her own skeleton keeps her skirt on its six chains of bones: it swings up to 83 degrees and its hem travels 1.1 m over the 14 seconds.
+
+**A camera that moves.** A set's cameras never move. A shot can now bring cameras of its own that do, under `moving_cameras` in its plan: a few keys, each a place for the lens, a point it looks at and a lens length, and how to ease into it (`in_out`, the default, `in`, `out`, `linear`, or `hold`). `from` and `to` are shorthand for two keys the shot long. `plan_shot.py` copies them into the shot's `plan.json`; Blender's films (`render_take.py` films them alongside the set's cameras; `render_path.py` films one at any frame rate, a picture at a time) and the watch page (`gallery/camera-path.js`) put the lens in the same place at the same moment, and a test checks the page's sums against Python's. `just camera-path <shot>` says what the camera sees of the figure, second by second. This one, `push_in`:
+
+| | lens off the floor | from her | lens | looking up | in the picture |
+|---|---|---|---|---|---|
+| start | 38 cm | 5.6 m | 24 mm | 6 degrees | all of her and the stage, the window, couch, desk and riser; she is a third of the height |
+| end, 14 s | 50 cm | 2.9 m | 32 mm | 16 degrees | knees to raised hand, the window and the boxing house behind her |
+
+It eases in and out over the whole 14 seconds, so it creeps at first, moves most in the middle and settles as she holds her last point.
+
+**The films** (`just omni-film`, free; into `shots/groove-flamenco/omni/`), all 1280 by 720 at 24 frames a second (what Omni makes, so what goes in is what comes back), silent:
+
+- **Bold ink**, the look you like best, as the gallery draws it: the watch page itself, in a headless Chrome, one picture at a time (`scripts/video/watch_film.py`), so it is the same bold ink the gallery shows, line for line. She is drawn as her mid-poly mesh (she has no cards baked). The same page draws the stage with nobody on it, and her alone in white on black (the mask).
+- **Plain shaded**, the stage with nobody on it, and **depth** (white half a metre from the lens, black at 12 m), from a background Blender with the set's own lights.
+- Her side and back, from her detailed mesh, on the grey her picture stands on (`scripts/video/turnaround.py`), for the reference pictures.
+
+**The pack** (`just omni-pack`, into `exports/omni/groove-flamenco/`, kept out of git): `source.mp4` (bold ink: what is sent), `shaded.mp4`, `plate.mp4` and `plate-shaded.mp4`, `mask.mp4`, `depth.mp4`, `first.png` and `last.png`; `refs/character-sheet.png` (her front, side and back, and her head from three sides, on one 16:9 sheet with no words on it) and `refs/set.png` (the stage from where the push-in ends, nobody on it): the two pictures edit mode takes; `refs-6/`, six pictures for the other two ways of asking; the three prompts; and `manifest.json` (the stretch and why, the frame rate, the camera's keys, the cast and what was measured on her, every file's size and fingerprint, and the licence notes: the dance is a private test, not for publishing; no song anywhere). `motion/restyles/groove-flamenco.json` says how it is all made, prompts included, so it can be made again.
+
+**Sending it.** `just omni-send exports/omni/groove-flamenco [edit|frames|generate] [go]` (`scripts/video/omni.py`, plain Python, no SDK). Without `go` it prints exactly what it would send and what it would cost, and stops; that is all it has done so far. With `go` each file goes up through the Files API, then one request to the Interactions API; what comes back has its sound taken off and lands in `results/` beside a record of the request. The key is `GEMINI_API_KEY` in `.env`; it is not there yet, and the command says so. Three ways of asking:
+
+- **edit** (the default): our film and the two pictures. The prompt asks for warm, handmade stop-motion (felt, clay, painted wood, soft warm light), keeping her motion, timing, framing and the camera move exactly, keeping her looks from the sheet, and quiet room sound only, no music. It names nobody real.
+- **frames**: our first and last pictures, and the model makes the 10 seconds between (it makes 3 to 10 seconds that way, so it is not our 14).
+- **generate**: six pictures and a prompt with timings (`[0-3s] ...`): a new film of the same idea, with no film of ours to follow.
+
+What it costs (Gemini's price page, read 24 November 2026): video out is 5,792 tokens a second at 720p, $12 a million, so about $0.07 a second. The edit is 14 seconds out, $0.97, plus a cent or two for what goes in and the model's thinking (not published for Omni; the estimate guesses high): **about $1.00**. Generate is the same; frames, 10 seconds, about $0.72.
+
+**Did it keep the dance?** `just omni-drift <export> <result.mp4> [go]` brings what came back in as a clip, has GEM-X read the dancer's motion off it on your RunPod endpoint (about 3.5 minutes of an RTX 4090 for 14 seconds, roughly $0.07; it chooses the dancer itself when only one person is found, and marks the camera as moving), and compares that motion with ours: every joint against the hips, turned to face the same way and brought to the same size, after the shift in time that fits best; and the best shift in each two-second window, so a film that slows down or hurries shows as a shift that grows. `omni.py compare <ours> <theirs>` is that last step alone, free. Not run yet.
+
+**In the gallery** (`#/watch/groove-flamenco`): the take on its stage, starting on the moving camera, in bold ink, as the mid-poly mesh ("Model" switches to the low-poly one). `#/restyle/groove-flamenco` plays our film beside what Omni sends back, from one Play button; until something comes back the right side says so, and any of our other passes can go on the left.
+
+**What is weak.**
+- *Her hands and face* come from the clip only as far as GEM-X reads them: the hands are not read at all and stay open, and her wrists hit their limits often in the points (clamped on 264 of 421 frames for the left hand). The face is her mid-poly model's, readable from the middle of the push-in on.
+- *The skirt* goes through her legs (up to 8.8 cm) when she lunges, and its hem dips 5 cm into the floor in the low stance near the end.
+- *The side-step* takes her 1.3 m to her right of the mark early on, while the camera is still wide; the end framing is set for where she finishes, not where she wanders.
+- *The mask* is her mesh alone; bold ink's outline, about 3 pixels, lies just outside it.
+- *The bold ink film* is the page's pictures taken one at a time, so its edges are as smooth as the page's (antialiased, not supersampled).
+- *Edit mode's 2 pictures*: Google's page says reference pictures work with editing and allows up to 6 in all; the pack keeps to 2 for editing to be safe. Whether Omni keeps a 14 s film exactly frame for frame is what the drift check is for.
+- *Nothing has been sent.* The request follows Google's page as read on 24 November 2026; the first real one will show whether it is read as written.
 
 ## Comics
 

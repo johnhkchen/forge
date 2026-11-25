@@ -282,3 +282,12 @@ html, body { overflow-x: hidden; }
 .watch-bar .watch-play { flex: none; min-width: 5.5em; }
 .watch-bar .watch-wind { flex: 1; min-width: 0; height: 32px; accent-color: var(--clay-primary); }
 .watch-bar .watch-time { flex: none; font-variant-numeric: tabular-nums; color: var(--clay-ink-soft); font-size: 0.9rem; }
+
+/* #/restyle/<name>: our segment beside an AI restyle of it (gallery/restyle.js) */
+.restyle-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.restyle-pair figure { margin: 0; min-width: 0; }
+.restyle-film, .restyle-empty { width: 100%; aspect-ratio: 16 / 9; display: block; background: var(--clay-ink, #1c1917); border-radius: 12px; }
+.restyle-empty { display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; color: var(--clay-ink-soft); background: var(--clay-cream, #f2efe9); text-align: center; }
+.restyle-pair figcaption { margin-top: 6px; }
+.restyle-pick { max-width: 100%; font: inherit; }
+@media (max-width: 720px) { .restyle-pair { grid-template-columns: 1fr; } }

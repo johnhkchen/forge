@@ -333,10 +333,11 @@ def main() -> None:
         shot = json.load(f)
     with open(args.poses) as f:
         library = json.load(f)
-    set_card = None
+    set_card, moving = None, None
     if args.brief:
         with open(args.brief) as f:
-            set_card = json.load(f).get("set")
+            brief = json.load(f)
+        set_card, moving = brief.get("set"), brief.get("moving_cameras")
     standing_set = None
     if args.standing or isinstance(set_card, str):
         # A standing set: marks the beats name become the path, distances and facings; its blocks go in the plan.
@@ -349,6 +350,12 @@ def main() -> None:
     def keep_plan(record):
         if standing_set:
             standing.into_plan(record, standing_set, shot)
+        if moving:
+            # Cameras of this shot's own that move (scripts/sets/camera_path.py): kept with every key filled in.
+            sys.path.insert(0, os.path.join(REPO, "scripts", "sets"))
+            import camera_path
+
+            record["moving_cameras"] = camera_path.expand_all(moving, record.get("seconds"))
         with open(os.path.join(args.shot, "plan.json"), "w") as f:
             json.dump(record, f, indent=1)
 

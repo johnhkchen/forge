@@ -17,6 +17,9 @@ A shot list's beat can say `"source": "video"`:
               more than one person's motion was made for it
               (`just video <name> "" <shot>:<person>` makes another's)
     drift     "keep" (default) or "flatten", see below
+    facing_at "start" (default) or "end": which moment of the stretch is
+              turned to face the way the mark faces (plus facing_deg). "end"
+              suits a dance that finishes on a pose for the house
     handles   false to give the joins the beat's own first and last frames
     lock_feet false to leave the feet as the video's motion has them. By
               default a foot that is down is held on its spot and the body
@@ -268,7 +271,12 @@ def piece(stage, beat: dict, first: int, piece_card: dict, sk, before: int = 0, 
             # Turned so that the way it went is the way the path goes.
             turn = math.degrees(math.atan2(x1 - x0, z1 - z0) - math.atan2(went[0], went[1]))
         else:
-            turn = h0 + float(beat.get("facing_deg") or 0.0) - timeline.facing(sk, motion, a)
+            # Facing the way the mark faces as the stretch begins, or (facing_at "end") as it ends: a dance that
+            # finishes on a pose for the house is turned so that pose is the one square on.
+            facing_at = beat.get("facing_at") or "start"
+            if facing_at not in ("start", "end"):
+                raise ValueError(f"beat \"{beat['name']}\": facing_at is start or end")
+            turn = h0 + float(beat.get("facing_deg") or 0.0) - timeline.facing(sk, motion, b if facing_at == "end" else a)
         motion = timeline.moved(motion, turn, 0.0, 0.0)
         motion = timeline.moved(motion, 0.0, x0 - motion["root"][a][0], z0 - motion["root"][a][2])
         off = (x1 - motion["root"][b][0], z1 - motion["root"][b][2])  # from where it ends to where the shot wants it
