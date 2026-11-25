@@ -1593,6 +1593,71 @@ Read plainly: what sticks out round her shoulders is down by a third to three fi
 
 Pictures (`exports/omni/groove-flamenco/shoulders/`, out of git): `first.png`, `middle.png`, `last.png` are the push-in's first, middle and last moments in bold ink as cards. `raise-last-joe-before-after.png` and `raise-last-pixel-both-before-after.png` are close on her shoulder at the last raise (13.96 s). `raise-both-*` are the same with both arms up (10.75 s). `waist-last-joe-before-after.png` is the waistband. All of them are before on the left, taken off the watch page in a headless Chrome. `evidence/shoulders/after-*` and `before-*` are the judge's own: the real model, then bold ink, then "Pixels, both".
 
+## No flaps
+
+After "Shoulders that hold" the scraps were gone, but three things still showed with her arm overhead. A flap of skin stuck out below the raised arm like a little hand. Short bold-ink marks sat inside the raised upper arm like a tattoo. A dark jagged choker ringed the base of her neck. Now the choker is gone, the tattoo is down to a mark or two, and the flap is a small edge.
+
+```
+just impostor runs/<character> ...                   # cards cut with the shoulder and the neck held (the default)
+just impostor-joints runs/<character> detailed       # her pieces: the armpit drawn from both sides, the head's card stepping aside up the neck
+just impostor-shoulders groove-flamenco after evidence/shoulders-2
+```
+
+**Where each one came from.** As before, each card and piece was drawn alone in its own colour at the last raise. Every inked pixel was sorted by why bold ink drew it (an outline, a step in depth, a fold) and between what.
+
+- **The flap under the arm was the chest's card.** It holds a little of the arm's skin next to the joint, so the cards close up when the arm bends. When the arm goes up the collar bone lifts, and the shoulder joint goes up a few centimetres with it. The shoulder's zone (where the cards step aside for the piece) moves with the joint. The arm's skin that the chest's card kept is left behind, outside the zone, and shows. Measured on the model, those pixels are skin the arm's bones pull on wholly, 7 to 8 cm from the joint as the cards were cut: inside the zone then, outside it now.
+- **The tattoo was two things.** First, holes in the shoulder's piece. Overhead, the armpit's skin folds over on itself, and the fold's under side faces away from the eye, so it was not drawn. Through each hole the arm's card showed from inside the zone (the bit it keeps near its own bone), and bold ink drew a ring round it. Second, bold ink drew a line where the fold's two layers met.
+- **The choker was the head's card.** It had taken the neck's skin down to her collar, because the head's bones pull on it a little (4% or more is enough for the head, chest and hips). With her head tipped back that skin swung forward with the head, and its cut end showed as a dark ragged band. Holding that back left the card's cut end halfway down the neck, and the band moved up with it.
+
+**What was done.**
+
+- **The card above a held joint keeps less** (`bake_impostor.py`: HELD_ABOVE). At a shoulder, the chest's card keeps the arm's skin only within 1.0 ring of the joint (the arm's card keeps the chest's within 1.35, as before). The joint moves off the chest when the arm goes up, so what the chest keeps must sit deeper inside the zone. The head's joint is held the same way now: the head's card takes the neck's skin only near its own joint.
+- **The head's card steps aside up the neck** (`yoke.py`: HEAD_ASIDE; `bake_joints.py`). The neck's piece already stood in for the chest's card. Now the head's card also steps aside, in a zone of its own, 0.65 of the way from the foot of the neck to the head's joint (9 cm on her). The neck's piece carries the head's own neck skin up that far. The jaw, the face and the hair stay on the card. Tried at 0.8: it also cut away the bottom of her bun.
+- **The armpit drawn from both sides** (`impostor.py`: draw_skin; `gallery/impostor.js`: JOINT_VERTEX, JOINT_FRAGMENT). Inside its zone a shoulder's piece also draws faces turned away (`"sides": 2`), lit as the side the eye sees. Such a face says it is the chest's card, not the arm's, so bold ink draws no line between the fold's two layers. The arm's card keeps nothing in the shoulder's zone (`"cores_cm"`: a shoulder has no wide cuff to look down). Only past the zone (the piece is drawn 1.5 cm further) do faces turned away stay out, because past it they would be the inside of the tube, seen down its cut end.
+- **A piece may give a card a zone and a core of its own** (`"zones_cm"`, `"cores_cm"` in impostor.json; `impostor.py`: part_zones; `gallery/impostor-math.js`: partBalls). Both readers do the same, and a test holds them together.
+
+**What was weighed, and left off** (`judge_joints.py` on her take, from the push-in camera and from 1 m, each way against the others).
+
+| tried | what it did | kept? |
+|---|---|---|
+| both of a shoulder's cards stepping aside right out to the piece's edge | the last flap went, but more of her was left bare and she read less like herself | no |
+| the shoulder's piece drawn from outside only, as before | holes, and the ring of ink round each | no |
+| the arm's card keeping its core inside the zone | the tattoo's blob | no |
+| a shoulder piece's pull evened out along it, as the neck's is (3 and 8 cm) | the folds stayed where they were | no |
+| the head's card stepping aside 0.8 of the way up the neck | the bottom of her bun went, more bare | no |
+| the head's card left whole (only the cut held) | numbers like the kept way, but the choker came back halfway up her neck | no |
+
+**What it is now** (`evidence/shoulders/joints-after.json` is "Shoulders that hold"; `evidence/shoulders-2/joints-after.json` is this; before to after).
+
+| look | eye | shoulders, likeness | neck, likeness | arm raised, likeness | sticks out, shoulders | bare, shoulders |
+|---|---|---|---|---|---|---|
+| Bold ink | push-in camera | 0.71 to 0.69 | 0.69 to 0.74 | 0.58 to 0.59 | 125 to 55 | 55 to 63 |
+| Bold ink | crew camera | 0.71 to 0.71 | 0.75 to 0.77 | 0.61 to 0.62 | 91 to 55 | 34 to 37 |
+| Bold ink | 1 m | 0.68 to 0.68 | 0.78 to 0.79 | 0.70 to 0.70 | 1,767 to 1,072 | 1,122 to 1,298 |
+| "Pixels, both" | push-in camera | 0.71 to 0.72 | 0.79 to 0.82 | 0.70 to 0.69 | 253 to 177 | 26 to 28 |
+| "Pixels, both" | crew camera | 0.70 to 0.72 | 0.83 to 0.85 | 0.71 to 0.70 | 191 to 158 | 7 to 9 |
+| "Pixels, both" | 1 m | 0.68 to 0.70 | 0.86 to 0.87 | 0.74 to 0.76 | 2,379 to 1,656 | 853 to 1,018 |
+
+Round the neck, what sticks out fell from 954 to 549 pixels from 1 m in bold ink, and from 120 to 97 through the push-in camera in "Pixels, both". The dark blots fell in nearly every row. The pixels that stick out (the flaps) fell by a fifth to three fifths.
+
+**What did not get better.** The uncovered pixels went up again, a tenth to a half: from 1 m in bold ink a shoulder 1,122 to 1,298, the neck 313 to 472. The flaps used to cover skin the real model stretches there, the side of her body under the arm and the throat under the jaw, and nothing draws that skin now. Through the cameras the dance is filmed with it is a few pixels a shoulder. The neck's piece also sits further from the model's skin: 0.56 cm at a typical point, now 0.98. Most likely that is the head's own neck skin it now carries, whose pull is evened out along the neck the way the rest of the piece's is, so it bends more gently than the model's does. It was not checked. Through the push-in camera a shoulder in bold ink reads a little less like her (0.71 to 0.69).
+
+**The men did not change.** Their sheets and pieces are not baked again, and nothing new is drawn for them. A piece without `"sides"`, `"zones_cm"` or `"cores_cm"` is drawn as before. `just impostor-neck` and `just impostor-knees` on the candy-shop crew (`evidence/shoulders-2/joints-men-*-after.json` against `evidence/shoulders/`): all 104 rows of the neck's table and all 132 of the knees' are the same to the last digit.
+
+**What it costs.** Her pieces are 9,128 triangles where they were 8,790: the neck's piece carries the skin up to her jaw. The armpit's back faces are drawn only inside the shoulder's zone. Sheets are the same size.
+
+**What is still weak.**
+
+- **A small edge under the raised arm.** The chest's card still keeps a sliver of the arm's skin within a ring of the joint, and from 1 m it shows as a thin outline.
+- **Her side under a raised arm, and her throat under the jaw, are partly bare** (above). A piece that reaches down her side as far as the arm's bones pull would draw that stretch. It was not built.
+- **A dark spot and one or two short marks** are left in the raised armpit. That is the black of her top's edge on the folded skin, and a fold the bold ink still finds.
+- **Black lace-like scraps at her other armpit** with both arms up (`raise-both-joe-before-after.png`, the right of each picture). That is the edge of her top on the shoulder's piece. Not chased.
+- **The neck's skin is drawn further off** than before (0.6 to 1.0 cm).
+- **The men's cards are not cut the new way** and were not tried with it. When they are baked again, their heads' cards will step aside up their necks too. On Lincoln, whose shirt collar is held back, that has not been looked at.
+- No phone has run it.
+
+Pictures (`exports/omni/groove-flamenco/shoulders-2/`, out of git): `first.png`, `middle.png`, `last.png` are the push-in in bold ink as cards. `raise-last-*-before-after.png` are close on the raised shoulder at the last raise, `raise-both-*` with both arms up (10.75 s), and `neck-last-*` close on the neck. Each is in bold ink and in "Pixels, both", with before ("Shoulders that hold") on the left. `evidence/shoulders-2/after-*` are the judge's own: the real model, then bold ink, then "Pixels, both".
+
 ## A place from a world model
 
 The Niantic saloon is the first place we did not build. World Labs' Marble grew it from one picture: an empty Gold Rush saloon in the hold of a beached whaleship. What Marble hands over is kept out of git, in `world/marble/niantic-saloon/`: the place itself as a cloud of soft colored dots ("splats", in four sizes from 100 thousand dots to 4.3 million), a coarse mesh of every surface for bumping into, and a record that says how big it really is.

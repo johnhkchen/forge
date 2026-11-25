@@ -231,8 +231,9 @@ export function partBalls(card) {
   for (const joint of card.joints || []) for (const name of joint.between) {
     const p = card.parts.findIndex((part) => part.name === name);
     const piece = pieces.get(joint.bone), aside = piece && (piece.aside || joint.between).includes(name);
-    if (p >= 0 && out[p].length < FILL.aPart) out[p].push({ bone: joint.bone, radius: (FILL.ball * joint.ring_cm) / 100, inner: (FILL.inner * joint.ball_cm) / 100, zone: aside ? piece.zone_cm / 100 : 0,
-      core: aside ? (piece.core_cm ?? FILL.zoneCore * joint.ring_cm) / 100 : 0, about: (aside && piece.about) || null });
+    // (a piece may give one of the cards that step aside a zone and a core of its own: "zones_cm", "cores_cm")
+    if (p >= 0 && out[p].length < FILL.aPart) out[p].push({ bone: joint.bone, radius: (FILL.ball * joint.ring_cm) / 100, inner: (FILL.inner * joint.ball_cm) / 100, zone: aside ? (piece.zones_cm?.[name] ?? piece.zone_cm) / 100 : 0,
+      core: aside ? (piece.cores_cm?.[name] ?? piece.core_cm ?? FILL.zoneCore * joint.ring_cm) / 100 : 0, about: (aside && piece.about) || null });
   }
   return out;
 }

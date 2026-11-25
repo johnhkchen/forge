@@ -290,8 +290,12 @@ def joints_of(rig):
     return out
 
 
-HELD = 1.35     # at a shoulder, what either card takes from the other by pull alone stays within this many rings of the joint: the shoulder's zone (bake_joints.py), where a piece of the model is drawn
-HELD_JOINTS = ("upper_arm_l", "upper_arm_r")  # the joints it holds at: the ball joints an arm swings overhead about
+HELD = 1.35     # at a shoulder, what the arm's card takes from the chest stays within this many rings of the joint: the shoulder's zone (bake_joints.py), where a piece of the model is drawn
+HELD_JOINTS = ("upper_arm_l", "upper_arm_r", "head")  # the joints it holds at: the ball joints an arm swings overhead about, and the head's on its neck
+HELD_ABOVE = 1.0  # ... and what the card above the joint (the chest) takes from the one below stays within this many: less, because the
+                  # joint itself moves off it. An arm going up lifts its collar bone and its joint a few centimetres with it, and the
+                  # arm's skin the chest's card kept was left behind, outside the zone that had moved on, as a flap under the arm. A head
+                  # tipped back leaves the neck skin its card took from the chest standing out from her throat as a jagged collar.
 
 
 def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_overlap=0.04, head_lap=0.3, dress=None, held=0.0):
@@ -340,7 +344,7 @@ def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_
     owner, lapped, rings, balls = impostor.round_cut(np.concatenate(points), np.concatenate(pulls), np.concatenate(edges), np.concatenate(corners), np.concatenate(begin), sides,
                                                      [(column[a], column[b], centre) for a, b, _, centre in joints], lap, smooth_m, {(column["chest"], column["head"]): head_lap}, ball,
                                                      pulled=[trunk_overlap if name in TRUNK else overlap for name in names],
-                                                     held={pair: held for a, b, bone, _ in joints if bone in HELD_JOINTS for pair in ((column[a], column[b]), (column[b], column[a]))} if held > 0 else None)
+                                                     held=dict(pair for a, b, bone, _ in joints if bone in HELD_JOINTS for pair in (((column[a], column[b]), held), ((column[b], column[a]), held * HELD_ABOVE / HELD))) if held > 0 else None)
     out, own = {name: [] for name in names}, {name: 0 for name in names}
     for obj, start, many in spans:
         mine = owner[start:start + many]

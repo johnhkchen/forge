@@ -218,6 +218,8 @@ def main():
     name, target = flag("--name", "necked"), int(flag("--triangles", "320"))
     zones = dict((k, float(v)) for k, v in (pair.split("=") for pair in flag("--zone", "knee=1.6,elbow=1.7,hip=1.25,shoulder=1.35,neck=1").split(",")))
     even_m, cloth, rim = float(flag("--even", str(yoke.EVEN_M))), float(flag("--cloth", str(yoke.CLOTH))), float(flag("--rim", "0"))
+    head_aside = float(flag("--head-aside", str(yoke.HEAD_ASIDE)))  # how far up the neck the head's card steps aside for the neck's piece (0: it stays whole)
+    bare_shoulders = flag("--armpit", "on") == "on"  # a shoulder's piece is drawn from both sides in its zone and the arm's card keeps no core there (off: as before "No flaps")
     rework = flag("--pull", "worked") != "rig"  # --pull rig: every piece keeps the rig's own pull, as the knees do
     leave = set(flag("--leave", "").split(","))  # joints to leave to their cards whatever the bake finds (judge_joints.py says which do better so)
     with open(os.path.join(HERE, "joints.json")) as f:  # ... and the ones written down for this character
@@ -258,7 +260,10 @@ def main():
         # hangs over a collar, and is the head's card's to show)
         heads = [folds.get(g.name) == "head" for g in obj.vertex_groups]
         headed = np.array([sum(g.weight for g in v.groups if heads[g.group]) > 0.5 * (sum(g.weight for g in v.groups) or 1.0) for v in obj.data.vertices])
-        below += [[first + i for i in poly.vertices] for poly in obj.data.polygons if not headed[list(poly.vertices)].all()]
+        # (... but up the neck as far as the head's card steps aside for the neck's piece, the head's own neck skin is there to lie on)
+        up_to = (head_aside * (rig.matrix_world @ rig.data.bones["head"].head_local - rig.matrix_world @ rig.data.bones["neck"].head_local).length + LAP_M) if head_aside > 0 and "neck" in rig.data.bones and "head" in rig.data.bones else 0.0
+        foot = rig.matrix_world @ rig.data.bones["neck"].head_local if up_to else None
+        below += [[first + i for i in poly.vertices] for poly in obj.data.polygons if not headed[list(poly.vertices)].all() or (up_to and (obj.matrix_world @ poly.center - foot).length < up_to)]
     skin = BVHTree.FromPolygons(points, faces)
     skin_below = BVHTree.FromPolygons(points, below) if below else skin
     # What the pieces are cut from: a tidy mesh with this skeleton. A detailed mesh is not one (a third of a million
@@ -304,6 +309,9 @@ def main():
     for j, kind, ring, zone, centre in wanted:
         full = int(target * (float(flag("--neck-triangles", str(YOKE_FULL))) if kind == "neck" else 1))  # (--neck-triangles: how many times a joint's the neck piece may have)
         taken = lambda at: any((at - c).length < z - OVERLAP_M for c, z in shoulders)  # inside a shoulder's zone: its piece is there
+        # where the head's card steps aside up the neck (head_aside), the neck's piece carries the head's own neck skin too
+        neck_up = head_aside * (head_of(j["bone"]) - centre).length + LAP_M if kind == "neck" and head_aside > 0 else 0.0
+        up_neck = lambda at: (at - centre).length < neck_up
         pieces = []
         for obj in tidy:
             groups = bake_impostor.groups_of(obj, folds, dress)
@@ -320,7 +328,8 @@ def main():
             near = np.array([(obj.matrix_world @ v.co - centre).length < zone + margin * ring for v in obj.data.vertices])
             if kind == "neck":  # the trunk's side only (the head is its card's, whole), and not what a shoulder's piece has
                 free = np.array([not taken(obj.matrix_world @ v.co) for v in obj.data.vertices])
-                keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and pull[list(p.vertices), 1].mean() >= 0.2 and free[list(p.vertices)].any()}
+                keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and free[list(p.vertices)].any()
+                        and (pull[list(p.vertices), 1].mean() >= 0.2 or (pull[list(p.vertices), 0].mean() >= 0.2 and up_neck(obj.matrix_world @ p.center)))}
             else:
                 keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and pull[list(p.vertices)].sum(axis=1).mean() >= 0.2}
             if not keep:
@@ -339,15 +348,16 @@ def main():
             bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in keep], context="FACES")
             bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)  # a .glb's mesh is split along every seam of its texture
             bmesh.ops.triangulate(bm, faces=bm.faces)
-            pieces.append((obj, data, bm))
+            pieces.append((obj, data, bm, len(bm.faces) * (sum(1 for s in keep.values() if s[1] >= 0.2) / float(len(keep)) if kind == "neck" else 1.0)))  # (and how many of them the trunk's own side gives: what decides how often it is cut in four)
         if not pieces:
             continue
-        before = sum(len(bm.faces) for _, _, bm in pieces)
+        before = sum(len(bm.faces) for _, _, bm, _ in pieces)
+        trunk_side = sum(t for _, _, _, t in pieces)
         cuts = 0
-        while wrap and before * 4 ** (cuts + 1) <= full * 4:
+        while wrap and trunk_side * 4 ** (cuts + 1) <= full * 4:
             cuts += 1
         objects = []
-        for obj, data, bm in pieces:
+        for obj, data, bm, _ in pieces:
             for _ in range(cuts):
                 bmesh.ops.subdivide_edges(bm, edges=bm.edges, cuts=1, use_grid_fill=True)
                 bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -361,7 +371,7 @@ def main():
                 pulls = bm.verts.layers.deform.verify()
                 heads = {i for i, g in enumerate(obj.vertex_groups) if folds.get(g.name) == "head"}
                 share = lambda v: sum(w for g, w in v[pulls].items() if g in heads) / (sum(v[pulls].values()) or 1.0)
-                bmesh.ops.delete(bm, geom=[f for f in bm.faces if sum(share(v) for v in f.verts) / len(f.verts) > HEADS], context="FACES")
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if sum(share(v) for v in f.verts) / len(f.verts) > HEADS and not up_neck(obj.matrix_world @ f.calc_center_median())], context="FACES")
             bm.to_mesh(data)
             bm.free()
             new = bpy.data.objects.new("joint %s" % j["bone"], data)
@@ -371,9 +381,10 @@ def main():
                 new.vertex_groups.new(name=g.name)
             objects.append(new)
         count = sum(len(o.data.polygons) for o in objects)
-        if count > full * 4:  # a tidy mesh with more than enough there: cut down, the pull carried along
+        full_here = full * before / max(trunk_side, 1e-9)  # (the head's skin up the neck is more of the neck's piece, not fewer triangles for the rest)
+        if count > full_here * 4:  # a tidy mesh with more than enough there: cut down, the pull carried along
             for o in objects:
-                o.modifiers.new("fewer", "DECIMATE").ratio = full / float(count)
+                o.modifiers.new("fewer", "DECIMATE").ratio = full_here / float(count)
             graph = bpy.context.evaluated_depsgraph_get()
             for o in objects:
                 fewer = bpy.data.meshes.new_from_object(o.evaluated_get(graph), preserve_all_data_layers=True, depsgraph=graph)
@@ -386,10 +397,23 @@ def main():
             for poly in o.data.polygons:
                 poly.use_smooth = True
         joints.append({"bone": j["bone"], "kind": kind, "between": j["between"], "ring_cm": j["ring_cm"], "zone_cm": round(zone * 100, 1), "reach_cm": round((zone + LAP_M) * 100, 1), "triangles": sum(len(o.data.polygons) for o in objects), "cut_from": before})
+        if kind == "shoulder" and bare_shoulders:
+            # An armpit overhead (README: "No flaps"). Overhead the armpit folds over on itself, and the fold's far side
+            # faces away: left out, it was a hole, and the arm's card showed through it from inside the zone (its core,
+            # near the arm's own line), a blob ringed in ink like a tattoo. So the piece is drawn from both sides inside its
+            # zone, and the arm's card keeps no core there (a shoulder has no wide cuff to look down). (Tried: both cards
+            # stepping aside out to the piece's edge, zones_cm: the last flap under the arm went, and the judge counted
+            # more of her left bare and less like her.)
+            joints[-1].update(sides=2, cores_cm={j["between"][0]: 0.0})
         if kind == "neck":
             # about: the bone whose head the zone and the piece are a ball about (not the joint's own, the head's);
             # aside: the one card that steps aside there (the head's stays whole); core_cm: and keeps nothing in it
             joints[-1].update(about="neck", aside=[j["between"][1]], core_cm=0.0)
+            if head_aside > 0:
+                # ... and the head's card steps aside too, up the neck to HEAD_ASIDE of the way to the head's joint: below
+                # that the neck is the piece's, the jaw and the face stay the card's. A head tipped back carried the foot
+                # of the neck its card had pictured out from her throat, a jagged dark collar (README: "No flaps")
+                joints[-1].update(aside=[j["between"][1], j["between"][0]], zones_cm={j["between"][0]: round(head_aside * (head_of(j["bone"]) - centre).length * 100, 1)}, cores_cm={j["between"][0]: 0.0})
         made += objects
         print("JOINTS %s (%s): a zone of %.1f cm; %d triangles of the tidy mesh there, made %d" % (j["bone"], kind, zone * 100, before, joints[-1]["triangles"]), flush=True)
     if dress and dress["root"] in rig.data.bones:
@@ -601,7 +625,7 @@ def main():
             centre, zone = head_of(j.get("about", j["bone"])), j["zone_cm"] / 100.0
             total = missed = 0.0
             for obj in bodies:
-                groups = [n in j.get("aside", j["between"]) for n in bake_impostor.groups_of(obj, folds, dress)]
+                groups = [n in [a for a in j.get("aside", j["between"]) if (j.get("zones_cm") or {}).get(a, j["zone_cm"]) >= j["zone_cm"]] for n in bake_impostor.groups_of(obj, folds, dress)]  # (a card that steps aside less far than the piece reaches is not counted: the head's, up the neck)
                 near = {}
                 for poly in obj.data.polygons:
                     at = obj.matrix_world @ poly.center

@@ -471,7 +471,9 @@ uniform sampler2D atlas;
 uniform sampler2D atlasData;
 uniform vec3 jointAt;
 uniform float reach;
+uniform float backReach; // its far side, where it has one drawn (a bare armpit folded over: "sides" 2), only this near
 uniform float who;
+uniform float whoBack; // a face seen from behind (a bare armpit folded over on itself) says it is the other card of the joint: no ink between the fold's two layers (impostor.py: draw_skin)
 uniform float inkM;
 uniform vec3 lineInk;
 uniform vec3 light;
@@ -495,16 +497,17 @@ vec3 unfold(vec2 e) {
 }
 void main() {
   vec3 off = vView - jointAt;
-  if (dot(off, off) > reach * reach) discard;
+  if (dot(off, off) > (gl_FrontFacing || inkM > 0.0 ? reach * reach : backReach * backReach)) discard; // (the ink shell is all back faces: it keeps its reach)
   if (inkM > 0.0) {
     gl_FragColor = vec4(lineInk, who);
   } else {
     vec3 colour = texture2D(atlas, vAtlas).rgb;
     vec3 seen = normalize(mat3(vTurnX, vTurnY, vTurnZ) * unfold(texture2D(atlasData, vAtlas).xy));
+    if (!gl_FrontFacing && backReach > 0.0 && backReach < reach) seen = -seen; // a bare armpit's fold seen from behind: lit as the side the eye sees (not the dress's inside, which is as it was)
     float facing = dot(seen, light);
     vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
     vec3 paint = mix(vec3(dot(colour, vec3(0.2126, 0.7152, 0.0722))), colour, punch);
-    gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), who);
+    gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), gl_FrontFacing ? who : whoBack);
   }
   #include <colorspace_fragment>
 }`;
@@ -517,7 +520,7 @@ export async function skinFor(folder, card, loader) {
   const pieces = [];
   gltf.scene.traverse((o) => {
     const joint = o.isSkinnedMesh && card.skin.joints.find((j) => `joint ${j.bone}` === o.material.name);
-    if (joint) pieces.push({ joint, geometry: o.geometry, bones: o.skeleton.bones.map((b) => b.name), parents: o.skeleton.bones.map((b) => (b.parent?.isBone ? b.parent.name : null)), inverses: o.skeleton.boneInverses, part: card.parts.findIndex((p) => p.name === joint.part) });
+    if (joint) pieces.push({ joint, geometry: o.geometry, bones: o.skeleton.bones.map((b) => b.name), parents: o.skeleton.bones.map((b) => (b.parent?.isBone ? b.parent.name : null)), inverses: o.skeleton.boneInverses, part: card.parts.findIndex((p) => p.name === joint.part), backPart: card.parts.findIndex((p) => p.name === joint.between[1]) });
   });
   return { pieces, colour, data, inkM: card.ink_m || 0, dispose: () => { colour.dispose(); data.dispose(); pieces.forEach((p) => p.geometry.dispose()); } };
 }
@@ -543,9 +546,9 @@ export function skinMeshes(skin, bones, paint) {
     const stood = piece.bones.map((_, i) => standIn(piece, i));
     const skeleton = new THREE.Skeleton(stood.map(([bone]) => bone), stood.map(([, k]) => piece.inverses[k]));
     return [0, 1].map((shell) => {
-      const face = piece.joint.kind === "dress" ? THREE.DoubleSide : THREE.FrontSide; // (a skirt flung up shows its inside)
+      const face = piece.joint.kind === "dress" || piece.joint.sides === 2 ? THREE.DoubleSide : THREE.FrontSide; // (a skirt flung up shows its inside; a bare armpit folded over, its far side)
       const material = new THREE.ShaderMaterial({ vertexShader: JOINT_VERTEX, fragmentShader: JOINT_FRAGMENT, side: shell ? THREE.BackSide : face, uniforms: {
-        atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, who: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 }, over: { value: 0 },
+        atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, backReach: { value: 0 }, who: { value: 1 }, whoBack: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 }, over: { value: 0 },
         lineInk: { value: new THREE.Color(0x1c1721) }, ...paint } });
       const mesh = new THREE.SkinnedMesh(piece.geometry, material);
       mesh.bind(skeleton, new THREE.Matrix4());
@@ -567,8 +570,10 @@ export function skinMeshes(skin, bones, paint) {
           const u = mesh.material.uniforms;
           u.jointAt.value.copy(at);
           u.reach.value = (piece.joint.reach_cm / 100) * size;
+          u.backReach.value = piece.joint.kind === "dress" ? u.reach.value : ((piece.joint.sides === 2 ? piece.joint.zone_cm : 0) / 100) * size;
           u.over.value = ((piece.joint.over_cm || 0) / 100) * size;
           u.who.value = told.ids ? cardNumber(figure, piece.part) : 1;
+          u.whoBack.value = told.ids && piece.backPart >= 0 ? cardNumber(figure, piece.backPart) : u.who.value;
           if (shell) mesh.visible = told.line > 0 && skin.inkM > 0;
         });
       });

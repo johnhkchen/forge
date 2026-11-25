@@ -427,6 +427,9 @@ def test_joints():
     check("a shoulder's two parts take nothing of each other further than 1.35 rings from the joint, however far the pull reaches", bool((off_joint[held[0] | held[1]] <= 1.35 * rings[(0, 1)] + 1e-9).all())
           and bool((off_joint[far_pull[0] | far_pull[1]] > 1.35 * rings[(0, 1)]).any()), "the pull alone took faces out to %.1f cm, held %.1f cm" % (100 * off_joint[far_pull[0] | far_pull[1]].max(), 100 * off_joint[held[0] | held[1]].max()))
     check("... and nearer the joint they take what they took", bool(((held[0] | held[1]) == ((far_pull[0] | far_pull[1]) & (off_joint <= 1.35 * rings[(0, 1)]))).all()))
+    _, less_above, _, _ = impostor.round_cut(points, pull, edges, corners, begin, sides, joint, 0.2, 0.02, pulled=[0.1, 0.1], held={(0, 1): 1.35, (1, 0): 1.0})
+    check("... and the part above the joint may be held nearer still (bake_impostor.py: HELD_ABOVE; the joint moves off it), the part below as it was",
+          bool((off_joint[less_above[1]] <= 1.0 * rings[(0, 1)] + 1e-9).all()) and bool((less_above[0] == held[0]).all()) and less_above[1].sum() < held[1].sum(), "%d faces to %d" % (held[1].sum(), less_above[1].sum()))
     size, made = balls[(0, 1)]
     check("the joint's ball is as big as fits inside the limb there, and is made of the faces round the ring, both parts'", 0.03 < size < 0.04 and (owner[made] == 0).any() and (owner[made] == 1).any()
           and float(np.abs(middle[made] - line).max()) < 0.065, "%.1f cm across, faces within %.1f cm of the ring" % (200 * size, 100 * np.abs(middle[made] - line).max()))
@@ -1042,6 +1045,12 @@ def test_skin(runs):
         check("... from outside only: its near wall, never its far one", float(depth[there].max()) < 3.0 and abs(float(depth[120, 120]) - 2.95) < 0.004, "%.3f to %.3f m off" % (depth[there].min(), depth[there].max()))
         inside_out = piece(rest, flip=True)[0]
         check("... and turned inside out, only the wall that then faces the eye, the far one", float(inside_out[np.isfinite(inside_out)].min()) > 3.0)
+        skin.joints[0].update(sides=2, zone_cm=6.0)  # a bare armpit folded over: its far side drawn too, inside its zone only
+        both = piece(rest, flip=True)[0]
+        near_wall = np.isfinite(both) & (both < 3.0)
+        check("a piece drawn from both sides shows a face turned away too, but only inside its zone (past it, that is the inside of a tube)", near_wall.any()
+              and float(np.abs(y[near_wall]).max()) < math.sqrt(0.06 ** 2 - 0.05 ** 2) + 0.012 and float(np.abs(y[np.isfinite(both)]).max()) > 0.09, "%.3f m up and down" % float(np.abs(y[near_wall]).max()))
+        del skin.joints[0]["sides"], skin.joints[0]["zone_cm"]
         check("it says it is the card below the joint", set(np.unique(who)) == {0, 1})
         skin.joints[0]["over_cm"] = 1.5  # worn over the body (a dress): it stands nearer by that much, on the very same pixels
         over, _ = piece(rest)
@@ -1208,6 +1217,15 @@ def test_neck(runs):
     check("the neck piece's zone is the chest's card's alone, with no core; the head's card has none; a shoulder's is both its cards', as it was",
           near(zones["chest"], [(0.16, 0.0), (0.12, impostor.ZONE_CORE * 0.09)]) and near(zones["head"], [(0.0, 0.0)]) and near(zones["upper_arm_l"], [(0.12, impostor.ZONE_CORE * 0.09)]), str(zones))
     check("... and it is a ball about the foot of the neck, not the head's joint", abouts == {"chest": ["neck", None], "head": [None], "upper_arm_l": [None]}, str(abouts))
+    # her pieces ("No flaps"): the head's card steps aside up the neck in a zone of its own, with no core; at a bare
+    # shoulder both cards step aside as far as the piece reaches, the arm's with no core
+    bare = json.loads(json.dumps(card))
+    bare["skin"]["joints"][0].update(aside=["chest", "head"], zones_cm={"head": 11.0}, cores_cm={"head": 0.0})
+    bare["skin"]["joints"][1].update(zones_cm={"upper_arm_l": 13.0, "chest": 13.0}, cores_cm={"upper_arm_l": 0.0}, sides=2)
+    bare_zones, bare_abouts = impostor.part_zones(bare), impostor.part_zones(bare, about=True)
+    check("a piece may give a card that steps aside a zone and a core of its own: the head's up the neck, a bare shoulder's",
+          near(bare_zones["head"], [(0.11, 0.0)]) and near(bare_zones["chest"], [(0.16, 0.0), (0.13, impostor.ZONE_CORE * 0.09)]) and near(bare_zones["upper_arm_l"], [(0.13, 0.0)])
+          and bare_abouts["head"] == ["neck"], str(bare_zones))
     folder = tempfile.mkdtemp(prefix="impostor-test-")
     try:
         ball(folder)
@@ -1261,9 +1279,9 @@ def test_neck(runs):
               const picked = (run) => ["comic", "pixel-baked", "pixel-both", "joe"].map((id) => bakedFor(run, lookOf(id), "detailed").folder);
               const first = picked(all), mixed = picked(some);
               globalThis.location = { search: "?joints=knees" };
-              console.log(JSON.stringify({ balls: partBalls(card), first, mixed, knees: picked(all) }));
+              console.log(JSON.stringify({ balls: partBalls(card.card), bare: partBalls(card.bare), first, mixed, knees: picked(all) }));
             """ % (json.dumps("file://" + os.path.join(REPO, "gallery", "impostor-math.js")), json.dumps("file://" + os.path.join(shim, "looks.mjs")))
-            out = subprocess.run([node, "--input-type=module", "-e", script], input=json.dumps(card), capture_output=True, text=True)
+            out = subprocess.run([node, "--input-type=module", "-e", script], input=json.dumps({"card": card, "bare": bare}), capture_output=True, text=True)
         finally:
             shutil.rmtree(shim)
         if out.returncode:
@@ -1271,6 +1289,8 @@ def test_neck(runs):
         js = json.loads(out.stdout)
         check("the page gives every part the same zones, and the same bone each is about", [[(round(b["zone"], 9), round(b["core"], 9), b["about"]) for b in balls] for balls in js["balls"]]
               == [[(round(z, 9), round(c, 9), a) for (z, c), a in zip(zones[part["name"]], abouts[part["name"]])] for part in card["parts"]], str(js["balls"]))
+        check("... and the same zones and cores of their own", [[(round(b["zone"], 9), round(b["core"], 9), b["about"]) for b in balls] for balls in js["bare"]]
+              == [[(round(z, 9), round(c, 9), a) for (z, c), a in zip(bare_zones[part["name"]], bare_abouts[part["name"]])] for part in bare["parts"]], str(js["bare"]))
         tail = lambda names: [n.split("-impostor")[1] for n in names]
         check("... reads the cards that have a neck piece first of all, each look its own", tail(js["first"]) == ["-comic-necked", "-pixel-necked", "-pixel-clear-necked", "-joe-necked"], str(tail(js["first"])))
         check("... the ones with knees only where there are no others, and the plain cards where there are neither", tail(js["mixed"]) == ["-comic-skinned", "-pixel-joined", "-pixel-clear", "-joe-necked"], str(tail(js["mixed"])))

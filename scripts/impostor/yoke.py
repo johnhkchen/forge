@@ -29,6 +29,7 @@ RIM_CLEAR_M = 0.04 # ... but not where the next piece is, nor this far past it: 
 RIM_UP = 0.2       # ... nor up the neck: above the foot of the neck by this share of the zone the piece meets the head's card, not the chest's
 EVEN_M = 0.03      # the pull is evened out over about this far along the surface
 CLOTH = 0.5        # clothing gives this share of what the neck and head pull on it to the chest
+HEAD_ASIDE = 0.65  # the head's card steps aside for the neck's piece this share of the way from the foot of the neck up to the head's joint: the neck is the piece's, the jaw and the face the card's
 SHOULDER_SPAN = 0.65  # a shoulder's zone reaches at least this share of the way from its joint to the foot of the neck (shoulder_zone)
 
 

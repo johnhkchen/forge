@@ -1084,7 +1084,10 @@ def part_zones(card, about=False):
             if piece is None or name not in piece.get("aside", joint["between"]):
                 out.setdefault(name, []).append(None if about else (0.0, 0.0))
             else:
-                out.setdefault(name, []).append(piece.get("about") if about else (piece["zone_cm"] / 100.0, piece.get("core_cm", ZONE_CORE * joint["ring_cm"]) / 100.0))
+                # (a piece may give one of the cards that step aside a zone and a core of its own: "zones_cm", "cores_cm")
+                zone_cm = (piece.get("zones_cm") or {}).get(name, piece["zone_cm"])
+                core_cm = (piece.get("cores_cm") or {}).get(name, piece.get("core_cm", ZONE_CORE * joint["ring_cm"]))
+                out.setdefault(name, []).append(piece.get("about") if about else (zone_cm / 100.0, core_cm / 100.0))
     return {name: zones[:BALLS_A_PART] for name, zones in out.items()}
 
 
@@ -1400,9 +1403,18 @@ def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=Non
         if joint.get("over_cm"):  # worn over the body (a dress): it wins where a card of the body is this near, slid toward the eye along its own line, so it stands where it stood on the picture
             ahead = ahead * np.maximum(0.0, 1.0 - joint["over_cm"] / 100.0 / np.maximum(np.linalg.norm(at - eye.at, axis=1), 1e-6))
         number = 1 + PARTS_A_FIGURE * (figure % 15) + names.index(joint["part"]) % PARTS_A_FIGURE
+        # (a face seen from behind says it is the other card of the joint: where an armpit folds over on itself, its two layers are then two cards meeting, and bold ink draws no line between them)
+        number_back = 1 + PARTS_A_FIGURE * (figure % 15) + names.index(joint["between"][1]) % PARTS_A_FIGURE if joint["between"][1] in names else number
+        both = joint.get("sides") == 2  # its far side drawn too, inside its zone (bake_joints.py: a bare armpit folds over on itself overhead)
+        inner = joint.get("zone_cm", 0.0) / 100.0 * float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))
         for t in tris:
             (x0, y0), (x1, y1), (x2, y2) = spots[t]
             area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)
+            back = both and area < -1e-9
+            if back:
+                t = t[[0, 2, 1]]
+                (x0, y0), (x1, y1), (x2, y2) = spots[t]
+                area = -area
             if area <= 1e-9 or (ahead[t] <= eye.near).any():  # turned away from the eye, or behind it
                 continue
             lo_x, hi_x = max(0, int(math.floor(min(x0, x1, x2)))), min(wide, int(math.ceil(max(x0, x1, x2))))
@@ -1415,7 +1427,7 @@ def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=Non
             w = np.stack([w0, w1, 1.0 - w0 - w1], axis=-1)
             far = w @ ahead[t]
             keep = (w >= 0.0).all(axis=-1) & (far < depth[lo_y:hi_y, lo_x:hi_x])
-            keep &= (((w @ at[t] - centre) ** 2).sum(axis=-1) < reach * reach)  # a piece is drawn in its zone and a little past it
+            keep &= (((w @ at[t] - centre) ** 2).sum(axis=-1) < (inner if back else reach) ** 2)  # a piece is drawn in its zone and a little past it (its far side in its zone only: past it, that is the inside of a tube, seen down its cut end)
             if not keep.any():
                 continue
             w = w[keep]
@@ -1423,12 +1435,14 @@ def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=Non
             iy, ix = np.clip(np.floor(place[:, 1] * size).astype(int), 0, size - 1), np.clip(np.floor(place[:, 0] * size).astype(int), 0, size - 1)
             normal = np.einsum("nk,kij,nj->ni", w, turns[t], skin.facing[iy, ix].astype(np.float64))
             normal /= np.maximum(np.linalg.norm(normal, axis=1, keepdims=True), 1e-9)
+            if back:  # (seen from behind: lit as the side the eye sees)
+                normal = -normal
             rgb = skin.colour[iy, ix, :3]
             lit = to_linear(rgb) * tones(normal, np.eye(3), eye) if paint is None else painted(rgb, normal, np.eye(3), eye, paint)
             colour[lo_y:hi_y, lo_x:hi_x][keep] = lit
             depth[lo_y:hi_y, lo_x:hi_x][keep] = far[keep]
             if who is not None:
-                who[lo_y:hi_y, lo_x:hi_x][keep] = number
+                who[lo_y:hi_y, lo_x:hi_x][keep] = number_back if back else number
 
 
 # ---------- lines drawn on the finished picture (gallery/looks.js does the same on the graphics card) ----------
