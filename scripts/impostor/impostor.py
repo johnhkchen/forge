@@ -1132,10 +1132,12 @@ def tones(normal_bone, turn, eye, light=LIGHT, shade=SHADE, edges=EDGES):
     return out
 
 
-def painted(rgb, normal_bone, turn, eye, paint):
+def painted(rgb, normal_bone, turn, eye, paint, rim_world=None):
     """A card's pixels in a look's paint (the page's shader: CARD_FRAGMENT): the stored colour made stronger or
     weaker (punch), one of the look's flat tones by how far the surface faces the light, and a little light on
-    the rim. rgb as stored (0 to 1, as the screen has it); returns light as it adds up (to_screen for the screen)."""
+    the rim. rgb as stored (0 to 1, as the screen has it); returns light as it adds up (to_screen for the screen).
+    rim_world: which way the surface itself faces, in the world, for the rim's light (a piece whose skin is
+    dragged: its turned facing leans further from the eye than the stretched skin does; draw_skin)."""
     world = normal_bone @ turn.T
     facing = world @ (eye.turn @ unit(LIGHT))
     tone = np.ones(facing.shape + (3,), dtype=np.float32)
@@ -1144,7 +1146,7 @@ def painted(rgb, normal_bone, turn, eye, paint):
     lit = to_linear(rgb)
     grey = lit @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
     lit = grey[..., None] + (lit - grey[..., None]) * paint["punch"]
-    rim = paint["rim"] * (1.0 - np.clip(world @ eye.turn[:, 2], 0.0, 1.0)) ** 3 * (facing >= paint["edges"][0])
+    rim = paint["rim"] * (1.0 - np.clip((world if rim_world is None else rim_world) @ eye.turn[:, 2], 0.0, 1.0)) ** 3 * (facing >= paint["edges"][0])
     return lit * tone + rim[..., None]
 
 
@@ -1406,7 +1408,7 @@ def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=Non
         # (a face seen from behind says it is the other card of the joint: where an armpit folds over on itself, its two layers are then two cards meeting, and bold ink draws no line between them)
         number_back = 1 + PARTS_A_FIGURE * (figure % 15) + names.index(joint["between"][1]) % PARTS_A_FIGURE if joint["between"][1] in names else number
         both = joint.get("sides") == 2  # its far side drawn too, inside its zone (bake_joints.py: a bare armpit folds over on itself overhead)
-        inner = joint.get("zone_cm", 0.0) / 100.0 * float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))
+        inner = joint.get("back_cm", joint.get("zone_cm", 0.0)) / 100.0 * float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))  # (its far side: in its zone, or as far as "back_cm" says: an armpit that reaches down the side)
         for t in tris:
             (x0, y0), (x1, y1), (x2, y2) = spots[t]
             area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)
@@ -1438,7 +1440,11 @@ def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=Non
             if back:  # (seen from behind: lit as the side the eye sees)
                 normal = -normal
             rgb = skin.colour[iy, ix, :3]
-            lit = to_linear(rgb) * tones(normal, np.eye(3), eye) if paint is None else painted(rgb, normal, np.eye(3), eye, paint)
+            flat = None
+            if joint.get("rim") == "surface":  # (its rim lit by which way the skin itself faces: bake_joints.py, an armpit)
+                flat = unit(np.cross(at[t[1]] - at[t[0]], at[t[2]] - at[t[0]]))
+                flat = np.tile(flat if flat @ (eye.at - at[t[0]]) > 0 else -flat, (len(rgb), 1))
+            lit = to_linear(rgb) * tones(normal, np.eye(3), eye) if paint is None else painted(rgb, normal, np.eye(3), eye, paint, flat)
             colour[lo_y:hi_y, lo_x:hi_x][keep] = lit
             depth[lo_y:hi_y, lo_x:hi_x][keep] = far[keep]
             if who is not None:

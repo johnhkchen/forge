@@ -85,7 +85,15 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             The judge finds how deep a point is in a round leg, never past the leg's own thickness, and not below
             the ankle; a leg's middle line that goes out through the side of a skirt is out by as much of it as is
             past the cloth, and one that goes out under the hem is not out at all
-  baked     with RUNS_DIR holding a baked character (profiles/*-impostor-comic-joined, or the older
+  armpit    the armpit (yoke.py, bake_joints.py): the least turn from one direction to another; an arm swept from
+            hanging to overhead every way round, its collar bone still and lifted; a bone carried by the one it
+            hangs from and turned about its own head; a rig's pull, whole or as each point's strongest bones, the
+            same; on a torso whose side the arm pulls on near the joint, the chest's card steps aside as far round
+            the joint as the sweep drags its skin, no less than the shoulder's zone and no more than SIDE_MOST
+            times it; such a piece's cards keep no core and their own zones. With RUNS_DIR holding a baked
+            armpit (*-impostor-joe-layered-necked): the chest's zone is past the shoulder's, the piece reaches
+            it, from both sides
+  baked    with RUNS_DIR holding a baked character (profiles/*-impostor-comic-joined, or the older
             *-impostor): its sheets are the size its card says, every part has every picture, a bone's frame in
             the file is where its skin was bound, and a frame of its walk draws as one whole figure; a sheet
             baked since the joints were mended marks its ink line, says how every joint was lapped, and its
@@ -1050,7 +1058,12 @@ def test_skin(runs):
         near_wall = np.isfinite(both) & (both < 3.0)
         check("a piece drawn from both sides shows a face turned away too, but only inside its zone (past it, that is the inside of a tube)", near_wall.any()
               and float(np.abs(y[near_wall]).max()) < math.sqrt(0.06 ** 2 - 0.05 ** 2) + 0.012 and float(np.abs(y[np.isfinite(both)]).max()) > 0.09, "%.3f m up and down" % float(np.abs(y[near_wall]).max()))
-        del skin.joints[0]["sides"], skin.joints[0]["zone_cm"]
+        skin.joints[0]["back_cm"] = 10.0  # an armpit that reaches down the side ("An armpit that holds"): its far side as far as it says
+        further = piece(rest, flip=True)[0]
+        far_wall = np.isfinite(further) & (further < 3.0)
+        check("... and as far as \"back_cm\" says, where it has one (an armpit reaching down the side)", far_wall.any()
+              and abs(float(np.abs(y[far_wall]).max()) - math.sqrt(0.10 ** 2 - 0.05 ** 2)) < 0.012, "%.3f m up and down" % (float(np.abs(y[far_wall]).max()) if far_wall.any() else 0.0))
+        del skin.joints[0]["sides"], skin.joints[0]["zone_cm"], skin.joints[0]["back_cm"]
         check("it says it is the card below the joint", set(np.unique(who)) == {0, 1})
         skin.joints[0]["over_cm"] = 1.5  # worn over the body (a dress): it stands nearer by that much, on the very same pixels
         over, _ = piece(rest)
@@ -1308,8 +1321,12 @@ def test_neck(runs):
     foot, top = rest[said["about"]][:3, 3], rest[said["bone"]][:3, 3]
     at = skin.stood(said["bone"], rest)[0]
     far = np.linalg.norm(at - foot, axis=1)
-    check("a baked neck piece: some hundreds of triangles, a ball about the foot of the neck, the chest's card alone stepping aside",
-          said["about"] == "neck" and said["aside"] == ["chest"] and said["part"] == "chest" and 200 <= len(tris) <= 2400 and float((far < said["reach_cm"] / 100.0 + 0.06).mean()) > 0.97, "%d triangles, %.0f%% of its points within reach and 6 cm more" % (len(tris), 100 * (far < said["reach_cm"] / 100.0 + 0.06).mean()))
+    # (baked since "No flaps", the head's card steps aside too, but only up the neck, in a zone of its own; and a point
+    # whose pull was worked over is moved, as it rests, to stand right as the cards were pictured, arms hanging: with
+    # the rig's arms straight out a few of them stand off, so at rest a few more points than before lie past its reach)
+    check("a baked neck piece: some hundreds of triangles, a ball about the foot of the neck, the chest's card stepping aside (and the head's only up the neck)",
+          said["about"] == "neck" and said["aside"][0] == "chest" and (said["aside"] == ["chest"] or (said["aside"] == ["chest", "head"] and said["zones_cm"]["head"] < said["zone_cm"]))
+          and said["part"] == "chest" and 200 <= len(tris) <= 2400 and float((far < said["reach_cm"] / 100.0 + 0.06).mean()) > 0.95, "%s; %d triangles, %.0f%% of its points within reach and 6 cm more" % (said["aside"], len(tris), 100 * (far < said["reach_cm"] / 100.0 + 0.06).mean()))
     share = lambda name: ((bones == skin.bones.index(name)) * pull).sum(axis=1) if name in skin.bones else np.zeros(len(points))
     up = (at - foot) @ impostor.unit(top - foot) / float(np.linalg.norm(top - foot))  # 0 at the foot of the neck, 1 at the head's joint
     column = np.linalg.norm((at - foot) - np.outer(up, top - foot), axis=1) < 0.09
@@ -1682,10 +1699,83 @@ def test_legs():
           abs(through - (math.hypot(0.36, 0.30) * (0.45 - 0.25) / 0.36 + 0.40)) < 1e-3 and under == 0.0, "%.3f and %.3f m" % (through, under))
 
 
+def test_armpit(runs):
+    """The armpit (yoke.py: arm_sweep, pose_bones, skin, side_zone; bake_joints.py: arm_drag): how far a raised arm
+    drags the skin of the side off the chest's card, and how far the chest's card steps aside for it."""
+    import yoke
+    # a turn that takes one direction to another, and half a turn
+    rng = np.random.default_rng(7)
+    a, b = impostor.unit(rng.normal(size=3)), impostor.unit(rng.normal(size=3))
+    turn = yoke.rotation(a, b)
+    check("the least turn takes one direction to another, and is a turn", np.allclose(turn @ a, b) and np.allclose(turn.T @ turn, np.eye(3)) and abs(np.linalg.det(turn) - 1.0) < 1e-9)
+    flip = yoke.rotation(a, -a)
+    check("... straight back is half a turn", np.allclose(flip @ a, -a) and np.allclose(flip.T @ flip, np.eye(3)) and abs(np.linalg.det(flip) - 1.0) < 1e-9)
+
+    # a sweep of an arm hanging down its side (z up, the body facing -y, the left arm out along +x)
+    hang, out, ahead, up = np.array([0.0, 0.0, -1.0]), np.array([1.0, 0.0, 0.0]), np.array([0.0, -1.0, 0.0]), np.array([0.0, 0.0, 1.0])
+    ways = yoke.arm_sweep(hang, out, ahead, up)
+    aims = [t @ hang for t, _ in ways]
+    check("an arm is swept from hanging to overhead, out to the side, forward, across and back, with the collar bone still and lifted",
+          any(np.allclose(v, hang) for v in aims) and any(np.allclose(v, up) for v in aims) and any(np.allclose(v, out) for v in aims) and any(np.allclose(v, ahead) for v in aims)
+          and any(v @ out < -0.3 for v in aims) and any(v @ ahead < -0.3 for v in aims) and max(l for _, l in ways) == 180.0 * yoke.COLLAR_LIFT and min(l for _, l in ways) == 0.0, "%d ways" % len(ways))
+
+    # a skeleton: the chest, a collar bone from the middle out, the upper arm hanging from its end
+    frame = lambda head, y_axis: np.block([[np.column_stack([np.cross(y_axis, [0.0, -1.0, 0.0]) if abs(y_axis[1]) < 0.9 else [1.0, 0.0, 0.0], y_axis, np.cross(np.cross(y_axis, [0.0, -1.0, 0.0]) if abs(y_axis[1]) < 0.9 else [1.0, 0.0, 0.0], y_axis)]), np.array(head, dtype=float)[:, None]], [np.zeros((1, 3)), np.ones((1, 1))]])
+    hung = {"chest": frame([0.0, 0.0, 0.0], np.array([0.0, 0.0, 1.0])), "shoulder_l": frame([0.03, 0.0, 0.0], np.array([1.0, 0.0, 0.0])), "upper_arm_l": frame([0.15, 0.0, 0.0], hang)}
+    parent = {"chest": None, "shoulder_l": "chest", "upper_arm_l": "shoulder_l"}
+    turned = yoke.arm_pose(hung, parent, "upper_arm_l", "shoulder_l", yoke.rotation(hang, up), 30.0, out, up)
+    joint = turned["upper_arm_l"][:3, 3]
+    check("a bone is carried as the one it hangs from is, then turned about its own head: the collar bone lifts the joint, the arm points up",
+          np.allclose(turned["chest"], hung["chest"]) and np.allclose(turned["shoulder_l"][:3, 3], hung["shoulder_l"][:3, 3]) and abs(joint[2] - 0.12 * 0.5) < 1e-9 and np.allclose(turned["upper_arm_l"][:3, 1], up), str(joint))
+
+    # skin: the side of the torso under the arm, pulled more by the arm the nearer it is to the joint, and the arm
+    names = ["chest", "shoulder_l", "upper_arm_l"]
+    side = np.array([[0.13, y, z] for y in np.linspace(-0.08, 0.08, 9) for z in np.linspace(-0.30, 0.04, 35)])
+    arm = np.array([[0.15 + 0.03 * math.cos(t), 0.03 * math.sin(t), z] for t in np.linspace(0, 2 * math.pi, 12, endpoint=False) for z in np.linspace(-0.28, -0.02, 14)])
+    points = np.concatenate([side, arm])
+    reach = np.clip(1.0 - np.linalg.norm(side - hung["upper_arm_l"][:3, 3], axis=1) / 0.12, 0.0, 1.0) * 0.45
+    pull = np.zeros((len(points), 3))
+    pull[:len(side), 0], pull[:len(side), 2], pull[len(side):, 2] = 1.0 - reach, reach, 1.0
+    rest_inv = np.array([np.linalg.inv(hung[n]) for n in names])
+    stood = yoke.skin(points, pull, np.array([hung[n] for n in names]) @ rest_inv)
+    few = (np.argsort(-pull, axis=1)[:, :2], np.take_along_axis(pull, np.argsort(-pull, axis=1)[:, :2], axis=1))
+    check("a rig's pull given whole or as each point's strongest bones moves the points the same; at rest, nowhere", np.allclose(stood, points)
+          and np.allclose(yoke.skin(points, pull, np.array([turned[n] for n in names]) @ rest_inv), yoke.skin(points, few, np.array([turned[n] for n in names]) @ rest_inv)))
+    drag = np.zeros(len(points))
+    for t, lifted in ways:
+        pose = yoke.arm_pose(hung, parent, "upper_arm_l", "shoulder_l", t, lifted, out, up)
+        drag = np.maximum(drag, np.linalg.norm(yoke.skin(points, pull, np.array([pose[n] for n in names]) @ rest_inv) - stood, axis=1))
+    held = np.arange(len(points)) < len(side)  # (the chest's card holds the side; the arm's own skin is its card's)
+    j0 = hung["upper_arm_l"][:3, 3]
+    far = np.linalg.norm(points - j0, axis=1)
+    got = yoke.side_zone(points, drag, held, j0, 0.08)
+    dragged = held & (drag > yoke.ARM_DRAG_M)
+    check("the chest's card steps aside as far round the joint as the arm drags its skin, past the shoulder's own zone",
+          0.08 < got <= float(far[dragged].max()) + 1e-9 and (far[dragged] <= got + 1e-9).mean() >= yoke.SIDE_SHARE - 1e-9 and float(drag[held & (far > got + 0.02)].max()) < 0.02,
+          "%.1f cm; the skin past it is dragged %.1f cm at most" % (got * 100, 100 * float(drag[held & (far > got + 0.02)].max())))
+    check("... no less than the shoulder's own zone where the arm drags nothing, and never more than %.1f times it" % yoke.SIDE_MOST,
+          yoke.side_zone(points, np.zeros(len(points)), held, j0, 0.08) == 0.08 and 0.04 < yoke.side_zone(points, drag, held, j0, 0.04) <= yoke.SIDE_MOST * 0.04 + 1e-12
+          and yoke.side_zone(points, drag, np.zeros(len(points), dtype=bool), j0, 0.08) == 0.08)
+
+    # what the cards are told, and what the bake wrote
+    card = {"parts": [{"name": n} for n in ("chest", "upper_arm_l")], "joints": [{"bone": "upper_arm_l", "between": ["upper_arm_l", "chest"], "ring_cm": 7.0, "ball_cm": 5.0}],
+            "skin": {"joints": [{"bone": "upper_arm_l", "zone_cm": 9.9, "zones_cm": {"chest": 16.5, "upper_arm_l": 13.4}, "cores_cm": {"chest": 0.0, "upper_arm_l": 0.0}, "sides": 2, "back_cm": 16.5}]}}
+    zones = impostor.part_zones(card)
+    check("an armpit's cards step aside as far as each is dragged, keeping nothing", zones == {"upper_arm_l": [(0.134, 0.0)], "chest": [(0.165, 0.0)]}, str(zones))
+    baked = sorted(glob.glob(os.path.join(runs, "*", "profiles", "*-impostor-joe-layered-necked", "impostor.json")))
+    armpits = [(path, j) for path in baked for j in json.load(open(path)).get("skin", {}).get("joints", []) if "side_cm" in j]
+    if armpits:
+        check("with a baked armpit: the chest's card steps aside past the shoulder's zone, the piece is drawn that far, from both sides, and no card keeps a core there",
+              all(j["zones_cm"][j["between"][1]] == j["side_cm"] > j["zone_cm"] and j["reach_cm"] >= max(j["side_cm"], j["arm_cm"]) and j["sides"] == 2 and j["back_cm"] >= j["side_cm"]
+                  and all(v == 0.0 for v in j["cores_cm"].values()) for _, j in armpits), "; ".join("%s %s %.1f cm" % (os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(p)))), j["bone"], j["side_cm"]) for p, j in armpits))
+    else:
+        print("    (no baked armpit in %s)" % runs)
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("layers", lambda: test_layers(runs)), ("skin", lambda: test_skin(runs)), ("neck", lambda: test_neck(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs)), ("dress", lambda: test_dress(runs)), ("legs", test_legs)]
+             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("layers", lambda: test_layers(runs)), ("skin", lambda: test_skin(runs)), ("neck", lambda: test_neck(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs)), ("dress", lambda: test_dress(runs)), ("legs", test_legs), ("armpit", lambda: test_armpit(runs))]
     failed = 0
     for name, case in cases:
         print(name)

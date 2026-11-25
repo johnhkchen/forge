@@ -482,6 +482,7 @@ uniform vec3 shadeDark;
 uniform vec2 edges;
 uniform float punch;
 uniform float rim;
+uniform float rimSurface; // 1: the rim lit by which way the skin itself faces, not its turned facing (an armpit whose skin is dragged: "rim": "surface")
 varying vec2 vAtlas;
 varying vec3 vView;
 varying vec3 vTurnX;
@@ -507,7 +508,9 @@ void main() {
     float facing = dot(seen, light);
     vec3 tone = facing > edges.x ? vec3(1.0) : facing > edges.y ? shadeMid : shadeDark;
     vec3 paint = mix(vec3(dot(colour, vec3(0.2126, 0.7152, 0.0722))), colour, punch);
-    gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(seen.z, 0.0, 1.0), 3.0) * step(edges.x, facing), gl_FrontFacing ? who : whoBack);
+    vec3 flat_ = normalize(cross(dFdx(vView), dFdy(vView)));
+    float toEye = rimSurface > 0.5 ? abs(flat_.z) : seen.z;
+    gl_FragColor = vec4(paint * tone + rim * pow(1.0 - clamp(toEye, 0.0, 1.0), 3.0) * step(edges.x, facing), gl_FrontFacing ? who : whoBack);
   }
   #include <colorspace_fragment>
 }`;
@@ -548,7 +551,7 @@ export function skinMeshes(skin, bones, paint) {
     return [0, 1].map((shell) => {
       const face = piece.joint.kind === "dress" || piece.joint.sides === 2 ? THREE.DoubleSide : THREE.FrontSide; // (a skirt flung up shows its inside; a bare armpit folded over, its far side)
       const material = new THREE.ShaderMaterial({ vertexShader: JOINT_VERTEX, fragmentShader: JOINT_FRAGMENT, side: shell ? THREE.BackSide : face, uniforms: {
-        atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, backReach: { value: 0 }, who: { value: 1 }, whoBack: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 }, over: { value: 0 },
+        atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, backReach: { value: 0 }, who: { value: 1 }, whoBack: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 }, over: { value: 0 }, rimSurface: { value: piece.joint.rim === "surface" ? 1 : 0 },
         lineInk: { value: new THREE.Color(0x1c1721) }, ...paint } });
       const mesh = new THREE.SkinnedMesh(piece.geometry, material);
       mesh.bind(skeleton, new THREE.Matrix4());
@@ -570,7 +573,7 @@ export function skinMeshes(skin, bones, paint) {
           const u = mesh.material.uniforms;
           u.jointAt.value.copy(at);
           u.reach.value = (piece.joint.reach_cm / 100) * size;
-          u.backReach.value = piece.joint.kind === "dress" ? u.reach.value : ((piece.joint.sides === 2 ? piece.joint.zone_cm : 0) / 100) * size;
+          u.backReach.value = piece.joint.kind === "dress" ? u.reach.value : ((piece.joint.sides === 2 ? (piece.joint.back_cm ?? piece.joint.zone_cm) : 0) / 100) * size; // (an armpit that reaches down the side: its far side as far as "back_cm" says)
           u.over.value = ((piece.joint.over_cm || 0) / 100) * size;
           u.who.value = told.ids ? cardNumber(figure, piece.part) : 1;
           u.whoBack.value = told.ids && piece.backPart >= 0 ? cardNumber(figure, piece.backPart) : u.who.value;

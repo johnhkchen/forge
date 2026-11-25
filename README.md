@@ -1658,6 +1658,87 @@ Round the neck, what sticks out fell from 954 to 549 pixels from 1 m in bold ink
 
 Pictures (`exports/omni/groove-flamenco/shoulders-2/`, out of git): `first.png`, `middle.png`, `last.png` are the push-in in bold ink as cards. `raise-last-*-before-after.png` are close on the raised shoulder at the last raise, `raise-both-*` with both arms up (10.75 s), and `neck-last-*` close on the neck. Each is in bold ink and in "Pixels, both", with before ("Shoulders that hold") on the left. `evidence/shoulders-2/after-*` are the judge's own: the real model, then bold ink, then "Pixels, both".
 
+## An armpit that holds
+
+After "No flaps", with her arm overhead, the side of her body under the arm was still partly bare, a dark blob and a thin edge sat in the raised armpit, black lace-like scraps and a spike stuck out of her other armpit with both arms up, and a ragged dark line ran under her jaw. Now each shoulder's piece reaches down her side as far as the raised arm really pulls the skin, and across into her chest and back, and the cards step aside under it.
+
+```
+just impostor-joints runs/<character> detailed --from joe-layered,pixel-clear-layered,comic-layered   # her pieces, the armpits sized by how far the arm drags the skin
+just impostor-shoulders groove-flamenco after evidence/armpit --stills who:raise                       # the counts, and what draws every pixel at the raises
+```
+
+**What was bare, and what drew each scrap.** The judge now paints a picture of who draws every pixel (`judge_joints.py --stills who`: each card in its own colour, each piece a darker shade of its card's, the neck's piece yellow, the far side of a piece striped, bold ink's lines black; then the cards faded, with the model's body they leave bare in blue and what sticks out in red). `evidence/armpit/before-who-figure-13.75-raise-1.png` is the last raise from 1 m, `before-who-figure-10.75-raise-1.png` both arms up. Measured on her real model:
+
+- **Her bare side was skin the arm drags and nothing draws.** The rig pulls her side along with the arm: taken through its range, an arm drags 13,000 points of the skin her chest's card holds by more than a centimetre, up to 14 cm, lying up to 16.6 cm from the shoulder joint. Her shoulder's piece stopped at 9.9 cm and the chest's card, being rigid, leaves that skin where it hung. Between the two the real body is stretched up and out, and nothing was there. It is all chest skin: the arm drags none of her spine's skin more than 3.5 cm, and that only 16 to 19 cm away.
+- **The dark blob and the thin edge under the raised arm** were three things: the chest's card's own flap of arm skin; the chest's card's "core", a line it keeps through the joint along its own bone, which at a shoulder runs straight down her side; and holes in the shoulder's piece, through which both showed, ringed in ink. The holes were the bake's own doing. Her piece is cut from several of the tidy model's meshes (her skin under the top, under the top and skirt, and bare), whose points were not joined, so a third of the armpit's back came out as an island and was thrown away as a "scrap" (86 triangles a shoulder before; 160 once the piece reached further).
+- **The black scraps and the spike at her other armpit were her left arm's card.** Her detailed model took its pull from the tidy model's nearest surface, and on her left shoulder that is the tidy top's strap, which the arm pulls. So that strap of her top belongs to the arm's card, which swings it overhead like a rigid plate: a black band across the armpit, ringed in ink, with its end sticking out past her side. Measured the same way, her chest drags 4,800 points of her left arm's own skin off the arm's card, out to 13.1 cm from the joint (her right: 8.1 cm, inside the zone).
+- **The dark line under the jaw** was the head's card and the neck's piece taking turns pixel by pixel under her jaw, where the two lie within millimetres of each other: a hatched band, which bold ink ringed in a ragged line.
+- **The neck's piece "1.0 cm off"** was mostly the judge. Since "No flaps" the piece carries the head's own skin up her neck, and the judge matched those points against the nearest of the chest's skin, a centimetre lower and moving with the chest. Matched against the skin they lie on, it was 0.79 cm. But the head's own skin was really off too, 1 to 3 cm, because the piece takes its pull from the tidy model, which gives that skin partly to the neck, where her real model gives it wholly to the head.
+
+**What was done** (`scripts/impostor/yoke.py`: arm_sweep, arm_pose, pose_bones, skin, side_zone; `bake_joints.py`: arm_drag).
+
+- **Each arm is taken through its range and the drag is measured.** From hanging to overhead, out to the side, forward, across the body and back, once with the collar bone still and once lifted a sixth of the raise (43 ways). Every point of her real model is pulled there by its own bones and measured against the card that holds it as the cards were pictured. Nothing is guessed per character: a skeleton, its pull and its cards are all it reads.
+- **The chest's card steps aside as far round the shoulder as its skin is dragged more than a centimetre**: 16.5 and 16.6 cm on her, where the shoulder's zone is 9.9 (`"zones_cm"`; a stray point or two far off does not count, and it is never more than 1.8 times the zone). A threshold of 2 or 3 cm gives the same 16 cm: the dragged skin is all in one place. **The arm's card steps aside as far as the chest drags the arm's own skin**: her left arm 13.4 cm, her right the 9.9 it had.
+- **The shoulder's piece reaches that far**: the fold, the stretch of her side, and the edge of her top on it, one skin. Cut from the tidy model as before, its points now **welded** where two of the tidy model's meshes meet, so nothing of it is mistaken for a scrap (6 triangles of all her pieces left out, the neck's, where 268 were). Inside it no card keeps a core, and it is drawn from both sides as far as it reaches (`"back_cm"`), so a fold of the stretched side turning away from the eye is not a hole.
+- **Its rim is lit by which way the skin itself faces** (`"rim": "surface"`). A point half the arm's and half the chest's is turned half as far as the arm; on her side overhead that left the lit facing 15 to 50 degrees further from the eye than the stretched skin really is, and bold ink's rim light washed the black of her top pale grey. Now the rim follows the drawn surface (on the page, from the triangle's own slope); the colour and the three tones still come from the cards' sheets.
+- **The neck's piece is pulled as her real model is where it lies** (`--neck-pull`; it was the tidy model's pull), so the head's own skin up her neck goes with the head. And it is **worn over a card within a centimetre of it**, as the dress is over her body (`"over_cm"`): under the jaw the throat is the piece's and the jaw the card's, with one line between them.
+- `judge_joints.py`: the who pictures above, and the neck's skin matched against the skin each point lies on ("off_cm"; the old way is kept as "off_held_cm").
+
+**What was weighed, and left off.**
+
+| tried | what it did | kept? |
+|---|---|---|
+| a bigger shoulder piece alone, measured on the tidy model's skin | covered her side, but a third of its back was thrown away as a scrap, and the left strap was not found | no: measured on the real model, and welded |
+| the chest's card stepping aside only where skin is dragged 2 or 3 cm | about the same 16 cm (measured then on the tidy model) | (1 cm kept) |
+| the neck piece's head skin keeping the rig's pull where the head has half of it or more (evened out only below) | no change at all | no |
+| the neck piece's pull not evened out | a little worse at a turned head, a little better at a raised arm | no |
+
+**What it is now** (`evidence/armpit/joints-before.json` is b584004's cards, "No flaps", judged with this code; `joints-after.json` is this; before to after).
+
+| look | eye | shoulders, likeness | worst shoulder | neck, likeness | arm raised, likeness | sticks out, shoulders | bare, shoulders | sticks out, neck | bare, neck |
+|---|---|---|---|---|---|---|---|---|---|
+| Bold ink | push-in camera | 0.71 to 0.84 | 0.53 to 0.64 | 0.74 to 0.77 | 0.62 to 0.84 | 55 to 34 | 63 to 23 | 48 to 50 | 14 to 12 |
+| Bold ink | crew camera | 0.73 to 0.82 | 0.59 to 0.71 | 0.77 to 0.78 | 0.64 to 0.81 | 55 to 42 | 37 to 19 | 36 to 38 | 15 to 16 |
+| Bold ink | 2 m | 0.71 to 0.82 | 0.58 to 0.56 | 0.79 to 0.80 | 0.72 to 0.85 | 278 to 172 | 280 to 99 | 158 to 156 | 111 to 101 |
+| Bold ink | 1 m | 0.68 to 0.81 | 0.54 to 0.52 | 0.79 to 0.80 | 0.71 to 0.84 | 1,072 to 666 | 1,297 to 379 | 548 to 551 | 472 to 424 |
+| "Pixels, both" | push-in camera | 0.72 to 0.82 | 0.51 to 0.59 | 0.82 to 0.83 | 0.69 to 0.86 | 177 to 162 | 28 to 4 | 97 to 100 | 11 to 11 |
+| "Pixels, both" | crew camera | 0.71 to 0.79 | 0.61 to 0.67 | 0.84 to 0.85 | 0.70 to 0.82 | 157 to 144 | 9 to 1 | 97 to 99 | 4 to 3 |
+| "Pixels, both" | 2 m | 0.71 to 0.82 | 0.55 to 0.68 | 0.88 to 0.89 | 0.76 to 0.87 | 560 to 419 | 177 to 26 | 322 to 311 | 65 to 42 |
+| "Pixels, both" | 1 m | 0.70 to 0.82 | 0.56 to 0.63 | 0.87 to 0.88 | 0.76 to 0.86 | 1,656 to 1,146 | 1,018 to 180 | 887 to 867 | 393 to 305 |
+
+(Pixels of the screen in the judge's disc, a shoulder or the neck, an average over the moments; "arm raised" is the neck and both shoulders together at 10.75 s and 13.75 s.) Read plainly: round her shoulders what is left uncovered fell by three fifths to nine tenths, from 1 m in bold ink 1,297 pixels to 379, and what sticks out by a tenth to two fifths. She reads more like herself at every eye and in both looks: through the push-in camera the arm raised goes 0.62 to 0.84 in bold ink. The chest twisted, the one move "Shoulders that hold" left worse, is better too: from 1 m in bold ink 3,972 bare pixels to 1,356 and 3,704 sticking out to 902, mostly the neck's new pull. The skin of the neck and collar, measured on the skin: 0.80 cm off where it was 0.79, at a typical point, and 2.2 cm for the worst twentieth where it was 2.5; with a head turned 0.97 to 0.84 and a chest twisted 1.02 to 0.84, but with an arm raised 0.58 to 0.76.
+
+Her knees, elbows and hips (`joints-knees-*.json`) are within a hundredth of what they were at every eye in both looks.
+
+**The men did not change, as they are.** Their pieces are not baked again here, and a piece without `"back_cm"` or `"rim"` is drawn as before. `just impostor-neck` and `just impostor-knees` on the candy-shop crew with b584004's code and with this one (`evidence/armpit/joints-men-*-before.json`, `-after.json`): every row is the same to the last digit but a few, and those few change just as much between two runs of the same code (`joints-men-neck-after-again.json`): the judge's own wobble, at close-up views of nine moments (Lincoln at 28.75, 30 and 35.75 s, Roosevelt at 15.75, 17.5 and 55.75, the pirate at 21.5, 34 and 36; up to 0.13 of likeness on one row). Why was not found. The "off" of the neck's skin now measures each point against the skin it lies on; the old way ("off_held_cm") gives the men's old numbers to the digit.
+
+**Lincoln baked again with the new code** (`just impostor-detailed runs/<Lincoln> lowpoly`, `just impostor-layered ... lowpoly`; nobody had: his cards were from before "Shoulders that hold"). His cards are now cut with the shoulder and the neck held, his head's card steps aside up his neck, and his pieces have armpits: the arm drags 9,000 to 10,000 points of his chest's skin, so his chest's card steps aside 21.4 and 21.2 cm round each shoulder (zones of 12.0 and 12.2; at the cap of 1.8 times), and his arms' 12.9 and 15.0. His right elbow is still left to its cards. `evidence/armpit/joints-lincoln-*-rebaked.json`, against his old cards judged with this code; likeness, then pixels left bare and sticking out, from 1 m in bold ink:
+
+| Lincoln | through the crew camera | from 1 m | bare, from 1 m | sticks out, from 1 m |
+|---|---|---|---|---|
+| neck and shoulders | 0.56 to 0.68 | 0.61 to 0.72 | 1,690 to 356 | 3,766 to 3,265 |
+| shoulders | 0.37 to 0.50 | 0.42 to 0.58 | 2,455 to 296 | 2,763 to 1,577 |
+| neck | 0.63 to 0.66 | 0.71 to 0.72 | 101 to 97 | 501 to 397 |
+| knees | 0.47 to 0.68 | 0.41 to 0.69 | 2,577 to 344 | 1,350 to 1,326 |
+| elbows | 0.45 to 0.43 | 0.68 to 0.73 | 135 to 205 | 538 to 546 |
+| hips | 0.50 to 0.49 | 0.61 to 0.60 | 37 to 22 | 1,302 to 1,298 |
+
+In "Pixels, both" the same way round: neck and shoulders 0.68 to 0.77 from 1 m, shoulders 0.43 to 0.61, knees 0.54 to 0.79. What got worse: his elbow through the crew camera (0.45 to 0.43), what sticks out round his knees in "Pixels, both" (1,629 to 1,749 from 1 m), and **his neck's skin, measured on the skin, 0.45 cm off to 0.89**. Part of that is the head's card stepping aside up his neck ("No flaps": 0.79 without it), and the rest is not like for like: his detailed model, the judge's real one, is now rigged from the low-poly version the cast plays, not the painted one, so the skin it is measured against moves differently. With the tidy pull on his neck's piece, as before, it was 1.27. So future bakes of the men are safe to run, and better by nearly every count the judges make, but for that one measure and his elbow; they have not been run for Roosevelt and the pirate.
+
+**What it costs.** Her pieces are 10,067 triangles where they were 9,128: each armpit is 807 and 1,003 where a shoulder was 564 and 569. Still one file (432 KB where it was 405) and one picture 1,024 square for colour and one for facing (1.2 MB to fetch, 1.1 before). The bake takes 35 seconds; the sweep is 43 poses of a third of a million points, twice. On the page, a piece whose rim is lit by its surface works out its slope once a pixel. No sheet is baked again for her.
+
+**What is still weak.**
+
+- **A neck that sticks out a little more.** Round her neck what is uncovered went down at six of the eight eyes, but what sticks out went up by two or three pixels through the cameras the dance is filmed with (48 to 50 through the push-in camera in bold ink), mostly when her chest twists, where the neck now goes with her head and a little past the real outline. 
+- **An arm raised: the neck's skin is further off** (0.58 to 0.76 cm), while a turned head and a twist got nearer. The real model's own pull is hard there (each point all chest, all neck or all head), and the piece now follows it.
+- **The worst single shoulder from 1 m and 2 m in bold ink is a little lower** (0.54 to 0.52, 0.58 to 0.56). From 1 m that is her left shoulder at 4.5 s, arm down, head turned, where the left armpit's piece now covers 13.4 cm of her arm and is plainer than the arm's card.
+- **Her side is drawn by a few hundred flat triangles** under the cards' colours, so close up the edge of her top along her side is softer than the card drew it, and on the left the strap of her top is a soft grey band, not a crisp black one.
+- **Under the jaw** there is still a dark band, the jaw's underside as the head's card pictured it, and a short ink squiggle on her throat where bold ink finds a fold in the neck's piece. The hatching is gone.
+- **The spine's card** is not dragged far (3.5 cm at most, 16 to 19 cm from the joint) and still does not step aside. The biggest patch left bare under her raised arm from 1 m is just past the lower tip of the piece, at the edge of the spine's card (`after-who-figure-13.75-raise-1.png`).
+- **Her walk and run** play the same pieces and were not looked at. No phone has run it.
+
+Pictures (`exports/omni/groove-flamenco/armpit/`, out of git): `first.png`, `middle.png`, `last.png` are the push-in in bold ink as cards. `raise-last-*-before-after.png` are close on the raised shoulder at the last raise (13.96 s), `raise-both-*` with both arms up (10.75 s), and `neck-last-*` close on the neck, each in bold ink and in "Pixels, both", with before ("No flaps") on the left, taken off the watch page. `evidence/armpit/before-who-*` and `after-who-*` are the judge's own: the real model, bold ink, what draws every pixel, and what is bare (blue) and sticks out (red), at the raises and the head turns, from the push-in camera, the crew camera, 2 m and 1 m.
+
 ## A place from a world model
 
 The Niantic saloon is the first place we did not build. World Labs' Marble grew it from one picture: an empty Gold Rush saloon in the hold of a beached whaleship. What Marble hands over is kept out of git, in `world/marble/niantic-saloon/`: the place itself as a cloud of soft colored dots ("splats", in four sizes from 100 thousand dots to 4.3 million), a coarse mesh of every surface for bumping into, and a record that says how big it really is.

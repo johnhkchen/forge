@@ -32,7 +32,11 @@ things more. "over": pixels the cards cover and the model does not (what sticks 
 the skin itself, measured on the model and not on a picture (Yoke, below): "held_cm" is how far a rigid card
 holds the skin of the neck and collar from where the model has it (and "held_worst_cm": 95 points of a hundred
 are nearer), "off_cm" the same for what is drawn there, which is the neck's piece when the cards have one
-(bake_joints.py). --stills yoke writes a still of every such moment from every eye.
+(bake_joints.py). --stills yoke writes a still of every such moment from every eye. --stills who (or who:raise, for
+one kind of moment) writes <tag>-who-<role>-<seconds>-<why>-<eye>.png: the real model, the cards in bold ink, what
+draws each pixel (every card in its own colour, every piece of the model a darker shade of its card's, the neck's
+yellow, the far side of a piece drawn from both sides striped, bold ink's lines black: who_picture), and the cards
+faded with the model's body they leave bare in blue and what sticks out in red.
 
 "shaft" rows are the same disc laid on the middle of a thigh or an upper arm, where nothing bends: what the
 cards score when nothing is wrong. --sheets says which baked cards to read: joined (as they were: rigid parts,
@@ -127,7 +131,12 @@ class Yoke:
     each of them where it was when the cards were pictured, carried by the chest bone alone. "held" is how far
     that is from where the model has the same point now. "off" is the same for what is drawn there: the neck
     piece's points when the cards have one (the chest's card has stepped aside), each against the point of the
-    model it lay on when the cards were pictured; with no piece, the rigid points, and "off" is "held"."""
+    model it lay on when the cards were pictured; with no piece, the rigid points, and "off" is "held".
+
+    The piece's points are matched against every point of the model in the ball, whoever pulls it: since "No
+    flaps" the piece carries the head's own skin up the neck too, and matched against the chest's skin alone (as
+    it was, "off_held_cm") those points were measured against the nearest of the chest's skin below them, up to a
+    centimetre away, and moving with the chest, not the head: 0.6 cm read as 1.0."""
 
     def __init__(self, real, card):
         import bpy
@@ -141,7 +150,7 @@ class Yoke:
         rings = {j["bone"]: j["ring_cm"] / 100.0 for j in card.get("joints") or []}
         shoulders = [(head(b), 1.35 * rings[b]) for b in ("upper_arm_l", "upper_arm_r") if b in rings]  # (fixed, so before and after are the same skin)
         folds = bake_impostor.part_of_bone(rig)
-        self.picked = []  # per mesh: (the mesh, which of its points, where each was when the cards were pictured)
+        self.picked, chest = [], []  # per mesh: (the mesh, which of its points, where each was when the cards were pictured); and whether the chest holds each
         for obj in real.bodies:
             groups = [folds.get(g.name) for g in obj.vertex_groups]
             picked = []
@@ -152,10 +161,12 @@ class Yoke:
                 pull = {}
                 for g in v.groups:
                     pull[groups[g.group]] = pull.get(groups[g.group], 0.0) + g.weight
-                if pull and max(pull, key=pull.get) == "chest":
+                if pull:
                     picked.append(v.index)
+                    chest.append(max(pull, key=pull.get) == "chest")
             hung = real.hung[obj.name]
             self.picked.append((obj, np.array(picked, dtype=np.int64), np.array([obj.matrix_world @ hung.vertices[i].co for i in picked]).reshape(-1, 3)))
+        self.chest = np.array(chest, dtype=bool)
         self.hung_chest = np.array(real.hung_bones["chest"])
         # the skeleton as the cards were pictured, as a clip's frames have a pose (judge_seams.py: Real.pose, backwards)
         to_glb = np.linalg.inv(np.array(Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))))
@@ -190,23 +201,28 @@ class Yoke:
         now = np.array(rig.matrix_world @ rig.pose.bones["chest"].matrix) @ np.linalg.inv(self.hung_chest)
         true = self.stand()
         hung = np.concatenate([h for _, _, h in self.picked])
-        held = np.linalg.norm(hung @ now[:3, :3].T + now[:3, 3] - true, axis=1) * 100.0
+        held = np.linalg.norm(hung @ now[:3, :3].T + now[:3, 3] - true, axis=1)[self.chest] * 100.0
         skin = getattr(character, "skin", None)
         piece = next((j["bone"] for j in skin.joints if j.get("kind") == "neck" and j["bone"] in skin.pieces), None) if skin else None
-        off = held
+        off = off_held = held
         if piece:
             to_bl = lambda at: np.stack([at[:, 0], -at[:, 2], at[:, 1]], axis=1)  # a .glb's y-up to Blender's z-up
-            if id(skin) not in self.matched:  # each of the piece's points against the model's point it lay on
-                tree = kdtree.KDTree(len(hung))
-                for i, p in enumerate(hung):
-                    tree.insert(p, i)
-                tree.balance()
-                found = [tree.find(p) for p in to_bl(skin.stood(piece, self.hung_frames)[0])]
-                self.matched[id(skin)] = (np.array([f[1] for f in found]), np.array([f[2] for f in found]) < 0.01)
-            match, close = self.matched[id(skin)]
-            off = np.linalg.norm(to_bl(skin.stood(piece, pose)[0]) - true[match], axis=1)[close] * 100.0
+            if id(skin) not in self.matched:  # each of the piece's points against the model's point it lay on (and, as it was, against the chest's skin alone)
+                laid = to_bl(skin.stood(piece, self.hung_frames)[0])
+                self.matched[id(skin)] = []
+                for among in (np.arange(len(hung)), np.nonzero(self.chest)[0]):
+                    tree = kdtree.KDTree(len(among))
+                    for i in among:
+                        tree.insert(hung[i], int(i))
+                    tree.balance()
+                    found = [tree.find(p) for p in laid]
+                    self.matched[id(skin)].append((np.array([f[1] for f in found]), np.array([f[2] for f in found]) < 0.01))
+            stood = to_bl(skin.stood(piece, pose)[0])
+            (match, close), (match_held, close_held) = self.matched[id(skin)]
+            off = np.linalg.norm(stood - true[match], axis=1)[close] * 100.0
+            off_held = np.linalg.norm(stood - true[match_held], axis=1)[close_held] * 100.0
         return {"held_cm": round(float(held.mean()), 2), "held_worst_cm": round(float(np.percentile(held, 95)), 2), "off_cm": round(float(off.mean()), 2),
-                "off_worst_cm": round(float(np.percentile(off, 95)), 2), "piece": bool(piece)}
+                "off_worst_cm": round(float(np.percentile(off, 95)), 2), "off_held_cm": round(float(off_held.mean()), 2), "piece": bool(piece)}
 
 
 def judge(real, cards, disc, per_px):
@@ -281,6 +297,59 @@ def draw_look(character, pose, eye, look, only=None):
         return blown(impostor.with_lines(picture, lines), FINER)
     paint = impostor.PAINTS["pixel" if look == "pixel-baked" else "comic"]
     return blown(impostor.draw(character, pose, eye, line="shell", paint=paint, only=only)[0], FINER)
+
+
+WHO = {"hips": (150, 90, 30), "spine": (240, 160, 40), "chest": (220, 60, 60), "head": (90, 200, 90), "upper_arm_l": (60, 200, 230), "upper_arm_r": (60, 90, 230),
+       "forearm_l": (150, 230, 240), "forearm_r": (150, 160, 240), "hand_l": (200, 240, 250), "hand_r": (200, 200, 250), "dress": (230, 120, 200)}
+PIECE = {"shoulder": None, "neck": (250, 240, 0), "dress": (130, 0, 90)}  # a piece: its card's colour, darker (None), or its own
+
+
+def who_picture(character, pose, eye, real=None, drawn=None):
+    """What draws each pixel, colour by colour, at the eye's own size (rows from the bottom up): every card in its
+    part's colour (WHO), every piece of the model in a darker shade of its card's (the neck's yellow, the dress's
+    plum), and the far side of a piece drawn from both sides (an armpit folded over) striped. Bold ink's lines on
+    top, in black. With real and drawn (the real model and the cards in bold ink, both FINER times the eye's size),
+    a second picture: the cards faded, the model's body they leave bare in blue, what sticks out in red.
+    Returns [the who picture, the bare picture], each FINER times the eye's size."""
+    tall, wide = eye.size[1], eye.size[0]
+    names = [p["name"] for p in character.parts]
+    who = np.zeros((tall, wide), dtype=np.int32)
+    skin = getattr(character, "skin", None)
+    character.skin = None
+    _, depth, _ = impostor.draw(character, pose, eye, line="off", who=who, paint=impostor.PAINTS["joe"])
+    character.skin = skin
+    shown = np.zeros((tall, wide, 3), dtype=np.uint8)
+    for k, name in enumerate(names):
+        shown[who == 1 + k % impostor.PARTS_A_FIGURE] = WHO.get(name, (128, 128, 128))
+    if skin is not None:
+        joints = skin.joints
+        for j in joints:
+            colour, d, w = np.zeros((tall, wide, 3), np.float32), np.full((tall, wide), np.inf, np.float32), np.zeros((tall, wide), np.int32)
+            skin.joints = [j]
+            impostor.draw_skin(character, pose, eye, colour, d, w, 0, impostor.PAINTS["joe"])
+            skin.joints = joints
+            won = d < depth
+            depth[won] = d[won]
+            own = PIECE.get(j.get("kind")) or tuple(int(c * 0.45) for c in WHO.get(j["part"], (128, 128, 128)))
+            back = won & (w == 1 + names.index(j["between"][1]) % impostor.PARTS_A_FIGURE) & (j["between"][1] != j["part"])
+            shown[won] = own
+            stripes = back & ((np.arange(wide)[None, :] + np.arange(tall)[:, None]) % 4 < 2)
+            shown[stripes] = (255, 255, 255)
+            who[won] = np.where(back[won], 1 + names.index(j["between"][1]) % impostor.PARTS_A_FIGURE, 1 + names.index(j["part"]) % impostor.PARTS_A_FIGURE)
+    lines = impostor.bold_lines(depth, who, eye) & (who > 0)
+    shown[lines] = (0, 0, 0)
+    out = np.zeros((tall, wide, 4), dtype=np.uint8)
+    out[..., :3], out[..., 3] = shown, np.where(np.isfinite(depth), 255, 0)
+    pictures = [blown(out, FINER)]
+    if real is not None and drawn is not None:
+        body, cover = real[..., 3] > 127, drawn[..., 3] > 127
+        faded = drawn.copy()
+        faded[..., :3] = (faded[..., :3].astype(np.float32) * 0.45 + 130).astype(np.uint8)
+        faded[..., 3] = 255
+        faded[body & ~cover, :3] = (0, 60, 255)
+        faded[~body & cover, :3] = (255, 40, 40)
+        pictures.append(faded)
+    return pictures
 
 
 def main():
@@ -409,6 +478,16 @@ def main():
                         half = int(0.45 / (2.0 * float(ahead) * fine.tan / fine.size[1]))
                         x0, y0 = int(np.clip(centre[0] - half, 0, fine.size[0] - 2 * half)), int(np.clip(centre[1] - half, 0, fine.size[1] - 2 * half))
                         still(os.path.join(out, "%s-%s-%g-%s-%s.png" % (tag or which, role, t, why, eye_name)), [truth] + [drawn[look] for look in looks], discs.get(("neck", "yoke")), crop=(x0, y0, x0 + 2 * half, y0 + 2 * half))
+                    asked_who = {s.split(":", 1)[1] if ":" in s else why for s in stills if s.split(":")[0] == "who"}
+                    if why and why in asked_who and "joe" in looks:  # --stills who (or who:raise): what draws each pixel, and what is bare and what sticks out
+                        made = who_picture(characters["joe"], pose, eye, truth, drawn["joe"])
+                        crop = None
+                        if not focus:
+                            centre, ahead = fine.to_pixels(pose["neck"][:3, 3])
+                            half = int(0.45 / (2.0 * float(ahead) * fine.tan / fine.size[1]))
+                            x0, y0 = int(np.clip(centre[0] - half, 0, fine.size[0] - 2 * half)), int(np.clip(centre[1] - half, 0, fine.size[1] - 2 * half))
+                            crop = (x0, y0, x0 + 2 * half, y0 + 2 * half)
+                        still(os.path.join(out, "%s-who-%s-%g-%s-%s.png" % (tag or which, role, t, why, eye_name)), [truth, drawn["joe"]] + made, None, crop=crop)
                     if name in parts_of and focus:
                         lower = next(p["name"] for p in first["parts"] if p["bone"] == focus)
                         upper = next(p["name"] for p in first["parts"] if p["bone"] == above[focus])
@@ -438,7 +517,7 @@ def main():
             for k in ("likeness", "blots", "colour", "bare", "over"):
                 if row[k] is not None:
                     e[k].append(row[k])
-            for k in ("held_cm", "held_worst_cm", "off_cm", "off_worst_cm"):  # the yoke's skin itself (Yoke)
+            for k in ("held_cm", "held_worst_cm", "off_cm", "off_worst_cm", "off_held_cm"):  # the yoke's skin itself (Yoke)
                 if k in row:
                     e.setdefault(k, []).append(row[k])
     for key in sorted(table):
@@ -446,7 +525,7 @@ def main():
         e.update(worst=round(float(min(e["likeness"])), 3), likeness=mean(e["likeness"]), blots=mean(e["blots"]), colour=mean(e["colour"]), bare=mean(e["bare"]), over=mean(e["over"]))
         skin = ""
         if "off_cm" in e:
-            e.update({k: mean(e[k]) for k in ("held_cm", "held_worst_cm", "off_cm", "off_worst_cm")})
+            e.update({k: mean(e[k]) for k in ("held_cm", "held_worst_cm", "off_cm", "off_worst_cm", "off_held_cm") if k in e})
             skin = "; the skin a rigid card would hold %.1f cm off (%.1f at worst), what is drawn %.1f cm (%.1f)" % (e["held_cm"], e["held_worst_cm"], e["off_cm"], e["off_worst_cm"])
         print("JOINTS %-44s %3d joints: likeness %.3f (worst %.3f), blots %4.1f%%, colour off %4.1f, bare %5.1f px, over %5.1f px%s" % (key, e["joints"], e["likeness"], e["worst"], 100.0 * e["blots"], e["colour"] or 0.0, e["bare"], e["over"], skin), flush=True)
     report["table"] = table

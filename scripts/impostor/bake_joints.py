@@ -6,6 +6,7 @@ every knee, elbow, hip and shoulder, and one for the neck, the collar and the to
         [--zone knee=1.6,elbow=1.7,hip=1.25,shoulder=1.35,neck=1] [--margin 0.2] [--kinds knee,elbow,hip,shoulder,neck,dress]
         [--torn 0.4] [--missed 0.5] [--leave forearm_l,...] [--dress-triangles 4000]
         [--even 0.03] [--cloth 0.5] [--pull worked|rig] [--neck-triangles 1] [--rim 0]
+        [--side 0.01] [--weld on] [--neck-pull pictured|tidy] [--neck-over 1.0]
 
 A card is a picture of a rigid piece of the model, taken as it stood. Bend a knee far and look at it end on, and
 the two pictures that meet there show what they never should: the open end of the thigh and the open top of the
@@ -80,6 +81,19 @@ from the tidy garments (yoke.cut_from): a sleeveless top is her skin's own black
 piece is worn over the body ("over_cm"): where it and a card of the body are that near, as at a waistband, the
 dress is drawn.
 
+An armpit that holds (README). Overhead, the rig drags the skin of her side up with the arm five to fifteen
+centimetres, and a rigid chest's card leaves it where it hung. So each arm is taken through its range (arm_drag:
+raised from hanging to overhead every way round, the collar bone still and lifted; yoke.arm_sweep) and every point of
+the pictured model is measured for how far that drags it off the card that holds it. The chest's card steps aside
+round the shoulder as far as its skin is dragged more than --side metres (yoke.side_zone; "zones_cm" for the chest),
+the arm's as far as the chest drags the arm's own skin off it (a strap painted on, given the arm's pull), and the
+shoulder's piece reaches that far: the fold, the stretch of the side and the edge of her top, one skin. Inside it
+no card keeps a core, the piece is drawn from both sides ("back_cm"), and its rim is lit by which way the skin
+itself faces ("rim": "surface"). --side 0 leaves a shoulder's piece at its zone, as before. --weld joins a piece's
+points where two of the tidy version's meshes meet, so it is one skin (--weld off as before). The neck's piece is
+pulled as the pictured body is where it lies (--neck-pull tidy as before) and worn over a card within --neck-over
+centimetres of it, as the dress is.
+
 A joint is left to its cards when too much of its piece would not lie down (--torn: the share of it in triangles
 pulled out to shards, where the two meshes are too unlike: a rolled sleeve), or misses too much of the model
 there (--missed), or is named in --leave or, for this character, in scripts/impostor/joints.json.
@@ -149,6 +163,69 @@ def cut_from(meshes, worn, dress):
     told = [(garment_of(o), [impostor.slug_of(g) for g in str(o.get("under") or "").split("|") if g]) for o in meshes]
     return [o for o, keep in zip(meshes, yoke.cut_from(told, worn, (dress or {}).get("garments", ()))) if keep]
 
+
+
+def arm_drag(rig, objs, folds, shoulders, dress=None):
+    """How far each arm, taken through its range (yoke.arm_sweep), drags the skin of a tidy mesh off the card that
+    holds it as the cards were pictured. objs: the tidy meshes the pieces are cut from; shoulders: the bones whose
+    heads are the shoulders' joints. Returns {bone: (drag per point of every obj, in order, m; where each point
+    rests as pictured, in the world; how far the joint itself goes, m)} and, per obj, the part that pulls each point
+    most. Only this arm and its collar bone move; the chest stands still, so what moves is off the chest's card.
+    The skeleton must stand as the cards were pictured (bake_impostor.hang_arms)."""
+    names = [b.name for b in rig.data.bones]
+    hung = {n: np.array(rig.pose.bones[n].matrix) for n in names}
+    rest_inv = np.array([np.linalg.inv(np.array(rig.data.bones[n].matrix_local)) for n in names])
+    parent = {n: (rig.data.bones[n].parent.name if rig.data.bones[n].parent else None) for n in names}
+    world = np.array(rig.matrix_world)
+    to_rig = np.linalg.inv(world)
+    points, which, pull, owner = [], [], [], []
+    for obj in objs:
+        m = to_rig @ np.array(obj.matrix_world)
+        co = np.empty(len(obj.data.vertices) * 3)
+        obj.data.vertices.foreach_get("co", co)
+        points.append(co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3])
+        column = [names.index(g.name) if g.name in names else -1 for g in obj.vertex_groups]
+        parts = bake_impostor.groups_of(obj, folds, dress)
+        w, p = np.zeros((len(obj.data.vertices), 4), dtype=np.int64), np.zeros((len(obj.data.vertices), 4))
+        for v in obj.data.vertices:  # (each point's four strongest bones: a .glb's own, and a detailed mesh is a third of a million points)
+            strongest = sorted(((g.weight, column[g.group]) for g in v.groups if column[g.group] >= 0), reverse=True)[:4]
+            for k, (weight, c) in enumerate(strongest):
+                w[v.index, k], p[v.index, k] = c, weight
+            total = {}
+            for g in v.groups:
+                total[parts[g.group]] = total.get(parts[g.group], 0.0) + g.weight
+            owner.append(max(total, key=total.get) if total else None)
+        which.append(w)
+        pull.append(p / np.maximum(p.sum(axis=1, keepdims=True), 1e-9))
+    points, which, pull = np.concatenate(points), np.concatenate(which), np.concatenate(pull)
+    deform = lambda pose: np.array([pose[n] for n in names]) @ rest_inv
+    stood = yoke.skin(points, (which, pull), deform(hung))
+    up = np.linalg.solve(world[:3, :3], np.array([0.0, 0.0, 1.0]))  # (the world's up, in the skeleton's own frame)
+    up = up / np.linalg.norm(up)
+    toes = [n for n in ("toe_l", "toe_r", "foot_l", "foot_r") if n in hung]
+    ahead = hung[toes[0]][:3, 1] if toes else np.array([0.0, -1.0, 0.0])  # the way the body faces: where a foot points
+    ahead = ahead - (ahead @ up) * up
+    ahead = ahead / max(np.linalg.norm(ahead), 1e-9)
+    out = {}
+    for bone in shoulders:
+        if bone not in hung:
+            continue
+        joint = hung[bone][:3, 3]
+        collar = parent[bone] if parent[bone] and parent[bone].startswith("shoulder") else None
+        side = joint - hung[parent[bone] or bone][:3, 3] if collar else joint - hung.get("chest", hung[bone])[:3, 3]
+        side = side - (side @ up) * up - (side @ ahead) * ahead
+        side = side / max(np.linalg.norm(side), 1e-9)
+        drag, own, travel = np.zeros(len(points)), np.zeros(len(points)), 0.0
+        for turn, lifted in yoke.arm_sweep(hung[bone][:3, 1], side, ahead, up):
+            pose = yoke.arm_pose(hung, parent, bone, collar, turn, lifted, side, up)
+            now = yoke.skin(points, (which, pull), deform(pose))
+            drag = np.maximum(drag, np.linalg.norm(now - stood, axis=1))
+            carried = pose[bone] @ np.linalg.inv(hung[bone])  # (and off the arm's own card, which rides the arm)
+            own = np.maximum(own, np.linalg.norm(now - (stood @ carried[:3, :3].T + carried[:3, 3]), axis=1))
+            travel = max(travel, float(np.linalg.norm(pose[bone][:3, 3] - joint)))
+        out[bone] = (drag, stood @ world[:3, :3].T + world[:3, 3], travel, world[:3, :3] @ joint + world[:3, 3], own)
+    starts = np.cumsum([0] + [len(o.data.vertices) for o in objs])
+    return out, {o.name: (int(a), int(b)) for o, a, b in zip(objs, starts[:-1], starts[1:])}, owner
 
 
 def rasterise(uv, size):
@@ -306,6 +383,44 @@ def main():
         wanted.append((j, kind, ring, zone, centre))
     wanted.sort(key=lambda w: w[1] == "neck")  # the neck's last: it leaves the shoulders' zones to their own pieces
     shoulders = [(centre, zone) for _, kind, _, zone, centre in wanted if kind == "shoulder"]
+    necks = [(centre, zone) for _, kind, _, zone, centre in wanted if kind == "neck"]
+    # The armpit (README: "An armpit that holds"). Overhead, the skin of her side goes up with the arm, five to ten
+    # centimetres, and the chest's card, rigid, leaves it where it hung: bare, under a shoulder's piece that stopped
+    # at its zone. So each arm is taken through its range (yoke.arm_sweep) and every point of the tidy mesh is
+    # measured for how far the arm drags it off the chest's card; the shoulder's piece reaches, on the chest's side,
+    # as far round the joint as that skin lies (yoke.side_zone), and the chest's card steps aside as far.
+    bake_impostor.hang_arms(scene, rig)  # (the pose the cards were pictured in, kept for the colours below)
+    hung_basis = {b.name: b.matrix_basis.copy() for b in rig.pose.bones}
+    sides, side_m = {}, float(flag("--side", str(yoke.ARM_DRAG_M)))  # --side 0: a shoulder's piece stops at its zone, as before
+    if side_m > 0 and bare_shoulders:
+        named = [j["bone"] for j, kind, *_ in wanted if kind == "shoulder"]
+        # measured on the pictured model, whose skin the cards hold, with its own pull (a detailed model took its pull
+        # from the tidy version's nearest surface, a painted-on garment's among them); and on the tidy mesh the
+        # piece is cut from, for where its points rest
+        seen, _, seen_owners = arm_drag(rig, [o for o in bodies if not bake_impostor.worn_dress(o, dress)], folds, named, dress)
+        drags, slices, owners = arm_drag(rig, tidy, folds, named, dress)
+        for j, kind, ring, zone, centre in wanted:
+            if j["bone"] not in drags:
+                continue
+            drag, spots, travel, joint, own = seen[j["bone"]]
+            held, arms = (np.array([o == j["between"][n] for o in seen_owners]) for n in (1, 0))
+            reach_m = yoke.side_zone(spots, drag, held, joint, zone, side_m)
+            pulled, off_arm = held & (drag > side_m), arms & (own > side_m)
+            arm_m = yoke.side_zone(spots, own, arms, joint, zone, side_m)  # (and the arm's own card, where the chest drags its skin off it)
+            sides[j["bone"]] = (reach_m, travel, drags[j["bone"]][0], drags[j["bone"]][1], drags[j["bone"]][3], arm_m)  # (the tidy mesh: what drags, where it rests, where the joint is)
+            print("JOINTS %s's armpit: the arm drags %d points of the %s's skin more than %.1f cm (%.1f at most); the %s's card steps aside %.1f cm round the joint, where the piece's zone is %.1f; the joint itself goes %.1f cm" % (
+                j["bone"], int(pulled.sum()), j["between"][1], side_m * 100, 100 * float(drag[held].max()) if held.any() else 0.0, j["between"][1], reach_m * 100, zone * 100, travel * 100), flush=True)
+            print("JOINTS %s's armpit: ... and the chest drags %d points of the arm's own skin off its card more than %.1f cm, %s cm from the joint (its zone by the same measure: %.1f)" % (
+                j["bone"], int(off_arm.sum()), side_m * 100, np.percentile(np.linalg.norm(spots[off_arm] - joint, axis=1) * 100, [5, 50, 95]).round(1).tolist() if off_arm.any() else "-",
+                100 * yoke.side_zone(spots, own, arms, joint, zone, side_m)), flush=True)
+            for other in sorted({o for o in seen_owners if o and o not in j["between"]}):
+                theirs = np.array([o == other for o in seen_owners]) & (drag > side_m)
+                if theirs.any():
+                    print("JOINTS %s's armpit: ... and %d points of the %s's skin, %.1f cm at most, %.1f to %.1f cm from the joint" % (j["bone"], int(theirs.sum()), other, 100 * float(drag[theirs].max()),
+                          100 * float(np.linalg.norm(spots[theirs] - joint, axis=1).min()), 100 * float(np.linalg.norm(spots[theirs] - joint, axis=1).max())), flush=True)
+    for b in rig.pose.bones:
+        b.matrix_basis = Matrix.Identity(4)
+    bpy.context.view_layer.update()
     for j, kind, ring, zone, centre in wanted:
         full = int(target * (float(flag("--neck-triangles", str(YOKE_FULL))) if kind == "neck" else 1))  # (--neck-triangles: how many times a joint's the neck piece may have)
         taken = lambda at: any((at - c).length < z - OVERLAP_M for c, z in shoulders)  # inside a shoulder's zone: its piece is there
@@ -325,13 +440,24 @@ def main():
                     for n in (0, 1):
                         if groups[g.group] == j["between"][n] or (n == 1 and groups[g.group] in trunk):
                             pull[v.index, n] += g.weight / total
-            near = np.array([(obj.matrix_world @ v.co - centre).length < zone + margin * ring for v in obj.data.vertices])
+            wide = sides[j["bone"]][5] if j["bone"] in sides else zone  # (an armpit: the arm's side as far as its card steps aside)
+            near = np.array([(obj.matrix_world @ v.co - centre).length < wide + margin * ring for v in obj.data.vertices])
             if kind == "neck":  # the trunk's side only (the head is its card's, whole), and not what a shoulder's piece has
                 free = np.array([not taken(obj.matrix_world @ v.co) for v in obj.data.vertices])
                 keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and free[list(p.vertices)].any()
                         and (pull[list(p.vertices), 1].mean() >= 0.2 or (pull[list(p.vertices), 0].mean() >= 0.2 and up_neck(obj.matrix_world @ p.center)))}
             else:
                 keep = {p.index: pull[list(p.vertices)].mean(axis=0) for p in obj.data.polygons if near[list(p.vertices)].any() and pull[list(p.vertices)].sum(axis=1).mean() >= 0.2}
+            own = sum(1 for i in keep if any((obj.matrix_world @ obj.data.vertices[v].co - centre).length < zone + margin * ring for v in obj.data.polygons[i].vertices))  # (the shoulder as it was: what decides how often it is cut in four)
+            if j["bone"] in sides and obj.name in slices:
+                # the armpit: and the chest's skin round the joint, as far as the arm drags it (as the cards were pictured)
+                reach_m, travel, drag, spots, joint = sides[j["bone"]][:5]
+                a, b = slices[obj.name]
+                held = np.array([o == j["between"][1] for o in owners[a:b]])
+                round_ = held & (np.linalg.norm(spots[a:b] - joint, axis=1) < reach_m + travel + LAP_M + margin * ring)
+                for p in obj.data.polygons:
+                    if p.index not in keep and round_[list(p.vertices)].any() and pull[list(p.vertices)].sum(axis=1).mean() >= 0.2:
+                        keep[p.index] = pull[list(p.vertices)].mean(axis=0)
             if not keep:
                 continue
             data = obj.data.copy()
@@ -348,7 +474,7 @@ def main():
             bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in keep], context="FACES")
             bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)  # a .glb's mesh is split along every seam of its texture
             bmesh.ops.triangulate(bm, faces=bm.faces)
-            pieces.append((obj, data, bm, len(bm.faces) * (sum(1 for s in keep.values() if s[1] >= 0.2) / float(len(keep)) if kind == "neck" else 1.0)))  # (and how many of them the trunk's own side gives: what decides how often it is cut in four)
+            pieces.append((obj, data, bm, len(bm.faces) * (sum(1 for s in keep.values() if s[1] >= 0.2) / float(len(keep)) if kind == "neck" else own / float(len(keep)))))  # (and how many of them the trunk's own side gives: what decides how often it is cut in four)
         if not pieces:
             continue
         before = sum(len(bm.faces) for _, _, bm, _ in pieces)
@@ -362,8 +488,15 @@ def main():
                 bmesh.ops.subdivide_edges(bm, edges=bm.edges, cuts=1, use_grid_fill=True)
                 bmesh.ops.triangulate(bm, faces=bm.faces)
             # what lies wholly outside the zone and the little more the piece is drawn in is not needed
-            reach = zone + LAP_M + 0.01
-            bmesh.ops.delete(bm, geom=[f for f in bm.faces if all((obj.matrix_world @ v.co - centre).length > reach for v in f.verts)], context="FACES")
+            reach = (sides[j["bone"]][5] if j["bone"] in sides else zone) + LAP_M + 0.01
+            if j["bone"] in sides:  # (the armpit: on the chest's side, as far as the arm drags the skin; not where the neck's piece is)
+                side_reach = sides[j["bone"]][0] + sides[j["bone"]][1] + LAP_M + 0.01
+                lower = bm.faces.layers.int.get("lower")
+                far = lambda f, r: all((obj.matrix_world @ v.co - centre).length > r for v in f.verts)
+                necked = lambda f: any(all((obj.matrix_world @ v.co - c).length < z - OVERLAP_M for v in f.verts) for c, z in necks)
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if far(f, reach) and (f[lower] == 1 or far(f, side_reach) or necked(f))], context="FACES")
+            else:
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if all((obj.matrix_world @ v.co - centre).length > reach for v in f.verts)], context="FACES")
             if kind == "neck":
                 bmesh.ops.delete(bm, geom=[f for f in bm.faces if all(taken(obj.matrix_world @ v.co) for v in f.verts)], context="FACES")
                 # and what is more the head's than the neck's is the head's card's: a tidy mesh's long triangles reach from
@@ -397,6 +530,12 @@ def main():
             for poly in o.data.polygons:
                 poly.use_smooth = True
         joints.append({"bone": j["bone"], "kind": kind, "between": j["between"], "ring_cm": j["ring_cm"], "zone_cm": round(zone * 100, 1), "reach_cm": round((zone + LAP_M) * 100, 1), "triangles": sum(len(o.data.polygons) for o in objects), "cut_from": before})
+        if j["bone"] in sides and max(sides[j["bone"]][0], sides[j["bone"]][5]) > zone:
+            # the chest's card steps aside as far as the arm drags its skin, the arm's as far as the chest drags the arm's
+            # (the shoulder's own zone, unless a painted-on strap took the arm's pull), and the piece is drawn that far
+            reach_m, arm_m = sides[j["bone"]][0], sides[j["bone"]][5]
+            joints[-1].update(zones_cm={j["between"][1]: round(reach_m * 100, 1), j["between"][0]: round(arm_m * 100, 1)}, reach_cm=round((max(reach_m, arm_m) + LAP_M) * 100, 1),
+                              side_cm=round(reach_m * 100, 1), arm_cm=round(arm_m * 100, 1), drag_cm=round(side_m * 100, 2), travel_cm=round(sides[j["bone"]][1] * 100, 1))
         if kind == "shoulder" and bare_shoulders:
             # An armpit overhead (README: "No flaps"). Overhead the armpit folds over on itself, and the fold's far side
             # faces away: left out, it was a hole, and the arm's card showed through it from inside the zone (its core,
@@ -405,10 +544,26 @@ def main():
             # stepping aside out to the piece's edge, zones_cm: the last flap under the arm went, and the judge counted
             # more of her left bare and less like her.)
             joints[-1].update(sides=2, cores_cm={j["between"][0]: 0.0})
+            if "side_cm" in joints[-1]:
+                # ... and reaching down the side (above), the chest's card keeps no core there either: a core is a line
+                # through the joint along the chest's bone, which at a shoulder runs straight down her side, and kept it
+                # showed through the fold as red scraps of the chest's card. Its far side is drawn as far as the piece
+                # reaches on the chest's side: overhead the stretched side folds into the armpit and turns away.
+                joints[-1].update(cores_cm={j["between"][0]: 0.0, j["between"][1]: 0.0}, back_cm=max(joints[-1]["side_cm"], joints[-1]["arm_cm"]))
+                # Its rim is lit by which way the skin itself faces. A point half the arm's and half the chest's is turned
+                # half as far as the arm, and on her side overhead that left it facing 15 to 50 degrees further from the
+                # eye than the stretched skin really does: bold ink's rim light then washed the black of her top pale grey.
+                joints[-1]["rim"] = "surface"
         if kind == "neck":
             # about: the bone whose head the zone and the piece are a ball about (not the joint's own, the head's);
             # aside: the one card that steps aside there (the head's stays whole); core_cm: and keeps nothing in it
             joints[-1].update(about="neck", aside=[j["between"][1]], core_cm=0.0)
+            # ... and worn over the cards that near, as the dress is ("over_cm"): where the head's card meets it under the
+            # jaw, the two lay within a few millimetres of each other and took turns pixel by pixel, a hatched dark band
+            # that bold ink ringed in a ragged line. Now the jaw is the card's where it stands clear of the neck, and the
+            # throat under it the piece's. --neck-over 0 as before.
+            if float(flag("--neck-over", str(yoke.NECK_OVER_CM))) > 0:
+                joints[-1]["over_cm"] = float(flag("--neck-over", str(yoke.NECK_OVER_CM)))
             if head_aside > 0:
                 # ... and the head's card steps aside too, up the neck to HEAD_ASIDE of the way to the head's joint: below
                 # that the neck is the piece's, the jaw and the face stay the card's. A head tipped back carried the foot
@@ -511,7 +666,10 @@ def main():
         bpy.data.objects.remove(obj)
     for obj in bodies:
         obj.hide_render = True
-    bake_impostor.hang_arms(scene, rig)  # the pose the cards were pictured in
+    for b in rig.pose.bones:  # the pose the cards were pictured in (bake_impostor.hang_arms, above)
+        b.rotation_mode = "QUATERNION"
+        b.matrix_basis = hung_basis[b.name]
+    bpy.context.view_layer.update()
     into = {}
     for part, bone in bone_of.items():
         if bone in rest and bone in rig.pose.bones:
@@ -527,6 +685,19 @@ def main():
     bpy.ops.object.join()
     whole = made[0]
     whole.name = "joints"
+    if flag("--weld", "on") == "on":
+        # One piece can be cut from several of the tidy version's meshes (her skin is cut where a painted-on top and a
+        # skirt were: "body under: sleeveless top", "... ruffled skirt + sleeveless top"), and where they meet its
+        # points are two. Welded, a piece is one skin: no crack opens there as it is laid down, and the part from the
+        # smaller mesh is not taken for a scrap that came away (an armpit lost a third of its back to that).
+        bm = bmesh.new()
+        bm.from_mesh(whole.data)
+        for slot in range(len(whole.data.materials)):
+            verts = list({v for f in bm.faces if f.material_index == slot for v in f.verts})
+            bmesh.ops.remove_doubles(bm, verts=verts, dist=1e-4)
+        bm.to_mesh(whole.data)
+        bm.free()
+        whole.data.update()
     whole.data.uv_layers.new(name="atlas")
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
@@ -552,7 +723,13 @@ def main():
         # took its pull from the tidy version's nearest surface, the painted garment's among them). It was thought to
         # be why her armpit came apart overhead; judge_joints.py found the skin drawn further off (0.6 to 0.9 cm) and
         # no fewer bare pixels.
-        pulled_as = {} if wrap and worn is not None and flag("--pull", "worked") == "pictured" else None
+        # The neck's piece alone is pulled as the pictured body is where it lies (README: "An armpit that holds"; --neck-pull
+        # tidy as before). Since the head's card steps aside up the neck ("No flaps"), the piece carries the head's own
+        # skin there, which the pictured body gives wholly to the head and the tidy version partly to the neck: carried
+        # by the tidy pull, it stood 1 to 3 cm off the model's under her jaw. Pulled as the pictured body, her neck from
+        # 1 m in bold ink was left bare by a sixth less, and her chest twisted by nearly half less.
+        neck_pictured = wrap and flag("--neck-pull", "pictured") == "pictured"
+        pulled_as = {} if (wrap and worn is not None and flag("--pull", "worked") == "pictured") or neck_pictured else None
         corners_of = {id(every): faces, id(skin_below): below}
         for v in bm.verts:
             if v.link_faces and v.link_faces[0].material_index in dresses:
@@ -575,7 +752,7 @@ def main():
                 hit, facing, index, far = skin.find_nearest(at)
             if hit is not None:
                 v.co = back @ hit
-                if pulled_as is not None:  # the pictured body's pull there: its face's corners', the nearer counting more
+                if pulled_as is not None and (flag("--pull", "worked") == "pictured" or not neck_pictured or (v.link_faces and v.link_faces[0].material_index in necks)):  # the pictured body's pull there: its face's corners', the nearer counting more
                     total = {}
                     for corner in corners_of[id(skin)][index]:
                         share = 1.0 / max((points[corner] - hit).length, 1e-5)
@@ -668,7 +845,7 @@ def main():
             if sum(f.calc_area() for f in island) < SCRAP * whole_area.get(me.materials[start.material_index].name, 0.0):
                 scraps += island
         if scraps:
-            print("JOINTS %d triangles in scraps that had come away from their pieces were left out" % len(scraps), flush=True)
+            print("JOINTS %d triangles in scraps that had come away from their pieces were left out (%s)" % (len(scraps), ", ".join("%s %d" % (n, c) for n, c in sorted(__import__("collections").Counter(me.materials[f.material_index].name[len("joint "):] for f in scraps).items()))), flush=True)
             bmesh.ops.delete(bm, geom=scraps, context="FACES")
         bm.to_mesh(me)
         bm.free()
