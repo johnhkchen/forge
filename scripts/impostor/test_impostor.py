@@ -418,6 +418,15 @@ def test_joints():
     reach = [float(middle[which[0]].max() - line) for which in (short, wider)]
     check("a part also takes the faces next door that its own bones still pull on, and the other part, told not to, takes no more", bool((wider[0] | ~short[0]).all()) and reach[1] > reach[0] + 0.008 and bool((wider[1] == short[1]).all()),
           "%.1f cm into its neighbour by the ring's rule, %.1f cm where its bones pull by a tenth" % (reach[0] * 100, reach[1] * 100))
+    # a shoulder (bake_impostor.py: HELD): what a part takes of its neighbour, by the pull or by the ring's reach along
+    # a fringe that runs on down her side, stays within so many rings of the joint itself
+    _, far_pull, _, _ = impostor.round_cut(points, pull, edges, corners, begin, sides, joint, 0.2, 0.02, pulled=[0.1, 0.1])
+    _, held, _, _ = impostor.round_cut(points, pull, edges, corners, begin, sides, joint, 0.2, 0.02, pulled=[0.1, 0.1], held={(0, 1): 1.35, (1, 0): 1.35})
+    spot = np.add.reduceat(points[corners], begin, axis=0) / 4.0
+    off_joint = np.linalg.norm(spot - joint[0][2], axis=1)
+    check("a shoulder's two parts take nothing of each other further than 1.35 rings from the joint, however far the pull reaches", bool((off_joint[held[0] | held[1]] <= 1.35 * rings[(0, 1)] + 1e-9).all())
+          and bool((off_joint[far_pull[0] | far_pull[1]] > 1.35 * rings[(0, 1)]).any()), "the pull alone took faces out to %.1f cm, held %.1f cm" % (100 * off_joint[far_pull[0] | far_pull[1]].max(), 100 * off_joint[held[0] | held[1]].max()))
+    check("... and nearer the joint they take what they took", bool(((held[0] | held[1]) == ((far_pull[0] | far_pull[1]) & (off_joint <= 1.35 * rings[(0, 1)]))).all()))
     size, made = balls[(0, 1)]
     check("the joint's ball is as big as fits inside the limb there, and is made of the faces round the ring, both parts'", 0.03 < size < 0.04 and (owner[made] == 0).any() and (owner[made] == 1).any()
           and float(np.abs(middle[made] - line).max()) < 0.065, "%.1f cm across, faces within %.1f cm of the ring" % (200 * size, 100 * np.abs(middle[made] - line).max()))
@@ -1034,6 +1043,11 @@ def test_skin(runs):
         inside_out = piece(rest, flip=True)[0]
         check("... and turned inside out, only the wall that then faces the eye, the far one", float(inside_out[np.isfinite(inside_out)].min()) > 3.0)
         check("it says it is the card below the joint", set(np.unique(who)) == {0, 1})
+        skin.joints[0]["over_cm"] = 1.5  # worn over the body (a dress): it stands nearer by that much, on the very same pixels
+        over, _ = piece(rest)
+        check("a piece worn over the body (\"over_cm\") wins over a card that near: nearer by that much, on the same pixels", np.array_equal(np.isfinite(over), there)
+              and abs(float(np.median(depth[there] - over[there])) - 0.015) < 0.002, "%.4f m nearer" % float(np.median(depth[there] - over[there])))
+        del skin.joints[0]["over_cm"]
         bent = np.eye(4)
         bent[:3, :3] = impostor.about([0.0, 0.0, 1.0], math.radians(90.0))
         at, _ = skin.stood("j", {"lo": np.eye(4), "j": bent})
@@ -1119,6 +1133,18 @@ def test_neck(runs):
     got = yoke.zone([0.0, 1.6, 0.0], [[0.17, 1.55, 0.0], [-0.2, 1.55, 0.0]], [0.0, 1.38, 0.0])
     check("the neck piece's zone is a ball about the foot of the neck, most of the way to the nearer arm or down to the chest's joint, whichever is less",
           abs(got - min(yoke.ARM * math.hypot(0.17, 0.05), yoke.CHEST * 0.22)) < 1e-9 and abs(yoke.zone([0, 0, 0], [[1, 0, 0]], [0, -0.1, 0]) - yoke.CHEST * 0.1) < 1e-9, "%.4f m" % got)
+    # a shoulder's zone: as the shoulders are wide, not as the arm is thick (her slim arm; Roosevelt's thick one)
+    hers, his = yoke.shoulder_zone(0.085, [0.152, 1.40, 0.0], [0.0, 1.40, 0.0]), yoke.shoulder_zone(0.140, [0.199, 1.45, 0.0], [0.0, 1.45, 0.0])
+    check("a shoulder's zone reaches at least %.2f of the way from its joint to the foot of the neck; a thick arm's ring reaches further and is kept" % yoke.SHOULDER_SPAN,
+          abs(hers - yoke.SHOULDER_SPAN * 0.152) < 1e-9 and hers > 0.085 and his == 0.140, "a slim arm's 8.5 cm made %.1f cm; a thick arm's 14 cm kept" % (hers * 100))
+    # which of a tidy version's meshes a piece is cut from (bake_joints.py: cut_from)
+    hers = [(None, []), ("sleeveless_top", []), (None, ["sleeveless_top"]), ("ruffled_skirt", []), (None, ["ruffled_skirt"]), (None, ["ruffled_skirt", "sleeveless_top"]), ("hair_flower", []), (None, ["hair_flower"])]
+    dressed = yoke.cut_from(hers, {"ruffled_skirt"}, ["ruffled_skirt"])
+    check("a body with only its skirt put back on: the top is painted on her skin, so her pieces are cut from the skin under it, never from the top or the skirt",
+          dressed == [True, False, True, False, True, True, False, True], str(dressed))
+    lincoln = [(None, []), ("linen_work_shirt", []), (None, ["linen_work_shirt"]), ("wool_trousers", []), (None, ["wool_trousers"])]
+    check("... a clothed model of one skin is cut from the garments, its outside, as it was (Lincoln's shirt is his collar)", yoke.cut_from(lincoln, None) == [True, True, False, True, False])
+    check("... and a skin hidden by a dress is cut from either way (a knee under a skirt lies on the leg)", yoke.cut_from(hers, None, ["ruffled_skirt"]) == [True, True, False, False, True, True, True, False])
 
     # a neck as a rig has it: a line of points a centimetre apart, each given to one bone alone
     count = 25

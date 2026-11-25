@@ -11,6 +11,8 @@ tops stayed behind with the ribs.
 What is in here:
 
     zone        how big the piece is: a ball about the foot of the neck
+    shoulder_zone  ... and how big a shoulder's is: as the shoulders are wide, not as the arm is thick
+    cut_from    which of the tidy version's meshes a piece is cut from: a top painted on the skin is skin
     spread_pull the bones' pull evened out along the piece (a neck is not a hinge)
     lay_cloth   clothing gives up some of what the neck pulls on it (a collar lies on the shoulders)
     rim         the pull eased over to the chest bone toward the piece's rim, where the chest's card is
@@ -27,6 +29,7 @@ RIM_CLEAR_M = 0.04 # ... but not where the next piece is, nor this far past it: 
 RIM_UP = 0.2       # ... nor up the neck: above the foot of the neck by this share of the zone the piece meets the head's card, not the chest's
 EVEN_M = 0.03      # the pull is evened out over about this far along the surface
 CLOTH = 0.5        # clothing gives this share of what the neck and head pull on it to the chest
+SHOULDER_SPAN = 0.65  # a shoulder's zone reaches at least this share of the way from its joint to the foot of the neck (shoulder_zone)
 
 
 def ease(x):
@@ -39,6 +42,40 @@ def zone(foot, arms, chest, times=1.0):
     begin; arms: where each upper arm begins."""
     foot = np.asarray(foot, dtype=np.float64)
     return times * min(ARM * min(float(np.linalg.norm(np.asarray(a) - foot)) for a in arms), CHEST * float(np.linalg.norm(np.asarray(chest) - foot)))
+
+
+def shoulder_zone(zone, joint, foot, span=SHOULDER_SPAN):
+    """A shoulder's zone (m): the one its ring gives (zone), but never less than `span` of the way from the joint to
+    the foot of the neck. What stretches when an arm goes up (the cap of the shoulder, the deltoid, the armpit) is as
+    big as the shoulders are wide, not as the arm is thick. A slim arm on a woman's shoulders made a zone of 8.5 cm
+    where the skin that moves reaches 10 to 15; on the men the ring's zone is 0.69 to 0.72 of the way already."""
+    return max(float(zone), span * float(np.linalg.norm(np.asarray(joint, dtype=np.float64) - np.asarray(foot, dtype=np.float64))))
+
+
+def cut_from(meshes, worn, dress=()):
+    """Which of a tidy version's meshes the pieces are cut from: [True or False] for meshes [(the garment it is, or
+    None for skin; the garments it is the skin under)], as cloth.py writes names. worn: the garments the pictured
+    model has as meshes of their own, or None when it is one skin (a clothed final.glb). dress: the dress's
+    garments (bake_impostor.py: chains_of), which are a piece of their own and never cut here.
+
+    One skin: the tidy garments are its outside (a shirt, a coat) and are cut; the skin under them is not, except
+    under the dress (a knee under a skirt lies on the leg). A body with garments put back on it (rig_detailed.py:
+    "dressed") has every garment that was not put back painted on its skin: her sleeveless top is the base body's
+    own black, not cloth over it. Cut from the tidy garment, a piece is that garment's shape, not hers (the tidy
+    top's straps are plates standing off her shoulders by up to ten centimetres, which laid onto her skin tore into
+    fins), and lay_cloth would hold it back from the neck as if it were a collar. So there such a garment gives way
+    to the skin it hides, which lies where her skin does and moves as skin."""
+    swung = lambda g: bool(g) and any(s == g or s.startswith(g + "_") for s in dress)
+    out = []
+    for gear, under in meshes:
+        if worn is None:
+            keep = gear is not None or not under or any(swung(g) for g in under)
+        elif gear is not None:
+            keep = gear in worn
+        else:
+            keep = not under or any(g not in worn or swung(g) for g in under)
+        out.append(keep and not swung(gear))
+    return out
 
 
 def rounds_for(even_m, edge_m):

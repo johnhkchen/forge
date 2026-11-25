@@ -139,7 +139,7 @@ class Yoke:
         foot = head("neck")
         self.zone = arithmetic.zone(foot, [head(b) for b in ("upper_arm_l", "upper_arm_r")], head("chest"))
         rings = {j["bone"]: j["ring_cm"] / 100.0 for j in card.get("joints") or []}
-        shoulders = [(head(b), 1.35 * rings[b]) for b in ("upper_arm_l", "upper_arm_r") if b in rings]
+        shoulders = [(head(b), 1.35 * rings[b]) for b in ("upper_arm_l", "upper_arm_r") if b in rings]  # (fixed, so before and after are the same skin)
         folds = bake_impostor.part_of_bone(rig)
         self.picked = []  # per mesh: (the mesh, which of its points, where each was when the cards were pictured)
         for obj in real.bodies:
@@ -304,6 +304,13 @@ def main():
     with open(os.path.join(REPO, "sets", cast["set"], "set.json")) as f:
         crew = json.load(f)["cameras"]["crew"]
     crew_fov = math.degrees(2.0 * math.atan(36.0 / (16.0 / 9.0) / 2.0 / crew["lens_mm"]))
+    push = None  # a take's own moving camera, for --eyes push
+    if os.path.isfile(os.path.join(take, "plan.json")):
+        sys.path.insert(0, os.path.join(REPO, "scripts", "sets"))
+        import camera_path
+        with open(os.path.join(take, "plan.json")) as f:
+            moving = camera_path.expand_all(json.load(f).get("moving_cameras") or {})
+        push = moving.get("push_in") or next(iter(moving.values()), None)
     report = {"take": os.path.basename(take), "model": model, "sheets": which, "size": list(SIZE), "rows": [], "folders": {}}
     began = time.time()
 
@@ -359,7 +366,12 @@ def main():
                 bends = dict(bends, neck=yoke_moves(rest, pose).get(why, 0.0))
                 slip = yoke.measure(characters[looks[0]])
             for eye_name in eyes:
-                if eye_name == "crew":
+                if eye_name == "push":  # the take's own moving camera, where it is at that moment (a take filmed with one: groove-flamenco's push-in)
+                    if push is None:
+                        continue
+                    where = camera_path.sample(push, t)
+                    views = [(impostor.Eye(np.array(where["at"], dtype=float), np.array(where["aim"], dtype=float), math.degrees(2.0 * math.atan(36.0 / (16.0 / 9.0) / 2.0 / where["lens_mm"])), SIZE), spots, "")]
+                elif eye_name == "crew":
                     views = [(impostor.Eye(np.array(crew["at"], dtype=float), np.array(crew["aim"], dtype=float), crew_fov, SIZE), spots, "")]
                 else:  # a square round the joint, as the screen shows it from that many metres
                     away = float(eye_name)

@@ -72,6 +72,14 @@ without the chains' bones draws neither the piece nor the zone, and the dress's 
 Under a dress the knee and hip pieces are cut from the skin the dress hides ("body under: ..." in the tidy version)
 and laid onto the body, not onto the skirt.
 
+Bare shoulders, a top painted on (README: "Shoulders that hold"). A shoulder's zone is never smaller than
+yoke.SHOULDER_SPAN of the way from its joint to the foot of the neck: the skin that stretches when an arm goes up is
+as big as the shoulders are wide, not as the arm is thick. A pictured model that is a body with garments put back
+on it has every other garment painted on its skin, and its pieces are cut from the skin those garments hide, not
+from the tidy garments (yoke.cut_from): a sleeveless top is her skin's own black, and moves as skin. And the dress's
+piece is worn over the body ("over_cm"): where it and a card of the body are that near, as at a waistband, the
+dress is drawn.
+
 A joint is left to its cards when too much of its piece would not lie down (--torn: the share of it in triangles
 pulled out to shards, where the two meshes are too unlike: a rolled sleeve), or misses too much of the model
 there (--missed), or is named in --leave or, for this character, in scripts/impostor/joints.json.
@@ -110,6 +118,7 @@ DRESS_ROOM_M = 0.05  # the dress's zone reaches this far past the furthest of it
 DRESS_SWING = 1.5   # ... and its piece is drawn this many times as far out: swung, the hem goes further
 DRESS_WRAP_M = 0.10  # the tidy version's dress is laid onto the pictured one where that is within this of it (a ruffle stands further off than a sleeve)
 LEAST_M = {"elbow": 0.08, "knee": 0.10}  # a zone is never smaller than this: a ring found small (a rolled sleeve) is not a small joint
+DRESS_OVER_M = 0.015  # the dress's piece is worn over the body: where it and a card of the body are this near, the dress is drawn
 TORN_STRETCH = 2.5  # a triangle with an edge pulled out to this many times its length did not lie down on the model
 MISSED_M = 0.015    # the model's surface this far from a piece is not covered by it
 SCRAP = 0.03        # an island of a piece with less than this share of the piece's area is a scrap
@@ -126,6 +135,19 @@ def kind_of(bone):
 def hides_dress(obj, dress):
     """Whether a tidy version's mesh is skin a garment of the dress hides ("body under: ruffled skirt")."""
     return bool(dress and obj.get("under") and any(bake_impostor.worn_dress({"gear": g}, dress) for g in str(obj["under"]).split("|")))
+
+
+def garment_of(obj):
+    """The garment a mesh is ("gear: sleeveless top", or a "gear" of its own), as cloth.py writes a name; None for skin."""
+    gear = obj.get("gear") or (obj.name[len("gear: "):].split(".")[0] if obj.name.startswith("gear: ") else None)
+    return impostor.slug_of(gear) if gear else None
+
+
+def cut_from(meshes, worn, dress):
+    """Which of a tidy version's meshes the pieces are cut from (yoke.cut_from has the rule and why). worn: the
+    garments the pictured model has as meshes of their own, or None when it is one skin (a clothed final.glb)."""
+    told = [(garment_of(o), [impostor.slug_of(g) for g in str(o.get("under") or "").split("|") if g]) for o in meshes]
+    return [o for o, keep in zip(meshes, yoke.cut_from(told, worn, (dress or {}).get("garments", ()))) if keep]
 
 
 
@@ -225,10 +247,12 @@ def main():
     folds = bake_impostor.part_of_bone(rig, dress)
     bone_of = {n: bones[0] for n, bones in bake_impostor.parts_with(dress)}
     # The pictured model as it rests, to lay the pieces on (not the dress: a knee under a skirt lies on the leg).
-    points, faces, below = [], [], []
+    points, faces, below, body_pulls = [], [], [], []
     for obj in [o for o in bodies if not bake_impostor.worn_dress(o, dress)]:
         first = len(points)
         points += [obj.matrix_world @ v.co for v in obj.data.vertices]
+        group_names = [g.name for g in obj.vertex_groups]
+        body_pulls += [{group_names[g.group]: g.weight for g in v.groups if g.weight > 0} for v in obj.data.vertices]
         faces += [[first + i for i in poly.vertices] for poly in obj.data.polygons]
         # (the same without the head's own faces, for the neck's piece to be laid on: a beard, a jaw or a hat brim
         # hangs over a collar, and is the head's card's to show)
@@ -246,10 +270,14 @@ def main():
         known = set(scene.objects)
         bpy.ops.import_scene.gltf(filepath=os.path.join(profiles, "%s-walk.glb" % card["plays"]))
         extra = [o for o in scene.objects if o not in known]
-        tidy = [o for o in extra if o.type == "MESH" and o.find_armature() and (not o.get("under") or hides_dress(o, dress))]
+        # a pictured model that is a body with garments put back on it has the others painted on: cut from the skin under those
+        worn = {garment_of(o) for o in bodies if garment_of(o)} or None
+        if flag("--painted", "skin") == "garment":  # (tried: a garment painted on cut as the tidy garment, as before "Shoulders that hold")
+            worn = None
+        tidy = cut_from([o for o in extra if o.type == "MESH" and o.find_armature()], worn, dress)
+        print("JOINTS cut from the tidy version's %s" % ", ".join(sorted(o.name for o in tidy)), flush=True)
     else:
-        extra, tidy = [], bodies
-    tidy = [o for o in tidy if not bake_impostor.worn_dress(o, dress)]  # the dress is its own piece; under it, the skin it hides
+        extra, tidy = [], [o for o in bodies if not bake_impostor.worn_dress(o, dress)]  # the dress is its own piece
 
     joints, made = [], []
     head_of = lambda bone: rig.matrix_world @ rig.data.bones[bone].head_local
@@ -268,6 +296,8 @@ def main():
             zone = yoke.zone(centre, [head_of(b) for b in ("upper_arm_l", "upper_arm_r")], head_of("chest"), zones[kind])
         else:
             zone, centre = max(zones[kind] * ring, LEAST_M.get(kind, 0.0)), head_of(j["bone"])
+            if kind == "shoulder" and "neck" in rig.data.bones:  # as big as the shoulders are wide, not as the arm is thick
+                zone = yoke.shoulder_zone(zone, centre, head_of("neck"))
         wanted.append((j, kind, ring, zone, centre))
     wanted.sort(key=lambda w: w[1] == "neck")  # the neck's last: it leaves the shoulders' zones to their own pieces
     shoulders = [(centre, zone) for _, kind, _, zone, centre in wanted if kind == "shoulder"]
@@ -448,7 +478,7 @@ def main():
                     poly.use_smooth = True
             zone = furthest + DRESS_ROOM_M
             joints.append({"bone": key, "kind": "dress", "between": ["dress", folds.get(root, "hips")], "ring_cm": 0.1, "zone_cm": round(zone * 100, 1), "reach_cm": round(zone * DRESS_SWING * 100, 1),
-                           "triangles": sum(len(o.data.polygons) for o in objects), "cut_from": before, "from": "model" if from_model else "tidy", "about": root, "aside": ["dress"], "core_cm": 0.0,
+                           "triangles": sum(len(o.data.polygons) for o in objects), "cut_from": before, "from": "model" if from_model else "tidy", "about": root, "aside": ["dress"], "core_cm": 0.0, "over_cm": round(DRESS_OVER_M * 100, 2),
                            "chains": len(dress["chains"]), "garments": dress["garments"]})
             made += objects
             print("JOINTS the dress (%s): %d chains from %s, a zone of %.1f cm; %d triangles of the %s there, made %d" % (", ".join(dress["garments"]), len(dress["chains"]), root, zone * 100, before,
@@ -493,6 +523,13 @@ def main():
         necks = {s for s, m in enumerate(me.materials) if any(j["kind"] == "neck" and m.name == "joint %s" % j["bone"] for j in joints)}
         dresses = {s for s, m in enumerate(me.materials) if any(j["kind"] == "dress" and m.name == "joint %s" % j["bone"] for j in joints)}
         every = skin
+        # Tried and left off (--pull pictured): on a body with garments put back on it, a piece cut from the skin under
+        # a painted-on garment pulled as the pictured body is where it lies, not as the tidy skin was (the pictured body
+        # took its pull from the tidy version's nearest surface, the painted garment's among them). It was thought to
+        # be why her armpit came apart overhead; judge_joints.py found the skin drawn further off (0.6 to 0.9 cm) and
+        # no fewer bare pixels.
+        pulled_as = {} if wrap and worn is not None and flag("--pull", "worked") == "pictured" else None
+        corners_of = {id(every): faces, id(skin_below): below}
         for v in bm.verts:
             if v.link_faces and v.link_faces[0].material_index in dresses:
                 if dress_from_model:
@@ -506,15 +543,37 @@ def main():
                 continue
             at, out = whole.matrix_world @ v.co, (turn @ v.normal).normalized()
             skin = skin_below if v.link_faces and v.link_faces[0].material_index in necks else every
-            hit, facing, _, far = skin.ray_cast(at + out * WRAP_M, -out, 2.0 * WRAP_M)
+            hit, facing, index, far = skin.ray_cast(at + out * WRAP_M, -out, 2.0 * WRAP_M)
             if hit is None or facing.dot(out) <= 0.0:
-                hit, facing, _, far = skin.find_nearest(at, WRAP_M)
+                hit, facing, index, far = skin.find_nearest(at, WRAP_M)
             if hit is None:  # the tidy mesh has something here the pictured model has not: the nearest of it, however far
                 lost.append(v)
-                hit, facing, _, far = skin.find_nearest(at)
+                hit, facing, index, far = skin.find_nearest(at)
             if hit is not None:
                 v.co = back @ hit
+                if pulled_as is not None:  # the pictured body's pull there: its face's corners', the nearer counting more
+                    total = {}
+                    for corner in corners_of[id(skin)][index]:
+                        share = 1.0 / max((points[corner] - hit).length, 1e-5)
+                        for bone, w in body_pulls[corner].items():
+                            total[bone] = total.get(bone, 0.0) + w * share
+                    pulled_as[v.index] = total
         print("JOINTS laid onto the pictured model: %d of %d points found no surface within %g cm and went to the nearest there is" % (len(lost), len(bm.verts), WRAP_M * 100), flush=True)
+        if pulled_as:
+            layer = bm.verts.layers.deform.verify()
+            slot = {g.name: g.index for g in whole.vertex_groups}
+            bm.verts.ensure_lookup_table()
+            for i, total in pulled_as.items():
+                best = sorted(total.items(), key=lambda pair: -pair[1])[:4]
+                whole_w = sum(w for _, w in best) or 1.0
+                for bone, _ in best:
+                    if bone not in slot:
+                        slot[bone] = whole.vertex_groups.new(name=bone).index
+                v = bm.verts[i]
+                v[layer].clear()
+                for bone, w in best:
+                    v[layer][slot[bone]] = w / whole_w
+            print("JOINTS %d points pulled as the pictured body is where they lie (its garments painted on)" % len(pulled_as), flush=True)
         # Did a piece lie down? Where the model is one skin (a knee in trousers, a bare shoulder) every triangle keeps
         # its shape and its facing. Where it is one thing inside another (a forearm in a wide cuff), points of one
         # triangle land on different layers and the triangle is pulled out into a shard, or turned over. A joint with

@@ -1,7 +1,7 @@
 """Cuts a rigged character into rigid parts, one per bone, and pictures each part from all around.
 
     Blender -b --factory-startup -P scripts/impostor/bake_impostor.py -- <run> <profile>
-        [--look comic|pixel|joe] [--dress auto|off] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150] [--layers 2] [--round-the-back] [--eyes 20,40] [--eyes-round 6]
+        [--look comic|pixel|joe] [--dress auto|off] [--head-px 2] [--creases head|none] [--head-colours 16] [--face auto|none|FILE] [--plays painted] [--title "Detailed model"] [--soften 128] [--views 26,62] [--px 192] [--lap 0.4] [--ball 0.9] [--smooth-cm 2] [--overlap 0.25] [--trunk-overlap 0.04] [--held 1.35] [--ink-cm 1.4] [--rest-pose] [--out DIR] [--name impostor-comic-joined] [--bent knee,elbow] [--bends 0,45,90,120,150] [--layers 2] [--round-the-back] [--eyes 20,40] [--eyes-round 6]
 
 Reads <run>/profiles/<profile>-walk.glb (the file the page plays, so a bone's frame here is exactly
 its frame there) and writes <run>/profiles/<profile>-impostor-<look>-joined/ (pages older than the mended
@@ -26,7 +26,10 @@ below the joint carries a ball in it: the faces round the ring pulled in onto a 
 of the room there is inside the body. A bend opens the outside of a joint; the ball is what shows through,
 and it never pokes out, where a lap long enough to close a bent knee would stand out as a spur. A part also
 takes the faces next door that its own bones still pull on by at least --overlap (--trunk-overlap for the hips,
-spine, chest and head): that is how the skin under an arm goes up with the arm. --lap 0 cuts the old way
+spine, chest and head): that is how the skin under an arm goes up with the arm. At a shoulder neither card takes
+anything of the other's further than --held rings from the joint (1.35: the shoulder's zone, where a piece of the
+model is drawn and both cards step aside): an arm swung overhead carried what its card took from the chest round
+with it, and the side of her top stood in the air above her shoulder (README: "Shoulders that hold"). --lap 0 cuts the old way
 instead: only that last rule, with nothing evened out.
 
 The line round a part. Every part is pictured with its own ink line all the way round it, and the line's
@@ -287,13 +290,20 @@ def joints_of(rig):
     return out
 
 
-def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_overlap=0.04, head_lap=0.3, dress=None):
+HELD = 1.35     # at a shoulder, what either card takes from the other by pull alone stays within this many rings of the joint: the shoulder's zone (bake_joints.py), where a piece of the model is drawn
+HELD_JOINTS = ("upper_arm_l", "upper_arm_r")  # the joints it holds at: the ball joints an arm swings overhead about
+
+
+def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_overlap=0.04, head_lap=0.3, dress=None, held=0.0):
     """The cut made fit for a joint to bend (impostor.py: round_cut has the account of it): {part name: [(object,
     [face indices], lapped over from next door?, the ball these faces are pulled onto or None)]}, how many
     triangles each part owns outright, and what each joint was given. The pull is evened out along the surface
     over smooth_m; two parts that meet at a joint each reach `lap` times the ring's radius into the other; and the
     part below the joint carries a ball in it, `ball` of the room there is. The chest takes less of the head than
-    `lap` (head_lap): a jaw that stayed behind when the head turned would show. Points are where they stand in
+    `lap` (head_lap): a jaw that stayed behind when the head turned would show. At a shoulder what either card
+    takes by pull alone stays within `held` rings of the joint (0: as far as the pull goes, the cut as it was): an
+    arm swung overhead carries what its card took from the chest round with it, and skin from down her side stood
+    up in the air above the shoulder (README: "Shoulders that hold"). Points are where they stand in
     the baking pose. A dress (chains_of) is one part more, met at no joint: it neither laps nor takes a ball."""
     folds = part_of_bone(rig, dress)
     names = [name for name, _ in parts_with(dress)]
@@ -329,7 +339,8 @@ def cut_round(objects, rig, posed, lap, smooth_m, ball=0.9, overlap=0.25, trunk_
     sides = np.concatenate(sides)
     owner, lapped, rings, balls = impostor.round_cut(np.concatenate(points), np.concatenate(pulls), np.concatenate(edges), np.concatenate(corners), np.concatenate(begin), sides,
                                                      [(column[a], column[b], centre) for a, b, _, centre in joints], lap, smooth_m, {(column["chest"], column["head"]): head_lap}, ball,
-                                                     pulled=[trunk_overlap if name in TRUNK else overlap for name in names])
+                                                     pulled=[trunk_overlap if name in TRUNK else overlap for name in names],
+                                                     held={pair: held for a, b, bone, _ in joints if bone in HELD_JOINTS for pair in ((column[a], column[b]), (column[b], column[a]))} if held > 0 else None)
     out, own = {name: [] for name in names}, {name: 0 for name in names}
     for obj, start, many in spans:
         mine = owner[start:start + many]
@@ -649,6 +660,7 @@ def main():
     ppm = float(flag("--px", "48" if look == "pixel" else "192"))
     overlap = float(flag("--overlap", "0.25"))
     trunk_overlap = float(flag("--trunk-overlap", "0.04"))
+    held = float(flag("--held", str(HELD)))  # at a shoulder, how far (in rings of the joint) a card may take the other's skin by pull alone; 0: as far as the pull goes, as cards were cut before
     # pixel art: the line is one pixel of the sheet. bold ink: no line round the part at all (the page draws it)
     ink_m = float(flag("--ink-cm", str(100.0 / ppm) if look == "pixel" else "0" if look == "joe" else "1.4")) / 100.0
     colours = int(flag("--colours", "32" if look == "pixel" else "0"))
@@ -702,7 +714,7 @@ def main():
 
     # The parts, each in its bone's own frame.
     if lap > 0:
-        chosen, own, joints = cut_round(bodies, rig, posed, lap, smooth_m, ball, overlap, trunk_overlap, dress=dress)
+        chosen, own, joints = cut_round(bodies, rig, posed, lap, smooth_m, ball, overlap, trunk_overlap, dress=dress, held=held)
     else:
         (chosen, own), joints = cut(bodies, rig, overlap, trunk_overlap, dress), None
     parts, made = [], {}
@@ -844,7 +856,7 @@ def main():
     last = {}  # the layer just pictured, for the one behind it: {part: (how high each pixel stands, where there is one)}
 
     card = {"format": "forge-impostor/1", "source": os.path.basename(source), "profile": profile, "look": look, "nearest": look == "pixel", "plays": flag("--plays", profile), "title": flag("--title", ""), "px_per_m": ppm, "ink_m": ink_m, "overlap": overlap, "trunk_overlap": trunk_overlap, "arms_lowered_deg": lowered,
-            "cut": {"lap": lap, "smooth_m": smooth_m, "ball": ball} if lap > 0 else None, "joints": joints, **({"bent": {"joints": bent}} if bent else {}), "line_marked": True, "layers": layers, **({"eyes": {"deg": list(BEHIND_TILTS), "round": BEHIND_AROUND}} if layers > 1 else {}), "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
+            "cut": dict({"lap": lap, "smooth_m": smooth_m, "ball": ball}, **({"held": held} if held > 0 else {})) if lap > 0 else None, "joints": joints, **({"bent": {"joints": bent}} if bent else {}), "line_marked": True, "layers": layers, **({"eyes": {"deg": list(BEHIND_TILTS), "round": BEHIND_AROUND}} if layers > 1 else {}), "line_back_m": impostor.LINE_BACK_M, "creases": creases if look == "pixel" else None, "head_colours": head_colours,
             "light": list(impostor.LIGHT), "shade": [list(s) for s in impostor.SHADE], "edges": list(impostor.EDGES),
             "march": {"px": impostor.MARCH_PX, "max": impostor.MARCH_MAX, "refine": impostor.REFINE, "wall_m": impostor.WALL_M}, "blend_deg": impostor.BLEND_DEG, "hold_deg": impostor.HOLD_DEG,
             "parts": parts, "triangles": whole_triangles, "default_views": sets[0], "sets": {}}

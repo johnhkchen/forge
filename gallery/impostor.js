@@ -443,6 +443,7 @@ export const JOINT_VERTEX = `
 #include <common>
 #include <skinning_pars_vertex>
 uniform float inkM;
+uniform float over;
 varying vec2 vAtlas;
 varying vec3 vView;
 varying vec3 vTurnX;
@@ -460,6 +461,9 @@ void main() {
   vTurnZ = turn[2];
   vec4 seen = modelViewMatrix * vec4(transformed, 1.0);
   vView = seen.xyz;
+  // worn over the body (a dress: "over_cm"): slid toward the eye along its own line, so it lands on the same pixel
+  // and wins where a card of the body is that near (impostor.py: draw_skin)
+  seen.xyz *= max(0.0, 1.0 - over / max(length(seen.xyz), 1e-6));
   gl_Position = projectionMatrix * seen;
 }`;
 export const JOINT_FRAGMENT = `
@@ -541,7 +545,7 @@ export function skinMeshes(skin, bones, paint) {
     return [0, 1].map((shell) => {
       const face = piece.joint.kind === "dress" ? THREE.DoubleSide : THREE.FrontSide; // (a skirt flung up shows its inside)
       const material = new THREE.ShaderMaterial({ vertexShader: JOINT_VERTEX, fragmentShader: JOINT_FRAGMENT, side: shell ? THREE.BackSide : face, uniforms: {
-        atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, who: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 },
+        atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, who: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 }, over: { value: 0 },
         lineInk: { value: new THREE.Color(0x1c1721) }, ...paint } });
       const mesh = new THREE.SkinnedMesh(piece.geometry, material);
       mesh.bind(skeleton, new THREE.Matrix4());
@@ -563,6 +567,7 @@ export function skinMeshes(skin, bones, paint) {
           const u = mesh.material.uniforms;
           u.jointAt.value.copy(at);
           u.reach.value = (piece.joint.reach_cm / 100) * size;
+          u.over.value = ((piece.joint.over_cm || 0) / 100) * size;
           u.who.value = told.ids ? cardNumber(figure, piece.part) : 1;
           if (shell) mesh.visible = told.line > 0 && skin.inkM > 0;
         });

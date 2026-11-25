@@ -297,7 +297,7 @@ def march_steps(card, cell, px_per_m):
 
 # ---------- cutting a character into parts ----------
 
-def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m, less=None, ball=0.9, ball_reach=1.0, pulled=None):
+def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m, less=None, ball=0.9, ball_reach=1.0, pulled=None, held=None):
     """Which part owns each face of a mesh, and which faces each part also takes from next door, so that a
     joint can bend without opening. The arithmetic of bake_impostor.py's cut, with no Blender in it.
 
@@ -313,6 +313,13 @@ def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m,
     less     {(taker, giver): share} for a pair that should lap less than `lap`
     pulled   P numbers, or None: a part also takes a neighbour's face when its own bones pull on that face by at
              least its number (the skin under an arm goes up with the arm)
+    held     {(taker, giver): k}: at that joint a part takes nothing of the other's, by reach or by pull, further
+             than k times the ring's radius from the joint itself. A shoulder swings an arm overhead: skin the
+             arm's card took from the chest 20 cm down her side goes round with it, 20 cm up into the air above the
+             shoulder. (Where two parts' faces lie mixed along a fringe down the side, as on a mesh whose weights
+             came from a coarser one, the "ring" between them is no ring and the reach follows it all the way
+             down.) Within the shoulder's zone (bake_joints.py: 1.35 rings) a piece of the model is drawn and both
+             cards step aside, so what they borrow there never shows; further out it is a scrap off the body
     ball     how big the ball in a joint is, as a share of the room there is for it
     ball_reach  the faces a ball is made of: the two parts' within this many ring radii of the ring
 
@@ -374,6 +381,9 @@ def round_cut(points, pull, edges, corners, begin, sides, joints, lap, smooth_m,
             reach = off <= radius * (less or {}).get((taker, giver), lap)
             if pulled is not None and (taker, giver) not in (less or {}):
                 reach = reach | (share[theirs, taker] >= pulled[taker])
+            if held and (taker, giver) in held:
+                about = ring.mean(axis=0) if centre is None else np.asarray(centre, dtype=np.float64)
+                reach &= np.linalg.norm(middle[theirs] - about, axis=1) <= held[(taker, giver)] * radius
             lapped[taker, theirs[(owner[theirs] == giver) & reach]] = True
         if centre is not None and ball > 0:
             # as big as fits: inside the nearest of the ring, and inside the nearest skin of all
@@ -1387,6 +1397,8 @@ def draw_skin(character, pose, eye, colour, depth, who=None, figure=0, paint=Non
         bone = np.asarray(pose[joint.get("about", joint["bone"])], dtype=np.float64)  # (the neck's piece is a ball about the foot of the neck)
         centre, reach = bone[:3, 3], joint["reach_cm"] / 100.0 * float(np.cbrt(abs(np.linalg.det(bone[:3, :3]))))
         spots, ahead = eye.to_pixels(at)
+        if joint.get("over_cm"):  # worn over the body (a dress): it wins where a card of the body is this near, slid toward the eye along its own line, so it stands where it stood on the picture
+            ahead = ahead * np.maximum(0.0, 1.0 - joint["over_cm"] / 100.0 / np.maximum(np.linalg.norm(at - eye.at, axis=1), 1e-6))
         number = 1 + PARTS_A_FIGURE * (figure % 15) + names.index(joint["part"]) % PARTS_A_FIGURE
         for t in tris:
             (x0, y0), (x1, y1), (x2, y2) = spots[t]

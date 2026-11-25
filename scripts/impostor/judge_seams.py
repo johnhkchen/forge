@@ -136,7 +136,7 @@ class Real:
         if not pieces:  # only the whole model is wanted (judge_faces.py): the cut is slow and not needed
             chosen = {name: [] for name, _ in bake_impostor.PARTS}
         elif round_:
-            chosen, _, _ = bake_impostor.cut_round(self.bodies, rig, posed, round_["lap"], round_["smooth_m"], round_.get("ball", 0.0), round_.get("overlap", card["overlap"]), round_.get("trunk_overlap", card["trunk_overlap"]))
+            chosen, _, _ = bake_impostor.cut_round(self.bodies, rig, posed, round_["lap"], round_["smooth_m"], round_.get("ball", 0.0), round_.get("overlap", card["overlap"]), round_.get("trunk_overlap", card["trunk_overlap"]), held=round_.get("held", 0.0))
         else:
             chosen, _ = bake_impostor.cut(self.bodies, rig, card["overlap"], card["trunk_overlap"])
         # every joint as it stood when the parts were cut: how the part below is turned in the frame of the part

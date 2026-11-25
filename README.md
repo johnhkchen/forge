@@ -1469,7 +1469,7 @@ Through the moving camera, which is what the dance is filmed with: likeness 0.25
 
 - **Her legs came through her skirt** in the widest stances, at the start and the end of the dance (`push-first-mesh-then-cards.png`). That was the swing, not the cards: the real model and her mesh did it too. Mended in "Legs inside the skirt", next.
 - **The tiers are softer than the cards'.** The piece is a smooth skin laid onto the ruffles, so the tiers are in its shape only as far as 3,840 triangles reach; their edges come from bold ink's line on depth, wavy where the cards had them crisp. 22% of its area is pulled out more than 2.5 times, or turned over, as it lies onto the flounces, and shows as streaks on the lowest tier close up.
-- **The waistband is jagged** close up: where the piece's top edge meets the top's card there is a row of little teeth (`cards/last.png`).
+- **The waistband is jagged** close up: where the piece's top edge meets the top's card there is a row of little teeth (`cards/last.png`). (Mostly mended in "Shoulders that hold", below: the skirt is now worn over the body.)
 - **The 17th card shares the hips' number** on the finished picture (a figure has numbers for 16), so bold ink draws no line between the skirt and the hips, which is right, and none for a small step between the skirt and a thigh, which mostly is.
 - **Only one character has it.** The villager's tunic has four chains from the hips and would be a dress by the same recipe; his mid-poly rig also has four chains named `cloth_linen_tunic_9_*` hanging from his head, which the recipe leaves alone (they are the fault that crashed the joint pieces before; not mended here). The ninja's hood is not a dress. The pirate's coat is cut at the waist and has no chains. Neither the villager nor the ninja has cards to try it on.
 - **A crowd gets the rigid card.** On the tag field a runner further than 8 m gets no pieces, and her skirt is then the dress's card riding the hips, which does not tear but does not swing.
@@ -1523,6 +1523,75 @@ Her low-poly model (the gallery's "Model", and the crowd): a leg out through the
 - **Her walk and run are as they were.** The clips she was given before (`profiles/midpoly-walk.glb`, `-run.glb`, which the tag field and the cards page play) were baked with the old swing. Swung again in a scratch copy, her walk went from a leg out through the cloth on 11 of 25 frames to none, and her run from 16 of 18 to 1. They are rebuilt when her walk and run are made again.
 - **The villager's tunic** goes through the same code (four chains from the hips), and its walk and run measure the same before and after (5.5 and 4.7 cm into his legs): that is cloth his thighs carry on their own, not the swing.
 - **The shot in the main folder is not rebaked.** The new take lives in this branch's own `shots/groove-flamenco/` (`midpoly-groove.glb`, `lowpoly-groove.glb`); `just cast groove-flamenco runs/<the flamenco dancer> "" groove` makes it again anywhere. The mp4 films and Omni's pack were not remade.
+
+## Shoulders that hold
+
+When the flamenco dancer threw an arm overhead, her cards grew a ring of black scraps and skin-coloured chunks round the shoulder, off her body, and the top met the skirt in a row of black teeth. Now the shoulder holds through a full raise and the skirt sits over the top.
+
+```
+just impostor runs/<character> ...                                   # cards cut with the shoulder held (the default now; --held 0 cuts as before)
+just impostor-joints runs/<character> detailed                       # the pieces: bigger shoulders where the arms are slim, a top painted on cut as skin
+just impostor-shoulders groove-flamenco after                        # the neck and shoulders, counted, through the take's own push-in camera too
+just impostor-shoulders groove-flamenco before evidence/shoulders --runs <a folder of runs holding the old cards>
+```
+
+**What it was** (`exports/omni/groove-flamenco/shoulders/raise-*-before-after.png`, out of git: before on the left). Each part of her was drawn alone and coloured, at the last moment of the push-in (`evidence/shoulders/before-figure-13.75-raise-1.png` is the judge's own).
+
+- **The scraps were the arm's card, not the dress.** A card is cut with the arms hanging. The arm's card takes some of the chest's skin next to it, so the skin under an arm goes up with the arm: everything its bones pull on by a quarter or more, and everything within reach of the line where arm and chest meet. On her that reached 15 to 17 cm down the side of her top. Her model's weights came from a coarser one, so the line between arm and chest is a fringe that runs down her side, not a ring round the shoulder, and the reach followed it. Raise the arm overhead and that card turns about the shoulder like a rigid plate: skin from 15 cm below the shoulder ends up 15 cm above it, in the air. Inside the shoulder's zone (where a piece of the model is drawn and the cards step aside) that never shows; outside it, it is the black ring. Of what her arms borrowed from the chest, 280 and 340 cm² lay outside the zone. Roosevelt's arms borrowed as much and only 1 to 3 cm² of it lay outside, because his zone is wider.
+- **Her zone was too small for her shoulders.** A shoulder's zone was 1.35 times the ring where arm meets chest: 12 to 19 cm on the men, 8.5 on her, whose arms are slim. But what stretches when an arm goes up (the cap of the shoulder, the deltoid, the armpit) is as big as the shoulders are wide, not as thick as the arm.
+- **The fins were her top's straps, from the wrong model.** Her detailed model is now her base body (the top painted on its skin, black) with the skirt put back as a mesh. The neck and shoulder pieces were still cut from the tidy model's "sleeveless top", whose straps are plates standing off her shoulders by up to 10 cm. Laid onto her skin they tore, and the neck piece keeps a torn strap where the tidy model had it, so they stood out as fins.
+- **The teeth at the waist were her body showing through the skirt.** The skirt's piece lies on the skirt, and the skirt's waistband lies on her body within millimetres. The body's cards are pictures read to the nearest pixel, so along the waistband the body came out in front of the skirt in spikes.
+- **Not the cause:** the skirt claimed by the chest or shoulders (none of it is in either), the yoke's reach (her neck piece is 13.7 cm, as on the men), or the sheets' colours bleeding.
+
+**What was done.**
+
+- **A shoulder holds what it borrows** (`bake_impostor.py`: HELD, `--held`; `impostor.py`: round_cut). At a shoulder, neither the arm's card nor the chest's takes anything of the other's further than 1.35 rings from the joint, by the pull or by reach. That is the shoulder's zone, so all that it borrows is under the piece. Her cards are baked again with it (every look, one and two surfaces deep). The men's are not: their sheets are as they were.
+- **A shoulder is as big as the shoulders are wide** (`yoke.py`: shoulder_zone). Its zone is never less than 0.65 of the way from the joint to the foot of the neck: 9.9 cm on her. On the men the ring's zone is already more (0.69 to 0.72 of the way), so nothing changes for them.
+- **A top painted on is skin** (`yoke.py`: cut_from). When the pictured model is a body with some garments put back on it, every garment that was not put back is painted on its skin, and the pieces are cut from the tidy model's skin under that garment ("body under: sleeveless top"), not from the garment. So her neck piece is her skin and moves like skin, and nothing of the straps stands off it. It is not held back from the neck the way Lincoln's collar is: she has no collar. A clothed model of one skin (the men's) is cut from its garments as before.
+- **The skirt is worn over the body** (`bake_joints.py`: DRESS_OVER_M; `impostor.py`: draw_skin; `gallery/impostor.js`: JOINT_VERTEX). The skirt's piece wins over a card of the body that is within 1.5 cm of it (`"over_cm"` in impostor.json). It is slid toward the eye along its own line, so it lands on the very same pixels.
+
+**What was weighed, and left off.**
+
+| tried | what it did | kept? |
+|---|---|---|
+| the shoulder's zone 0.8 of the way to the neck (12.2 cm) | "Pixels, both" better (shoulders from 1 m 0.68 to 0.71), bold ink worse (0.69 to 0.68), more bare | no |
+| her pieces cut from the tidy top, as before (`--painted garment`) | likeness 0.03 higher and far fewer bare pixels, but the strap fins come back and more sticks out | no |
+| her pieces pulled as her pictured body is where they lie (`--pull pictured`) | the skin drawn further off (0.6 to 0.9 cm), no fewer bare pixels | no |
+| inside a zone, a card keeps what is near its own bone's line on its own side of the joint only | for her a little less sticking out, but the men's likeness fell by a hundredth | no |
+
+**How it is measured.** `just impostor-shoulders` is the neck judge (`judge_joints.py`, "A neck that holds") on her take. It adds the take's own moving camera (`--eyes push`) to the crew camera, 2 m and 1 m. The moments are the dance's own: the arm raised highest (10.75 s, both arms up; 13.75 s, the last raise), the collar bone shrugged most (the same two), the head turned most (3.5 s, 4.5 s) and the chest twisted most (0 s, 1 s). Cards are layered, with their pieces, as the pages draw them.
+
+**What it is now** (`evidence/shoulders/joints-before.json`, `joints-after.json`; before to after).
+
+| look | eye | shoulders, likeness | worst shoulder | neck and shoulders, arm raised | blots, shoulders | sticks out, shoulders | bare, shoulders |
+|---|---|---|---|---|---|---|---|
+| Bold ink | push-in camera | 0.63 to 0.71 | 0.24 to 0.57 | 0.51 to 0.58 | 14% to 10% | 308 to 125 | 19 to 55 |
+| Bold ink | crew camera | 0.62 to 0.71 | 0.35 to 0.56 | 0.53 to 0.61 | 15% to 13% | 172 to 91 | 9 to 34 |
+| Bold ink | 1 m | 0.62 to 0.68 | 0.39 to 0.55 | 0.63 to 0.70 | 10% to 5% | 3,748 to 1,767 | 286 to 1,122 |
+| "Pixels, both" | push-in camera | 0.66 to 0.71 | 0.41 to 0.48 | 0.64 to 0.70 | 17% to 14% | 423 to 253 | 11 to 26 |
+| "Pixels, both" | crew camera | 0.59 to 0.70 | 0.37 to 0.59 | 0.62 to 0.71 | 18% to 15% | 275 to 191 | 1 to 7 |
+| "Pixels, both" | 1 m | 0.60 to 0.68 | 0.30 to 0.52 | 0.68 to 0.74 | 10% to 6% | 4,346 to 2,379 | 339 to 853 |
+
+The skin of the neck and collar is drawn 0.56 cm from where the model has it, where it was 0.61 (0.63 to 0.56 with an arm raised). A turned head goes 0.66 to 0.76 from 1 m in bold ink. The neck itself, as a joint, is within a hundredth of where it was (0.79 to 0.78 from 1 m in bold ink).
+
+Read plainly: what sticks out round her shoulders is down by a third to three fifths. The dark blots are down by a tenth to a half. The worst single shoulder through the push-in camera scores more than twice what it did (0.24 to 0.57). The price is bare pixels. The ring of scraps used to cover the skin of her side that the real model stretches up with the arm, and that skin is now not drawn. Up to 1,100 pixels round a shoulder from 1 m in bold ink are uncovered, a few dozen through the cameras the dance is filmed with. The chest twisted is the one move that did not get better: likeness the same, and more both bare and sticking out (from 1 m in bold ink, 818 to 3,624 bare and 2,033 to 3,839 sticking out). Why was not found.
+
+**The skirt did not slip** (`evidence/shoulders/dress-shoulders.json`: the dress judge on her skirt, the old cards and the new side by side). Likeness 0.378 to 0.383 in bold ink and 0.432 to 0.432 in "Pixels, both", with the same pixels bare, torn and sticking out. The waistband's teeth are gone (`waist-last-joe-before-after.png`). A small notch is left at one side.
+
+**The men did not change.** Their sheets and pieces are not baked again, and nothing the page draws for them changed. The skirt's "over" is only on a dress. The judges were run with the code as it was and as it is (`evidence/shoulders/joints-men-neck-*.json`, `joints-men-knees-*.json`: `just impostor-neck` and `just impostor-knees` on the candy-shop crew, layered cards with their pieces). Every number is the same to the last digit: likeness, blots, bare, sticking out and the skin's centimetres, for every joint, look and eye. For example, neck and shoulders from 1 m are 0.620 and 0.620 in bold ink, a knee 0.486 and 0.486, a shoulder through the crew camera 0.513 and 0.513.
+
+**What it costs.** Nothing to draw: the same number of cards, and her pieces are 8,790 triangles where they were 9,072. Her sheets are the size they were (bold ink 21.7 MB two surfaces deep, "Pixels, both" 6.6).
+
+**What is still weak.**
+
+- **Her side, overhead.** In the real model the skin of her side goes up with the arm. A card is rigid and her shoulder's piece stops at 9.9 cm, so with an arm high some of that skin is not drawn (the bare pixels above). The chest's card also keeps a little of her armpit where the arm left it, which sticks out as a skin-coloured flap below the raised arm (`raise-last-*-before-after.png`). A bigger shoulder piece was tried and helped one look and not the other.
+- **Bold ink scribbles on the raised arm**: the line drawn where the shoulder's piece and the arm's card step apart in depth draws a few short marks inside the upper arm.
+- **The chest twisted** reads no better, and leaves more bare and more sticking out.
+- **The men's cards are not cut the new way.** Their sheets were left alone. When they are baked again they will be cut with the shoulder held. Their borrowed skin already lies nearly all inside their zones (1 to 3 cm² outside, measured on Roosevelt), so little should change. That is not measured.
+- **Her walk and run** play the same cards, and were not looked at.
+- No phone has run it.
+
+Pictures (`exports/omni/groove-flamenco/shoulders/`, out of git): `first.png`, `middle.png`, `last.png` are the push-in's first, middle and last moments in bold ink as cards. `raise-last-joe-before-after.png` and `raise-last-pixel-both-before-after.png` are close on her shoulder at the last raise (13.96 s). `raise-both-*` are the same with both arms up (10.75 s). `waist-last-joe-before-after.png` is the waistband. All of them are before on the left, taken off the watch page in a headless Chrome. `evidence/shoulders/after-*` and `before-*` are the judge's own: the real model, then bold ink, then "Pixels, both".
 
 ## A place from a world model
 
