@@ -1411,6 +1411,70 @@ The head as dots, against its card with the fan on (`cost-close-dots-mac.json`):
 - **A crowd still gets no layer behind**, and "Pixels, baked" still has no layered sheet.
 - No phone has run any of it.
 
+## A dress
+
+The flamenco dancer is the first of the cast in a long skirt, and a skirt is the one shape the cards had never been asked to hold. Every card belongs to one bone. A skirt spans the hips and both legs, so cut into thigh and shin cards it tore apart between her legs whenever she side-stepped or lunged, and the six chains of bones it really swings on (up to 83 degrees in the dance) were no card's at all. Now a skirt is one piece of its own, swung by its own chains, and it cannot tear.
+
+```
+just impostor-detailed runs/<flamenco dancer> midpoly     # her cards, the dress among them
+just impostor-layered runs/<flamenco dancer> midpoly      # two surfaces deep, as the pages read them
+just impostor-dress groove-flamenco after evidence/dress --ways before=<a run baked with --dress off>:necked,after=:layered-necked
+just gallery                                              # #/watch/groove-flamenco, "Cards"
+```
+
+**What it was** (`evidence/dress/after-side-1.25-push-joe.png` and the others: the real model, then the cards as they were, the dress's card riding the hips, the dress cut from the model, and the dress as it is now).
+
+- **Torn between the legs.** Cut the old way, the skirt's faces went to whichever bone pulled them most: the top of it to the hips' card, the sides to the thighs' and shins'. In a side-step the two legs' cards go apart and the skirt goes with them, in two halves, with the stage between.
+- **Rigid where it should swing.** The chains are not bones any card rides, so what they pulled on folded into the hips' card and hung straight down while the real skirt flew out.
+- **A guess under the skirt.** Her detailed mesh is the picture's: one skin, dressed, and what TRELLIS put under a long skirt is a guess. Lift the skirt and there were no legs to show.
+
+**What was weighed.**
+
+| her skirt, eight moments, three eyes | likeness, bold ink | "Pixels, both" | bare pixels, bold ink | torn open, bold ink | torn, "Pixels, both" |
+|---|---|---|---|---|---|
+| the cards as they were (the skirt among the hips and legs) | 0.25 | 0.26 | 2,853 | 335 | 173 |
+| the skirt as one card riding the hips | 0.21 | 0.22 | 3,157 | 314 | 165 |
+| one piece, cut down from the detailed skirt itself | 0.38 | 0.39 | 1,250 | 14 | 13 |
+| **one piece, the tidy version's skirt laid onto the detailed one: kept** | **0.66** | **0.66** | **288** | **4.9** | **0.7** |
+
+(`evidence/dress/dress-after.json`. Likeness is how well the skirt's light and dark follows the real model's, as the joints' judge counts it: the polka dots, the shadows of the tiers, the hem. Bare is pixels of her the cards leave uncovered within 4 cm of the skirt; torn is the bare ones shut in on every side: the stage seen through her.)
+
+A bell or a cone of cards, one card a chain segment with a picture of the skirt on each, was the other thought. It was not built: neighbouring chains swing apart (one forward, one back, in every turn of the dance), so the cards of a bell part along every seam between them, which is the tear moved from between the legs to between the chains; and a card is rigid, while a skirt's hem bends. Every one-skin way scored far above every card way above, and the knees already showed that a piece of the model beats any picture of a bend (README: "A knee that bends").
+
+The piece cut down from the detailed skirt itself is the truer surface, and lost. Its 194,000 triangles are a TRELLIS mesh of 7,500 scraps welded together; cut down to the size of a joint piece it came apart into islands and holes (8,653 of its 18,260 triangles were scraps), and unwrapped into thousands of little patches whose colour came out in blocks. The tidy version's skirt is one clean skin of 960 triangles, already rigged on the chains: cut each triangle in four, lay every point onto the detailed skirt from outside (as the knees are laid), and it has the tiers' shape, the detailed skirt's colours and a clean unwrap.
+
+**What was done** (`scripts/impostor/rig_detailed.py`, `bake_impostor.py`: chains_of, groups_of; `bake_joints.py`; `impostor.py`: chains_of; `gallery/impostor.js`: skinMeshes).
+
+- **A body under the clothes.** For a character whose clothes hide its body ("A real body under the clothes", above) the detailed model is now the base body with each hiding garment put back on as a mesh of its own, `gear: ruffled skirt`, not the clothed mesh. Weights go kind to kind: the skirt's from the tidy skirt (its chains among them), the body's from the tidy body and the skin under the skirt, never from the skirt. So under the skirt there are legs, in her black tights.
+- **Any garment swung by chains that hang over the legs is a dress.** The cut reads the skeleton: bones named as `cloth.py` names its chains (`cloth_<gear>_<chain>_<n>`), whose top hangs from the hips or the spine. A skirt, a dress, a robe, a coat's tails. A hood's chains hang from the head and are left alone: the head's card has the face, and a hood does not tear between the legs. Nothing about her is written down anywhere; any character rigged by `cloth.py` gets it from the same recipe.
+- **The dress is a card of its own**, the 17th, riding the bone its chains hang from. The chains' pull on a face counts for the dress, and on a garment that is a mesh of its own the hips' and the legs' pull too. So the thighs' and shins' cards are legs, and the dress's card is the whole skirt as it hangs, from 26 directions, two surfaces deep. Its card is for the crowd and for colour; near by it steps aside.
+- **One piece of the model, swung by the chains.** The tidy skirt, 3,840 triangles once cut, pulled by the chains and the hips and the legs exactly as the rigged model is, painted from the dress's own pictures (so the polka dots are the sheet's, in the look's own colours) and drawn the way the knees' pieces are. It is a joint like any other to the pages: its zone is a ball about the hips as big as the dress, in which the dress's card keeps nothing (`"kind": "dress"`, `"about": "hips"`, `"aside": ["dress"]`, `"core_cm": 0`). No new folder and no new look: it is one more piece in `-necked` and `-layered-necked`.
+- **Under a skirt the knees lie on the legs.** The knee and hip pieces are cut from the skin the skirt hides (`body under: ruffled skirt` in the tidy version) and laid onto the legs, not the skirt. Cut the old way they were made of skirt and 34 to 37% of them would not lie down.
+- **A clip without the chains** (one made for someone else) draws no dress piece, and the dress's card, whose zone is told about the chain's top bone, rides the hips as it is. Every other piece still draws: a bone the clip lacks is stood in for by the nearest above it that it has.
+
+**What it is now**, by what each moment asked (bold ink; "Pixels, both" in brackets; the take's moving camera, the crew camera and 2 m from the skirt together):
+
+| | likeness, before | after | bare, before | after | torn, before | after |
+|---|---|---|---|---|---|---|
+| the widest lunge (0.75 s, 8.75 s) | 0.25 (0.27) | 0.68 (0.68) | 1,460 (1,047) | 264 (110) | 268 (99) | 4 (0) |
+| the widest side-step (0.25 s, 1.25 s) | 0.24 (0.24) | 0.68 (0.66) | 4,183 (3,720) | 231 (76) | 516 (300) | 8 (1) |
+| the deepest stance (0 s, 12 s) | 0.39 (0.41) | 0.66 (0.69) | 1,209 (902) | 231 (66) | 118 (36) | 0 (0) |
+| the hem flung furthest (3 s at 62 degrees, 9.5 s at 68) | 0.13 (0.14) | 0.61 (0.62) | 4,558 (4,073) | 425 (143) | 438 (258) | 7 (1) |
+
+Through the moving camera, which is what the dance is filmed with: likeness 0.25 to 0.60 in bold ink and 0.23 to 0.61 in "Pixels, both", 42 torn pixels to 5 and 7 to none. In bold ink the worst of the 24 pictures now scores above the best of them before (0.52 against 0.49); in "Pixels, both" not quite (0.47 against 0.54). `evidence/dress/after-<move>-<seconds>-<eye>-<look>.png` are the judge's own; `push-first-mesh-then-cards.png`, `-middle-`, `-last-` are the push-in's first, middle and last pictures off the watch page, her mid-poly mesh as the film was made and her cards now, in bold ink (the cards' alone: `exports/omni/groove-flamenco/cards/`, kept out of git).
+
+**What it costs.** Her sheets are the size anyone's are: bold ink 15.6 MB in memory (21.9 two surfaces deep, against the pirate's 32.7), "Pixels, both" 5.2 (6.6). Her pieces are 9,072 triangles where a dancer's were 4,000 to 5,200, 3,840 of them the dress, and their pictures 1,024 pixels square instead of 512 (a skirt is as much surface as every other piece together): 8.4 MB in memory where the others' are 2.1, 1.6 MB to fetch. `--atlas 512` and `--dress-triangles` are the knobs. Not timed on the tag field or a phone.
+
+**What is still weak.**
+
+- **Her legs come through her skirt** in the widest stances, at the start and the end of the dance (`push-first-mesh-then-cards.png`). That is the swing, not the cards: the real model and her mesh do it too (the chains keep 8.8 cm out of a thigh at worst, `swing.py`), and the cards now show it faithfully where before they hid it under a rigid hem.
+- **The tiers are softer than the cards'.** The piece is a smooth skin laid onto the ruffles, so the tiers are in its shape only as far as 3,840 triangles reach; their edges come from bold ink's line on depth, wavy where the cards had them crisp. 22% of its area is pulled out more than 2.5 times, or turned over, as it lies onto the flounces, and shows as streaks on the lowest tier close up.
+- **The waistband is jagged** close up: where the piece's top edge meets the top's card there is a row of little teeth (`cards/last.png`).
+- **The 17th card shares the hips' number** on the finished picture (a figure has numbers for 16), so bold ink draws no line between the skirt and the hips, which is right, and none for a small step between the skirt and a thigh, which mostly is.
+- **Only one character has it.** The villager's tunic has four chains from the hips and would be a dress by the same recipe; his mid-poly rig also has four chains named `cloth_linen_tunic_9_*` hanging from his head, which the recipe leaves alone (they are the fault that crashed the joint pieces before; not mended here). The ninja's hood is not a dress. The pirate's coat is cut at the waist and has no chains. Neither the villager nor the ninja has cards to try it on.
+- **A crowd gets the rigid card.** On the tag field a runner further than 8 m gets no pieces, and her skirt is then the dress's card riding the hips, which does not tear but does not swing.
+- No phone has run it.
+
 ## A place from a world model
 
 The Niantic saloon is the first place we did not build. World Labs' Marble grew it from one picture: an empty Gold Rush saloon in the hold of a beached whaleship. What Marble hands over is kept out of git, in `world/marble/niantic-saloon/`: the place itself as a cloud of soft colored dots ("splats", in four sizes from 100 thousand dots to 4.3 million), a coarse mesh of every surface for bumping into, and a record that says how big it really is.
@@ -1543,7 +1607,7 @@ It eases in and out over the whole 14 seconds, so it creeps at first, moves most
 
 **The films** (`just omni-film`, free; into `shots/groove-flamenco/omni/`), all 1280 by 720 at 24 frames a second (what Omni makes, so what goes in is what comes back), silent:
 
-- **Bold ink**, the look you like best, as the gallery draws it: the watch page itself, in a headless Chrome, one picture at a time (`scripts/video/watch_film.py`), so it is the same bold ink the gallery shows, line for line. She is drawn as her mid-poly mesh (she has no cards baked). The same page draws the stage with nobody on it, and her alone in white on black (the mask).
+- **Bold ink**, the look you like best, as the gallery draws it: the watch page itself, in a headless Chrome, one picture at a time (`scripts/video/watch_film.py`), so it is the same bold ink the gallery shows, line for line. She is drawn as her mid-poly mesh (the film was made before she had cards; she has them now, with a skirt of its own: "A dress", above). The same page draws the stage with nobody on it, and her alone in white on black (the mask).
 - **Plain shaded**, the stage with nobody on it, and **depth** (white half a metre from the lens, black at 12 m), from a background Blender with the set's own lights.
 - Her side and back, from her detailed mesh, on the grey her picture stands on (`scripts/video/turnaround.py`), for the reference pictures.
 
@@ -1559,7 +1623,7 @@ What it costs (Gemini's price page, read 24 November 2026): video out is 5,792 t
 
 **Did it keep the dance?** `just omni-drift <export> <result.mp4> [go]` brings what came back in as a clip, has GEM-X read the dancer's motion off it on your RunPod endpoint (about 3.5 minutes of an RTX 4090 for 14 seconds, roughly $0.07; it chooses the dancer itself when only one person is found, and marks the camera as moving), and compares that motion with ours: every joint against the hips, turned to face the same way and brought to the same size, after the shift in time that fits best; and the best shift in each two-second window, so a film that slows down or hurries shows as a shift that grows. `omni.py compare <ours> <theirs>` is that last step alone, free. Not run yet.
 
-**In the gallery** (`#/watch/groove-flamenco`): the take on its stage, starting on the moving camera, in bold ink, as the mid-poly mesh ("Model" switches to the low-poly one). `#/restyle/groove-flamenco` plays our film beside what Omni sends back, from one Play button; until something comes back the right side says so, and any of our other passes can go on the left.
+**In the gallery** (`#/watch/groove-flamenco`): the take on its stage, starting on the moving camera. Now that she has cards it opens on them, in "Pixels, both" (the look chips switch to bold ink; "Meshes" brings back the mid-poly mesh, and "Model" the low-poly one). `#/restyle/groove-flamenco` plays our film beside what Omni sends back, from one Play button; until something comes back the right side says so, and any of our other passes can go on the left.
 
 **What is weak.**
 - *Her hands and face* come from the clip only as far as GEM-X reads them: the hands are not read at all and stay open, and her wrists hit their limits often in the points (clamped on 264 of 421 frames for the left hand). The face is her mid-poly model's, readable from the middle of the push-in on.
