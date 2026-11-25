@@ -78,6 +78,13 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             and reads layered cards first (needs node). With RUNS_DIR holding layered cards
             (profiles/*-impostor-joe-layered): every picture has a layer behind listed, inside the sheet, the first
             layer is the sheet that was there before, and a frame of the walk covers all it covered without
+  legs      a skirt kept outside the legs (swing.py, judge_legs.py): a rod is as thick as the leg each way round it;
+            cloth inside a leg on its outer side is pushed straight out, and cloth a leg has gone through (on its
+            inner side) is taken round to the outer side, not pushed further in; cloth that was in a rod as made may
+            stay that far in and no further; a skirt's chains are kept from the legs only, a hood's from nothing.
+            The judge finds how deep a point is in a round leg, never past the leg's own thickness, and not below
+            the ankle; a leg's middle line that goes out through the side of a skirt is out by as much of it as is
+            past the cloth, and one that goes out under the hem is not out at all
   baked     with RUNS_DIR holding a baked character (profiles/*-impostor-comic-joined, or the older
             *-impostor): its sheets are the size its card says, every part has every picture, a bone's frame in
             the file is where its skin was bound, and a frame of its walk draws as one whole figure; a sheet
@@ -1554,10 +1561,85 @@ def test_dress(runs):
           "%d pixels of the dress's card, %d shut in of %d" % (alone, holes, shown.sum()))
 
 
+def swing_parts(*names):
+    """Functions out of swing.py (a script Blender runs whole) that need only numpy and math, by name."""
+    import ast
+    path = os.path.join(REPO, ".claude", "skills", "tidy-mesh", "scripts", "swing.py")
+    with open(path) as f:
+        tree = ast.parse(f.read())
+    keep = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
+    keep += [node for node in tree.body if isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "SKIRT_FROM" for t in node.targets)]
+    space = {"np": np, "math": math}
+    exec(compile(ast.Module(body=keep, type_ignores=[]), path, "exec"), space)
+    return space
+
+
+def tube_cast(radius, top=None, bottom=None):
+    """A ray against the wall of an upright open tube round the z axis: how far to the wall, or None."""
+    def cast(origin, way, far, *_):
+        o, w = np.asarray(origin, float), np.asarray(way, float)
+        a = w[0] ** 2 + w[1] ** 2
+        if a < 1e-12:
+            return None
+        b, c = 2 * (o[0] * w[0] + o[1] * w[1]), o[0] ** 2 + o[1] ** 2 - radius ** 2
+        disc = b * b - 4 * a * c
+        if disc < 0:
+            return None
+        for t in sorted(((-b - math.sqrt(disc)) / (2 * a), (-b + math.sqrt(disc)) / (2 * a))):
+            z = o[2] + w[2] * t
+            if 1e-9 < t <= far and (top is None or z <= top) and (bottom is None or z >= bottom):
+                return t
+        return None
+    return cast
+
+
+def test_legs():
+    import judge_legs
+    parts = swing_parts("thick_at", "in_rods")
+    # a leg: a rod down the z axis from the hip (0, 0, 0) to the knee (0, 0, -0.4), 8 cm thick side to side (its
+    # bone's x) and 10 front to back (its z, which is the world's y here)
+    steps, around = 8, 12
+    angle = np.arange(around) * 2 * math.pi / around
+    profile = np.tile(np.sqrt(1.0 / ((np.cos(angle) / 0.08) ** 2 + (np.sin(angle) / 0.10) ** 2)), (steps, 1))
+    rod = (np.zeros(3), np.array([0.0, 0.0, -0.4]), profile, np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
+    side, front = parts["thick_at"](profile, np.array([0.5, 0.5]), np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]), rod[3], rod[4])
+    check("a rod is as thick as the leg each way round it: 8 cm to the side, 10 to the front", abs(side - 0.08) < 1e-6 and abs(front - 0.10) < 1e-6, "%.3f and %.3f" % (side, front))
+    # the garment's middle is at x = -0.15 (the leg is the left one): out of the garment is +x here
+    points = np.array([[0.05, 0.0, -0.2], [-0.05, 0.0, -0.2], [0.12, 0.0, -0.2]])
+    outward = np.array([[1.0, 0.0, 0.0]] * 3)
+    over, move = parts["in_rods"](points, [rod], np.zeros((3, 1)), outward)
+    moved = points + move[:, 0]
+    check("cloth in a leg on its outer side is pushed straight out to the skin", abs(over[0, 0] - 0.03) < 1e-6 and np.allclose(moved[0], [0.08, 0.0, -0.2]), str(moved[0]))
+    check("... cloth a leg has gone through (on its inner side) is taken round to the outer side, not pushed further in",
+          np.allclose(moved[1], [0.08, 0.0, -0.2]) and over[1, 0] > 0.12, "%s, %.3f m" % (moved[1], over[1, 0]))
+    check("... and cloth outside the leg is clear of it", over[2, 0] < 0, "%.3f" % over[2, 0])
+    over, _ = parts["in_rods"](points[:1], [rod], np.array([[0.02]]), outward[:1])
+    check("cloth that was 2 cm in the rod as made may stay that far in, and no further", abs(over[0, 0] - 0.01) < 1e-6, "%.3f" % over[0, 0])
+    check("a skirt's chains hang from the hips or the spine; a hood's do not", "hips" in parts["SKIRT_FROM"] and "spine" in parts["SKIRT_FROM"] and "head" not in parts["SKIRT_FROM"])
+
+    # the judge: a round leg 8 cm thick down the z axis, a thigh from 0 to -0.4 and a shin from -0.4 to -0.8
+    leg = tube_cast(0.08)
+    segments = [(np.zeros(3), np.array([0.0, 0.0, -0.4])), (np.array([0.0, 0.0, -0.4]), np.array([0.0, 0.0, -0.8]))]
+    points = np.array([[0.05, 0.0, -0.2], [0.0, 0.11, -0.3], [0.0, 0.02, -0.5], [0.02, 0.0, -0.78]])
+    deep, which = judge_legs.depth_in_legs(points, segments, leg, upto=[1.0, judge_legs.ANKLE])
+    check("the judge finds how deep cloth is in a leg: 3 cm, nought outside it, 6 cm in the shin, and nothing below the ankle",
+          np.allclose(deep, [0.03, 0.0, 0.06, 0.0], atol=1e-6) and list(which[:3]) == [0, 0, 1], str(np.round(deep, 4)))
+    capped, _ = judge_legs.depth_in_legs(points[:1], segments, lambda *a: None, cap=lambda k, t, w: 0.07)
+    check("... a ray that slips out through a fold finds the skin no further than the leg is thick", abs(capped[0] - 0.02) < 1e-6, "%.3f" % capped[0])
+    ring = judge_legs.profile_of(lambda o, w, d: leg(o, w, d), np.zeros(3), np.array([0.0, 0.0, -0.4]), np.array([1.0, 0, 0]), np.array([0, 1.0, 0]))
+    check("... and takes a leg's thickness all round it as it was made", np.allclose(ring, 0.08, atol=1e-6) and abs(judge_legs.thickness(ring, 0.5, 0.0, 1.0, slack=1.0, plus=0.0) - 0.08) < 1e-6)
+    # a skirt: an open tube 25 cm round from the waist (0) to the hem (-0.6); the hip joint inside it at x = 0.09
+    skirt = tube_cast(0.25, top=0.0, bottom=-0.6)
+    through = judge_legs.out_through([[0.09, 0.0, -0.05], [0.45, 0.0, -0.35], [0.45, 0.0, -0.75]], skirt)
+    under = judge_legs.out_through([[0.09, 0.0, -0.05], [0.12, 0.0, -0.45], [0.40, 0.0, -0.80]], skirt)
+    check("a leg kicked out through the side of the skirt is out by as much of its middle line as is past the cloth; one out under the hem is not out",
+          abs(through - (math.hypot(0.36, 0.30) * (0.45 - 0.25) / 0.36 + 0.40)) < 1e-3 and under == 0.0, "%.3f and %.3f m" % (through, under))
+
+
 def main():
     runs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "runs")
     cases = [("views", test_views), ("packing", test_packing), ("choosing", test_choosing), ("placing", test_placing), ("drawing", test_drawing),
-             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("layers", lambda: test_layers(runs)), ("skin", lambda: test_skin(runs)), ("neck", lambda: test_neck(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs)), ("dress", lambda: test_dress(runs))]
+             ("page", test_page), ("joints", test_joints), ("fill", test_fill), ("layers", lambda: test_layers(runs)), ("skin", lambda: test_skin(runs)), ("neck", lambda: test_neck(runs)), ("faces", lambda: test_faces(runs)), ("clear", lambda: test_clear(runs)), ("baked", lambda: test_baked(runs)), ("dress", lambda: test_dress(runs)), ("legs", test_legs)]
     failed = 0
     for name, case in cases:
         print(name)

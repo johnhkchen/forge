@@ -22,7 +22,9 @@
 #    worn on (hips, head...). The hanging points are weighted to them, more
 #    the lower they are and the further they stand off the body: where a
 #    kilt's side rests on a thigh it stays with the thigh, and the panels
-#    between swing. The chains have joint limits like every other bone.
+#    between swing. The chains have joint limits like every other bone (wider
+#    for a skirt's, which hang over the legs: a knee lifts a skirt further
+#    than it swings on its own).
 #    Nothing moves yet: swing.py, run after animate.py, makes them hang and
 #    swing with the motion. The rig remembers to ask for it ("then" in
 #    animate.py's result).
@@ -37,6 +39,7 @@ PARAMS = {
     "chain_every": 0.16,  # one chain about every this share of the height around a piece (4 to 8 all the way round, 1 to 4 on a part of the way)
     "bone_long": 0.07,    # a chain's bones are about this share of the height long (1 to 3 bones)
     "limits": [-70, 70, -15, 15, -50, 50],  # how far a cloth bone may turn, degrees: out/in, twist, sideways
+    "skirt_limits": [-100, 100, -45, 45, -75, 75],  # ... and one that hangs over the legs (from the hips or the spine): a knee lifts a skirt further than it swings, and swing.py keeps it out of the legs
 }
 
 import bpy
@@ -320,10 +323,11 @@ if PARAMS["bones"]:
                 new_bones.append(bone_name)
         bpy.ops.object.mode_set(mode="OBJECT")
         limits = known.setdefault("limits", {})
+        hangs_from = {name: c["parent"] for c in chains for name in c["bones"]}
         for bone_name in new_bones:
             bone = rig.pose.bones[bone_name]
             bone.rotation_mode = "QUATERNION"
-            lim = [float(v) for v in PARAMS["limits"]]
+            lim = [float(v) for v in PARAMS["skirt_limits" if hangs_from.get(bone_name) in ("hips", "spine") else "limits"]]
             for old in [r for r in bone.constraints if r.type == "LIMIT_ROTATION"]:
                 bone.constraints.remove(old)
             rule = bone.constraints.new("LIMIT_ROTATION")

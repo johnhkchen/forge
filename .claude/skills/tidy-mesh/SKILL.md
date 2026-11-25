@@ -1315,7 +1315,8 @@ named `cloth_<gear>_<chain>_<bone>`, children of the trunk bone the piece
 is worn on (hips, head; never a leg). Points are weighted to them more the
 lower they hang and the further they stand off the body, so a kilt's side
 resting on a thigh stays with the thigh and the panels between swing. Each
-bone has limits like any other (70 degrees out and in, 50 sideways).
+bone has limits like any other (70 degrees out and in, 50 sideways; a
+skirt's, which hang from the hips or the spine, 100 and 75).
 
 **`swing.py`: hang and swing, after any motion.** animate.py bakes the
 body and leaves the cloth bones still; its result lists `"then":
@@ -1326,11 +1327,17 @@ VRM avatars and in most game engines. No cloth solver, and nothing a .glb
 can't carry: the result is one rotation key a frame on the cloth bones.
 Each bone's end keeps some of its speed, is pulled toward where it hangs
 at rest, down by gravity and back by the air of walking, stays a
-bone-length from the joint above, is pushed out of the thighs, shins and
-chest (rods around those bones as thick as the body is there, checked
-along the whole cloth bone, not only its end), and is clamped to its
-limits. A loop is played three times and the last round kept, then its end
-is eased onto its start, so it has no seam.
+bone-length from the joint above, and is clamped to its limits. A garment
+whose chains hang from the hips or the spine (a skirt, a tunic) is then
+kept out of the thighs and shins, all chains together: rods round those
+bones as thick as the body is each way round them (rays to the skin), and
+tried against them the chains, the panels between neighbouring chains and
+the garment's own points, skinned as the mesh is; cloth on a leg's inner
+side goes round to its outer side; no point of it goes below the floor;
+pushes only partly become speed, and each turn is eased with its
+neighbours. A loop is played three times and the last round kept, then its
+end is eased onto its start, so it has no seam. `scripts/impostor/judge_legs.py`
+(`just impostor-legs`) measures a take against the real mesh.
 
 Because swing.py only reads the baked action, it works the same after the
 walk and after a shot, and it is the only thing that had to be added to

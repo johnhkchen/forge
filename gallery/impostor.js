@@ -430,7 +430,8 @@ export function setHeadGrid(quad, screen, look, camera, at, part) {
 // cards' own, looked up from their sheets into one small picture (atlas), and so is which way its surface faces
 // (atlasData: as the model has it at rest, folded as the sheets fold theirs), turned here as the bones have
 // turned it. It is drawn inside the joint's zone and a little past it (`reach`, about `jointAt`, as the eye has
-// it), from outside only: the inside of a sleeve or a trouser leg is never shown. `who` is the number of the card
+// it), from outside only: the inside of a sleeve or a trouser leg is never shown (but a skirt's piece is drawn both
+// sides: one a leg lifts, or the floor flares, is seen from under its hem). `who` is the number of the card
 // below the joint, for the lines a look draws on the finished picture. inkM over 0, back faces: its ink shell,
 // for the looks that keep the line behind the surface.
 //
@@ -538,7 +539,8 @@ export function skinMeshes(skin, bones, paint) {
     const stood = piece.bones.map((_, i) => standIn(piece, i));
     const skeleton = new THREE.Skeleton(stood.map(([bone]) => bone), stood.map(([, k]) => piece.inverses[k]));
     return [0, 1].map((shell) => {
-      const material = new THREE.ShaderMaterial({ vertexShader: JOINT_VERTEX, fragmentShader: JOINT_FRAGMENT, side: shell ? THREE.BackSide : THREE.FrontSide, uniforms: {
+      const face = piece.joint.kind === "dress" ? THREE.DoubleSide : THREE.FrontSide; // (a skirt flung up shows its inside)
+      const material = new THREE.ShaderMaterial({ vertexShader: JOINT_VERTEX, fragmentShader: JOINT_FRAGMENT, side: shell ? THREE.BackSide : face, uniforms: {
         atlas: { value: skin.colour }, atlasData: { value: skin.data }, jointAt: { value: new THREE.Vector3() }, reach: { value: 0 }, who: { value: 1 }, inkM: { value: shell ? skin.inkM : 0 },
         lineInk: { value: new THREE.Color(0x1c1721) }, ...paint } });
       const mesh = new THREE.SkinnedMesh(piece.geometry, material);

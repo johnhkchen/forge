@@ -1467,13 +1467,62 @@ Through the moving camera, which is what the dance is filmed with: likeness 0.25
 
 **What is still weak.**
 
-- **Her legs come through her skirt** in the widest stances, at the start and the end of the dance (`push-first-mesh-then-cards.png`). That is the swing, not the cards: the real model and her mesh do it too (the chains keep 8.8 cm out of a thigh at worst, `swing.py`), and the cards now show it faithfully where before they hid it under a rigid hem.
+- **Her legs came through her skirt** in the widest stances, at the start and the end of the dance (`push-first-mesh-then-cards.png`). That was the swing, not the cards: the real model and her mesh did it too. Mended in "Legs inside the skirt", next.
 - **The tiers are softer than the cards'.** The piece is a smooth skin laid onto the ruffles, so the tiers are in its shape only as far as 3,840 triangles reach; their edges come from bold ink's line on depth, wavy where the cards had them crisp. 22% of its area is pulled out more than 2.5 times, or turned over, as it lies onto the flounces, and shows as streaks on the lowest tier close up.
 - **The waistband is jagged** close up: where the piece's top edge meets the top's card there is a row of little teeth (`cards/last.png`).
 - **The 17th card shares the hips' number** on the finished picture (a figure has numbers for 16), so bold ink draws no line between the skirt and the hips, which is right, and none for a small step between the skirt and a thigh, which mostly is.
 - **Only one character has it.** The villager's tunic has four chains from the hips and would be a dress by the same recipe; his mid-poly rig also has four chains named `cloth_linen_tunic_9_*` hanging from his head, which the recipe leaves alone (they are the fault that crashed the joint pieces before; not mended here). The ninja's hood is not a dress. The pirate's coat is cut at the waist and has no chains. Neither the villager nor the ninja has cards to try it on.
 - **A crowd gets the rigid card.** On the tag field a runner further than 8 m gets no pieces, and her skirt is then the dress's card riding the hips, which does not tear but does not swing.
 - No phone has run it.
+
+## Legs inside the skirt
+
+In her wide stances, lunges and side-steps the flamenco dancer's legs came out through the front of her skirt, on the plain mesh film as much as on the cards. Now the skirt goes over her knees and her legs stay under it.
+
+```
+just impostor-legs groove-flamenco after                                         # every frame of the take, measured
+just impostor-legs groove-flamenco before evidence/unclip --shots <the old shots folder>
+```
+
+**Where the swing lives.** Only in Blender. `swing.py` plays the baked dance through once more and works out where the skirt's six chains of bones go, a frame at a time, and keys them into the take's `.glb`. Everything that draws her reads those keys: Blender's films, the watch page's mesh, her cards' dress piece (it is skinned to the same chains) and the tag field. Nothing in the browser moves the skirt on its own. So one fix in `swing.py` holds everywhere, and her cards did not need baking again: their weights and pictures do not depend on the motion.
+
+**Why the legs got through.** The old swing kept each chain, a line of three bones, out of a rod round each thigh and shin. But the rods were only as thick as the gap between a chain and a leg as she stood when the skirt was made, which near the hip is almost nothing. The cloth between two chains was never tried at all, so a knee slid between two chains straight through the panel. Her hem hangs below the last joint and her flounces stand off the chains, and none of that was tried either. Nothing kept the hem off the floor.
+
+**What it does now** (`swing.py`, for any garment whose chains hang from the hips or the spine: a skirt, a tunic, a coat's tails):
+
+- **Legs as thick as they are.** Each thigh and shin is measured by rays out from the bone to the skin of the body she is rigged with, at eight places along it and twelve ways round, so a thigh is wider front to back than side to side and a shin has its calf. The cloth keeps 1.7 cm off that.
+- **The whole skirt kept out, not three lines.** The chains, the panels between neighbouring chains, and every point of the skirt itself, skinned the way the mesh is (part chain, part hips or thigh), are tried against the legs on every frame. Anything inside pushes the joints it hangs on out.
+- **Legs stay inside.** Cloth found on the inner side of a leg goes round to the outer side, not further in, because the legs are inside the skirt. The settling before the dance starts brings her legs from standing into the first pose slowly, so the skirt starts outside them.
+- **The floor.** No point of the skirt goes below the floor.
+- **No shaking.** A push turns only partly into speed, so the cloth slides over a leg instead of bouncing, and each frame's turn is eased with its neighbours.
+- **Room to swing.** A skirt's chains may now turn 100 degrees out and 75 sideways (`cloth.py`), because a lifted knee lifts a skirt further than it ever swings by itself. A hood's chains are left as they were.
+
+**What was weighed.** Instead of moving the chains, the skirt could stop holding on to her thighs: the panels that rest on a thigh as made keep part of the thigh's pull. Tried with that pull taken away, every frame clipped and the skirt flew out to 106 degrees on average, so that pull stays, and the chains are pushed with it in mind. More room off the skin (3 cm) clipped less (99 frames) but held the skirt out further still (91 degrees on average); 1.7 cm is the middle of that.
+
+**Before and after**, the whole 14 s push-in, 421 frames (`evidence/unclip/legs-*.json`):
+
+| her mid-poly mesh (what Blender films and the page draws) | before | after |
+|---|---|---|
+| deepest the skirt goes into a leg | 8.6 cm | 7.4 cm |
+| frames where it goes in more than 0.5 cm | 403 | 133 |
+| ... more than 2 cm | 391 | 38 |
+| frames where a leg's middle goes out through the cloth (not under the hem) | 334 | 1 |
+| ... how much of the leg, at most | 60 cm | 0.6 cm |
+| hem below the floor | 4.3 cm, 20 frames | 0.03 cm, 1 frame |
+| the chains swing, at most (on average) | 81 (34) degrees | 126 (78) degrees |
+| the hem shakes, frame to frame | 7.3 mm | 7.5 mm |
+
+Her low-poly model (the gallery's "Model", and the crowd): a leg out through the cloth on 330 frames before, 15 after; deepest 9.2 cm before, 5.1 after; hem below the floor 4.4 cm before, 1.4 after.
+
+**Pictures**: `exports/omni/groove-flamenco/unclipped/` (out of git): the push-in's first, middle and last moments in bold ink, as her mesh (`mesh-*.png`) and as her cards (`cards-*.png`). The old ones are left where they were. Her cards' dress piece is now drawn from both sides, so a skirt flung up shows its inside instead of the set through it.
+
+**What is still weak.**
+
+- **It still brushes her legs.** A third of the frames have some cloth more than half a centimetre into a thigh or shin, mostly a few centimetres at the side of a thigh, from panels that are part chain and part thigh. The worst are around 9.2 s, when her right knee comes up highest.
+- **She wears it wider.** Because she stands wide nearly the whole dance, the skirt is held out by her legs most of the time: the most-lifted chain is out 78 degrees on average where it was 34. In the low wide stance at the start it reads as a skirt pushed up over her knees, nearly flat at the sides.
+- **Her walk and run are as they were.** The clips she was given before (`profiles/midpoly-walk.glb`, `-run.glb`, which the tag field and the cards page play) were baked with the old swing. Swung again in a scratch copy, her walk went from a leg out through the cloth on 11 of 25 frames to none, and her run from 16 of 18 to 1. They are rebuilt when her walk and run are made again.
+- **The villager's tunic** goes through the same code (four chains from the hips), and its walk and run measure the same before and after (5.5 and 4.7 cm into his legs): that is cloth his thighs carry on their own, not the swing.
+- **The shot in the main folder is not rebaked.** The new take lives in this branch's own `shots/groove-flamenco/` (`midpoly-groove.glb`, `lowpoly-groove.glb`); `just cast groove-flamenco runs/<the flamenco dancer> "" groove` makes it again anywhere. The mp4 films and Omni's pack were not remade.
 
 ## A place from a world model
 
@@ -1627,7 +1676,7 @@ What it costs (Gemini's price page, read 24 November 2026): video out is 5,792 t
 
 **What is weak.**
 - *Her hands and face* come from the clip only as far as GEM-X reads them: the hands are not read at all and stay open, and her wrists hit their limits often in the points (clamped on 264 of 421 frames for the left hand). The face is her mid-poly model's, readable from the middle of the push-in on.
-- *The skirt* goes through her legs (up to 8.8 cm) when she lunges, and its hem dips 5 cm into the floor in the low stance near the end.
+- *The skirt* went through her legs (up to 8.6 cm) when she lunged, and its hem dipped 4 cm into the floor in the low stance near the end. Mended: "Legs inside the skirt", above.
 - *The side-step* takes her 1.3 m to her right of the mark early on, while the camera is still wide; the end framing is set for where she finishes, not where she wanders.
 - *The mask* is her mesh alone; bold ink's outline, about 3 pixels, lies just outside it.
 - *The bold ink film* is the page's pictures taken one at a time, so its edges are as smooth as the page's (antialiased, not supersampled).
