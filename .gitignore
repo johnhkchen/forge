@@ -24,3 +24,6 @@ runs/*/card.jpg
 # Marble worlds as World Labs hands them over (splats, collision mesh, panorama): big, and fetched with credits
 world/marble/
 evidence/marble/diorama/cut/
+
+# Kimodo takes for the screen-test motions (requests and answers, every take); the kept ones are motion/library/<id>/
+motion/library/.cache/

@@ -157,14 +157,15 @@ class Casting:
         profiles = os.path.join(self.runs, run, "profiles")
         return os.path.isdir(profiles) and any("-impostor" in f for f in os.listdir(profiles))
 
-    def clip_file(self, role, candidate, take, clip):
-        """(path on disk, path the gallery serves it at) of one of a take's clips, from casting/reel.json's table."""
+    def clip_file(self, role, candidate, take, clip, side=None):
+        """(path on disk, path the gallery serves it at) of one of a take's clips, from casting/reel.json's table.
+        A "library" clip is one of the screen-test motions (motion/library) played on the run itself: the side names it."""
         reel = self.reel()
         how = (reel.get("clips") or {}).get(clip) or {}
         version = take.get("version") or reel.get("version", "lowpoly")
         swap = (self.role(role).get("chemistry") or {}).get("swap", "right")
-        rel = (how.get("file") or "").format(version=version, swap=swap)
-        if how.get("from") == "own":
+        rel = (how.get("file") or "").format(version=version, swap=swap, motion=(side or {}).get("motion", ""))
+        if how.get("from") in ("own", "library"):
             return os.path.join(self.runs, take["run"], rel), "runs/%s/%s" % (take["run"], rel)
         folder = self.take_dir(role, candidate, take["n"])
         return os.path.join(folder, rel), "shots/%s/%s" % (self.take_id(role, candidate, take["n"]), rel)
@@ -179,7 +180,7 @@ class Casting:
         reel = self.reel()
         out = []
         for side in reel.get("sides") or []:
-            path, url = self.clip_file(role, candidate, take, side["clip"])
+            path, url = self.clip_file(role, candidate, take, side["clip"], side)
             how = (reel.get("clips") or {}).get(side["clip"]) or {}
             item = {"id": side["id"], "name": side["name"], "why": side.get("why"), "clip": side["clip"], "glb": url,
                     "ready": os.path.isfile(path), "from_s": None, "to_s": None, "made_by": how.get("made_by")}
@@ -575,6 +576,10 @@ def tape(cast, role, candidate, n=None):
     wanted = [p for p in ("sides", "rom") if not os.path.isfile(os.path.join(profiles, "%s-%s.glb" % (version, p)))]
     if wanted:
         blender("scripts/tidy_profile.py", [source, profiles] + wanted, log)
+    #  1b. the screen-test motions the reel names (clip kind "library"), on its own skeleton (just screen-play)
+    screen = library_wanted(reel, run, version)
+    if screen:
+        blender("scripts/motion/apply_library.py", [run, "--motions", ",".join(screen), "--versions", version], log)
     #  2. cards, pictured from the detailed mesh given the low-poly skeleton (just impostor-detailed <run> lowpoly)
     if not cast.has_cards(take["run"]):
         blender("scripts/impostor/rig_detailed.py", [run, "--from", version], log)
@@ -604,6 +609,17 @@ def tape(cast, role, candidate, n=None):
                                                  "--left-version", version, "--right-version", "lowpoly"], log)
     write_bout(cast, role, candidate, take, bout, chem)
     return {"take": take["n"], "folder": folder, "reel": [s["id"] for s in cast.reel_for(role, candidate, take) if s["ready"]]}
+
+
+def library_wanted(reel, run, version, library=None):
+    """The screen-test motions the reel's "library" sides name that the library has made and this run has not played
+    (or played from an older take). Free to play: scripts/motion/apply_library.py."""
+    sys.path.insert(0, os.path.join(ROOT, "scripts", "motion"))
+    import screen_play
+
+    kinds = {k for k, how in (reel.get("clips") or {}).items() if how.get("from") == "library"}
+    named = [s["motion"] for s in reel.get("sides") or [] if s.get("clip") in kinds and s.get("motion")]
+    return screen_play.missing(run, named, [version], library or screen_play.LIBRARY)
 
 
 def write_chemistry(cast, role, candidate, take, crew, swap, version):

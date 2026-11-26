@@ -1,0 +1,182 @@
+{
+  "about": "The screen-test motions: whole-body moves made once from one plain sentence each by NVIDIA Kimodo (on the RunPod motion worker) and kept as SOMA motion. They belong to no one character, so every member of the cast, and anyone trying out for a part, can be played through the same set and compared. Between them they push every joint the cards and pieces find hard through its range the way real movement does. `just screen-motions` makes them (paid, a few cents; it prints the jobs and the cost and sends nothing unless told `go`); `just screen-play <run>` plays them on a character (free).",
+  "takes": 5,
+  "motions": [
+    {
+      "id": "stand-easy",
+      "name": "Stand easy",
+      "sentence": "A person stands idle and relaxed, slowly shifting their weight from one foot to the other.",
+      "seconds": 6,
+      "why": "Holding nearly still, the weight going from foot to foot. A card that swaps its picture while nothing much moves shows as a shimmer, and the hips and ankles take a small side-to-side load.",
+      "joints": ["hips", "ankles", "spine"],
+      "asks": [
+        {"measure": "weight_shift", "at_least": 0.045},
+        {"measure": "wander", "at_most": 0.35},
+        {"measure": "hips_drop", "at_most": 0.12}
+      ]
+    },
+    {
+      "id": "walk-turn-back",
+      "name": "Walk out and back",
+      "sentence": "A person walks forward a few steps, turns around, and walks back to where they started.",
+      "seconds": 8,
+      "why": "A quick change of direction: a planted foot pivots, the hips turn half round under a moving body, then the walk again the other way. Cards swap pictures fast in the turn.",
+      "joints": ["hips", "knees", "ankles", "spine twist"],
+      "asks": [
+        {"measure": "turn", "at_least": 140},
+        {"measure": "out", "at_least": 1.2},
+        {"measure": "back", "at_most": 0.6}
+      ]
+    },
+    {
+      "id": "jog-in-place",
+      "name": "Jog on the spot",
+      "sentence": "A person jogs in place, lifting the knees high and pumping the bent arms.",
+      "seconds": 6,
+      "why": "Knees lifted to the hip and both elbows held well bent and pumping, quicker than a walk, without going anywhere. Both feet leave the floor between steps.",
+      "joints": ["hips", "knees", "elbows", "shoulders"],
+      "asks": [
+        {"measure": "knee_lift", "at_least": 0.25},
+        {"measure": "elbow_bend", "at_least": 70},
+        {"measure": "wander", "at_most": 0.8}
+      ]
+    },
+    {
+      "id": "deep-squat",
+      "name": "Deep squat",
+      "sentence": "A person slowly squats down as low as they can, holds it, and stands back up.",
+      "seconds": 6,
+      "why": "The knees and hips folded as far as they go, and the ankles bent forward under them. The knees broke here before.",
+      "joints": ["knees", "hips", "ankles"],
+      "asks": [
+        {"measure": "hips_drop", "at_least": 0.35},
+        {"measure": "wander", "at_most": 0.35}
+      ]
+    },
+    {
+      "id": "reach-stretch",
+      "name": "Reach and stretch",
+      "sentence": "A person raises both arms high above their head and stretches, leaning to the left and then to the right.",
+      "seconds": 8,
+      "why": "Both shoulders at their furthest overhead, where cards open most, then the spine bending to each side under them.",
+      "joints": ["shoulders", "spine side bend", "elbows straight"],
+      "asks": [
+        {"measure": "hands_over_head", "at_least": 0.2},
+        {"measure": "side_bend", "at_least": 10},
+        {"measure": "wander", "at_most": 0.35}
+      ]
+    },
+    {
+      "id": "look-around",
+      "name": "Look around",
+      "sentence": "A person stands still and looks around, turning their head to the left, to the right, then looking up and down.",
+      "seconds": 7,
+      "why": "The neck alone: turning each way and nodding up and down while the body stays put. Does the face stay a face from the side, and does the head stay on the collar?",
+      "joints": ["neck", "head"],
+      "asks": [
+        {"measure": "head_turn", "at_least": 25},
+        {"measure": "head_nod", "at_least": 25},
+        {"measure": "wander", "at_most": 0.35}
+      ]
+    },
+    {
+      "id": "wave-both",
+      "name": "Wave with each hand",
+      "sentence": "A person waves hello with their right hand, then waves with their left hand.",
+      "seconds": 7,
+      "why": "Each shoulder raised and each elbow bent up high beside the face, one side and then the other, so left and right can be compared.",
+      "joints": ["shoulders", "elbows", "wrists"],
+      "asks": [
+        {"measure": "hand_over_shoulder", "at_least": 0.1},
+        {"measure": "wander", "at_most": 0.35}
+      ]
+    },
+    {
+      "id": "pick-up",
+      "name": "Pick something up",
+      "sentence": "A person bends down to pick something up off the floor and stands back up.",
+      "seconds": 6,
+      "why": "A bend all the way to the floor: the spine folded forward, the hips and knees bent, an arm reaching down past the shins. The head goes below the hips' height.",
+      "joints": ["spine bend", "hips", "knees", "shoulders"],
+      "asks": [
+        {"measure": "hand_low", "at_most": 0.35},
+        {"measure": "wander", "at_most": 0.5}
+      ]
+    },
+    {
+      "id": "turn-circle",
+      "name": "Turn round on the spot",
+      "sentence": "A person turns around in a full circle on the spot.",
+      "seconds": 6,
+      "why": "The whole body seen from every side in one go, the feet stepping round under it. Every card shows every picture it has.",
+      "joints": ["hips", "ankles", "whole body from every side"],
+      "asks": [
+        {"measure": "turn", "at_least": 300},
+        {"measure": "wander", "at_most": 0.6}
+      ]
+    },
+    {
+      "id": "arm-circles",
+      "name": "Arm circles",
+      "sentence": "A person stands with both arms stretched out to the sides and swings them in big circles.",
+      "seconds": 6,
+      "why": "The shoulders through their whole round: up overhead, out, down and back behind the body, where a card shows its back.",
+      "joints": ["shoulders", "shoulders behind", "collar bones"],
+      "asks": [
+        {"measure": "hands_over_shoulders", "at_least": 0.15},
+        {"measure": "hands_behind", "at_least": 0.15},
+        {"measure": "wander", "at_most": 0.35}
+      ]
+    },
+    {
+      "id": "lunge",
+      "name": "Forward lunge",
+      "sentence": "A person steps forward into a deep lunge and then steps back to standing.",
+      "seconds": 6,
+      "why": "One knee deep in front, the other near the floor behind with its hip stretched open: the two legs at the far ends of their range at once.",
+      "joints": ["knees", "hips", "hip stretched back", "ankles"],
+      "asks": [
+        {"measure": "hips_drop", "at_least": 0.2},
+        {"measure": "feet_apart", "at_least": 0.75},
+        {"measure": "wander", "at_most": 0.8}
+      ]
+    },
+    {
+      "id": "shrug-bow",
+      "name": "Shrug and bow",
+      "sentence": "A person shrugs their shoulders, then bows forward from the waist.",
+      "seconds": 6,
+      "why": "The collar bones lifted in a hard shrug (where the neck's piece meets the chest), then the spine and neck bending forward together in the bow.",
+      "joints": ["collar bones", "neck", "spine bend"],
+      "asks": [
+        {"measure": "shrug", "at_least": 0.03},
+        {"measure": "bow", "at_least": 30},
+        {"measure": "wander", "at_most": 0.35}
+      ]
+    },
+    {
+      "id": "twist",
+      "name": "Twist side to side",
+      "sentence": "A person stands with feet apart and twists their upper body to the left and to the right, swinging the arms.",
+      "seconds": 6,
+      "why": "The spine turning on the hips each way while the feet stay put: the chest's cards and the hips' cards point different ways.",
+      "joints": ["spine twist", "shoulders", "hips"],
+      "asks": [
+        {"measure": "twist", "at_least": 20},
+        {"measure": "wander", "at_most": 0.35}
+      ]
+    },
+    {
+      "id": "kick",
+      "name": "Front kick",
+      "sentence": "A person throws a high front kick with the right leg and then returns to a fighting stance.",
+      "seconds": 5,
+      "why": "One hip folded high with its knee snapping straight, the whole body balanced on the other foot. Kimodo has seen plenty of fighting.",
+      "joints": ["hips high", "knees", "standing ankle"],
+      "asks": [
+        {"measure": "foot_high", "at_least": 0.7},
+        {"measure": "wander", "at_most": 0.8}
+      ]
+    }
+  ]
+}

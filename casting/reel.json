@@ -21,7 +21,21 @@
     {"id": "tag", "name": "Tag moves", "clip": "tag", "from": 222, "to": 392,
      "why": "A dodge, a tag and being tagged: quick turns that make cards swap pictures fast."},
     {"id": "fight", "name": "A sparring bout", "clip": "fight", "from": 60, "to": 300,
-     "why": "Jabs, a hook and a block from the fight kit, opposite Lincoln. Fists come close to faces."}
+     "why": "Jabs, a hook and a block from the fight kit, opposite Lincoln. Fists come close to faces."},
+    {"id": "screen-stand-easy", "name": "Stand easy (screen test)", "clip": "library", "motion": "stand-easy", "why": "Holding nearly still, the weight going from foot to foot. A card that swaps its picture while nothing much moves shows as a shimmer, and the hips and ankles take a small side-to-side load."},
+    {"id": "screen-walk-turn-back", "name": "Walk out and back (screen test)", "clip": "library", "motion": "walk-turn-back", "why": "A quick change of direction: a planted foot pivots, the hips turn half round under a moving body, then the walk again the other way. Cards swap pictures fast in the turn."},
+    {"id": "screen-jog-in-place", "name": "Jog on the spot (screen test)", "clip": "library", "motion": "jog-in-place", "why": "Knees lifted to the hip and both elbows held well bent and pumping, quicker than a walk, without going anywhere. Both feet leave the floor between steps."},
+    {"id": "screen-deep-squat", "name": "Deep squat (screen test)", "clip": "library", "motion": "deep-squat", "why": "The knees and hips folded as far as they go, and the ankles bent forward under them. The knees broke here before."},
+    {"id": "screen-reach-stretch", "name": "Reach and stretch (screen test)", "clip": "library", "motion": "reach-stretch", "why": "Both shoulders at their furthest overhead, where cards open most, then the spine bending to each side under them."},
+    {"id": "screen-look-around", "name": "Look around (screen test)", "clip": "library", "motion": "look-around", "why": "The neck alone: turning each way and nodding up and down while the body stays put. Does the face stay a face from the side, and does the head stay on the collar?"},
+    {"id": "screen-wave-both", "name": "Wave with each hand (screen test)", "clip": "library", "motion": "wave-both", "why": "Each shoulder raised and each elbow bent up high beside the face, one side and then the other, so left and right can be compared."},
+    {"id": "screen-pick-up", "name": "Pick something up (screen test)", "clip": "library", "motion": "pick-up", "why": "A bend all the way to the floor: the spine folded forward, the hips and knees bent, an arm reaching down past the shins. The head goes below the hips' height."},
+    {"id": "screen-turn-circle", "name": "Turn round on the spot (screen test)", "clip": "library", "motion": "turn-circle", "why": "The whole body seen from every side in one go, the feet stepping round under it. Every card shows every picture it has."},
+    {"id": "screen-arm-circles", "name": "Arm circles (screen test)", "clip": "library", "motion": "arm-circles", "why": "The shoulders through their whole round: up overhead, out, down and back behind the body, where a card shows its back."},
+    {"id": "screen-lunge", "name": "Forward lunge (screen test)", "clip": "library", "motion": "lunge", "why": "One knee deep in front, the other near the floor behind with its hip stretched open: the two legs at the far ends of their range at once."},
+    {"id": "screen-shrug-bow", "name": "Shrug and bow (screen test)", "clip": "library", "motion": "shrug-bow", "why": "The collar bones lifted in a hard shrug (where the neck's piece meets the chest), then the spine and neck bending forward together in the bow."},
+    {"id": "screen-twist", "name": "Twist side to side (screen test)", "clip": "library", "motion": "twist", "why": "The spine turning on the hips each way while the feet stay put: the chest's cards and the hips' cards point different ways."},
+    {"id": "screen-kick", "name": "Front kick (screen test)", "clip": "library", "motion": "kick", "why": "One hip folded high with its knee snapping straight, the whole body balanced on the other foot. Kimodo has seen plenty of fighting."}
   ],
   "clips": {
     "sides": {"from": "own", "file": "profiles/{version}-sides.glb", "made_by": "just tidy <run> sides", "free": true},
@@ -29,6 +43,7 @@
     "run": {"from": "own", "file": "profiles/{version}-run.glb", "made_by": "just runs (one sentence to Kimodo on RunPod, then free)", "free": false},
     "crew": {"from": "chemistry", "file": "{swap}/{version}-crew.glb", "made_by": "the chemistry read", "free": true},
     "tag": {"from": "tape", "file": "tag/{version}-tag.glb", "made_by": "the self-tape", "free": true},
-    "fight": {"from": "tape", "file": "fight/cast-left.glb", "made_by": "the self-tape", "free": true}
+    "fight": {"from": "tape", "file": "fight/cast-left.glb", "made_by": "the self-tape", "free": true},
+    "library": {"from": "library", "file": "profiles/{version}-screen-{motion}.glb", "made_by": "just screen-motions go (once, for everyone: a few cents of Kimodo on RunPod), then just screen-play <run> (free; the tape plays them too)", "free": true}
   }
 }

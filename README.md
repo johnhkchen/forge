@@ -83,6 +83,7 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just gait <run folder>` | only ask Opus how the character walks (weight, stealth, swagger, stiffness) |
 | `just runs [runs folder]` | give every character that walks a run: one sentence each to Kimodo, cut into a loop, played on its low-poly and mid-poly versions |
 | `just run-asks [runs folder]` | only show the sentence and speed each character would be asked to run with; sends nothing |
+| `just screen-motions [go] [ids]`, `just screen-play <run> [ids]` | the screen-test moves: what making them would cost (PAID with `go`, a few cents), and playing them on a character (free). See Screen tests |
 | `just tidy <run folder> run` | only the Blender part of a run, once its clip is there |
 | `just walk-strip <file.glb> <out.png> [side or front]` | a picture of the walk (or the run), eight moments side by side |
 | `just bake-check <run folder> <file.glb>…` | measure a dressed character's colors against the detailed mesh: does each piece show its own cloth, and the body skin |
@@ -247,6 +248,46 @@ In the gallery, a character with a run has a "Run" button beside "Walk", and a "
 What is weak: a sentence steers Kimodo only a little (Roosevelt's "proudly" comes out chin-up with his arms behind him), a foot in the air stops a little short of its spot on the troll's short legs, and everyone's legs turn over at about the same beat. The numbers and the rest are in the skill's "Running" section.
 
 Kimodo needs the access described in Setup, step 6. Without it nothing breaks: `just runs` says "run skipped: Kimodo not available" and why, and a pipeline run carries on without the run. The parts that don't need Kimodo are tested without it (`python3 scripts/motion/test_run_clip.py`, part of `just check`).
+
+## Screen tests
+
+The same handful of moves for everyone in the cast, so any rig, and anyone trying out for a part, can be played through them and compared. Each move is made once from one plain sentence by Kimodo and kept as SOMA motion, so it belongs to no one character. Hand-made poses are stiff; these move the way people move, and push each joint through its range on the way.
+
+```
+just screen-motions                 # every job and what it would cost; sends nothing
+just screen-motions go              # PAID: make them (a few cents), score every take, keep the best
+just screen-play lincoln            # free: play them on a character, then line up everyone who has
+just screen-rehearse <folder>       # free: the same with stand-ins for Kimodo, to try screen-play first
+```
+
+| Move | Sentence (short) | What it tests |
+|---|---|---|
+| Stand easy | stands idle, shifting weight foot to foot | holding still (shimmer), hips and ankles side to side |
+| Walk out and back | walks forward, turns round, walks back | a quick change of direction, a pivot on a planted foot |
+| Jog on the spot | knees high, bent arms pumping | knees to the hip, elbows held bent, both feet off the floor |
+| Deep squat | squats as low as it can, holds, stands | knees and hips folded all the way, ankles |
+| Reach and stretch | both arms up, leaning left and right | shoulders overhead, the spine bending sideways |
+| Look around | left, right, up, down | the neck alone, turning and nodding |
+| Wave with each hand | right hand, then left | each shoulder and elbow high beside the face |
+| Pick something up | bends down to the floor | the spine folded forward, a hand to the floor |
+| Turn round on the spot | a full circle | every side of the body, the feet stepping round |
+| Arm circles | big circles, arms out | shoulders through their whole round, behind the body too |
+| Forward lunge | a deep lunge and back | one knee deep in front, the other hip stretched open behind |
+| Shrug and bow | shrugs, then bows from the waist | the collar bones lifted hard, then spine and neck bending |
+| Twist side to side | twists the upper body each way | the spine turning on the hips |
+| Front kick | a high kick, back to a fighting stance | a hip folded high, balance on one foot |
+
+The list is `motion/library/library.json`: each move's id, sentence, seconds (eight at most), why it is there, the joints it pushes, and what it must be seen to do (`asks`: the hips at least this far down, both hands over the head, at least 300 degrees of turn...).
+
+**Five takes, the best kept.** As with a run, a sentence gives a motion, not the motion, so each is made five times on different seeds, one sentence a job (`scripts/motion/screen_motions.py`; `baml_src/9_run/screen.baml` sends the jobs). Every take is measured from its joints: a foot the model says is down sliding over the floor, the head flung about or thrown back, not starting and ending standing near the same pose, toes through the floor, and each of its `asks` it misses. A take that does everything asked always beats one that does not. The kept take is `motion/library/<id>/motion.json`, and every take's score and measures are in `scores.json` beside it. `python3 scripts/motion/screen_motions.py status` says what was kept and why.
+
+**What it costs.** 14 moves, five takes each: 70 jobs, 445 seconds of motion, about 190 s of GPU at 0.9 s a job and 0.28 s a second of motion (the worker's own records of the runs). With the minute the worker idles afterwards that is about $0.08, or $0.09 if the worker has to wake and load the sentence encoder first, at the assumed $0.00031 a GPU second in `casting.py`. A volume that has never run Kimodo would fetch 17.5 GB first (`just text-info`, up to half an hour). The dry run says which applies, and an answer already in the cache (`motion/library/.cache/`, out of git) is never paid for twice.
+
+**Playing them.** `just screen-play <run>` puts every made move on the character's low-poly and mid-poly versions, the same way its run goes on (`scripts/motion/apply_library.py`): its own skeleton and limits, planted feet, swinging cloth, a tail. Out come `profiles/<version>-screen-<id>.glb`, beside its walk. Its cards play the low-poly files, and the cards page lists them as "Screen test: ...". Each move also gets a line-up for the watch page, `#/watch/screen-<id>`: everyone who has played it, side by side across the studio stage at their own size (`shots/screen-<id>/`). The casting reel names the same files as extra sides (clip kind `library`), and taping a candidate plays any it is missing.
+
+**Tried without paying.** `python3 scripts/motion/test_screen_motions.py` (part of `just check`) makes every move with a stick-figure stand-in in five ways: done well, done by half, with sliding feet, with the head thrown back, never coming back to standing. The scoring keeps the one done well every time. The same stand-ins were played on Lincoln and the pirate in Blender.
+
+**What is weak.** The asks' thresholds are guesses until real takes come back: an idle that sways too little, or a squat Kimodo makes shallower than 0.35 of the hip height, will miss its ask on every take (the best is still kept, and `status` says so). No path is given, so a move may wander a little; that is scored, not prevented. The moves are played in each character's own strides, so a short character's walk out and back covers less ground.
 
 ## Shots
 
