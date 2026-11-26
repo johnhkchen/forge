@@ -47,6 +47,7 @@ check:
     python3 scripts/impostor/test_impostor.py | tail -1
     python3 scripts/test_fabric.py | tail -1
     python3 scripts/casting/test_casting.py | tail -1
+    python3 scripts/casting/test_screen.py | tail -1
     python3 scripts/video/test_video.py 2>/dev/null | tail -1
     python3 scripts/sets/test_camera_path.py | tail -1
     python3 scripts/video/test_omni.py 2>/dev/null | tail -1
@@ -593,18 +594,54 @@ diorama-shots port="8028":
 casting role="":
     python3 scripts/casting/casting.py status {{role}}
 
-# What a casting step would do and cost, without doing it (step: headshots, take, tape, judge, revise)
+# What a casting step would do and cost, without doing it (step: headshots, screen, mesh, take, tape, judge, revise)
 casting-plan step role candidate="":
     python3 scripts/casting/casting.py plan "{{step}}" "{{role}}" {{candidate}} | sed '/^RESULT/d'
 
-# PAID (Codex pictures; Opus too with more): a headshot for every look in casting/<role>/role.json that has none, and first `more` new looks written by Opus. Prints the cost and stops unless go is "go"
-casting-headshots role go="" more="0":
+# PAID (Codex pictures; Opus too with more): `variations` headshots of every look in casting/<role>/role.json (each a different design of the same brief), drawing only what is missing, and first `more` new looks written by Opus. Then the free screen test. Prints the cost and stops unless go is "go"
+casting-headshots role go="" more="0" variations="1":
     #!/usr/bin/env bash
     set -euo pipefail
-    python3 scripts/casting/casting.py plan headshots "{{role}}" | sed '/^RESULT/d'
-    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was started. To spend it: just casting-headshots {{role}} go"; exit 0; }
-    baml run casting_headshots -- --role "{{role}}" --more {{more}}
+    python3 scripts/casting/casting.py plan headshots "{{role}}" --more {{more}} --variations {{variations}} | sed '/^RESULT/d'
+    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was started. To spend it: just casting-headshots {{role}} go {{more}} {{variations}}"; exit 0; }
+    baml run casting_headshots -- --role "{{role}}" --more {{more}} --variations {{variations}}
+    just casting-screen "{{role}}"
     python3 scripts/casting/casting.py status "{{role}}"
+
+# Free: the screen test. Every headshot of a part measured on what its breakdown asks for and ranked, into casting/<role>/screen.json and screen-contact-sheet.png (a few seconds). look=look first shows Haiku every headshot once for the must-nots a picture can't be measured for (about $0.21, the CLI prints its own cost)
+casting-screen role look="" runs="runs":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{look}}" = "look" ]; then
+        uv run --no-project --python 3.12 --with pillow --with numpy --with scipy python scripts/casting/screen.py "{{role}}" --runs "{{runs}}" | grep -E '^RESULT' >/dev/null
+        baml run casting_vision -- --role "{{role}}" 2>&1 | grep -E 'cost_usd|vision:|rror' || true
+    fi
+    uv run --no-project --python 3.12 --with pillow --with numpy --with scipy python scripts/casting/screen.py "{{role}}" --runs "{{runs}}"
+
+# PAID (Codex pictures, on your ChatGPT plan): every colourway written under a look in casting/<role>/role.json drawn from its headshot, only its colours changed; then the free screen test. Prints the plan and stops unless go is "go"
+casting-colourways role go="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/casting/casting.py plan colourways "{{role}}" | sed '/^RESULT/d'
+    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was started. To spend it: just casting-colourways {{role}} go"; exit 0; }
+    baml run casting_colourways -- --role "{{role}}"
+    just casting-screen "{{role}}"
+
+# Headshots as git keeps them: Codex's full-size PNGs into casting/<role>/headshots/full/ (out of git), a 1024-pixel JPEG of each beside them. The paid steps do this themselves
+casting-keep role:
+    uv run --no-project --python 3.12 --with pillow --with numpy --with scipy python scripts/casting/screen.py keep "{{role}}"
+
+# PAID (RunPod GPU, a few cents a mesh): the screen test's best few headshots (shots: "brewer,clerk.2", or a number for the best that many) each built by TRELLIS.2 alone, no Claude, no rig, no motion; then, free, stood up, sized and pictured from all round. Prints the cost and stops unless go is "go"
+casting-mesh-screen role shots="5" go="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    picked="{{shots}}"
+    case "$picked" in *[!0-9]*) ;; *) picked=$(python3 scripts/casting/casting.py top "{{role}}" "$picked");; esac
+    python3 scripts/casting/casting.py plan mesh "{{role}}" --shots "$picked" | sed '/^RESULT/d'
+    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was started. To spend it: just casting-mesh-screen {{role}} $picked go"; exit 0; }
+    todo=$(python3 scripts/casting/casting.py unbuilt "{{role}}" "$picked")
+    [ -z "$todo" ] || baml run casting_mesh_screen -- --role "{{role}}" --shots "$todo"
+    python3 scripts/casting/casting.py screen-3d "{{role}}" | sed '/^RESULT/d'
 
 # PAID (a few dollars: TRELLIS.2, Claude in Blender, Kimodo): a shortlisted headshot built into a character, then its reel taped and its camera test run (both free). Prints the cost and stops unless go is "go"
 casting-take role candidate go="":
@@ -650,9 +687,10 @@ casting-revise role candidate go="":
 casting-shots port="8028" candidate="villager":
     python3 scripts/casting/shots.py --port {{port}} --candidate "{{candidate}}"
 
-# Casting's own tests: the files, the board, the costs, the notes, and the gallery's casting API (no Blender, no models)
+# Casting's own tests: the files, the board, the costs, the notes, the gallery's casting API, and the screen test on robots drawn in the test (no Blender, no models)
 casting-test:
     python3 scripts/casting/test_casting.py
+    python3 scripts/casting/test_screen.py
 
 # Vendor the b28 clay style kit into the gallery
 sync-kit:

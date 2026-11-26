@@ -137,35 +137,132 @@ function stepBox(step, role, candidate, h) {
   return h("div", { class: `clay-surface casting-step${step.paid ? " paid" : " free"}` },
     h("div", { class: "casting-step-head" },
       h("h4", {}, step.name),
-      h("span", { class: `casting-price${step.paid ? " paid" : ""}` }, step.paid ? (step.high ? `${step.low ? money(step.low) : "Free"}–${money(step.high)}` : "Pictures") : "Free")),
+      h("span", { class: `casting-price${step.paid ? " paid" : ""}` }, step.paid ? (step.high ? (step.low === step.high ? `about ${money(step.high)}` : `${step.low ? money(step.low) : "Free"}–${money(step.high)}`) : "Pictures") : "Free")),
     h("p", { class: "about" }, step.what),
     h("button", { class: "clay-button clay-button--soft casting-try", type: "button", onclick: tryIt }, step.paid ? "See what it would cost" : "See what it would do"),
     out);
 }
 
+// Put one headshot on the shortlist: `shot` is a look's id for its first picture, "<look>.<n>" for another.
+function shortlister(role, refresh) {
+  return async (shot, button) => {
+    button.disabled = true;
+    try { await post(`api/casting/${encodeURIComponent(role.id)}/shortlist`, { look: shot }); refresh(); }
+    catch (err) { button.disabled = false; button.textContent = String(err.message || err); }
+  };
+}
+
+function shortlistButton(shot, candidate, shortlist, h, label = "Put on the shortlist") {
+  return candidate ? h("span", { class: "casting-done" }, label === "Put on the shortlist" ? "On the shortlist" : `${label}: on the shortlist`)
+    : h("button", { class: "clay-button clay-button--soft", type: "button", onclick: (e) => shortlist(shot, e.target) }, label);
+}
+
 function headshots(role, h, refresh) {
   const looks = role.looks;
   const standIns = role.candidates.filter((c) => c.stand_in);
-  const shortlist = async (look, button) => {
-    button.disabled = true;
-    try { await post(`api/casting/${encodeURIComponent(role.id)}/shortlist`, { look: look.id }); refresh(); }
-    catch (err) { button.disabled = false; button.textContent = String(err.message || err); }
-  };
+  const shortlist = shortlister(role, refresh);
+  const arrival = (id) => role.canon_options.find((o) => o.id === id)?.name;
   return h("section", { class: "casting-section", id: "stage-headshots" },
     h("h2", {}, "Headshots"),
-    h("p", { class: "lede" }, `${looks.length} looks are written in the breakdown, each a whole brief, so a picture of each costs one Codex picture and no Opus. ${role.board.pictured ? `${role.board.pictured} drawn so far.` : "None drawn yet: that is the first step that spends anything."}`),
+    h("p", { class: "lede" }, `${looks.length} looks, each a whole brief. Codex draws each a few times, a different design each time, on your ChatGPT plan. ${role.board.drawn ? `${role.board.drawn} pictures so far.` : "None drawn yet: that is the first step that spends anything."}`),
     h("div", { class: "casting-grid casting-looks" }, looks.map((look) => {
-      // Only a drawn headshot can go on the shortlist, so only then is there a button.
-      const button = !look.picture ? null : look.candidate ? h("span", { class: "casting-done" }, "On the shortlist")
-        : h("button", { class: "clay-button clay-button--soft", type: "button", onclick: (e) => shortlist(look, e.target) }, "Put on the shortlist");
+      const pictures = look.pictures || [];
+      // The first picture large, the others small beside it; every drawn one can go on the shortlist.
       return h("figure", { class: "clay-surface casting-look" },
-        look.picture ? h("img", { src: look.picture, alt: `Headshot: ${look.name}`, loading: "lazy" }) : h("div", { class: "casting-blank" }, h("span", {}, "Not drawn yet"), h("small", {}, look.brief?.size_m ? `${look.brief.size_m} m tall` : "")),
-        h("figcaption", {}, h("b", {}, look.name), h("span", {}, look.why), h("details", {}, h("summary", {}, "What Codex would be asked to draw"), h("p", {}, look.brief?.subject)), button));
+        pictures.length ? h("img", { src: pictures[0].picture, alt: `Headshot: ${look.name}`, loading: "lazy" }) : h("div", { class: "casting-blank" }, h("span", {}, "Not drawn yet"), h("small", {}, look.brief?.size_m ? `${look.brief.size_m} m tall` : "")),
+        pictures.length > 1 ? h("div", { class: "casting-more-pictures" }, pictures.slice(1).map((p) => h("a", { href: p.picture, target: "_blank", title: p.shot }, h("img", { src: p.picture, alt: `Picture ${p.n} of ${look.name}`, loading: "lazy" })))) : null,
+        h("figcaption", {}, h("b", {}, look.name), h("span", {}, look.why),
+          look.suits && arrival(look.suits) ? h("span", { class: "casting-suits" }, `Fits “${arrival(look.suits)}”`) : null,
+          h("details", {}, h("summary", {}, "What Codex was asked to draw"), h("p", {}, look.brief?.subject)),
+          pictures.length && !role.screen ? h("div", { class: "casting-chips" }, pictures.map((p) => shortlistButton(p.shot, p.candidate, shortlist, h, pictures.length > 1 ? `Shortlist picture ${p.n}` : "Put on the shortlist"))) : null));
     }),
     standIns.map((c) => h("figure", { class: "clay-surface casting-look stand-in" },
       h("img", { src: c.picture, alt: `${c.name}, standing in`, loading: "lazy" }),
       h("figcaption", {}, h("b", {}, `${c.name} (standing in)`), h("span", {}, c.why))))),
     stepBox(role.steps.find((s) => s.id === "headshots"), role, null, h));
+}
+
+// ---------- the screen test: every headshot measured, best first (scripts/casting/screen.py) ----------
+
+const SCREEN_MEASURES = [
+  ["builds", "Builds", "One figure, whole, on a plain background, front on, arms straight out: what TRELLIS builds well."],
+  ["stands_apart", "Stands apart", "Its outline at the crew camera's size against everyone in the cast: how little it shares with the nearest, and how square its head is."],
+  ["face", "Face", "Shrunk to the crew camera's pixels in the pixel look's colours: a dark face plate, two light eyes on it, the grille."],
+  ["colours", "Colours", "How much of it is the breakdown's five colours, mustard leading, and how far its mustard is from the cast's colours."],
+  ["cards", "Cards", "Nothing thin or loose (wires, antennae, springs): that's where cards come apart."],
+];
+
+function scoreBars(scores, h) {
+  return h("dl", { class: "casting-bars" }, SCREEN_MEASURES.flatMap(([key, name]) => [
+    h("dt", {}, name),
+    h("dd", {}, h("span", { class: "casting-bar" }, h("span", { style: `width:${Math.round(100 * (scores[key] || 0))}%` })), h("small", {}, (scores[key] ?? 0).toFixed(2))),
+  ]));
+}
+
+function meshBox(mesh, h) {
+  if (!mesh?.turn) return mesh ? h("p", { class: "about" }, "Built as a mesh; not pictured yet (just casting-mesh-screen).") : null;
+  const a = mesh.against || {};
+  return h("details", { class: "casting-mesh" },
+    h("summary", {}, "Its mesh, from all round"),
+    h("img", { src: mesh.turn, alt: "The mesh from eight sides, and at the crew camera's size", loading: "lazy" }),
+    h("p", { class: "about" }, `${a.front_is === "as drawn" ? "Faces the way it was drawn" : "Came in turned round"}; keeps ${Math.round(100 * (a.outline_kept || 0))}% of its picture's outline; ${mesh.mesh?.pieces ?? "?"} loose pieces.`));
+}
+
+function screenSection(role, h, refresh) {
+  const screen = role.screen;
+  const shortlist = shortlister(role, refresh);
+  const steps = ["screen", "mesh"].map((id) => role.steps.find((s) => s.id === id)).filter(Boolean);
+  if (!screen?.shots?.length) {
+    return h("section", { class: "casting-section", id: "stage-screen" },
+      h("h2", {}, "Screen test"),
+      h("p", { class: "lede" }, "Once there are headshots, each one is measured here on what the breakdown asks for, for free, so the shortlist is picked on evidence."),
+      h("div", { class: "casting-grid casting-steps" }, steps.map((s) => stepBox(s, role, null, h))));
+  }
+  const vision = screen.vision;
+  return h("section", { class: "casting-section", id: "stage-screen" },
+    h("h2", {}, "Screen test"),
+    h("p", { class: "lede" }, `Every headshot measured on what the breakdown asks for, best first. ${screen.shots.length} pictures, measured on this Mac for free. Beside each: what the crew camera sees, and its face on the pixel look's grid.`),
+    h("details", { class: "casting-legend clay-surface casting-panel" },
+      h("summary", {}, "What each score means"),
+      h("dl", {}, SCREEN_MEASURES.flatMap(([, name, about]) => [h("dt", {}, name), h("dd", {}, about)])),
+      h("p", { class: "about" }, `Each is out of 1. The total weighs them ${Object.entries(screen.how?.weights || {}).map(([k, w]) => `${SCREEN_MEASURES.find((m) => m[0] === k)?.[1] || k} ${Math.round(100 * w)}%`).join(", ")}, and takes ${screen.how?.flag_cost ?? 0.1} off for each thing the breakdown rules out. ${vision ? `Haiku also looked at every picture once for those (${vision.made}).` : ""}`),
+      h("p", { class: "about" }, h("a", { href: screen.sheet, target: "_blank" }, "All of them on one page"))),
+    screen.colourway_sheet ? h("p", { class: "about" }, h("a", { href: screen.colourway_sheet, target: "_blank" }, "The colourways side by side, beside the cast in their own colours")) : null,
+    h("ol", { class: "casting-screen" }, screen.shots.filter((row) => !row.colourway).map((row) =>
+      h("li", { class: `clay-surface casting-shot${row.flags?.length ? " flagged" : ""}${colourwaysOf(screen, row).length ? " has-colourways" : ""}` },
+        h("div", { class: "casting-shot-pictures" },
+          h("img", { class: "casting-shot-picture", src: row.picture, alt: `Headshot ${row.id}`, loading: "lazy" }),
+          h("div", { class: "casting-shot-small" },
+            h("img", { class: "pixelated casting-shot-crew", src: row.small, alt: "As the crew camera sees it", title: "As the crew camera sees it", loading: "lazy" }),
+            h("img", { class: "pixelated casting-shot-face", src: row.face, alt: "Its face on the pixel look's grid", title: "Its face on the pixel look's grid", loading: "lazy" }))),
+        h("div", { class: "casting-shot-label" },
+          h("span", { class: "casting-rank" }, `#${row.rank}`),
+          h("b", {}, row.name), h("span", { class: "about" }, row.n > 1 ? ` picture ${row.n}` : ""),
+          h("span", { class: "casting-total" }, row.scores.total.toFixed(2))),
+        scoreBars(row.scores, h),
+        row.flags?.length ? h("ul", { class: "casting-flags" }, row.flags.map((f) => h("li", {}, f))) : null,
+        meshBox(row.mesh, h),
+        shortlistButton(row.id, row.candidate, shortlist, h),
+        colourwayStrip(colourwaysOf(screen, row), shortlist, h)))),
+    h("div", { class: "casting-grid casting-steps" }, steps.map((s) => stepBox(s, role, null, h))));
+}
+
+// A headshot's colourways: the same picture drawn again in other colours, screened like any headshot.
+const colourwaysOf = (screen, row) => screen.shots.filter((r) => r.colourway?.of === row.id);
+
+function colourwayStrip(ways, shortlist, h) {
+  if (!ways.length) return null;
+  return h("div", { class: "casting-colourways" },
+    h("h4", {}, "In other colours"),
+    h("ul", {}, ways.map((w) => h("li", { class: `clay-well casting-colourway${w.flags?.length ? " flagged" : ""}` },
+      h("img", { class: "casting-colourway-picture", src: w.picture, alt: `${w.colourway.name}`, loading: "lazy" }),
+      h("img", { class: "pixelated casting-colourway-crew", src: w.small, alt: "As the crew camera sees it", loading: "lazy" }),
+      h("div", { class: "casting-colourway-label" },
+        h("b", {}, w.colourway.name),
+        h("span", { class: "casting-swatches-row" }, w.colourway.swatches.map((hex) => h("span", { class: "chip-colour", title: hex, style: `background:${hex}` }))),
+        h("span", { class: "about" }, `#${w.rank} · total ${w.scores.total.toFixed(2)} · colours ${w.scores.colours.toFixed(2)} · stands apart ${w.scores.stands_apart.toFixed(2)}`),
+        w.flags?.length ? h("span", { class: "casting-flags" }, w.flags.join("; ")) : null,
+        shortlistButton(w.id, w.candidate, shortlist, h))))));
 }
 
 function shortlistSection(role, h) {
@@ -185,7 +282,7 @@ function shortlistSection(role, h) {
     })),
     h("h3", { class: "casting-subhead", id: "stage-tapes" }, "What each step costs"),
     h("p", { class: "about" }, "Paid steps never start from this page. “See what it would cost” asks what would happen and prints the command to run in Terminal; the casting recipes in the justfile do nothing until you add go."),
-    h("div", { class: "casting-grid casting-steps" }, role.steps.filter((s) => s.id !== "headshots").map((s) => stepBox(s, role, null, h))));
+    h("div", { class: "casting-grid casting-steps" }, role.steps.filter((s) => !["headshots", "screen", "mesh"].includes(s.id)).map((s) => stepBox(s, role, null, h))));
 }
 
 // One line for a card: bold ink's lines-that-are-not-there and see-through against the cast member it stands in for.
@@ -206,6 +303,7 @@ export function rolePage({ role, h, refresh }) {
     board(role, h),
     breakdown(role, h),
     headshots(role, h, refresh),
+    screenSection(role, h, refresh),
     shortlistSection(role, h));
 }
 

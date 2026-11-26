@@ -1,0 +1,135 @@
+{
+  "made": "2026-11-26 18:53",
+  "model": "Haiku, through the Claude Code CLI",
+  "shown": 24,
+  "tokens": "2 tokens in, 0 read from cache, 0 written to it, 7141 out: about 0.4 cents at Haiku list price",
+  "usd": 0.0035707,
+  "shots": {
+    "brewer": {
+      "id": "brewer",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "clerk": {
+      "id": "clerk",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "clerk.2": {
+      "id": "clerk.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "clapper-brow-robot.3": {
+      "id": "clapper-brow-robot.3",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "brewer.3": {
+      "id": "brewer.3",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "capsule-hatchling-robot.3": {
+      "id": "capsule-hatchling-robot.3",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "clapper-brow-robot": {
+      "id": "clapper-brow-robot",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "clapper-brow-robot.2": {
+      "id": "clapper-brow-robot.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "tin-toy.2": {
+      "id": "tin-toy.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "brewer.2": {
+      "id": "brewer.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "capsule-hatchling-robot": {
+      "id": "capsule-hatchling-robot",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "capsule-hatchling-robot.2": {
+      "id": "capsule-hatchling-robot.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "builder": {
+      "id": "builder",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "clerk.3": {
+      "id": "clerk.3",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "walking-partner-robot.3": {
+      "id": "walking-partner-robot.3",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "walking-partner-robot.2": {
+      "id": "walking-partner-robot.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "builder.3": {
+      "id": "builder.3",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "stagehand-robot": {
+      "id": "stagehand-robot",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "stagehand-robot.2": {
+      "id": "stagehand-robot.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "walking-partner-robot": {
+      "id": "walking-partner-robot",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "builder.2": {
+      "id": "builder.2",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "stagehand-robot.3": {
+      "id": "stagehand-robot.3",
+      "breaks": [],
+      "pose": "t-pose"
+    },
+    "tin-toy": {
+      "id": "tin-toy",
+      "breaks": [
+        "antenna with a red ball on its head"
+      ],
+      "pose": "t-pose"
+    },
+    "tin-toy.3": {
+      "id": "tin-toy.3",
+      "breaks": [
+        "antenna with a red ball on its head"
+      ],
+      "pose": "t-pose"
+    }
+  },
+  "cli_cost_usd": 0.2134095,
+  "cost_note": "The Claude Code CLI passed on only part of its token counts (tokens, usd above); cli_cost_usd is its own total_cost_usd for the call, the figure to go by."
+}

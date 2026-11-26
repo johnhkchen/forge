@@ -1,7 +1,7 @@
 {
   "id": "robot",
   "title": "The robot",
-  "drafted": "By hand, as a proposal, on 2026-11-24. No model was asked. Nothing here is canon until you choose.",
+  "drafted": "By hand, as a proposal, on 2026-11-24. No model was asked. Nothing here is canon until you choose. The fifth way it could arrive, the ninja's crew, was added on 2026-11-26.",
   "breakdown": {
     "logline": "A small, earnest robot who has just come out of a capsule and wants very much to be useful.",
     "essence": "Kind, eager and a little old-fashioned, like a tin toy that has read a manual on manners. Takes every job seriously, however small. Not a menace and not a joke: the cast should be glad it came.",
@@ -10,11 +10,31 @@
     "height_m": 1.45,
     "height_why": "The shortest in the line-up (the dancer is 1.65, the villager 1.7, Lincoln 1.93), so it reads as new and young, and its big head keeps a face you can find from the crew camera.",
     "palette": [
-      {"name": "mustard enamel", "hex": "#E0A526", "where": "head, chest, upper arms and thighs"},
-      {"name": "steel blue", "hex": "#44679B", "where": "forearms, shins, and every ball joint"},
-      {"name": "charcoal", "hex": "#2B2A2E", "where": "face plate, hands and feet"},
-      {"name": "lamp cream", "hex": "#F2E6C8", "where": "the two round eyes"},
-      {"name": "tomato red", "hex": "#C8442F", "where": "one round dial on the chest"}
+      {
+        "name": "mustard enamel",
+        "hex": "#E0A526",
+        "where": "head, chest, upper arms and thighs"
+      },
+      {
+        "name": "steel blue",
+        "hex": "#44679B",
+        "where": "forearms, shins, and every ball joint"
+      },
+      {
+        "name": "charcoal",
+        "hex": "#2B2A2E",
+        "where": "face plate, hands and feet"
+      },
+      {
+        "name": "lamp cream",
+        "hex": "#F2E6C8",
+        "where": "the two round eyes"
+      },
+      {
+        "name": "tomato red",
+        "hex": "#C8442F",
+        "where": "one round dial on the chest"
+      }
     ],
     "palette_why": "Nobody in the cast wears yellow. Three of them wear navy (Roosevelt's singlet, the pirate's coat, the ninja), three wear browns and linens (Lincoln, the villager, the lizardkin's leathers), two are green (the troll, the lizardkin) and the dancer has the red. Mustard stands apart from all of them in hue and is far lighter than the navies, so the height line-up reads at once. The joints take the brand's steel blue, a calmer blue than the navies. One small red dial is the only accent.",
     "reads_as_cards": [
@@ -58,7 +78,10 @@
       "pitch": "It drops out of the gachapon holding nothing, and believes it was sent by the developer to finish the world: it goes looking for every \"TODO\" it can find, starting with the sign at the corner of the map. Nobody has the heart to tell it that it is a toon like the rest of them.",
       "who_paid": "Nobody it knows of. A capsule nobody ordered: the first pull the gachapon ever made on its own. (For us: the credits were spent, as always; in the story, it is a wondrous accident.)",
       "where": "It sleeps standing up beside the gachapon at the spawn spot, so it can greet whoever comes next.",
-      "names": ["Todo", "Tock"],
+      "names": [
+        "Todo",
+        "Tock"
+      ],
       "touches": "Plays on the premise (a world being built a little at a time) without explaining it. Gives the \"TODO: more world\" corner and the Niantic someone who wants to go there."
     },
     {
@@ -67,7 +90,10 @@
       "pitch": "Lincoln has wanted an honest shop for a while (\"Lincoln's counter\", not yet seen). He saves up and pulls a capsule, and out comes a clerk: a robot that counts change to the penny and walks the miles with him to give it back. Lincoln treats it as a partner, never as a machine.",
       "who_paid": "Lincoln, from credits saved over many strips.",
       "where": "Behind the counter of Lincoln's shop, once there is one; until then, at his side.",
-      "names": ["Penny", "Tally"],
+      "names": [
+        "Penny",
+        "Tally"
+      ],
       "touches": "Brings a \"not yet seen\" idea onto the page, and shows Lincoln at his warmest: patient, honest, teaching. Needs care that the shop is about honesty and kindness, never about politics."
     },
     {
@@ -76,7 +102,10 @@
       "pitch": "Roosevelt and the pirate pool what they have to get a builder for the Square Deal Construction Company (not yet seen), and the gachapon gives them a robot. It is short, earnest and stronger than it looks: it lifts the giant baguette into place for the boarding house while the two of them argue about where it goes.",
       "who_paid": "Roosevelt and the pirate, together.",
       "where": "The settlement's edge, in the site hut beside the baguette boarding house.",
-      "names": ["Rivet", "Brick"],
+      "names": [
+        "Rivet",
+        "Brick"
+      ],
       "touches": "Gives the audition's lifts and squats a story reason. Brings the Square Deal company and the baguette boarding house onto the page."
     },
     {
@@ -85,8 +114,23 @@
       "pitch": "The first toon made through the troll's teahouse (not yet seen): someone ordered a new self at the character screen, it was sealed in a pearl and dropped into the gachapon, and came back out believing it is a robot. It is quite sure about this. The troll is quietly proud.",
       "who_paid": "Unknown: whoever stood at the teahouse screen, which is a mystery the strips can keep.",
       "where": "The settlement, helping at the troll and lizardkin's stall.",
-      "names": ["Boba", "Kettle"],
+      "names": [
+        "Boba",
+        "Kettle"
+      ],
       "touches": "Opens the teahouse and the pearl, two ideas under \"Not yet seen\", in one arrival. Fits \"believes they are who they ordered\" exactly."
+    },
+    {
+      "id": "crew",
+      "name": "The ninja's crew",
+      "pitch": "The ninja runs the photo stage and has never had a hand on it. The gachapon gives him a stagehand: a small robot that claps the slate before every shot, holds up the cue cards, and winds the reel back when someone wants to see it again. It never stands in the picture itself, until the day the ninja turns the camera round.",
+      "who_paid": "The ninja, from what the stage has earned: the first thing he has bought for anyone but himself.",
+      "where": "On the ninja's stage and in the casting office beside it, by the box camera. It sleeps under the backdrop.",
+      "names": [
+        "Slate",
+        "Cue"
+      ],
+      "touches": "Gives the stage and the casting office someone who belongs there, and the ninja, who only watches, someone to talk to. In a headshot it holds nothing: the slate, the cue cards and the reel are props, made on their own afterwards, as the breakdown says of anything held."
     }
   ],
   "canon_choice": null,
@@ -100,20 +144,42 @@
         "description": "A small friendly robot built like an old wind-up tin toy: a boxy head, a barrel chest and short round limbs with a ball at every joint. Painted matte mustard and steel blue, about the height of a twelve-year-old.",
         "subject": "A small friendly toy robot standing in a T-pose. A boxy head, slightly too big, with a flat charcoal face plate, two large round cream-coloured lamp eyes and a mouth grille of three horizontal bars. A short round neck collar. A barrel-shaped chest in matte mustard-yellow enamel with one round tomato-red dial in the middle and a raised seam around it. Upper arms and thighs are mustard cylinders; forearms and shins are steel-blue cylinders; a steel-blue ball sits at each shoulder, elbow, hip and knee. Charcoal mitten hands and wide flat charcoal feet. A chunky mustard wind-up key with two round wings fixed to the middle of its back. Matte painted enamel everywhere, lightly worn at the edges; no chrome, no glass, no text.",
         "materials": [
-          {"part": "head, chest, upper arms and thighs", "look": "matte mustard-yellow enamel, lightly worn at the edges", "metallic": false},
-          {"part": "forearms, shins and ball joints", "look": "matte steel-blue enamel", "metallic": false},
-          {"part": "face plate, hands and feet", "look": "matte charcoal paint", "metallic": false},
-          {"part": "eyes and chest dial", "look": "cream and tomato-red painted discs", "metallic": false}
+          {
+            "part": "head, chest, upper arms and thighs",
+            "look": "matte mustard-yellow enamel, lightly worn at the edges",
+            "metallic": false
+          },
+          {
+            "part": "forearms, shins and ball joints",
+            "look": "matte steel-blue enamel",
+            "metallic": false
+          },
+          {
+            "part": "face plate, hands and feet",
+            "look": "matte charcoal paint",
+            "metallic": false
+          },
+          {
+            "part": "eyes and chest dial",
+            "look": "cream and tomato-red painted discs",
+            "metallic": false
+          }
         ],
         "size_m": 1.45,
         "character": true,
         "lowpoly_triangles": 1200,
         "gear": [
-          {"name": "wind-up key", "kind": "attached", "slot": "back", "look": "a chunky mustard wind-up key with two round wings, fixed to the middle of the back"}
+          {
+            "name": "wind-up key",
+            "kind": "attached",
+            "slot": "back",
+            "look": "a chunky mustard wind-up key with two round wings, fixed to the middle of the back"
+          }
         ],
         "hidden_by": [],
         "lowpoly_style": "faceted flat-shaded, chunky boxes and cylinders with ball joints, colours painted in"
-      }
+      },
+      "suits": "helper"
     },
     {
       "id": "clerk",
@@ -124,20 +190,149 @@
         "description": "A small, neat shop-clerk robot: a boxy head under a short visor cap, a chest built like a cash drawer with one red button, short round limbs with ball joints. Matte mustard and steel-blue paint.",
         "subject": "A small tidy shop-clerk robot standing in a T-pose. A boxy head with a flat charcoal face plate, two large round cream-coloured lamp eyes and a mouth grille of three horizontal bars, under a short steel-blue visor cap. A square chest in matte mustard-yellow enamel shaped like a closed cash drawer, with a raised seam and one round tomato-red button in the middle. Upper arms and thighs are mustard cylinders; forearms and shins are steel-blue cylinders; a steel-blue ball sits at each shoulder, elbow, hip and knee. Charcoal mitten hands and wide flat charcoal feet. Matte painted enamel; no chrome, no glass, no text or numbers.",
         "materials": [
-          {"part": "head, chest, upper arms and thighs", "look": "matte mustard-yellow enamel", "metallic": false},
-          {"part": "cap, forearms, shins and ball joints", "look": "matte steel-blue enamel", "metallic": false},
-          {"part": "face plate, hands and feet", "look": "matte charcoal paint", "metallic": false},
-          {"part": "eyes and chest button", "look": "cream and tomato-red painted discs", "metallic": false}
+          {
+            "part": "head, chest, upper arms and thighs",
+            "look": "matte mustard-yellow enamel",
+            "metallic": false
+          },
+          {
+            "part": "cap, forearms, shins and ball joints",
+            "look": "matte steel-blue enamel",
+            "metallic": false
+          },
+          {
+            "part": "face plate, hands and feet",
+            "look": "matte charcoal paint",
+            "metallic": false
+          },
+          {
+            "part": "eyes and chest button",
+            "look": "cream and tomato-red painted discs",
+            "metallic": false
+          }
         ],
         "size_m": 1.45,
         "character": true,
         "lowpoly_triangles": 1200,
         "gear": [
-          {"name": "visor cap", "kind": "attached", "slot": "head", "look": "a short steel-blue visor cap, close to the head"}
+          {
+            "name": "visor cap",
+            "kind": "attached",
+            "slot": "head",
+            "look": "a short steel-blue visor cap, close to the head"
+          }
         ],
         "hidden_by": [],
         "lowpoly_style": "faceted flat-shaded, chunky boxes and cylinders with ball joints, colours painted in"
-      }
+      },
+      "suits": "counter",
+      "colourways": [
+        {
+          "id": "tangerine",
+          "name": "Tangerine",
+          "why": "Orange is nobody's in the cast: warmer and lighter than the dancer's red, far from the navies; grey joints keep it a toy, not a traffic cone.",
+          "brand": false,
+          "swatches": [
+            {
+              "name": "tangerine enamel",
+              "hex": "#E9772B",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "warm grey",
+              "hex": "#77736D",
+              "where": "visor cap, forearms, shins and every ball joint"
+            },
+            {
+              "name": "charcoal",
+              "hex": "#2B2A2E",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "sky blue",
+              "hex": "#6CB2E3",
+              "where": "the one round button on the chest"
+            }
+          ],
+          "of": "clerk.2",
+          "headshot": "clerk.2-tangerine"
+        },
+        {
+          "id": "lilac",
+          "name": "Lilac",
+          "why": "Nobody in the cast wears purple; a light lilac sits apart from the navies by lightness and from the greens and browns by hue.",
+          "brand": false,
+          "swatches": [
+            {
+              "name": "lilac enamel",
+              "hex": "#A88BD1",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "slate violet",
+              "hex": "#4E4860",
+              "where": "visor cap, forearms, shins and every ball joint"
+            },
+            {
+              "name": "charcoal",
+              "hex": "#2B2A2E",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "sunflower",
+              "hex": "#F2C230",
+              "where": "the one round button on the chest"
+            }
+          ],
+          "of": "clerk.2",
+          "headshot": "clerk.2-lilac"
+        },
+        {
+          "id": "clay",
+          "name": "Clay and steel",
+          "why": "The b28 palette itself: a cream body with steel-blue joints and an ink face, the one light figure in a cast of dark and middle tones.",
+          "brand": true,
+          "swatches": [
+            {
+              "name": "clay cream",
+              "hex": "#F2EFE9",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "steel blue",
+              "hex": "#44679B",
+              "where": "visor cap, forearms, shins and every ball joint"
+            },
+            {
+              "name": "ink",
+              "hex": "#1C1917",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "steel blue",
+              "hex": "#44679B",
+              "where": "the one round button on the chest"
+            }
+          ],
+          "of": "clerk.2",
+          "headshot": "clerk.2-clay"
+        }
+      ]
     },
     {
       "id": "builder",
@@ -148,21 +343,155 @@
         "description": "A short, sturdy builder robot: a boxy head under a round hard hat, a broad barrel chest, thick limbs with ball joints, a tool belt and wide feet. Matte mustard and steel-blue paint.",
         "subject": "A short, sturdy builder robot standing in a T-pose. A boxy head with a flat charcoal face plate, two large round cream-coloured lamp eyes and a mouth grille of three horizontal bars, under a round steel-blue hard hat with a small brim that leaves the eyes clear. A broad barrel chest in matte mustard-yellow enamel with one round tomato-red dial. Thick upper arms and thighs in mustard; thick forearms and shins in steel blue; a steel-blue ball at each shoulder, elbow, hip and knee. A plain charcoal tool belt with two closed pouches, close to the waist. Charcoal mitten hands and very wide flat charcoal feet. Matte painted enamel, a little scuffed; no chrome, no glass, no text.",
         "materials": [
-          {"part": "head, chest, upper arms and thighs", "look": "matte mustard-yellow enamel, a little scuffed", "metallic": false},
-          {"part": "hard hat, forearms, shins and ball joints", "look": "matte steel-blue enamel", "metallic": false},
-          {"part": "face plate, tool belt, hands and feet", "look": "matte charcoal paint and canvas", "metallic": false},
-          {"part": "eyes and chest dial", "look": "cream and tomato-red painted discs", "metallic": false}
+          {
+            "part": "head, chest, upper arms and thighs",
+            "look": "matte mustard-yellow enamel, a little scuffed",
+            "metallic": false
+          },
+          {
+            "part": "hard hat, forearms, shins and ball joints",
+            "look": "matte steel-blue enamel",
+            "metallic": false
+          },
+          {
+            "part": "face plate, tool belt, hands and feet",
+            "look": "matte charcoal paint and canvas",
+            "metallic": false
+          },
+          {
+            "part": "eyes and chest dial",
+            "look": "cream and tomato-red painted discs",
+            "metallic": false
+          }
         ],
         "size_m": 1.5,
         "character": true,
         "lowpoly_triangles": 1200,
         "gear": [
-          {"name": "hard hat", "kind": "attached", "slot": "head", "look": "a round steel-blue hard hat with a small brim"},
-          {"name": "tool belt", "kind": "worn", "slot": "hip", "look": "a plain charcoal canvas belt with two closed pouches"}
+          {
+            "name": "hard hat",
+            "kind": "attached",
+            "slot": "head",
+            "look": "a round steel-blue hard hat with a small brim"
+          },
+          {
+            "name": "tool belt",
+            "kind": "worn",
+            "slot": "hip",
+            "look": "a plain charcoal canvas belt with two closed pouches"
+          }
         ],
         "hidden_by": [],
         "lowpoly_style": "faceted flat-shaded, chunky boxes and thick cylinders with ball joints, colours painted in"
-      }
+      },
+      "suits": "square-deal",
+      "colourways": [
+        {
+          "id": "safety-orange",
+          "name": "Safety orange",
+          "why": "A builder's own colours, site orange and a lemon hard hat; no navy, brown or green, and orange stays clear of the dancer's red.",
+          "brand": false,
+          "swatches": [
+            {
+              "name": "safety orange enamel",
+              "hex": "#EE7B22",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "graphite",
+              "hex": "#45474D",
+              "where": "forearms, shins, every ball joint and the tool belt"
+            },
+            {
+              "name": "charcoal",
+              "hex": "#2B2A2E",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "lemon",
+              "hex": "#F4D03F",
+              "where": "the hard hat and the chest dial"
+            }
+          ],
+          "of": "builder.2",
+          "headshot": "builder.2-safety-orange"
+        },
+        {
+          "id": "plum-lemon",
+          "name": "Plum and lemon",
+          "why": "Purple and yellow sit opposite on the colour wheel, so the joints and the hat pop; nobody in the cast wears either.",
+          "brand": false,
+          "swatches": [
+            {
+              "name": "plum enamel",
+              "hex": "#85508F",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "lemon",
+              "hex": "#F2C94C",
+              "where": "forearms, shins, every ball joint and the hard hat"
+            },
+            {
+              "name": "charcoal",
+              "hex": "#2B2A2E",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "lemon",
+              "hex": "#F2C94C",
+              "where": "the chest dial"
+            }
+          ],
+          "of": "builder.2",
+          "headshot": "builder.2-plum-lemon"
+        },
+        {
+          "id": "steel-cream",
+          "name": "Steel and cream",
+          "why": "The b28 palette turned round: a steel-blue body with cream joints and hat. A calmer, lighter blue than the three navies; the screen says whether that is enough.",
+          "brand": true,
+          "swatches": [
+            {
+              "name": "steel blue enamel",
+              "hex": "#44679B",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "clay cream",
+              "hex": "#F2EFE9",
+              "where": "forearms, shins, every ball joint and the hard hat"
+            },
+            {
+              "name": "ink",
+              "hex": "#1C1917",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "clay cream",
+              "hex": "#F2EFE9",
+              "where": "the chest dial and the tool belt"
+            }
+          ],
+          "of": "builder.2",
+          "headshot": "builder.2-steel-cream"
+        }
+      ]
     },
     {
       "id": "brewer",
@@ -173,20 +502,357 @@
         "description": "A small, round-edged robot with a softly boxy head, a round chest and short limbs with ball joints, wearing a short cloth apron. Matte mustard and steel-blue paint.",
         "subject": "A small gentle robot standing in a T-pose. A softly rounded box of a head with a flat charcoal face plate, two large round cream-coloured lamp eyes and a mouth grille of three horizontal bars. A round chest in matte mustard-yellow enamel with one round tomato-red dial, and a short steel-blue cloth apron tied close at the waist, ending above the knees. Upper arms and thighs are mustard cylinders; forearms and shins are steel-blue cylinders; a steel-blue ball at each shoulder, elbow, hip and knee. Charcoal mitten hands and wide flat charcoal feet. Matte painted enamel; no chrome, no glass, no text.",
         "materials": [
-          {"part": "head, chest, upper arms and thighs", "look": "matte mustard-yellow enamel", "metallic": false},
-          {"part": "apron, forearms, shins and ball joints", "look": "matte steel-blue enamel and plain cotton", "metallic": false},
-          {"part": "face plate, hands and feet", "look": "matte charcoal paint", "metallic": false},
-          {"part": "eyes and chest dial", "look": "cream and tomato-red painted discs", "metallic": false}
+          {
+            "part": "head, chest, upper arms and thighs",
+            "look": "matte mustard-yellow enamel",
+            "metallic": false
+          },
+          {
+            "part": "apron, forearms, shins and ball joints",
+            "look": "matte steel-blue enamel and plain cotton",
+            "metallic": false
+          },
+          {
+            "part": "face plate, hands and feet",
+            "look": "matte charcoal paint",
+            "metallic": false
+          },
+          {
+            "part": "eyes and chest dial",
+            "look": "cream and tomato-red painted discs",
+            "metallic": false
+          }
         ],
         "size_m": 1.4,
         "character": true,
         "lowpoly_triangles": 1200,
         "gear": [
-          {"name": "short apron", "kind": "worn", "slot": "torso", "look": "a short steel-blue cotton apron, tied close, ending above the knees"}
+          {
+            "name": "short apron",
+            "kind": "worn",
+            "slot": "torso",
+            "look": "a short steel-blue cotton apron, tied close, ending above the knees"
+          }
         ],
         "hidden_by": [],
         "lowpoly_style": "faceted flat-shaded, softly rounded boxes and cylinders with ball joints, colours painted in"
-      }
+      },
+      "suits": "pearl"
+    },
+    {
+      "id": "stagehand-robot",
+      "name": "Stagehand Robot",
+      "why": "The robot as the ninja's backstage hand, its job told by a crew vest and a headset it wears rather than anything it carries, so the slate and cue cards can be made as props.",
+      "brief": {
+        "name": "Stagehand Robot",
+        "description": "A small toy-shop robot dressed as the photo stage's stagehand: a boxy mustard head a bit too big for it, a barrel chest, and short round limbs on steel-blue ball joints. It wears a short, close-fitting charcoal crew vest and a chunky padded headset of two round ear cups on a thick band, both rigid. Painted matte enamel throughout, 1.45 m tall.",
+        "subject": "A short, friendly toy robot standing in a T-pose, front on, arms straight out to the sides, empty mitten hands, head level and looking straight ahead. A boxy mustard-yellow head, slightly too big for the body, with a flat charcoal face plate holding two big round cream lamp eyes, each about a quarter of the face's width, unlit and matte, and a mouth grille of three thick horizontal bars. Over the top of the head sits a chunky headset: a thick flat charcoal band and two large round steel-blue ear cups pressed flat to the sides of the head, one solid shape with no wires and no microphone. A mustard barrel chest with a clear panel seam around it and one round tomato-red dial in the middle, visible through the open front of a short charcoal crew vest that fits snug, ends at the waist and has two flat square pockets sewn on. Mustard upper arms and thighs, steel-blue forearms and shins, a round steel-blue ball at each shoulder, elbow, hip and knee. Charcoal mitten hands with no fingers. Wide flat charcoal feet like short planks. All surfaces matte painted enamel with faint scuffs at the edges, no chrome, no shine, no text or logos.",
+        "materials": [
+          {
+            "part": "head, chest, upper arms, thighs",
+            "look": "matte mustard-yellow enamel paint, faint edge scuffs",
+            "metallic": false
+          },
+          {
+            "part": "forearms, shins, ball joints, headset ear cups",
+            "look": "matte steel-blue enamel paint",
+            "metallic": false
+          },
+          {
+            "part": "face plate, crew vest, headset band, mitten hands, feet",
+            "look": "matte charcoal enamel and flat charcoal canvas",
+            "metallic": false
+          },
+          {
+            "part": "lamp eyes and chest dial",
+            "look": "matte cream and matte tomato-red paint, unlit",
+            "metallic": false
+          }
+        ],
+        "size_m": 1.45,
+        "character": true,
+        "lowpoly_triangles": 1100,
+        "gear": [
+          {
+            "name": "crew vest",
+            "kind": "worn",
+            "slot": "torso",
+            "look": "short snug charcoal canvas vest, open front, ends at the waist, two flat square pockets"
+          },
+          {
+            "name": "padded headset",
+            "kind": "attached",
+            "slot": "head",
+            "look": "thick flat charcoal band over the head with two large round steel-blue ear cups, no wires or mic"
+          }
+        ],
+        "hidden_by": [],
+        "lowpoly_style": "chunky flat-shaded boxes and cylinders, balls at every joint, five flat colours painted in"
+      },
+      "suits": "crew"
+    },
+    {
+      "id": "clapper-brow-robot",
+      "name": "Clapper-Brow Robot",
+      "why": "A second reading of the ninja's stagehand that carries the slate on its own brow, so even standing empty-handed in the picture it reads as the one who starts every shot.",
+      "brief": {
+        "name": "Clapper-Brow Robot",
+        "description": "A toy-shop robot whose boxy head is crowned with a rigid striped brow band, like the top bar of a film slate, so it looks born for the photo stage. Square mustard head too big for its barrel chest, short round limbs on steel-blue balls, wide flat feet. Painted matte enamel, nothing worn that could swing.",
+        "subject": "A small, earnest toy robot standing in a T-pose, front on, arms straight out, empty mitten hands, head level and looking straight ahead. A boxy mustard-yellow head, a little too big for the body, its top edge capped by a thick rigid brow band painted with wide diagonal stripes of charcoal and cream, set flush to the head like the top bar of a film slate, no hinge sticking out. A flat charcoal face plate with two big round cream lamp eyes, unlit and matte, each about a quarter of the face's width, and a grille mouth of three thick horizontal bars. A mustard barrel chest with a panel seam around it and one round tomato-red dial in the centre. Mustard upper arms and thighs, steel-blue forearms and shins, a round steel-blue ball at each shoulder, elbow, hip and knee. Charcoal mitten hands with no fingers, wide flat charcoal feet. A thin steel-blue band around the waist joint. Matte painted enamel everywhere with light wear on the edges and corners, no chrome, no glow, no text, numbers or logos.",
+        "materials": [
+          {
+            "part": "head, chest, upper arms, thighs",
+            "look": "matte mustard-yellow enamel paint, light edge wear",
+            "metallic": false
+          },
+          {
+            "part": "forearms, shins, ball joints, waist band",
+            "look": "matte steel-blue enamel paint",
+            "metallic": false
+          },
+          {
+            "part": "face plate, hands, feet, brow stripes",
+            "look": "matte charcoal enamel",
+            "metallic": false
+          },
+          {
+            "part": "lamp eyes, brow stripes, chest dial",
+            "look": "matte cream and matte tomato-red paint, unlit",
+            "metallic": false
+          }
+        ],
+        "size_m": 1.45,
+        "character": true,
+        "lowpoly_triangles": 1000,
+        "gear": [
+          {
+            "name": "slate brow band",
+            "kind": "attached",
+            "slot": "head",
+            "look": "thick rigid band across the top of the head, wide diagonal charcoal and cream stripes"
+          }
+        ],
+        "hidden_by": [],
+        "lowpoly_style": "blocky flat-shaded toy, striped band painted flat into the head's top faces, five colours"
+      },
+      "suits": "crew"
+    },
+    {
+      "id": "capsule-hatchling-robot",
+      "name": "Capsule Hatchling Robot",
+      "why": "The newcomer still in its eggshell, a look for the moment it drops out of the gachapon believing it was sent to finish the world.",
+      "brief": {
+        "name": "Capsule Hatchling Robot",
+        "description": "The robot fresh from the gachapon, still wearing the top half of its capsule as a rigid round cap and the bottom ring as a collar at its waist. Boxy mustard head too big for it, barrel chest, short round limbs on steel-blue balls, wide flat feet. Matte painted enamel; the capsule pieces are matte painted plastic, not clear.",
+        "subject": "A small, eager toy robot standing in a T-pose, front on, arms straight out, empty mitten hands, head level and looking straight ahead. On top of its boxy mustard-yellow head sits a shallow rigid dome cap, the top half of a toy capsule, opaque matte steel-blue with a thick rolled rim, sitting snug like a bowl. A flat charcoal face plate with two big round cream lamp eyes, unlit and matte, each about a quarter of the face's width, and a three-bar grille mouth. A mustard barrel chest with a clear panel seam and one round tomato-red dial in the middle. Around the waist a short rigid ring, the lip of the capsule's lower half, in the same opaque steel-blue, fitting close like a belt. Mustard upper arms and thighs, steel-blue forearms and shins, a round steel-blue ball at each shoulder, elbow, hip and knee. Charcoal mitten hands, wide flat charcoal feet. All matte painted surfaces, crisp and new with barely any wear, no clear plastic, no chrome, no glow, no text or logos.",
+        "materials": [
+          {
+            "part": "head, chest, upper arms, thighs",
+            "look": "matte mustard-yellow enamel paint, fresh and unworn",
+            "metallic": false
+          },
+          {
+            "part": "capsule cap, waist ring, forearms, shins, ball joints",
+            "look": "opaque matte steel-blue painted plastic and enamel",
+            "metallic": false
+          },
+          {
+            "part": "face plate, hands, feet",
+            "look": "matte charcoal enamel",
+            "metallic": false
+          },
+          {
+            "part": "lamp eyes and chest dial",
+            "look": "matte cream and matte tomato-red paint, unlit",
+            "metallic": false
+          }
+        ],
+        "size_m": 1.45,
+        "character": true,
+        "lowpoly_triangles": 1100,
+        "gear": [
+          {
+            "name": "capsule cap",
+            "kind": "attached",
+            "slot": "head",
+            "look": "shallow rigid opaque steel-blue dome with a thick rolled rim, snug on top of the head"
+          },
+          {
+            "name": "capsule ring",
+            "kind": "attached",
+            "slot": "hip",
+            "look": "short rigid opaque steel-blue ring around the waist, the lip of the capsule's lower half"
+          }
+        ],
+        "hidden_by": [],
+        "lowpoly_style": "chunky flat-shaded toy, dome and ring as low-sided cylinders, five flat colours"
+      },
+      "suits": "helper",
+      "colourways": [
+        {
+          "id": "apricot",
+          "name": "Apricot",
+          "why": "A soft capsule-toy orange with slate-violet shell pieces: warm and light, unlike anyone in the cast.",
+          "brand": false,
+          "swatches": [
+            {
+              "name": "apricot enamel",
+              "hex": "#F4A259",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "slate violet",
+              "hex": "#4E4860",
+              "where": "the capsule cap and ring, forearms, shins and every ball joint"
+            },
+            {
+              "name": "charcoal",
+              "hex": "#2B2A2E",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "sky blue",
+              "hex": "#6CB2E3",
+              "where": "the one round dial on the chest"
+            }
+          ],
+          "of": "capsule-hatchling-robot.3",
+          "headshot": "capsule-hatchling-robot.3-apricot"
+        },
+        {
+          "id": "sky-sunflower",
+          "name": "Sky and sunflower",
+          "why": "A pale sky blue with a sunflower capsule: tests whether a light blue stands apart from the navies by lightness alone.",
+          "brand": false,
+          "swatches": [
+            {
+              "name": "sky blue enamel",
+              "hex": "#8EC3EA",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "sunflower",
+              "hex": "#F2C230",
+              "where": "the capsule cap and ring, forearms, shins and every ball joint"
+            },
+            {
+              "name": "ink",
+              "hex": "#1C1917",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "sunflower",
+              "hex": "#F2C230",
+              "where": "the one round dial on the chest"
+            }
+          ],
+          "of": "capsule-hatchling-robot.3",
+          "headshot": "capsule-hatchling-robot.3-sky-sunflower"
+        },
+        {
+          "id": "cream-steel",
+          "name": "Cream and steel",
+          "why": "The b28 palette: a cream body in a steel-blue capsule, ink face; the capsule reads as one piece of the brand's blue.",
+          "brand": true,
+          "swatches": [
+            {
+              "name": "clay cream",
+              "hex": "#F2EFE9",
+              "where": "head, chest, upper arms and thighs"
+            },
+            {
+              "name": "steel blue",
+              "hex": "#44679B",
+              "where": "the capsule cap and ring, forearms, shins and every ball joint"
+            },
+            {
+              "name": "ink",
+              "hex": "#1C1917",
+              "where": "face plate, hands and feet"
+            },
+            {
+              "name": "lamp cream",
+              "hex": "#F2E6C8",
+              "where": "the two round eyes and the grille bars"
+            },
+            {
+              "name": "steel blue",
+              "hex": "#44679B",
+              "where": "the one round dial on the chest"
+            }
+          ],
+          "of": "capsule-hatchling-robot.3",
+          "headshot": "capsule-hatchling-robot.3-cream-steel"
+        }
+      ]
+    },
+    {
+      "id": "walking-partner-robot",
+      "name": "Walking Partner Robot",
+      "why": "Lincoln's partner on the road rather than behind the counter, dressed for walking the miles to hand back a penny, with nothing in its hands.",
+      "brief": {
+        "name": "Walking Partner Robot",
+        "description": "The robot as Lincoln's companion on the long walks to return change: a short flat-crowned felt hat in charcoal and a rigid round-cornered pouch belted at its hip, set for the road rather than the shop. Boxy mustard head too big for its barrel chest, short limbs on steel-blue balls, wide flat feet. Matte painted enamel with honest road scuffs.",
+        "subject": "A small, earnest toy robot standing in a T-pose, front on, arms straight out, empty mitten hands, head level and looking straight ahead. On its boxy mustard-yellow head sits a small charcoal felt hat with a flat round crown and a short stiff brim, a little too small for the head. A flat charcoal face plate with two big round cream lamp eyes, unlit and matte, each about a quarter of the face's width, and a three-bar grille mouth. A mustard barrel chest with a panel seam and one round tomato-red dial in the centre. A snug charcoal belt at the waist carrying one rigid boxy pouch with rounded corners on the right hip, steel-blue with a flat flap, fixed tight against the thigh. Mustard upper arms and thighs, steel-blue forearms and shins, a round steel-blue ball at each shoulder, elbow, hip and knee. Charcoal mitten hands with no fingers, wide flat charcoal feet with dust on the soles. Matte painted enamel with scuffs at the toes, knees and corners, no chrome, no glow, no text or logos.",
+        "materials": [
+          {
+            "part": "head, chest, upper arms, thighs",
+            "look": "matte mustard-yellow enamel paint, scuffed at corners",
+            "metallic": false
+          },
+          {
+            "part": "forearms, shins, ball joints, hip pouch",
+            "look": "matte steel-blue enamel and stiff painted leather",
+            "metallic": false
+          },
+          {
+            "part": "face plate, felt hat, belt, hands, feet",
+            "look": "matte charcoal enamel and flat charcoal felt",
+            "metallic": false
+          },
+          {
+            "part": "lamp eyes and chest dial",
+            "look": "matte cream and matte tomato-red paint, unlit",
+            "metallic": false
+          }
+        ],
+        "size_m": 1.45,
+        "character": true,
+        "lowpoly_triangles": 1100,
+        "gear": [
+          {
+            "name": "felt hat",
+            "kind": "attached",
+            "slot": "head",
+            "look": "small charcoal felt hat, flat round crown, short stiff brim"
+          },
+          {
+            "name": "belt",
+            "kind": "worn",
+            "slot": "hip",
+            "look": "snug plain charcoal belt at the waist"
+          },
+          {
+            "name": "hip pouch",
+            "kind": "attached",
+            "slot": "hip",
+            "look": "rigid round-cornered steel-blue pouch with a flat flap, fixed on the right hip"
+          }
+        ],
+        "hidden_by": [],
+        "lowpoly_style": "blocky flat-shaded toy, hat and pouch as simple low-sided solids, five flat colours"
+      },
+      "suits": "counter"
     }
   ],
   "chemistry": {

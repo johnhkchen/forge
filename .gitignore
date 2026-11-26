@@ -30,3 +30,10 @@ evidence/marble/diorama/cut/
 # Kimodo takes for the screen-test motions (requests and answers, every take); the kept ones are motion/library/<id>/
 motion/library/.cache/
 motion/library/.joined/
+
+# The screen test's cache of the cast's outlines, and its Blender log (scripts/casting/screen.py, casting.py screen-3d)
+casting/*/screen/.cast/
+casting/*/screen/*.log
+
+# Codex's full-size headshots stay on this Mac; git keeps a 1024-pixel JPEG of each (screen.py keep)
+casting/*/headshots/full/

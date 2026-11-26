@@ -117,10 +117,65 @@
 .casting-take.here { outline: 3px solid var(--clay-primary); }
 .casting-history { margin-top: 20px; }
 
+/* headshots: a look's other pictures, and which arrival it fits */
+.casting-more-pictures { display: flex; gap: 6px; margin-top: 6px; }
+.casting-more-pictures img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--clay-well); }
+.casting-suits { font-size: 0.84rem; font-weight: 600; color: var(--clay-primary) !important; }
+.casting-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+.casting-chips .clay-button { font-size: 0.84rem; padding: 0.4em 0.8em; margin: 0; }
+
+/* the screen test: every headshot, best first */
+.casting-legend { margin: 10px 0 4px; }
+.casting-legend summary { cursor: pointer; font-weight: 600; }
+.casting-legend dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 10px 0 0; font-size: 0.92rem; }
+.casting-legend dt { font-weight: 700; }
+.casting-legend dd { margin: 0; color: var(--clay-ink-soft); }
+.casting-screen { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.casting-shot { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.casting-shot.flagged { outline: 2px dashed color-mix(in srgb, #c8442f 60%, transparent); }
+.casting-shot-pictures { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 8px; align-items: end; }
+.casting-shot-picture { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--clay-radius-sm); background: var(--clay-well); }
+.casting-shot-small { display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: flex-end; padding: 6px; border-radius: var(--clay-radius-sm); background: var(--clay-well); box-shadow: var(--clay-shadow-well); align-self: stretch; }
+.casting-shot-small img { flex: none; max-width: 100%; height: auto; }
+img.pixelated { image-rendering: pixelated; }
+.casting-shot-crew { width: 100%; }
+.casting-shot-face { width: 64%; }
+.casting-shot-label { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.casting-rank { font: 700 1.1rem var(--clay-font-display); color: var(--clay-primary); }
+.casting-total { margin-left: auto; font: 700 1.1rem var(--clay-font-display); }
+.casting-bars { display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; margin: 0; font-size: 0.84rem; align-items: center; }
+.casting-bars dt { color: var(--clay-ink-soft); }
+.casting-bars dd { margin: 0; display: flex; align-items: center; gap: 6px; }
+.casting-bars small { width: 2.4em; text-align: right; color: var(--clay-ink-soft); }
+.casting-bar { flex: 1; height: 10px; border-radius: 6px; background: var(--clay-well); box-shadow: var(--clay-shadow-well); overflow: hidden; }
+.casting-bar > span { display: block; height: 100%; border-radius: 6px; background: var(--clay-primary); }
+.casting-flags { margin: 0; padding-left: 1.1em; font-size: 0.84rem; color: #a3382a; }
+.casting-mesh summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; }
+.casting-mesh img { width: 100%; margin-top: 6px; border-radius: 8px; background: var(--clay-well); }
+.casting-shot > .clay-button, .casting-shot > .casting-done { align-self: flex-start; margin-top: auto; font-size: 0.9rem; }
+.casting-shot > .clay-button { padding: 0.5em 1em; }
+
+/* a headshot's colourways, under it */
+.casting-shot.has-colourways { grid-column: span 2; }
+.casting-colourways h4 { margin: 6px 0 8px; font-size: 0.95rem; }
+.casting-colourways ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.casting-colourway { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 6px; padding: 8px; border-radius: var(--clay-radius-sm); background: var(--clay-well); box-shadow: var(--clay-shadow-well); align-items: end; align-content: start; }
+.casting-colourway.flagged { outline: 2px dashed color-mix(in srgb, #c8442f 60%, transparent); }
+.casting-colourway-picture { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+.casting-colourway-crew { width: 100%; height: auto; }
+.casting-colourway-label { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; }
+.casting-swatches-row { display: flex; gap: 4px; }
+.casting-swatches-row .chip-colour { width: 18px; height: 18px; }
+.casting-colourway-label .clay-button, .casting-colourway-label .casting-done { align-self: flex-start; font-size: 0.82rem; padding: 0.4em 0.8em; margin-top: 4px; }
+
 @media (max-width: 720px) {
   .casting-two { grid-template-columns: minmax(0, 1fr); }
   .casting-lineup { gap: 8px; height: 220px; }
   .casting-harmony-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .casting-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .casting-grid.casting-steps, .casting-canon .casting-grid { grid-template-columns: minmax(0, 1fr); }
+  .casting-screen { grid-template-columns: minmax(0, 1fr); }
+  .casting-shot.has-colourways { grid-column: auto; }
+  .casting-colourways ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .casting-legend dl { grid-template-columns: minmax(0, 1fr); }
 }

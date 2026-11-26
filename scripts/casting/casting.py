@@ -1,9 +1,14 @@
 """Casting: finding a new member of the cast the way a casting director does, in plain files.
 
     python3 scripts/casting/casting.py status [role]
-    python3 scripts/casting/casting.py plan <step> <role> [candidate]       what a step would do, and what it costs
+    python3 scripts/casting/casting.py plan <step> <role> [candidate] [--more n] [--variations n] [--shots a,b.2]
+                                                                             what a step would do, and what it costs
     python3 scripts/casting/casting.py note <role> <candidate> "<words>" [--about look|moves|cards] [--take n]
-    python3 scripts/casting/casting.py shortlist <role> <look>               a headshot becomes a candidate
+    python3 scripts/casting/casting.py shortlist <role> <shot>               a headshot ("clerk", "clerk.2") becomes a candidate
+    python3 scripts/casting/casting.py top <role> [n]                        the screen test's best n headshots, one a look first
+    python3 scripts/casting/casting.py add-mesh <role> <shot> <run folder>   a headshot the mesh screen built
+    python3 scripts/casting/casting.py unbuilt <role> <a,b.2>                of those, the ones not built yet
+    python3 scripts/casting/casting.py screen-3d <role> [--again]            the mesh screen's free half: stood up, pictured, measured
     python3 scripts/casting/casting.py status-of <role> <candidate> shortlisted|let go|cast
     python3 scripts/casting/casting.py add-take <role> <candidate> <run folder> [--answers 1,2]
     python3 scripts/casting/casting.py retake <role> <candidate>             a new take of the same build, for notes on moves or cards
@@ -57,6 +62,7 @@ NOTE_WORDS = 1000  # characters in one note
 STAGES = [
     ("breakdown", "Breakdown", "Who the part is, what they look like, and what must read on screen."),
     ("headshots", "Headshots", "Pictures of possible looks, cheap to make; most are let go."),
+    ("screen", "Screen test", "Every headshot measured on what the breakdown asks for, free, so the shortlist is picked on evidence."),
     ("shortlist", "Shortlist", "The few worth building."),
     ("tapes", "Tapes", "Built and rigged, each performs the same reel."),
     ("callbacks", "Callbacks", "Your notes, and the takes that answer them."),
@@ -69,6 +75,34 @@ FPS = 30
 OPUS_SHORT_USD = (0.05, 0.20)   # one short structured reply with no tools (a brief, a gait, a revision): an estimate
 RUNPOD_USD_PER_S = 0.00031      # an RTX 4090 on RunPod serverless, per second: an assumption; check your bill
 FINISH_STEPS = ("polish", "parts", "lowpoly")
+OPUS_LOOKS_USD = 1.80           # Opus writing four more looks for the robot, 2026-11-26: the Claude Code CLI's own cost_usd
+VISION_USD = 0.21               # Haiku looking at 24 small headshots at once, 2026-11-26: the CLI's own cost_usd
+MESH_SCREEN_SHOTS = 5           # how many of the screen test's best go on to be built as meshes, by default
+UV_IMAGES = ["uv", "run", "--no-project", "--python", "3.12", "--with", "pillow", "--with", "numpy", "--with", "scipy", "python"]
+
+
+SHOT = re.compile(r"^(?P<look>[a-z0-9][a-z0-9-]{0,47})(?:\.(?P<n>\d{1,3})(?:-(?P<colourway>[a-z0-9][a-z0-9-]{0,31}))?)?$")
+
+
+def parse_shot(stem):
+    """A headshot's name: "clerk" (picture 1), "clerk.2" (picture 2), "clerk.2-lilac" (picture 2 in the lilac
+    colourway; the first picture's is "clerk.1-lilac"). Returns (look, n, colourway or None), or None."""
+    m = SHOT.match(stem or "")
+    return (m["look"], int(m["n"] or 1), m["colourway"]) if m else None
+
+
+def shot_name(look, n=1, colourway=None):
+    if colourway:
+        return "%s.%d-%s" % (look, n, colourway)
+    return look if n == 1 else "%s.%d" % (look, n)
+
+
+def candidate_id(look, n=1, colourway=None):
+    """The candidate a headshot makes: its look's id for the first picture, "<look>-<n>" for picture n, and
+    "<look>-<n>-<colourway>" for one in another colourway."""
+    if colourway:
+        return "%s-%d-%s" % (look, n, colourway)
+    return look if n == 1 else "%s-%d" % (look, n)
 
 
 def read_json(path):
@@ -134,12 +168,45 @@ class Casting:
             raise ValueError("no such candidate")
         return found
 
-    def headshot(self, role, look):
-        """The picture drawn for a look, if there is one (casting/<role>/headshots/<look>.jpg or .png)."""
+    def headshot(self, role, look, n=1, colourway=None):
+        """Picture n of a look (in a colourway), if it is drawn: the JPEG git keeps, casting/<role>/headshots/<shot>.jpg
+        (screen.py keep makes it from Codex's PNG in headshots/full/), or a PNG still at the top."""
+        stem = shot_name(look, n, colourway)
         for ext in ("jpg", "png"):
-            if os.path.isfile(os.path.join(self.root, role, "headshots", "%s.%s" % (look, ext))):
-                return "casting/%s/headshots/%s.%s" % (role, look, ext)
+            if os.path.isfile(os.path.join(self.root, role, "headshots", "%s.%s" % (stem, ext))):
+                return "casting/%s/headshots/%s.%s" % (role, stem, ext)
         return None
+
+    def pictures(self, role, look, colourways=False):
+        """Every picture drawn of a look, in order: [(shot id, n, path)], the shot id being "clerk" or "clerk.2";
+        with colourways, [(shot id, n, path, colourway)] for those drawn again in other colours ("clerk.2-lilac")."""
+        folder = os.path.join(self.root, role, "headshots")
+        found = set()
+        for name in os.listdir(folder) if os.path.isdir(folder) else []:
+            stem, ext = os.path.splitext(name)
+            parsed = parse_shot(stem) if ext in (".png", ".jpg") else None
+            if parsed and parsed[0] == look and bool(parsed[2]) == colourways:
+                found.add((parsed[1], parsed[2] or ""))
+        if colourways:
+            return [(shot_name(look, n, c), n, self.headshot(role, look, n, c), c) for n, c in sorted(found)]
+        return [(shot_name(look, n), n, self.headshot(role, look, n)) for n, _ in sorted(found)]
+
+    def screen(self, role):
+        """The screen test's file (scripts/casting/screen.py), if it has been run."""
+        return read_json(os.path.join(self.root, role, "screen.json"))
+
+    def meshes(self, role):
+        """The mesh screen's file: for each headshot built by TRELLIS alone, its run and what was measured."""
+        return read_json(os.path.join(self.root, role, "mesh-screen.json")) or {}
+
+    @staticmethod
+    def shot(shot):
+        """A shot id split: "clerk.2" is ("clerk", 2, None), "clerk" ("clerk", 1, None), "clerk.2-lilac" ("clerk", 2,
+        "lilac"). The candidate it makes is "clerk-2" or "clerk-2-lilac"."""
+        parsed = parse_shot(str(shot))
+        if not parsed:
+            raise ValueError("not a headshot: %r" % shot)
+        return checked(parsed[0], "look"), parsed[1], parsed[2]
 
     def take_dir(self, role, candidate, n):
         """Where a take's films for the page are made: shots/casting/<role>/<candidate>-<n>/ (out of git)."""
@@ -212,11 +279,14 @@ class Casting:
         info = self.role(role)
         candidates = self.candidates(role) if candidates is None else candidates
         looks = info.get("looks") or []
-        pictured = [l for l in looks if self.headshot(role, l["id"])]
+        pictured = [l for l in looks if self.pictures(role, l["id"])]
+        drawn = sum(len(self.pictures(role, l["id"])) for l in looks)
         live = {k: c for k, c in candidates.items() if c.get("status") != "let go"}
+        screened = (self.screen(role) or {}).get("shots") or []
         counts = {
             "breakdown": 1 if info.get("breakdown") else 0,
-            "headshots": len(pictured) + len(candidates),
+            "headshots": drawn + sum(1 for c in candidates.values() if c.get("stand_in")),
+            "screen": len(screened),
             "shortlist": sum(1 for c in live.values() if c.get("status") in ("shortlisted", "cast")),
             "tapes": sum(1 for c in live.values() if c.get("takes")),
             "callbacks": sum(1 for c in live.values() if len(c.get("takes") or []) > 1 or c.get("notes")),
@@ -225,7 +295,7 @@ class Casting:
         reached = max([i for i, (key, _, _) in enumerate(STAGES) if counts[key]] or [0])
         return {"stages": [{"id": key, "name": name, "about": about, "count": counts[key], "reached": i <= reached}
                            for i, (key, name, about) in enumerate(STAGES)],
-                "now": STAGES[reached][0], "looks": len(looks), "pictured": len(pictured)}
+                "now": STAGES[reached][0], "looks": len(looks), "pictured": len(pictured), "drawn": drawn, "screened": len(screened)}
 
     def summary(self, role):
         """Everything the casting page shows for one role."""
@@ -251,19 +321,32 @@ class Casting:
             people.append({"id": cid, "name": c.get("name") or cid, "stand_in": bool(c.get("stand_in")), "why": c.get("why"),
                            "look": c.get("look"), "status": c.get("status", "submitted"),
                            "picture": ("runs/%s/%s" % (picture["run"], picture.get("file", "image.png")) if picture.get("run")
-                                       else self.headshot(role, c.get("look")) if c.get("look") else None),
+                                       else self.headshot(role, c.get("look"), c.get("variation") or 1, c.get("colourway")) if c.get("look") else None),
                            "takes": takes, "notes": c.get("notes") or [],
                            "open_notes": [n for n in c.get("notes") or [] if not n.get("answered_by")]})
-        looks = [{"id": l["id"], "name": l.get("name"), "why": l.get("why"), "picture": self.headshot(role, l["id"]),
-                  "brief": l.get("brief"), "candidate": next((k for k, c in candidates.items() if c.get("look") == l["id"]), None)}
+        meshes = self.meshes(role)
+        looks = [{"id": l["id"], "name": l.get("name"), "why": l.get("why"), "suits": l.get("suits"), "picture": self.headshot(role, l["id"]),
+                  "brief": l.get("brief"), "candidate": next((k for k, c in candidates.items() if c.get("look") == l["id"]), None),
+                  "pictures": [{"shot": shot, "n": n, "picture": path, "candidate": candidate_id(l["id"], n) if candidate_id(l["id"], n) in candidates else None}
+                               for shot, n, path in self.pictures(role, l["id"])],
+                  "colourways": [dict(w, picture=self.headshot(role, *self.shot(w["headshot"])))
+                                 for w in l.get("colourways") or []]}
                  for l in info.get("looks") or []]
+        screen = self.screen(role)
+        if screen:
+            for row in screen.get("shots") or []:
+                look, n, colourway = self.shot(row["id"])
+                cid = candidate_id(look, n, colourway)
+                row["candidate"] = cid if cid in candidates else None
+                row["mesh"] = meshes.get(row["id"])
         names = (info.get("chemistry") or {}).get("names") or {}
         line_up = [{"run": r, "name": self.run_brief(r).get("name") or r, "short": names.get(r), "height_m": self.height(r),
                     "picture": "runs/%s/image.png" % r, "card": "runs/%s/card.jpg" % r} for r in (info.get("chemistry") or {}).get("line_up") or []]
         return {"id": role, "title": info.get("title") or role, "drafted": info.get("drafted"), "breakdown": info.get("breakdown"),
                 "canon_options": info.get("canon_options") or [], "canon_choice": info.get("canon_choice"),
                 "looks": looks, "candidates": people, "board": self.board(role, candidates), "chemistry": dict(info.get("chemistry") or {}, line_up=line_up),
-                "swap": swap, "reel": self.reel(), "baseline": self.baseline(role), "costs": self.costs(), "steps": self.steps(role)}
+                "swap": swap, "reel": self.reel(), "baseline": self.baseline(role), "costs": self.costs(), "steps": self.steps(role),
+                "screen": screen, "meshes": meshes}
 
     # ---------- what things cost ----------
 
@@ -290,18 +373,66 @@ class Casting:
             "run": {"usd": 0.05, "about": "One sentence to Kimodo on the RunPod motion worker for its run: a few seconds of GPU once it is awake. An estimate."},
         }
 
-    def steps(self, role):
+    def to_draw(self, role, more=0, variations=1):
+        """How many Codex pictures `casting-headshots` would draw: every picture up to `variations` of each look that
+        is not there yet, and `variations` of each of `more` new looks."""
+        looks = self.role(role).get("looks") or []
+        have = sum(min(variations, len([p for p in self.pictures(role, l["id"]) if p[1] <= variations])) for l in looks)
+        return len(looks) * variations - have + more * variations
+
+    def colourways_to_draw(self, role):
+        """The colourways written in role.json whose picture is not drawn yet, though the headshot they come from is."""
+        out = []
+        for l in self.role(role).get("looks") or []:
+            for w in l.get("colourways") or []:
+                look, n, c = self.shot(w["headshot"])
+                if not self.headshot(role, look, n, c) and self.headshot(role, *self.shot(w["of"])[:2]):
+                    out.append(w["headshot"])
+        return out
+
+    def top_shots(self, role, n=MESH_SCREEN_SHOTS):
+        """The best `n` headshots of the screen test, by total, no two of one look first, then the next best."""
+        rows = (self.screen(role) or {}).get("shots") or []
+        best, seen = [], set()
+        for row in rows:
+            if row["look"] not in seen and not row.get("flags"):
+                best.append(row["id"])
+                seen.add(row["look"])
+        best += [r["id"] for r in rows if r["id"] not in best]
+        return best[:n]
+
+    def steps(self, role, more=0, variations=1, shots=None):
         """Every step of a casting, in order, with whether it is paid, what it costs, and the command."""
         c = self.costs()
         looks = len(self.role(role).get("looks") or [])
+        drawing = self.to_draw(role, more, variations)
         short, finish, mesh = c["short"], c["finish"], c["mesh"]
         take_low = round(finish["low"] + short["low"] + mesh["usd"] + c["run"]["usd"], 2)
         take_high = round(finish["high"] + short["high"] + mesh["usd"] + c["run"]["usd"], 2)
+        shots = list(shots) if shots else self.top_shots(role)
+        mesh_usd = round(len(shots) * mesh["usd"], 2)
+        opus = "; Opus writes %d more looks first: one ask, about $%.2f to $%.2f (the last such ask, four looks, was $%.2f by the CLI's own count)" % (
+            more, short["low"], OPUS_LOOKS_USD, OPUS_LOOKS_USD) if more else ""
         return [
-            {"id": "headshots", "name": "Draw the headshots", "paid": True, "low": 0, "high": 0, "pictures": looks,
-             "what": "Codex draws one picture for each look in the breakdown (%d). Asking Opus for more looks first adds one short answer." % looks,
-             "cost": "%d Codex pictures on your ChatGPT plan; nothing on Opus unless you ask for more looks (about $%.2f to $%.2f)." % (looks, short["low"], short["high"]),
-             "command": "just casting-headshots %s go" % role},
+            {"id": "headshots", "name": "Draw the headshots", "paid": True, "low": 0, "high": OPUS_LOOKS_USD if more else 0, "pictures": drawing,
+             "what": "Codex draws %d picture%s of each look in the breakdown (%d looks now), each a different design of the same brief, only those not drawn yet: %d to draw. Asking Opus for more looks first adds one answer." % (
+                 variations, "s" if variations > 1 else "", looks, drawing),
+             "cost": "%d Codex pictures on your ChatGPT plan%s." % (drawing, opus),
+             "command": "just casting-headshots %s go %d %d" % (role, more, variations)},
+            {"id": "colourways", "name": "Draw the colourways", "paid": True, "low": 0, "high": 0, "pictures": len(self.colourways_to_draw(role)),
+             "what": "Codex draws a headshot again in each colourway written for it in the breakdown, shown the headshot and told to change only its colours: %d to draw." % len(self.colourways_to_draw(role)),
+             "cost": "%d Codex pictures on your ChatGPT plan. Nothing on Opus." % len(self.colourways_to_draw(role)),
+             "command": "just casting-colourways %s go" % role},
+            {"id": "screen", "name": "Screen every headshot", "paid": False, "low": 0, "high": 0,
+             "what": "Free, on this Mac, a few seconds: every headshot measured on what the breakdown asks for (does it build, does it stand apart from the cast, does its face read at the crew camera's size, its colours, anything thin or loose), then ranked.",
+             "cost": "Free. Adding look=look shows Haiku every headshot once for the must-nots a picture alone can't measure (text, a glow, something held): about $%.2f by the CLI's own count." % VISION_USD,
+             "command": "just casting-screen %s" % role},
+            {"id": "mesh", "name": "Build the best few as meshes", "paid": True, "low": mesh_usd, "high": mesh_usd, "shots": shots,
+             "what": "TRELLIS.2 alone builds the %d best headshots of the screen test (%s): no Claude, no rig, no motion. Then, free, each is stood up, sized and pictured from all round, at full size and at the crew camera's, and set against its picture. A take of one of them starts from this mesh, so it is not paid for twice." % (
+                 len(shots), ", ".join(shots) or "none screened yet"),
+             "cost": "About $%.2f: %d meshes at about $%.2f of RunPod GPU each (%d s with the worker waking up, the runs' own median, at an assumed $%.5f a second). Nothing on Opus." % (
+                 mesh_usd, len(shots), mesh["usd"], mesh["seconds"], RUNPOD_USD_PER_S),
+             "command": "just casting-mesh-screen %s %s go" % (role, ",".join(shots) or "<shots>")},
             {"id": "take", "name": "Build a first take", "paid": True, "low": take_low, "high": take_high,
              "what": "A shortlisted headshot becomes a character: TRELLIS.2 makes the mesh, Claude finishes it in Blender, it gets its low-poly body, a skeleton, a walk, and a run from Kimodo.",
              "cost": "About $%.2f to $%.2f: Claude in Blender $%.2f to $%.2f (typically $%.2f), how it walks $%.2f to $%.2f, the mesh about $%.2f of GPU, the run a few cents." % (
@@ -319,15 +450,28 @@ class Casting:
              "command": "just casting-revise %s <candidate> go" % role},
         ]
 
-    def plan(self, step, role, candidate=None):
+    def plan(self, step, role, candidate=None, more=0, variations=1, shots=None):
         """What a step would do for this role and candidate, without doing it."""
-        steps = {s["id"]: s for s in self.steps(role)}
+        if shots:
+            for s in shots:
+                look, n, colourway = self.shot(s)
+                if not self.headshot(role, look, n, colourway):
+                    raise ValueError("no headshot %s" % s)
+        steps = {s["id"]: s for s in self.steps(role, int(more or 0), max(1, int(variations or 1)), shots)}
         if step not in steps:
             raise ValueError("no such step: %s (one of %s)" % (step, ", ".join(steps)))
         out = dict(steps[step], role=role, candidate=candidate, dry_run=True)
         out["command"] = out["command"].replace("<candidate>", candidate or "<candidate>")
+        if step == "mesh":
+            built = [s for s in out["shots"] if s in self.meshes(role)]
+            if built:
+                out["warning"] = "Built already, and not built again: %s." % ", ".join(built)
         if candidate:
             c = self.candidate(role, candidate)
+            if step == "take" and c.get("screen_run"):
+                mesh = self.costs()["mesh"]["usd"]
+                out["low"], out["high"] = round(out["low"] - mesh, 2), round(out["high"] - mesh, 2)
+                out["cost"] = "About $%.2f to $%.2f: its mesh is built already (the mesh screen), so as a first take less the mesh." % (out["low"], out["high"])
             if step == "take" and c.get("takes"):
                 out["warning"] = "It has %d take(s) already; a revised take is `revise`." % len(c["takes"])
             if step == "take" and not c.get("look"):
@@ -383,23 +527,54 @@ class Casting:
         write_json(self.candidate_path(role, candidate), c)
         return c
 
-    def shortlist(self, role, look):
-        """A headshot you like becomes a candidate (its id is the look's), shortlisted, with no take yet."""
+    def shortlist(self, role, shot):
+        """A headshot you like becomes a candidate, shortlisted, with no take yet. `shot` is a look's id for its first
+        picture ("clerk", candidate "clerk") or "<look>.<n>" for another ("clerk.2", candidate "clerk-2"). When the
+        mesh screen built it, the candidate keeps that run, and its first take starts from it."""
         info = self.role(role)
+        look, n, colourway = self.shot(shot)
         found = next((l for l in info.get("looks") or [] if l["id"] == look), None)
         if not found:
             raise ValueError("no such look")
-        if not self.headshot(role, look):
-            raise ValueError("that look has no headshot yet")
-        path = self.candidate_path(role, checked(look, "look"))
+        if colourway and not any(w["id"] == colourway for w in found.get("colourways") or []):
+            raise ValueError("no colourway %s of %s in the role" % (colourway, look))
+        if not self.headshot(role, look, n, colourway):
+            raise ValueError("that look has no headshot yet" if n == 1 else "that look has no picture %d" % n)
+        path = self.candidate_path(role, candidate_id(look, n, colourway))
         if os.path.isfile(path):
             c = read_json(path)
             c["status"] = "shortlisted" if c.get("status") in ("submitted", "let go") else c.get("status")
         else:
-            c = {"name": found.get("name") or look, "stand_in": False, "why": found.get("why"), "look": look,
-                 "status": "shortlisted", "takes": [], "notes": []}
+            way = next((w for w in found.get("colourways") or [] if w["id"] == colourway), None) if colourway else None
+            if colourway and not way:
+                raise ValueError("no colourway %s of %s in the role" % (colourway, look))
+            c = {"name": (found.get("name") or look) + ("" if n == 1 else " (%d)" % n) + (", %s" % way["name"].lower() if way else ""),
+                 "stand_in": False, "why": way["why"] if way else found.get("why"),
+                 "look": look, "variation": n, "status": "shortlisted", "takes": [], "notes": []}
+            if way:
+                c["colourway"] = colourway
+        built = self.meshes(role).get(shot_name(look, n, colourway))
+        if built and not c.get("screen_run"):
+            c["screen_run"] = built["run"]
         write_json(path, c)
         return c
+
+    def add_mesh(self, role, shot, run):
+        """A headshot the mesh screen built: its run (a run folder with mesh.glb and nothing more), kept in
+        casting/<role>/mesh-screen.json, and on its candidate if it is shortlisted already."""
+        look, n, colourway = self.shot(shot)
+        run = os.path.basename(os.path.normpath(run))
+        if not os.path.isfile(os.path.join(self.runs, run, "mesh.glb")):
+            raise ValueError("no mesh in run %s" % run)
+        meshes = self.meshes(role)
+        meshes[shot] = dict(meshes.get(shot) or {}, run=run, made=time.strftime("%Y-%m-%d", time.localtime()))
+        write_json(os.path.join(self.root, role, "mesh-screen.json"), meshes)
+        path = self.candidate_path(role, candidate_id(look, n, colourway))
+        if os.path.isfile(path):
+            c = read_json(path)
+            c.setdefault("screen_run", run)
+            write_json(path, c)
+        return meshes[shot]
 
     def add_take(self, role, candidate, run, answers=()):
         """A new take: a run folder made for this candidate. The notes it answers are marked answered by it."""
@@ -436,15 +611,21 @@ class Casting:
         """Open notes about the look: the ones only a paid take can answer."""
         return [n for n in self.candidate(role, candidate).get("notes") or [] if not n.get("answered_by") and n.get("about") == "look"]
 
-    def add_look(self, role, brief):
-        """A look Opus wrote (CastingLooks) kept in role.json, under an id made from its name."""
+    def add_look(self, role, idea):
+        """A look Opus wrote (CastingLooks) kept in role.json, under an id made from its name. `idea` is
+        {"brief": ..., "why": ..., "suits": <a canon option's id or null>}, or a bare brief."""
+        brief = idea.get("brief") if isinstance(idea, dict) and isinstance(idea.get("brief"), dict) else idea
         if not isinstance(brief, dict) or not brief.get("name") or not brief.get("subject"):
             raise ValueError("a look is a whole brief")
         info = self.role(role)
-        base = "-".join("".join(ch if ch.isascii() and ch.isalnum() else " " for ch in brief["name"].lower()).split())[:40] or "look"
+        base = "-".join("".join(ch if ch.isascii() and ch.isalnum() else " " for ch in brief["name"].lower()).split())[:40].strip("-") or "look"
         taken = {l["id"] for l in info.get("looks") or []}
         look = base if base not in taken else next("%s-%d" % (base, i) for i in range(2, 99) if "%s-%d" % (base, i) not in taken)
-        info.setdefault("looks", []).append({"id": look, "name": brief["name"], "why": "Written by Opus from the breakdown.", "brief": brief})
+        entry = {"id": look, "name": brief["name"], "why": (idea.get("why") if brief is not idea else None) or "Written by Opus from the breakdown.", "brief": brief}
+        suits = idea.get("suits") if brief is not idea else None
+        if suits in {o.get("id") for o in info.get("canon_options") or []}:
+            entry["suits"] = suits
+        info.setdefault("looks", []).append(entry)
         write_json(os.path.join(self.root, role, "role.json"), info)
         return look
 
@@ -555,6 +736,46 @@ def copy_motion(source, folder):
     os.makedirs(folder, exist_ok=True)
     for name in ("motion.json", "plan.json", "shotlist.json"):
         shutil.copyfile(os.path.join(source, name), os.path.join(folder, name))
+
+
+def run_json(command, log):
+    """A command whose last RESULT line is JSON; its output to the log. Raises when it fails."""
+    with open(log, "a") as out:
+        out.write("$ %s\n" % " ".join(command))
+        out.flush()
+        done = subprocess.run(command, stdout=subprocess.PIPE, stderr=out, cwd=ROOT, text=True)
+        out.write(done.stdout)
+    if done.returncode:
+        raise RuntimeError("%s failed: see %s" % (os.path.basename(command[-1] if command else "?"), log))
+    found = [line[7:] for line in done.stdout.splitlines() if line.startswith("RESULT ")]
+    return json.loads(found[-1]) if found else {}
+
+
+def screen_3d(cast, role, again=False):
+    """The mesh screen's free half, for every headshot the paid half built: each mesh stood up, sized and pictured
+    from all round in background Blender (screen_mesh.py), then set against its headshot (screen.py turn). Writes
+    casting/<role>/screen/<shot>-turn.png and the numbers into casting/<role>/mesh-screen.json."""
+    info = cast.role(role)
+    looks = {l["id"]: l for l in info.get("looks") or []}
+    meshes = cast.meshes(role)
+    folder = os.path.join(cast.root, role, "screen")
+    os.makedirs(folder, exist_ok=True)
+    log = os.path.join(folder, "mesh-screen.log")
+    for shot, record in sorted(meshes.items()):
+        if record.get("turn") and not again:
+            continue
+        look, n, colourway = cast.shot(shot)
+        height = (looks.get(look, {}).get("brief") or {}).get("size_m") or (info.get("breakdown") or {}).get("height_m") or 1.5
+        renders = os.path.join(cast.shots, "casting", role, "mesh-" + shot)
+        mesh = run_json([BLENDER, "-b", "--factory-startup", "--python-exit-code", "1", "-P", os.path.join(ROOT, "scripts", "casting", "screen_mesh.py"), "--",
+                         os.path.join(cast.runs, record["run"], "mesh.glb"), renders, str(height)], log)
+        sheet = os.path.join(folder, shot + "-turn.png")
+        against = run_json(UV_IMAGES + [os.path.join(ROOT, "scripts", "casting", "screen.py"), "turn",
+                                        os.path.join(ROOT, cast.headshot(role, look, n, colourway)), renders, str(height), sheet], log)
+        meshes[shot] = dict(record, mesh=mesh, against=against, turn="casting/%s/screen/%s-turn.png" % (role, shot))
+        write_json(os.path.join(cast.root, role, "mesh-screen.json"), meshes)
+        print("CASTING mesh screen %s: %s" % (shot, json.dumps(dict(mesh, **against))), flush=True)
+    return meshes
 
 
 def tape(cast, role, candidate, n=None):
@@ -756,7 +977,9 @@ def main(argv):
                 print("  %-12s %-12s %d take(s), %d open note(s)%s" % (c["id"], c["status"], len(c["takes"]), len(c["open_notes"]), " (stand-in)" if c["stand_in"] else ""))
         return 0
     if what == "plan":
-        plan = cast.plan(rest[0], rest[1], rest[2] if len(rest) > 2 else None)
+        shots = [s for s in (flag("--shots") or "").split(",") if s]
+        plan = cast.plan(rest[0], rest[1], rest[2] if len(rest) > 2 else None, more=int(flag("--more", 0)),
+                         variations=int(flag("--variations", 1)), shots=shots or None)
         print("PLAN %s (dry run: nothing is started)" % plan["name"])
         print("  what:    %s" % plan["what"])
         print("  costs:   %s" % plan["cost"])
@@ -770,6 +993,19 @@ def main(argv):
         return 0
     if what == "shortlist":
         print("RESULT " + json.dumps(cast.shortlist(rest[0], rest[1])))
+        return 0
+    if what == "add-mesh":
+        print("RESULT " + json.dumps(cast.add_mesh(rest[0], rest[1], rest[2])))
+        return 0
+    if what == "screen-3d":
+        print("RESULT " + json.dumps(screen_3d(cast, rest[0], again="--again" in argv)))
+        return 0
+    if what == "top":  # the screen test's best few, comma-separated, for the mesh screen
+        print(",".join(cast.top_shots(rest[0], int(rest[1]) if len(rest) > 1 else MESH_SCREEN_SHOTS)))
+        return 0
+    if what == "unbuilt":  # of the headshots named, those the mesh screen has not built yet
+        built = cast.meshes(rest[0])
+        print(",".join(s for s in rest[1].split(",") if s and s not in built))
         return 0
     if what == "status-of":
         print("RESULT " + json.dumps(cast.set_status(rest[0], rest[1], " ".join(rest[2:]))))
