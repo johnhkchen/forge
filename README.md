@@ -135,7 +135,9 @@ The first job on a fresh endpoint downloads whichever weights the volume doesn't
 | `just seam-shots [take] [tag] [port]` | stills of a take's joints on the watch page: the stage, close on each of the cast, closer on an elbow and a knee, in every look |
 | `just casting [role]` | how far each part being cast has come, and everyone trying out for it (see "Casting") |
 | `just casting-plan <step> <role> [candidate]` | what a casting step would do and cost; starts nothing |
-| `just casting-headshots <role> go`, `just casting-take <role> <candidate> go` | PAID: draw the headshots; build a shortlisted one into a character (then tape and judge it, free). Without `go` they only print the cost |
+| `just casting-headshots <role> go [more] [variations]`, `just casting-mesh-screen <role> [shots] go`, `just casting-take <role> <candidate> go` | PAID: draw the headshots; build the screen test's best few as bare meshes (cents); build a shortlisted one into a character (then tape and judge it, free). Without `go` they only print the cost |
+| `just casting-screen <role> [look]` | free: every headshot measured on what the breakdown asks for, and ranked (see "Wide at the cheap end") |
+| `just casting-colourways <role> go`, `just casting-keep <role>` | Codex (on your plan): every colourway written in the breakdown drawn from its headshot, colours only; keep: headshots as git keeps them (a JPEG each, Codex's PNG out of git) |
 | `just casting-tape <role> <candidate>`, `just casting-judge <role> <candidate>` | free: a take's reel and chemistry read; its camera test |
 | `just casting-revise <role> <candidate> [go]` | your notes become the next take: free for notes on moves or cards, PAID (with `go`) for a note on the look |
 | `just tidy <run folder> sides` | the audition sides on a character: standing easy, a wave, a head turn, an arm overhead, a deep squat |
@@ -1464,20 +1466,23 @@ New members of the cast are found the way a casting director finds an actor, on 
 ```
 just casting                              # where every part stands, and everyone trying out
 just casting-plan take robot              # what a step would do and what it costs; starts nothing
-just casting-headshots robot go           # PAID: draw the headshots
-just casting-take robot tin-toy go        # PAID: build a shortlisted headshot, then tape and judge it (free)
+just casting-headshots robot go 4 3       # PAID: Opus writes 4 more looks, then Codex draws 3 of every look (only what is missing)
+just casting-screen robot                 # free: every headshot measured and ranked (look=look: Haiku checks the must-nots too)
+just casting-mesh-screen robot 5 go       # PAID, cents: the best 5 built by TRELLIS alone, then pictured from all round (free)
+just casting-take robot clerk go          # PAID: build a shortlisted headshot, then tape and judge it (free)
 just casting-revise robot tin-toy [go]    # your notes become the next take (free for moves and cards; PAID for the look)
 ```
 
 | Real casting | Here |
 |---|---|
 | **The breakdown**: who the part is, the look, the must-haves, where they fit | `casting/<role>/role.json`, written by hand. It also holds the canon options for you to choose from (none goes in canon until you do) and the looks to draw, each a whole brief |
-| **Submissions**: headshots, narrowed to a shortlist | one Codex picture a look (`casting/<role>/headshots/`); "Put on the shortlist" makes it a candidate |
+| **Submissions**: headshots, narrowed to a shortlist | a few Codex pictures a look, each a different design (`casting/<role>/headshots/<look>.png`, `<look>.2.png`, ...); "Put on the shortlist" makes one a candidate |
+| **Screen test**: the pile of headshots read before anyone is called in | every headshot measured on what the breakdown asks for and ranked, free (`casting/<role>/screen.json`); then the best few built as meshes alone, cents each, and looked at from all round (below) |
 | **Sides**: the same short scenes for everyone | the reel (`casting/reel.json`): stand easy, walk, run, a wave, a head turn, an arm overhead, a deep squat, eight seconds of the candy-shop routine, the tag moves, a sparring bout. Chosen to push the cards where they are weakest (knees, shoulders, the neck) |
 | **Self-tapes** | each take plays the reel as flat cards beside the real model, in every look (the cards page, inside this one) |
 | **Callbacks with adjustments** | "Give a note" (about the look, the moves or the cards). The next take answers it; every take is kept, with its scores |
 | **Chemistry reads** | a height chart beside Lincoln, Roosevelt and the pirate; the five colours each is made of beside theirs; the crew's dance with the candidate in the pirate's place, and a sparring bout with Lincoln, both on the watch page |
-| **Screen test** | the camera test: the renderer's own judges (`judge_seams`, `judge_joints`, and `judge_faces` once the face has a recipe) on the candidate in the crew's dance, set beside the pirate judged the same way in the same place |
+| **Camera test** (a screen test on film) | the renderer's own judges (`judge_seams`, `judge_joints`, and `judge_faces` once the face has a recipe) on the candidate in the crew's dance, set beside the pirate judged the same way in the same place |
 | **Cast** | "Cast in the part". The canon entry, a place in the world and the arrival by gachapon stay yours to write |
 
 **Where things are.** `casting/reel.json` (the sides), `casting/<role>/role.json` (the breakdown), `casting/<role>/candidates/<id>/candidate.json` (status, takes, notes), `candidates/<id>/scores-<n>.json` (a take's camera test, summed up), `casting/<role>/baseline.json` (the cast member it is measured against). A take is a run folder in `runs/`; what the reel needs beyond the run's own clips is made into `shots/casting/<role>/<id>-<n>/` (the tag moves, the crew's dance with one dancer swapped, the bout, the judges' full output), out of git like the rest of `shots/`. `scripts/casting/casting.py` reads and writes all of it, `gallery/casting.js` is the page, `baml_src/12_casting/` the paid steps.
@@ -1488,7 +1493,9 @@ just casting-revise robot tin-toy [go]    # your notes become the next take (fre
 
 | Step | Paid? | Cost |
 |---|---|---|
-| Headshots | yes | one Codex picture a look (four looks are written; on your ChatGPT plan). Opus writes more looks only if asked (`more=3`), about $0.05 to $0.20 |
+| Headshots | yes | one Codex picture a look a time (`variations`; on your ChatGPT plan). Opus writes more looks only if asked (`more`). The first ask, for four, cost $1.80 by the Claude Code CLI's own count: through the plain `claude` it carried about 189,000 tokens of tool schemas, MCP servers and skills it never used. It now goes through `scripts/claude-lean`, where that overhead is about 1,600 tokens, so the same ask should come to about $0.20, nearly all of it the answer itself (an estimate: not run again) |
+| Screen test | free | a few seconds on this Mac. With `look=look`, Haiku also looks at every headshot once: $0.21 for 24, by the CLI's count |
+| Mesh screen | yes | about $0.08 of RunPod GPU a headshot (the runs' median, 245 s with the worker waking up); then free Blender. A take of one starts from its mesh |
 | A first take | yes | about $2.80 to $4.50: Claude finishing it in Blender, measured from the eight characters' own logs ($2.61 to $4.20, typically $3.31; the villager's three steps were $4.20, and the brief, the gait and retries took it to about $7), plus how it walks, about $0.08 of RunPod GPU for the mesh, and a few cents for its run |
 | Tape the reel | free | about a minute of background Blender (more the first time: its cards are baked from the detailed mesh, a minute and a half) |
 | Camera test | free | about five minutes of background Blender |
@@ -1506,9 +1513,56 @@ The GPU price is an assumption written in `casting.py` (`RUNPOD_USD_PER_S`); che
 
 The audition also found a fault before anyone was cast: a character with loose cloth (the villager's tunic) has cloth bones in its walk but not in a shot's clip, and the pieces of the real model that `bake_joints.py` puts in its joints are weighted to them, so the judges stopped. The camera test now judges such a candidate as cards alone and says so on the page. The robot's breakdown asks for nothing loose.
 
-**The robot's breakdown, in short.** A small, earnest toy-shop robot, 1.45 m (the shortest in the cast), a boxy head with two round lamp eyes and a grille mouth on a dark face plate, a barrel chest with one red dial, short round limbs with a real ball at every joint, matte mustard enamel with steel-blue joints, because nobody in the cast wears yellow and three of them wear navy. Rigid parts and real ball joints are what flat cards are made of, so it should read as cards better than anyone; if it does not, that is a note for the cards. Four ways it could arrive in canon are written out for you to choose from: the developer's helper (a capsule nobody ordered), Lincoln's counter, the Square Deal crew's first hire, or the first toon brewed in the teahouse.
+**The robot's breakdown, in short.** A small, earnest toy-shop robot, 1.45 m (the shortest in the cast), a boxy head with two round lamp eyes and a grille mouth on a dark face plate, a barrel chest with one red dial, short round limbs with a real ball at every joint, matte mustard enamel with steel-blue joints, because nobody in the cast wears yellow and three of them wear navy. Rigid parts and real ball joints are what flat cards are made of, so it should read as cards better than anyone; if it does not, that is a note for the cards. Five ways it could arrive in canon are written out for you to choose from: the developer's helper (a capsule nobody ordered), Lincoln's counter, the Square Deal crew's first hire, the first toon brewed in the teahouse, or the ninja's crew (a stagehand for his photo stage, who claps the slate and holds the cue cards; in its headshots it holds nothing, the slate and cards are props for later). None is chosen.
 
-Screenshots of every stage, phone and desktop: `evidence/casting/`. `just casting-test` tries the files, the board, the costs, the notes and the API with no Blender and no model.
+### Wide at the cheap end
+
+A take costs a few dollars, so the robot's audition looks at many more faces before the first one: eight looks instead of four, three pictures of each, every picture measured for free, the best few built as bare meshes for cents, and only then two or three takes.
+
+**More headshots.** `just casting-headshots robot go 4 3`: Opus wrote four more looks (`CastingLooks` is now shown the ways the part could arrive and asked to cover any that no look suits yet, so one of the four had to fit the ninja's crew), and Codex drew each of the eight looks three times, three at once. The second picture of a look asks for a different head and different proportions, the third for something chunkier and simpler; every rule of the brief stays. 24 pictures, in `casting/robot/headshots/` (`clerk.jpg`, `clerk.2.jpg`, `clerk.3.jpg`; see "How headshots are kept", below). The new looks: a stagehand in a crew vest and a padded headset, and a "clapper-brow" robot whose head is topped by a striped band like a film slate (both for the ninja's crew); a capsule hatchling still wearing half its capsule (the developer's helper); and a walking partner in a felt hat (Lincoln's counter).
+
+**The screen test** (`just casting-screen robot`, `scripts/casting/screen.py`). Every headshot is measured on what the breakdown says matters, from the picture alone, in a few seconds:
+
+| | what is measured |
+|---|---|
+| Builds | one figure, whole and in frame, on a plain background, front on (as wide on the left as the right), arms straight out in a T: what TRELLIS builds well |
+| Stands apart | its outline against every character in `runs/`, feet on one floor, half at their true heights through the crew camera (100 of the pixel look's pixels a metre: a face there is 13 to 18 wide) and half as shapes alone; and how square its head is |
+| Face | the head shrunk to the crew camera's grid (the pixel look's head grid, twice as fine) and every colour snapped to the 32 it is most made of, as the pixel sheet does: is there a dark face plate, two light eyes on it, level and apart, how many pixels wide, how much lighter; how many bars of the grille are left |
+| Colours | how much of it is the breakdown's five colours, whether mustard leads, and how far its mustard is from every cast member's main colours |
+| Cards | anything thinner than 3 cm, and anything thin rising above the head (an antenna), which is where cards come apart; cloth that hangs, read from the brief's gear (an apron gets cloth bones in a walk, which broke the judges on the villager) |
+
+It also flags what the breakdown rules out that a picture shows: shine, something held at a hand, a shadow or haze round the feet (TRELLIS may build it as a floor), something rising off the head. Each flag takes 0.1 off the total. `look=look` first shows Haiku all 24 pictures at once, small, for the must-nots a measurement can't see (text, a glow, a menacing face); it named the same two antennas the measurements did and nothing else, for $0.21. The Casting page shows the result as a contact sheet, best first: each headshot, the crew camera's view of it and its face on the head's grid, the five scores, the flags, and "Put on the shortlist". All of them on one page: `casting/robot/screen-contact-sheet.png`.
+
+**The robot's screen.** Best first: the shop clerk (0.96), its second picture (0.96), the clapper-brow robot's third (0.95), the capsule hatchling's third (0.94), the clapper-brow's first and second (0.94), the tin toy's second (0.93). Last: the tin toy's first and third (an antenna with a ball on it, which the breakdown rules out), the stagehand's third (a shadow round it, and its hands touch the frame), and all three teahouse brewers (the apron). What it says about the part: every robot's face reads at the crew camera's size (the heads are big: 40 to 95 pixels across, where a person's face is 13 to 18), so the face hardly separates them; what does is the outline against the cast and whether mustard leads the colours.
+
+**The mesh screen** (`just casting-mesh-screen robot 5 go`, paid, cents). The screen's best few, one a look and none flagged (`casting.py top`), each built by TRELLIS.2 alone into a run of its own: no Claude, no rig, no motion. Then free: `scripts/casting/screen_mesh.py` stands each mesh up and sizes it in background Blender, and pictures it from eight sides at eye level, and at the crew camera's own size from eye level and from 25 degrees up; `screen.py turn` sets its front against the headshot (which way it faces, how much of the outline it kept, how far the colours moved) and counts its loose pieces. Its sheet goes on the page under the headshot. When one is then shortlisted and taken, `casting_take` carries on from that run, so the mesh is not paid for twice.
+
+What it can't do: the per-bone cards. They need a skeleton, and a skeleton comes from the low-poly body Claude builds in Blender, which is most of what a take costs. So the mesh screen judges what TRELLIS made of a picture (the back it guessed, thin parts it lost, fused hands, a slab under the feet) and how the figure reads from all round at the crew camera's size, not how its joints bend as cards. Tried on the villager's mesh: 93 loose pieces with 7% of the surface outside the biggest, faces the way it was drawn, keeps 92% of its picture's outline.
+
+**Colourways** (`just casting-colourways robot go`, Codex on your ChatGPT plan). For the three headshots picked for the 3D check (the clerk's second, the builder's second, the capsule hatchling's third), three more colourways each, written under the look in `role.json` (`colourways`: an id, a name, five swatches in the breakdown's order, body first, and one line on why; `of` is the headshot, `headshot` the new one's name, `clerk.2-lilac`). Every one keeps a dark face plate with light lamp eyes and stays off the cast's colours: no navy (Roosevelt, the pirate, the ninja), no browns or linens (Lincoln, the villager, the lizardkin), no greens (the troll, the lizardkin), no red to lead (the dancer); one a robot leans on the brand's steel blue and cream. `casting_colourways` gives Codex the headshot itself and asks for the same picture with only the colours changed. Shape, pose and framing came back the same in all nine (one timed out at Codex's five minutes and was drawn on the second try). The screen measures a colourway against its own swatches, and the page shows each headshot's colourways under it. Side by side, with the cast in their own colours at the crew camera's size: `casting/robot/colourways-contact-sheet.png`.
+
+| | total | colours | nearest cast colour (how far) |
+|---|---|---|---|
+| clerk.2, mustard as drawn | 0.94 | 0.96 | the villager (40) |
+| clerk.2-lilac | 0.94 | 0.95 | the dancer (37) |
+| clerk.2-tangerine | 0.93 | 0.92 | the villager (30) |
+| clerk.2-clay (brand) | 0.79 | 0.76 | the dancer (14); flagged: pale paint against the grey background |
+| builder.2-safety-orange | 0.89 | 1.00 | the dancer (36) |
+| builder.2-plum-lemon | 0.88 | 0.97 | the ninja (35) |
+| builder.2-steel-cream (brand) | 0.86 | 0.94 | the pirate (28) |
+| builder.2, mustard as drawn | 0.85 | 0.86 | the villager (33); its steel blue nearly outweighs the mustard |
+| capsule-hatchling-robot.3, mustard as drawn | 0.94 | 1.00 | the villager (36) |
+| capsule-hatchling-robot.3-apricot | 0.92 | 0.91 | the villager (25) |
+| capsule-hatchling-robot.3-sky-sunflower | 0.92 | 0.88 | the dancer (25) |
+| capsule-hatchling-robot.3-cream-steel (brand) | 0.73 | 0.73 | the dancer (12); flagged: pale paint against the grey background |
+
+The outline doesn't change with the paint, so Builds, Stands apart and Face hardly move; Colours decides it. The cream bodies are the lesson: on Codex's light-grey background a cream robot's shaded edges are within a few shades of the ground, which is what TRELLIS's own background cut sees too, and cream sits closest to the dancer's white. If the brand's cream is wanted, it belongs on the joints, not the body.
+
+**How headshots are kept.** Codex draws a 1254-pixel PNG of about 1.4 MB. Git keeps a 1024-pixel JPEG of each at quality 90, about 65 KB (`casting/<role>/headshots/<shot>.jpg`); Codex's own PNG stays on this Mac in `headshots/full/`, out of git (`just casting-keep <role>`, which the paid steps run themselves). Everything reads the JPEG, so the screen gives the same answer from a fresh clone; TRELLIS and Codex are given the PNG when it is there and the JPEG otherwise (it is far above the 518 pixels TRELLIS looks at). The 33 headshots are 2.7 MB in git instead of 46 MB. Measured both ways on the first 24, the screen's total moved by 0.013 on average and by at most 0.02 on 23 of them; the 24th, the stagehand's third, whose outline is blurred by a shadow, loses its face (1.0 to 0.1, total 0.72 to 0.48) because where its neck is found moves with one ragged row. It is flagged and last-but-two either way.
+
+**What the Opus call carried.** The four more looks cost $1.80. Asking the plain `claude` the same way for one word ("Reply OK", Haiku) showed why: 189,394 tokens in before the question, $0.19, for 257 tools (MCP connectors and servers), 11 MCP servers, 42 skills and 78 slash commands, none of which a structured answer uses, plus the user's own model and effort settings. `scripts/claude-lean` runs `claude` with `--strict-mcp-config --setting-sources project --disable-slash-commands` and a one-line `--system-prompt` (BAML already passes `--tools ""`); the same one-word probe through it carried 1,557 tokens, $0.0003. Casting's Opus (`CastingWriter`) and Haiku (`Looker`) go through it. The "more looks" prompt itself, rendered dry (`CastingLooks@spec(...).prompt()`), is 11,479 characters, about 3,000 tokens; so the next ask for four looks should be about 4,500 tokens in and about $0.20, most of it the 9,000-odd tokens of the answer. The other `Writer` calls in the repo (briefs, comics, houses) still go through the plain CLI; moving them is a one-line change each, left for you.
+
+Screenshots of every stage, phone and desktop: `evidence/casting/` (the screen test: `2b-screen-test-*.png`; colourways: `2c-colourways-*.png`). `just casting-test` tries the files, the board, the costs, the notes and the API with no Blender and no model, and the screen test on robots drawn in the test: a good one, and one each with arms down, hands at the frame's edge, no face plate, the wrong colours, an antenna, a shadow, something held.
 
 ## Comics
 

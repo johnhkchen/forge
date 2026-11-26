@@ -1,0 +1,3286 @@
+{
+  "made": "2026-11-26 11:47",
+  "role": "robot",
+  "how": {
+    "crew_px_per_m": 100,
+    "head_grid": 2,
+    "palette_colours": 32,
+    "weights": {
+      "builds": 0.2,
+      "stands_apart": 0.2,
+      "face": 0.25,
+      "colours": 0.2,
+      "cards": 0.15
+    },
+    "flag_cost": 0.1,
+    "thin_cm": 3,
+    "names": {
+      "builds": "Builds",
+      "stands_apart": "Stands apart",
+      "face": "Face",
+      "colours": "Colours",
+      "cards": "Cards"
+    }
+  },
+  "cast": [
+    {
+      "run": "2026-11-20T06-16-35-cave-troll",
+      "name": "Cave Troll",
+      "height_m": 2.6
+    },
+    {
+      "run": "2026-11-20T13-52-46-stocky-pirate-deckhand",
+      "name": "Stocky Pirate Deckhand",
+      "height_m": 1.8
+    },
+    {
+      "run": "2026-11-20T13-52-48-shadow-ninja",
+      "name": "Shadow Ninja",
+      "height_m": 1.75
+    },
+    {
+      "run": "2026-11-20T13-52-54-lizardkin-warrior",
+      "name": "Lizardkin Warrior",
+      "height_m": 1.95
+    },
+    {
+      "run": "2026-11-20T14-02-41-young-lincoln-frontier-wrestler",
+      "name": "Young Lincoln Frontier Wrestler",
+      "height_m": 1.93
+    },
+    {
+      "run": "2026-11-20T14-02-45-roosevelt-wrestler-1890s",
+      "name": "Roosevelt Wrestler 1890s",
+      "height_m": 1.78
+    },
+    {
+      "run": "2026-11-20T18-10-09-flamenco-dancer",
+      "name": "Flamenco Dancer",
+      "height_m": 1.65
+    },
+    {
+      "run": "2026-11-20T22-46-17-plain-young-villager",
+      "name": "Plain Young Villager",
+      "height_m": 1.7
+    }
+  ],
+  "vision": {
+    "made": "2026-11-26 18:53",
+    "model": "Haiku, through the Claude Code CLI",
+    "shown": 24,
+    "tokens": "2 tokens in, 0 read from cache, 0 written to it, 7141 out: about 0.4 cents at Haiku list price",
+    "usd": 0.0035707,
+    "cli_cost_usd": 0.2134095,
+    "cost_note": "The Claude Code CLI passed on only part of its token counts (tokens, usd above); cli_cost_usd is its own total_cost_usd for the call, the figure to go by."
+  },
+  "shots": [
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.825,
+        "face": 1.0,
+        "colours": 0.986,
+        "cards": 0.972,
+        "total": 0.958
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.961,
+          "arms_at": 0.354,
+          "arm_band": 0.057,
+          "reach": 1.238,
+          "feet_width": 0.278,
+          "stray": 0.0,
+          "margin": 0.029
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.464,
+          "head_square": 0.866,
+          "crew_px_tall": 145,
+          "against": {
+            "Plain Young Villager": 0.464,
+            "Stocky Pirate Deckhand": 0.459,
+            "Shadow Ninja": 0.456,
+            "Roosevelt Wrestler 1890s": 0.446,
+            "Young Lincoln Frontier Wrestler": 0.387,
+            "Flamenco Dancer": 0.378,
+            "Lizardkin Warrior": 0.316,
+            "Cave Troll": 0.226
+          }
+        },
+        "face": {
+          "head_px_wide": 45.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2365,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 9.5,
+          "contrast": 0.604,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.824,
+          "by_colour": {
+            "mustard enamel": 0.324,
+            "steel blue": 0.166,
+            "charcoal": 0.281,
+            "lamp cream": 0.045,
+            "tomato red": 0.008
+          },
+          "main": "#d69c22",
+          "main_is": "mustard enamel",
+          "lead": 1.0,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 36.9,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0014,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.4
+        },
+        "hands": {
+          "left": 1.14,
+          "right": 1.14
+        }
+      },
+      "flags": [],
+      "id": "clerk",
+      "look": "clerk",
+      "n": 1,
+      "name": "Shop clerk",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/clerk.jpg",
+      "small": "casting/robot/screen/clerk-crew.png",
+      "face": "casting/robot/screen/clerk-face.png",
+      "look_small": "casting/robot/screen/clerk-look.jpg",
+      "vision": {
+        "id": "clerk",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 1
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.857,
+        "face": 1.0,
+        "colours": 0.903,
+        "cards": 0.989,
+        "total": 0.95
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.986,
+          "arms_at": 0.409,
+          "arm_band": 0.069,
+          "reach": 1.078,
+          "feet_width": 0.324,
+          "stray": 0.0,
+          "margin": 0.027
+        },
+        "stands_apart": {
+          "shares_most_with": "Stocky Pirate Deckhand",
+          "shared": 0.523,
+          "head_square": 0.968,
+          "crew_px_tall": 145,
+          "against": {
+            "Stocky Pirate Deckhand": 0.523,
+            "Flamenco Dancer": 0.519,
+            "Roosevelt Wrestler 1890s": 0.511,
+            "Shadow Ninja": 0.488,
+            "Lizardkin Warrior": 0.458,
+            "Plain Young Villager": 0.405,
+            "Cave Troll": 0.342,
+            "Young Lincoln Frontier Wrestler": 0.341
+          }
+        },
+        "face": {
+          "head_px_wide": 70.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 6656,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 14.0,
+          "contrast": 0.575,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.78,
+          "by_colour": {
+            "mustard enamel": 0.275,
+            "steel blue": 0.036,
+            "charcoal": 0.343,
+            "lamp cream": 0.108,
+            "tomato red": 0.018
+          },
+          "main": "#cf9510",
+          "main_is": "charcoal",
+          "lead": 0.758,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 38.3,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0006,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.26,
+          "right": 1.23
+        }
+      },
+      "flags": [],
+      "id": "clapper-brow-robot.3",
+      "look": "clapper-brow-robot",
+      "n": 3,
+      "name": "Clapper-Brow Robot",
+      "suits": "crew",
+      "picture": "casting/robot/headshots/clapper-brow-robot.3.jpg",
+      "small": "casting/robot/screen/clapper-brow-robot.3-crew.png",
+      "face": "casting/robot/screen/clapper-brow-robot.3-face.png",
+      "look_small": "casting/robot/screen/clapper-brow-robot.3-look.jpg",
+      "vision": {
+        "id": "clapper-brow-robot.3",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 2
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.869,
+        "face": 1.0,
+        "colours": 0.857,
+        "cards": 0.983,
+        "total": 0.943
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.983,
+          "arms_at": 0.41,
+          "arm_band": 0.052,
+          "reach": 1.061,
+          "feet_width": 0.298,
+          "stray": 0.0,
+          "margin": 0.041
+        },
+        "stands_apart": {
+          "shares_most_with": "Roosevelt Wrestler 1890s",
+          "shared": 0.512,
+          "head_square": 0.966,
+          "crew_px_tall": 145,
+          "against": {
+            "Roosevelt Wrestler 1890s": 0.512,
+            "Shadow Ninja": 0.504,
+            "Stocky Pirate Deckhand": 0.491,
+            "Plain Young Villager": 0.472,
+            "Flamenco Dancer": 0.449,
+            "Lizardkin Warrior": 0.398,
+            "Young Lincoln Frontier Wrestler": 0.38,
+            "Cave Troll": 0.283
+          }
+        },
+        "face": {
+          "head_px_wide": 60.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 4005,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 12.5,
+          "contrast": 0.542,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.736,
+          "by_colour": {
+            "mustard enamel": 0.265,
+            "steel blue": 0.001,
+            "charcoal": 0.352,
+            "lamp cream": 0.103,
+            "tomato red": 0.015
+          },
+          "main": "#d19018",
+          "main_is": "charcoal",
+          "lead": 0.671,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 35.9,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0008,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.35,
+          "right": 1.35
+        }
+      },
+      "flags": [],
+      "id": "clapper-brow-robot",
+      "look": "clapper-brow-robot",
+      "n": 1,
+      "name": "Clapper-Brow Robot",
+      "suits": "crew",
+      "picture": "casting/robot/headshots/clapper-brow-robot.jpg",
+      "small": "casting/robot/screen/clapper-brow-robot-crew.png",
+      "face": "casting/robot/screen/clapper-brow-robot-face.png",
+      "look_small": "casting/robot/screen/clapper-brow-robot-look.jpg",
+      "vision": {
+        "id": "clapper-brow-robot",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 3
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.72,
+        "face": 1.0,
+        "colours": 1.0,
+        "cards": 0.986,
+        "total": 0.942
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.991,
+          "arms_at": 0.468,
+          "arm_band": 0.063,
+          "reach": 1.059,
+          "feet_width": 0.332,
+          "stray": 0.0,
+          "margin": 0.025
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.545,
+          "head_square": 0.858,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.545,
+            "Stocky Pirate Deckhand": 0.53,
+            "Shadow Ninja": 0.508,
+            "Roosevelt Wrestler 1890s": 0.484,
+            "Plain Young Villager": 0.464,
+            "Lizardkin Warrior": 0.421,
+            "Young Lincoln Frontier Wrestler": 0.364,
+            "Cave Troll": 0.322
+          }
+        },
+        "face": {
+          "head_px_wide": 65.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3758,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 15.5,
+          "contrast": 0.664,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.921,
+          "by_colour": {
+            "mustard enamel": 0.289,
+            "steel blue": 0.288,
+            "charcoal": 0.269,
+            "lamp cream": 0.055,
+            "tomato red": 0.02
+          },
+          "main": "#cc971d",
+          "main_is": "mustard enamel",
+          "lead": 1.0,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 35.8,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0007,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.1,
+          "right": 1.1
+        }
+      },
+      "flags": [],
+      "id": "capsule-hatchling-robot.3",
+      "look": "capsule-hatchling-robot",
+      "n": 3,
+      "name": "Capsule Hatchling Robot",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/capsule-hatchling-robot.3.jpg",
+      "small": "casting/robot/screen/capsule-hatchling-robot.3-crew.png",
+      "face": "casting/robot/screen/capsule-hatchling-robot.3-face.png",
+      "look_small": "casting/robot/screen/capsule-hatchling-robot.3-look.jpg",
+      "vision": {
+        "id": "capsule-hatchling-robot.3",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 4
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.823,
+        "face": 0.95,
+        "colours": 0.964,
+        "cards": 0.977,
+        "total": 0.941
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.995,
+          "arms_at": 0.371,
+          "arm_band": 0.048,
+          "reach": 1.268,
+          "feet_width": 0.255,
+          "stray": 0.0,
+          "margin": 0.033
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.449,
+          "head_square": 0.85,
+          "crew_px_tall": 145,
+          "against": {
+            "Plain Young Villager": 0.449,
+            "Shadow Ninja": 0.444,
+            "Stocky Pirate Deckhand": 0.442,
+            "Roosevelt Wrestler 1890s": 0.44,
+            "Flamenco Dancer": 0.409,
+            "Young Lincoln Frontier Wrestler": 0.364,
+            "Lizardkin Warrior": 0.329,
+            "Cave Troll": 0.248
+          }
+        },
+        "face": {
+          "head_px_wide": 67.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 4022,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 12.5,
+          "contrast": 0.651,
+          "grille_bars": 2
+        },
+        "colours": {
+          "breakdown_share": 0.887,
+          "by_colour": {
+            "mustard enamel": 0.268,
+            "steel blue": 0.242,
+            "charcoal": 0.312,
+            "lamp cream": 0.058,
+            "tomato red": 0.007
+          },
+          "main": "#e1a122",
+          "main_is": "charcoal",
+          "lead": 0.854,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 39.6,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0012,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.72,
+          "right": 1.72
+        }
+      },
+      "flags": [],
+      "id": "clerk.2",
+      "look": "clerk",
+      "n": 2,
+      "name": "Shop clerk",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/clerk.2.jpg",
+      "small": "casting/robot/screen/clerk.2-crew.png",
+      "face": "casting/robot/screen/clerk.2-face.png",
+      "look_small": "casting/robot/screen/clerk.2-look.jpg",
+      "vision": {
+        "id": "clerk.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 5
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.827,
+        "face": 0.95,
+        "colours": 0.951,
+        "cards": 0.982,
+        "total": 0.94
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.995,
+          "arms_at": 0.372,
+          "arm_band": 0.05,
+          "reach": 1.265,
+          "feet_width": 0.262,
+          "stray": 0.0,
+          "margin": 0.033
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.443,
+          "head_square": 0.848,
+          "crew_px_tall": 145,
+          "against": {
+            "Plain Young Villager": 0.443,
+            "Roosevelt Wrestler 1890s": 0.441,
+            "Shadow Ninja": 0.441,
+            "Stocky Pirate Deckhand": 0.439,
+            "Flamenco Dancer": 0.403,
+            "Young Lincoln Frontier Wrestler": 0.36,
+            "Lizardkin Warrior": 0.331,
+            "Cave Troll": 0.25
+          }
+        },
+        "face": {
+          "head_px_wide": 66.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 4260,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 12.5,
+          "contrast": 0.686,
+          "grille_bars": 2
+        },
+        "colours": {
+          "breakdown_share": 0.965,
+          "by_colour": {
+            "lilac enamel": 0.275,
+            "slate violet": 0.339,
+            "charcoal": 0.295,
+            "lamp cream": 0.05,
+            "sunflower": 0.006
+          },
+          "main": "#a589c2",
+          "main_is": "slate violet",
+          "lead": 0.803,
+          "nearest_cast": "Flamenco Dancer",
+          "cast_gap": 36.9,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0009,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.68,
+          "right": 1.63
+        }
+      },
+      "flags": [],
+      "colourway": {
+        "id": "lilac",
+        "name": "Lilac",
+        "of": "clerk.2",
+        "swatches": [
+          "#A88BD1",
+          "#4E4860",
+          "#2B2A2E",
+          "#F2E6C8",
+          "#F2C230"
+        ]
+      },
+      "id": "clerk.2-lilac",
+      "look": "clerk",
+      "n": 2,
+      "name": "Shop clerk",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/clerk.2-lilac.jpg",
+      "small": "casting/robot/screen/clerk.2-lilac-crew.png",
+      "face": "casting/robot/screen/clerk.2-lilac-face.png",
+      "look_small": "casting/robot/screen/clerk.2-lilac-look.jpg",
+      "rank": 6
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.779,
+        "face": 1.0,
+        "colours": 1.0,
+        "cards": 0.891,
+        "total": 0.94
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.992,
+          "arms_at": 0.398,
+          "arm_band": 0.063,
+          "reach": 1.141,
+          "feet_width": 0.329,
+          "stray": 0.0,
+          "margin": 0.025
+        },
+        "stands_apart": {
+          "shares_most_with": "Roosevelt Wrestler 1890s",
+          "shared": 0.503,
+          "head_square": 0.866,
+          "crew_px_tall": 145,
+          "against": {
+            "Roosevelt Wrestler 1890s": 0.503,
+            "Shadow Ninja": 0.493,
+            "Stocky Pirate Deckhand": 0.493,
+            "Flamenco Dancer": 0.446,
+            "Plain Young Villager": 0.443,
+            "Lizardkin Warrior": 0.388,
+            "Young Lincoln Frontier Wrestler": 0.377,
+            "Cave Troll": 0.273
+          }
+        },
+        "face": {
+          "head_px_wide": 49.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3161,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 12.5,
+          "contrast": 0.663,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.937,
+          "by_colour": {
+            "mustard enamel": 0.324,
+            "steel blue": 0.245,
+            "charcoal": 0.309,
+            "lamp cream": 0.05,
+            "tomato red": 0.01
+          },
+          "main": "#dfa21c",
+          "main_is": "mustard enamel",
+          "lead": 1.0,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 41.3,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0054,
+          "thin_pieces": 1,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.11,
+          "right": 1.11
+        }
+      },
+      "flags": [],
+      "id": "clerk.3",
+      "look": "clerk",
+      "n": 3,
+      "name": "Shop clerk",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/clerk.3.jpg",
+      "small": "casting/robot/screen/clerk.3-crew.png",
+      "face": "casting/robot/screen/clerk.3-face.png",
+      "look_small": "casting/robot/screen/clerk.3-look.jpg",
+      "vision": {
+        "id": "clerk.3",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 7
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.877,
+        "face": 1.0,
+        "colours": 0.798,
+        "cards": 0.989,
+        "total": 0.933
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.985,
+          "arms_at": 0.401,
+          "arm_band": 0.061,
+          "reach": 1.156,
+          "feet_width": 0.318,
+          "stray": 0.0,
+          "margin": 0.021
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.493,
+          "head_square": 0.938,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.493,
+            "Stocky Pirate Deckhand": 0.49,
+            "Roosevelt Wrestler 1890s": 0.487,
+            "Shadow Ninja": 0.475,
+            "Lizardkin Warrior": 0.409,
+            "Plain Young Villager": 0.406,
+            "Young Lincoln Frontier Wrestler": 0.33,
+            "Cave Troll": 0.324
+          }
+        },
+        "face": {
+          "head_px_wide": 82.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 6584,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 18.0,
+          "contrast": 0.561,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.71,
+          "by_colour": {
+            "mustard enamel": 0.204,
+            "steel blue": 0.004,
+            "charcoal": 0.355,
+            "lamp cream": 0.133,
+            "tomato red": 0.014
+          },
+          "main": "#cd9625",
+          "main_is": "charcoal",
+          "lead": 0.561,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 32.9,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0006,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.31,
+          "right": 1.31
+        }
+      },
+      "flags": [],
+      "id": "clapper-brow-robot.2",
+      "look": "clapper-brow-robot",
+      "n": 2,
+      "name": "Clapper-Brow Robot",
+      "suits": "crew",
+      "picture": "casting/robot/headshots/clapper-brow-robot.2.jpg",
+      "small": "casting/robot/screen/clapper-brow-robot.2-crew.png",
+      "face": "casting/robot/screen/clapper-brow-robot.2-face.png",
+      "look_small": "casting/robot/screen/clapper-brow-robot.2-look.jpg",
+      "vision": {
+        "id": "clapper-brow-robot.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 8
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.817,
+        "face": 0.95,
+        "colours": 0.916,
+        "cards": 0.978,
+        "total": 0.931
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.996,
+          "arms_at": 0.373,
+          "arm_band": 0.05,
+          "reach": 1.268,
+          "feet_width": 0.257,
+          "stray": 0.0,
+          "margin": 0.033
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.448,
+          "head_square": 0.844,
+          "crew_px_tall": 145,
+          "against": {
+            "Plain Young Villager": 0.448,
+            "Shadow Ninja": 0.443,
+            "Stocky Pirate Deckhand": 0.441,
+            "Roosevelt Wrestler 1890s": 0.438,
+            "Flamenco Dancer": 0.409,
+            "Young Lincoln Frontier Wrestler": 0.363,
+            "Lizardkin Warrior": 0.329,
+            "Cave Troll": 0.248
+          }
+        },
+        "face": {
+          "head_px_wide": 68.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 4082,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 12.5,
+          "contrast": 0.693,
+          "grille_bars": 2
+        },
+        "colours": {
+          "breakdown_share": 0.962,
+          "by_colour": {
+            "tangerine enamel": 0.262,
+            "warm grey": 0.329,
+            "charcoal": 0.299,
+            "lamp cream": 0.065,
+            "sky blue": 0.007
+          },
+          "main": "#db7630",
+          "main_is": "warm grey",
+          "lead": 0.823,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 30.4,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0011,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.63,
+          "right": 1.63
+        }
+      },
+      "flags": [],
+      "colourway": {
+        "id": "tangerine",
+        "name": "Tangerine",
+        "of": "clerk.2",
+        "swatches": [
+          "#E9772B",
+          "#77736D",
+          "#2B2A2E",
+          "#F2E6C8",
+          "#6CB2E3"
+        ]
+      },
+      "id": "clerk.2-tangerine",
+      "look": "clerk",
+      "n": 2,
+      "name": "Shop clerk",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/clerk.2-tangerine.jpg",
+      "small": "casting/robot/screen/clerk.2-tangerine-crew.png",
+      "face": "casting/robot/screen/clerk.2-tangerine-face.png",
+      "look_small": "casting/robot/screen/clerk.2-tangerine-look.jpg",
+      "rank": 9
+    },
+    {
+      "scores": {
+        "builds": 0.967,
+        "stands_apart": 0.787,
+        "face": 1.0,
+        "colours": 0.891,
+        "cards": 0.984,
+        "total": 0.926
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.78125,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.987,
+          "arms_at": 0.4,
+          "arm_band": 0.053,
+          "reach": 1.201,
+          "feet_width": 0.302,
+          "stray": 0.0,
+          "margin": 0.016
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.502,
+          "head_square": 0.872,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.502,
+            "Stocky Pirate Deckhand": 0.499,
+            "Roosevelt Wrestler 1890s": 0.494,
+            "Shadow Ninja": 0.487,
+            "Lizardkin Warrior": 0.418,
+            "Plain Young Villager": 0.406,
+            "Cave Troll": 0.345,
+            "Young Lincoln Frontier Wrestler": 0.334
+          }
+        },
+        "face": {
+          "head_px_wide": 96.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 7911,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 19.5,
+          "contrast": 0.527,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.746,
+          "by_colour": {
+            "mustard enamel": 0.31,
+            "steel blue": 0.004,
+            "charcoal": 0.35,
+            "lamp cream": 0.06,
+            "tomato red": 0.021
+          },
+          "main": "#d4962b",
+          "main_is": "charcoal",
+          "lead": 0.894,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 31.8,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0008,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.36,
+          "right": 1.36
+        }
+      },
+      "flags": [],
+      "id": "tin-toy.2",
+      "look": "tin-toy",
+      "n": 2,
+      "name": "Tin toy",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/tin-toy.2.jpg",
+      "small": "casting/robot/screen/tin-toy.2-crew.png",
+      "face": "casting/robot/screen/tin-toy.2-face.png",
+      "look_small": "casting/robot/screen/tin-toy.2-look.jpg",
+      "vision": {
+        "id": "tin-toy.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 10
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.715,
+        "face": 1.0,
+        "colours": 0.91,
+        "cards": 0.988,
+        "total": 0.923
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.991,
+          "arms_at": 0.469,
+          "arm_band": 0.063,
+          "reach": 1.061,
+          "feet_width": 0.334,
+          "stray": 0.0,
+          "margin": 0.025
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.547,
+          "head_square": 0.855,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.547,
+            "Stocky Pirate Deckhand": 0.529,
+            "Shadow Ninja": 0.506,
+            "Roosevelt Wrestler 1890s": 0.482,
+            "Plain Young Villager": 0.462,
+            "Lizardkin Warrior": 0.422,
+            "Young Lincoln Frontier Wrestler": 0.362,
+            "Cave Troll": 0.323
+          }
+        },
+        "face": {
+          "head_px_wide": 66.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3769,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 15.5,
+          "contrast": 0.699,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.961,
+          "by_colour": {
+            "apricot enamel": 0.301,
+            "slate violet": 0.321,
+            "charcoal": 0.251,
+            "lamp cream": 0.07,
+            "sky blue": 0.019
+          },
+          "main": "#ea934a",
+          "main_is": "slate violet",
+          "lead": 0.974,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 25.2,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0006,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.14,
+          "right": 1.14
+        }
+      },
+      "flags": [],
+      "colourway": {
+        "id": "apricot",
+        "name": "Apricot",
+        "of": "capsule-hatchling-robot.3",
+        "swatches": [
+          "#F4A259",
+          "#4E4860",
+          "#2B2A2E",
+          "#F2E6C8",
+          "#6CB2E3"
+        ]
+      },
+      "id": "capsule-hatchling-robot.3-apricot",
+      "look": "capsule-hatchling-robot",
+      "n": 3,
+      "name": "Capsule Hatchling Robot",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/capsule-hatchling-robot.3-apricot.jpg",
+      "small": "casting/robot/screen/capsule-hatchling-robot.3-apricot-crew.png",
+      "face": "casting/robot/screen/capsule-hatchling-robot.3-apricot-face.png",
+      "look_small": "casting/robot/screen/capsule-hatchling-robot.3-apricot-look.jpg",
+      "rank": 11
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.72,
+        "face": 1.0,
+        "colours": 0.883,
+        "cards": 0.988,
+        "total": 0.919
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.99,
+          "arms_at": 0.468,
+          "arm_band": 0.063,
+          "reach": 1.059,
+          "feet_width": 0.332,
+          "stray": 0.0,
+          "margin": 0.025
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.546,
+          "head_square": 0.858,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.546,
+            "Stocky Pirate Deckhand": 0.529,
+            "Shadow Ninja": 0.507,
+            "Roosevelt Wrestler 1890s": 0.484,
+            "Plain Young Villager": 0.463,
+            "Lizardkin Warrior": 0.422,
+            "Young Lincoln Frontier Wrestler": 0.363,
+            "Cave Troll": 0.322
+          }
+        },
+        "face": {
+          "head_px_wide": 65.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3619,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 15.5,
+          "contrast": 0.744,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.921,
+          "by_colour": {
+            "sky blue enamel": 0.3,
+            "sunflower": 0.0,
+            "ink": 0.216,
+            "lamp cream": 0.073
+          },
+          "main": "#85b0d5",
+          "main_is": "sunflower",
+          "lead": 0.878,
+          "nearest_cast": "Flamenco Dancer",
+          "cast_gap": 24.9,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0006,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.1,
+          "right": 1.1
+        }
+      },
+      "flags": [],
+      "colourway": {
+        "id": "sky-sunflower",
+        "name": "Sky and sunflower",
+        "of": "capsule-hatchling-robot.3",
+        "swatches": [
+          "#8EC3EA",
+          "#F2C230",
+          "#1C1917",
+          "#F2E6C8",
+          "#F2C230"
+        ]
+      },
+      "id": "capsule-hatchling-robot.3-sky-sunflower",
+      "look": "capsule-hatchling-robot",
+      "n": 3,
+      "name": "Capsule Hatchling Robot",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/capsule-hatchling-robot.3-sky-sunflower.jpg",
+      "small": "casting/robot/screen/capsule-hatchling-robot.3-sky-sunflower-crew.png",
+      "face": "casting/robot/screen/capsule-hatchling-robot.3-sky-sunflower-face.png",
+      "look_small": "casting/robot/screen/capsule-hatchling-robot.3-sky-sunflower-look.jpg",
+      "rank": 12
+    },
+    {
+      "scores": {
+        "builds": 0.953,
+        "stands_apart": 0.683,
+        "face": 1.0,
+        "colours": 0.947,
+        "cards": 0.983,
+        "total": 0.914
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.68359375,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.963,
+          "arms_at": 0.392,
+          "arm_band": 0.053,
+          "reach": 0.982,
+          "feet_width": 0.337,
+          "stray": 0.0,
+          "margin": 0.014
+        },
+        "stands_apart": {
+          "shares_most_with": "Shadow Ninja",
+          "shared": 0.507,
+          "head_square": 0.79,
+          "crew_px_tall": 145,
+          "against": {
+            "Shadow Ninja": 0.507,
+            "Roosevelt Wrestler 1890s": 0.498,
+            "Plain Young Villager": 0.493,
+            "Stocky Pirate Deckhand": 0.488,
+            "Flamenco Dancer": 0.417,
+            "Young Lincoln Frontier Wrestler": 0.407,
+            "Lizardkin Warrior": 0.374,
+            "Cave Troll": 0.259
+          }
+        },
+        "face": {
+          "head_px_wide": 51.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 1907,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 9.0,
+          "contrast": 0.607,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.935,
+          "by_colour": {
+            "mustard enamel": 0.257,
+            "steel blue": 0.348,
+            "charcoal": 0.263,
+            "lamp cream": 0.043,
+            "tomato red": 0.025
+          },
+          "main": "#d39918",
+          "main_is": "steel blue",
+          "lead": 0.787,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 38.1,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0009,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.6
+        },
+        "hands": {
+          "left": 1.35,
+          "right": 1.35
+        }
+      },
+      "flags": [],
+      "id": "capsule-hatchling-robot",
+      "look": "capsule-hatchling-robot",
+      "n": 1,
+      "name": "Capsule Hatchling Robot",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/capsule-hatchling-robot.jpg",
+      "small": "casting/robot/screen/capsule-hatchling-robot-crew.png",
+      "face": "casting/robot/screen/capsule-hatchling-robot-face.png",
+      "look_small": "casting/robot/screen/capsule-hatchling-robot-look.jpg",
+      "vision": {
+        "id": "capsule-hatchling-robot",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 13
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.697,
+        "face": 0.9,
+        "colours": 0.939,
+        "cards": 0.974,
+        "total": 0.898
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.972,
+          "arms_at": 0.366,
+          "arm_band": 0.035,
+          "reach": 0.925,
+          "feet_width": 0.281,
+          "stray": 0.0,
+          "margin": 0.053
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.474,
+          "head_square": 0.769,
+          "crew_px_tall": 145,
+          "against": {
+            "Plain Young Villager": 0.474,
+            "Shadow Ninja": 0.425,
+            "Stocky Pirate Deckhand": 0.402,
+            "Roosevelt Wrestler 1890s": 0.387,
+            "Young Lincoln Frontier Wrestler": 0.364,
+            "Flamenco Dancer": 0.36,
+            "Lizardkin Warrior": 0.312,
+            "Cave Troll": 0.223
+          }
+        },
+        "face": {
+          "head_px_wide": 69.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2065,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 11.5,
+          "contrast": 0.615,
+          "grille_bars": 1
+        },
+        "colours": {
+          "breakdown_share": 0.878,
+          "by_colour": {
+            "mustard enamel": 0.254,
+            "steel blue": 0.315,
+            "charcoal": 0.236,
+            "lamp cream": 0.062,
+            "tomato red": 0.011
+          },
+          "main": "#d4991c",
+          "main_is": "steel blue",
+          "lead": 0.756,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 37.4,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0013,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 2.0,
+          "right": 2.0
+        }
+      },
+      "flags": [],
+      "id": "capsule-hatchling-robot.2",
+      "look": "capsule-hatchling-robot",
+      "n": 2,
+      "name": "Capsule Hatchling Robot",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/capsule-hatchling-robot.2.jpg",
+      "small": "casting/robot/screen/capsule-hatchling-robot.2-crew.png",
+      "face": "casting/robot/screen/capsule-hatchling-robot.2-face.png",
+      "look_small": "casting/robot/screen/capsule-hatchling-robot.2-look.jpg",
+      "vision": {
+        "id": "capsule-hatchling-robot.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 14
+    },
+    {
+      "scores": {
+        "builds": 0.982,
+        "stands_apart": 0.665,
+        "face": 1.0,
+        "colours": 0.827,
+        "cards": 0.982,
+        "total": 0.892
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.87890625,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.975,
+          "arms_at": 0.394,
+          "arm_band": 0.056,
+          "reach": 1.014,
+          "feet_width": 0.353,
+          "stray": 0.0,
+          "margin": 0.018
+        },
+        "stands_apart": {
+          "shares_most_with": "Roosevelt Wrestler 1890s",
+          "shared": 0.517,
+          "head_square": 0.785,
+          "crew_px_tall": 145,
+          "against": {
+            "Roosevelt Wrestler 1890s": 0.517,
+            "Stocky Pirate Deckhand": 0.516,
+            "Shadow Ninja": 0.514,
+            "Flamenco Dancer": 0.483,
+            "Plain Young Villager": 0.469,
+            "Lizardkin Warrior": 0.425,
+            "Young Lincoln Frontier Wrestler": 0.379,
+            "Cave Troll": 0.304
+          }
+        },
+        "face": {
+          "head_px_wide": 66.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3563,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 11.5,
+          "contrast": 0.553,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.798,
+          "by_colour": {
+            "mustard enamel": 0.207,
+            "steel blue": 0.063,
+            "charcoal": 0.481,
+            "lamp cream": 0.036,
+            "tomato red": 0.012
+          },
+          "main": "#cc8c1a",
+          "main_is": "charcoal",
+          "lead": 0.459,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 33.8,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0009,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.44,
+          "right": 1.44
+        }
+      },
+      "flags": [],
+      "id": "stagehand-robot",
+      "look": "stagehand-robot",
+      "n": 1,
+      "name": "Stagehand Robot",
+      "suits": "crew",
+      "picture": "casting/robot/headshots/stagehand-robot.jpg",
+      "small": "casting/robot/screen/stagehand-robot-crew.png",
+      "face": "casting/robot/screen/stagehand-robot-face.png",
+      "look_small": "casting/robot/screen/stagehand-robot-look.jpg",
+      "vision": {
+        "id": "stagehand-robot",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 15
+    },
+    {
+      "scores": {
+        "builds": 0.938,
+        "stands_apart": 0.531,
+        "face": 1.0,
+        "colours": 1.0,
+        "cards": 0.983,
+        "total": 0.891
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.5859375,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.996,
+          "arms_at": 0.363,
+          "arm_band": 0.079,
+          "reach": 1.157,
+          "feet_width": 0.492,
+          "stray": 0.0,
+          "margin": 0.012
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.599,
+          "head_square": 0.752,
+          "crew_px_tall": 150,
+          "against": {
+            "Flamenco Dancer": 0.599,
+            "Lizardkin Warrior": 0.482,
+            "Stocky Pirate Deckhand": 0.482,
+            "Roosevelt Wrestler 1890s": 0.425,
+            "Shadow Ninja": 0.396,
+            "Cave Troll": 0.38,
+            "Plain Young Villager": 0.33,
+            "Young Lincoln Frontier Wrestler": 0.294
+          }
+        },
+        "face": {
+          "head_px_wide": 66.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2752,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 11.0,
+          "contrast": 0.665,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.911,
+          "by_colour": {
+            "safety orange enamel": 0.278,
+            "graphite": 0.286,
+            "charcoal": 0.222,
+            "lamp cream": 0.034,
+            "lemon": 0.091
+          },
+          "main": "#dd6a19",
+          "main_is": "safety orange enamel",
+          "lead": 1.0,
+          "nearest_cast": "Flamenco Dancer",
+          "cast_gap": 35.5,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0009,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.24,
+          "right": 1.29
+        }
+      },
+      "flags": [],
+      "colourway": {
+        "id": "safety-orange",
+        "name": "Safety orange",
+        "of": "builder.2",
+        "swatches": [
+          "#EE7B22",
+          "#45474D",
+          "#2B2A2E",
+          "#F2E6C8",
+          "#F4D03F"
+        ]
+      },
+      "id": "builder.2-safety-orange",
+      "look": "builder",
+      "n": 2,
+      "name": "Builder",
+      "suits": "square-deal",
+      "picture": "casting/robot/headshots/builder.2-safety-orange.jpg",
+      "small": "casting/robot/screen/builder.2-safety-orange-crew.png",
+      "face": "casting/robot/screen/builder.2-safety-orange-face.png",
+      "look_small": "casting/robot/screen/builder.2-safety-orange-look.jpg",
+      "rank": 16
+    },
+    {
+      "scores": {
+        "builds": 0.967,
+        "stands_apart": 0.621,
+        "face": 1.0,
+        "colours": 0.881,
+        "cards": 0.978,
+        "total": 0.89
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.78125,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.987,
+          "arms_at": 0.363,
+          "arm_band": 0.07,
+          "reach": 1.162,
+          "feet_width": 0.419,
+          "stray": 0.0,
+          "margin": 0.016
+        },
+        "stands_apart": {
+          "shares_most_with": "Stocky Pirate Deckhand",
+          "shared": 0.515,
+          "head_square": 0.746,
+          "crew_px_tall": 150,
+          "against": {
+            "Stocky Pirate Deckhand": 0.515,
+            "Flamenco Dancer": 0.51,
+            "Roosevelt Wrestler 1890s": 0.46,
+            "Lizardkin Warrior": 0.441,
+            "Shadow Ninja": 0.441,
+            "Plain Young Villager": 0.374,
+            "Young Lincoln Frontier Wrestler": 0.338,
+            "Cave Troll": 0.323
+          }
+        },
+        "face": {
+          "head_px_wide": 47.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2424,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 8.0,
+          "contrast": 0.597,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.783,
+          "by_colour": {
+            "mustard enamel": 0.239,
+            "steel blue": 0.144,
+            "charcoal": 0.371,
+            "lamp cream": 0.018,
+            "tomato red": 0.012
+          },
+          "main": "#d19820",
+          "main_is": "charcoal",
+          "lead": 0.664,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 35.6,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0011,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.4
+        },
+        "hands": {
+          "left": 1.03,
+          "right": 1.0
+        }
+      },
+      "flags": [],
+      "id": "builder",
+      "look": "builder",
+      "n": 1,
+      "name": "Builder",
+      "suits": "square-deal",
+      "picture": "casting/robot/headshots/builder.jpg",
+      "small": "casting/robot/screen/builder-crew.png",
+      "face": "casting/robot/screen/builder-face.png",
+      "look_small": "casting/robot/screen/builder-look.jpg",
+      "vision": {
+        "id": "builder",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 17
+    },
+    {
+      "scores": {
+        "builds": 0.994,
+        "stands_apart": 0.677,
+        "face": 1.0,
+        "colours": 0.799,
+        "cards": 0.973,
+        "total": 0.89
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 0.9749638717215509,
+          "t_pose": 1.0,
+          "mirror_shared": 0.945,
+          "arms_at": 0.349,
+          "arm_band": 0.063,
+          "reach": 1.033,
+          "feet_width": 0.335,
+          "stray": 0.0,
+          "margin": 0.039
+        },
+        "stands_apart": {
+          "shares_most_with": "Stocky Pirate Deckhand",
+          "shared": 0.553,
+          "head_square": 0.83,
+          "crew_px_tall": 145,
+          "against": {
+            "Stocky Pirate Deckhand": 0.553,
+            "Shadow Ninja": 0.509,
+            "Roosevelt Wrestler 1890s": 0.505,
+            "Plain Young Villager": 0.462,
+            "Flamenco Dancer": 0.446,
+            "Lizardkin Warrior": 0.403,
+            "Young Lincoln Frontier Wrestler": 0.4,
+            "Cave Troll": 0.276
+          }
+        },
+        "face": {
+          "head_px_wide": 44.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 1882,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 8.5,
+          "contrast": 0.545,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.69,
+          "by_colour": {
+            "mustard enamel": 0.258,
+            "steel blue": 0.0,
+            "charcoal": 0.385,
+            "lamp cream": 0.033,
+            "tomato red": 0.013
+          },
+          "main": "#ca8b1d",
+          "main_is": "charcoal",
+          "lead": 0.625,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 32.4,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0013,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.41,
+          "right": 1.41
+        }
+      },
+      "flags": [],
+      "id": "walking-partner-robot.3",
+      "look": "walking-partner-robot",
+      "n": 3,
+      "name": "Walking Partner Robot",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/walking-partner-robot.3.jpg",
+      "small": "casting/robot/screen/walking-partner-robot.3-crew.png",
+      "face": "casting/robot/screen/walking-partner-robot.3-face.png",
+      "look_small": "casting/robot/screen/walking-partner-robot.3-look.jpg",
+      "vision": {
+        "id": "walking-partner-robot.3",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 18
+    },
+    {
+      "scores": {
+        "builds": 0.938,
+        "stands_apart": 0.52,
+        "face": 1.0,
+        "colours": 0.971,
+        "cards": 0.987,
+        "total": 0.884
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.5859375,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.995,
+          "arms_at": 0.363,
+          "arm_band": 0.077,
+          "reach": 1.16,
+          "feet_width": 0.488,
+          "stray": 0.0,
+          "margin": 0.012
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.602,
+          "head_square": 0.747,
+          "crew_px_tall": 150,
+          "against": {
+            "Flamenco Dancer": 0.602,
+            "Stocky Pirate Deckhand": 0.486,
+            "Lizardkin Warrior": 0.483,
+            "Roosevelt Wrestler 1890s": 0.424,
+            "Shadow Ninja": 0.396,
+            "Cave Troll": 0.382,
+            "Plain Young Villager": 0.33,
+            "Young Lincoln Frontier Wrestler": 0.294
+          }
+        },
+        "face": {
+          "head_px_wide": 66.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3201,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 10.5,
+          "contrast": 0.646,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.896,
+          "by_colour": {
+            "plum enamel": 0.285,
+            "lemon": 0.0,
+            "charcoal": 0.304,
+            "lamp cream": 0.034
+          },
+          "main": "#844e7e",
+          "main_is": "charcoal",
+          "lead": 0.885,
+          "nearest_cast": "Shadow Ninja",
+          "cast_gap": 35.2,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0007,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.3,
+          "right": 1.33
+        }
+      },
+      "flags": [],
+      "colourway": {
+        "id": "plum-lemon",
+        "name": "Plum and lemon",
+        "of": "builder.2",
+        "swatches": [
+          "#85508F",
+          "#F2C94C",
+          "#2B2A2E",
+          "#F2E6C8",
+          "#F2C94C"
+        ]
+      },
+      "id": "builder.2-plum-lemon",
+      "look": "builder",
+      "n": 2,
+      "name": "Builder",
+      "suits": "square-deal",
+      "picture": "casting/robot/headshots/builder.2-plum-lemon.jpg",
+      "small": "casting/robot/screen/builder.2-plum-lemon-crew.png",
+      "face": "casting/robot/screen/builder.2-plum-lemon-face.png",
+      "look_small": "casting/robot/screen/builder.2-plum-lemon-look.jpg",
+      "rank": 19
+    },
+    {
+      "scores": {
+        "builds": 0.923,
+        "stands_apart": 0.556,
+        "face": 1.0,
+        "colours": 0.947,
+        "cards": 0.983,
+        "total": 0.883
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.48828125,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.989,
+          "arms_at": 0.376,
+          "arm_band": 0.087,
+          "reach": 1.182,
+          "feet_width": 0.445,
+          "stray": 0.0,
+          "margin": 0.01
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.579,
+          "head_square": 0.754,
+          "crew_px_tall": 150,
+          "against": {
+            "Flamenco Dancer": 0.579,
+            "Stocky Pirate Deckhand": 0.5,
+            "Lizardkin Warrior": 0.448,
+            "Roosevelt Wrestler 1890s": 0.441,
+            "Shadow Ninja": 0.428,
+            "Plain Young Villager": 0.365,
+            "Cave Troll": 0.346,
+            "Young Lincoln Frontier Wrestler": 0.319
+          }
+        },
+        "face": {
+          "head_px_wide": 51.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2929,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 8.5,
+          "contrast": 0.566,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.849,
+          "by_colour": {
+            "mustard enamel": 0.263,
+            "steel blue": 0.192,
+            "charcoal": 0.353,
+            "lamp cream": 0.018,
+            "tomato red": 0.023
+          },
+          "main": "#cf921c",
+          "main_is": "charcoal",
+          "lead": 0.795,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 34.8,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0008,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.4
+        },
+        "hands": {
+          "left": 1.08,
+          "right": 1.05
+        }
+      },
+      "flags": [],
+      "id": "builder.3",
+      "look": "builder",
+      "n": 3,
+      "name": "Builder",
+      "suits": "square-deal",
+      "picture": "casting/robot/headshots/builder.3.jpg",
+      "small": "casting/robot/screen/builder.3-crew.png",
+      "face": "casting/robot/screen/builder.3-face.png",
+      "look_small": "casting/robot/screen/builder.3-look.jpg",
+      "vision": {
+        "id": "builder.3",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 20
+    },
+    {
+      "scores": {
+        "builds": 0.982,
+        "stands_apart": 0.712,
+        "face": 0.95,
+        "colours": 0.802,
+        "cards": 0.975,
+        "total": 0.883
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 0.9282433340802149,
+          "t_pose": 1.0,
+          "mirror_shared": 0.936,
+          "arms_at": 0.32,
+          "arm_band": 0.037,
+          "reach": 1.076,
+          "feet_width": 0.237,
+          "stray": 0.0,
+          "margin": 0.043
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.49,
+          "head_square": 0.798,
+          "crew_px_tall": 145,
+          "against": {
+            "Plain Young Villager": 0.49,
+            "Stocky Pirate Deckhand": 0.479,
+            "Shadow Ninja": 0.472,
+            "Roosevelt Wrestler 1890s": 0.462,
+            "Young Lincoln Frontier Wrestler": 0.408,
+            "Flamenco Dancer": 0.35,
+            "Lizardkin Warrior": 0.328,
+            "Cave Troll": 0.237
+          }
+        },
+        "face": {
+          "head_px_wide": 51.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2155,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 10.5,
+          "contrast": 0.534,
+          "grille_bars": 2
+        },
+        "colours": {
+          "breakdown_share": 0.654,
+          "by_colour": {
+            "mustard enamel": 0.265,
+            "steel blue": 0.0,
+            "charcoal": 0.324,
+            "lamp cream": 0.051,
+            "tomato red": 0.014
+          },
+          "main": "#c5881d",
+          "main_is": "charcoal",
+          "lead": 0.759,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 31.0,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0012,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.75,
+          "right": 1.75
+        }
+      },
+      "flags": [],
+      "id": "walking-partner-robot.2",
+      "look": "walking-partner-robot",
+      "n": 2,
+      "name": "Walking Partner Robot",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/walking-partner-robot.2.jpg",
+      "small": "casting/robot/screen/walking-partner-robot.2-crew.png",
+      "face": "casting/robot/screen/walking-partner-robot.2-face.png",
+      "look_small": "casting/robot/screen/walking-partner-robot.2-look.jpg",
+      "vision": {
+        "id": "walking-partner-robot.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 21
+    },
+    {
+      "scores": {
+        "builds": 0.967,
+        "stands_apart": 0.617,
+        "face": 1.0,
+        "colours": 0.785,
+        "cards": 0.982,
+        "total": 0.871
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.78125,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.985,
+          "arms_at": 0.433,
+          "arm_band": 0.075,
+          "reach": 1.159,
+          "feet_width": 0.366,
+          "stray": 0.0,
+          "margin": 0.016
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.599,
+          "head_square": 0.824,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.599,
+            "Stocky Pirate Deckhand": 0.506,
+            "Lizardkin Warrior": 0.472,
+            "Roosevelt Wrestler 1890s": 0.448,
+            "Shadow Ninja": 0.441,
+            "Cave Troll": 0.405,
+            "Plain Young Villager": 0.361,
+            "Young Lincoln Frontier Wrestler": 0.297
+          }
+        },
+        "face": {
+          "head_px_wide": 95.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 5285,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 15.0,
+          "contrast": 0.565,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.734,
+          "by_colour": {
+            "mustard enamel": 0.209,
+            "steel blue": 0.0,
+            "charcoal": 0.459,
+            "lamp cream": 0.055,
+            "tomato red": 0.011
+          },
+          "main": "#c68a19",
+          "main_is": "charcoal",
+          "lead": 0.466,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 32.6,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0009,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.19,
+          "right": 1.19
+        }
+      },
+      "flags": [],
+      "id": "stagehand-robot.2",
+      "look": "stagehand-robot",
+      "n": 2,
+      "name": "Stagehand Robot",
+      "suits": "crew",
+      "picture": "casting/robot/headshots/stagehand-robot.2.jpg",
+      "small": "casting/robot/screen/stagehand-robot.2-crew.png",
+      "face": "casting/robot/screen/stagehand-robot.2-face.png",
+      "look_small": "casting/robot/screen/stagehand-robot.2-look.jpg",
+      "vision": {
+        "id": "stagehand-robot.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 22
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.698,
+        "face": 0.85,
+        "colours": 0.8,
+        "cards": 0.976,
+        "total": 0.858
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.953,
+          "arms_at": 0.366,
+          "arm_band": 0.051,
+          "reach": 0.955,
+          "feet_width": 0.313,
+          "stray": 0.0,
+          "margin": 0.023
+        },
+        "stands_apart": {
+          "shares_most_with": "Stocky Pirate Deckhand",
+          "shared": 0.524,
+          "head_square": 0.819,
+          "crew_px_tall": 145,
+          "against": {
+            "Stocky Pirate Deckhand": 0.524,
+            "Shadow Ninja": 0.521,
+            "Plain Young Villager": 0.52,
+            "Roosevelt Wrestler 1890s": 0.491,
+            "Young Lincoln Frontier Wrestler": 0.428,
+            "Flamenco Dancer": 0.416,
+            "Lizardkin Warrior": 0.364,
+            "Cave Troll": 0.249
+          }
+        },
+        "face": {
+          "head_px_wide": 44.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2154,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 10.5,
+          "contrast": 0.538,
+          "grille_bars": 0
+        },
+        "colours": {
+          "breakdown_share": 0.68,
+          "by_colour": {
+            "mustard enamel": 0.252,
+            "steel blue": 0.015,
+            "charcoal": 0.361,
+            "lamp cream": 0.036,
+            "tomato red": 0.017
+          },
+          "main": "#c68a1d",
+          "main_is": "charcoal",
+          "lead": 0.673,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 31.7,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0012,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.2,
+          "right": 1.16
+        }
+      },
+      "flags": [],
+      "id": "walking-partner-robot",
+      "look": "walking-partner-robot",
+      "n": 1,
+      "name": "Walking Partner Robot",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/walking-partner-robot.jpg",
+      "small": "casting/robot/screen/walking-partner-robot-crew.png",
+      "face": "casting/robot/screen/walking-partner-robot-face.png",
+      "look_small": "casting/robot/screen/walking-partner-robot-look.jpg",
+      "vision": {
+        "id": "walking-partner-robot",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 23
+    },
+    {
+      "scores": {
+        "builds": 0.938,
+        "stands_apart": 0.524,
+        "face": 1.0,
+        "colours": 0.94,
+        "cards": 0.835,
+        "total": 0.856
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.5859375,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.98,
+          "arms_at": 0.364,
+          "arm_band": 0.079,
+          "reach": 1.16,
+          "feet_width": 0.488,
+          "stray": 0.0014,
+          "margin": 0.012
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.593,
+          "head_square": 0.741,
+          "crew_px_tall": 150,
+          "against": {
+            "Flamenco Dancer": 0.593,
+            "Stocky Pirate Deckhand": 0.482,
+            "Lizardkin Warrior": 0.48,
+            "Roosevelt Wrestler 1890s": 0.419,
+            "Shadow Ninja": 0.392,
+            "Cave Troll": 0.379,
+            "Plain Young Villager": 0.328,
+            "Young Lincoln Frontier Wrestler": 0.291
+          }
+        },
+        "face": {
+          "head_px_wide": 66.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3241,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 11.0,
+          "contrast": 0.708,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.89,
+          "by_colour": {
+            "steel blue enamel": 0.347,
+            "clay cream": 0.0,
+            "ink": 0.214,
+            "lamp cream": 0.085
+          },
+          "main": "#486385",
+          "main_is": "steel blue enamel",
+          "lead": 1.0,
+          "nearest_cast": "Stocky Pirate Deckhand",
+          "cast_gap": 28.0,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0082,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.29,
+          "right": 1.29
+        }
+      },
+      "flags": [],
+      "colourway": {
+        "id": "steel-cream",
+        "name": "Steel and cream",
+        "of": "builder.2",
+        "swatches": [
+          "#44679B",
+          "#F2EFE9",
+          "#1C1917",
+          "#F2E6C8",
+          "#F2EFE9"
+        ]
+      },
+      "id": "builder.2-steel-cream",
+      "look": "builder",
+      "n": 2,
+      "name": "Builder",
+      "suits": "square-deal",
+      "picture": "casting/robot/headshots/builder.2-steel-cream.jpg",
+      "small": "casting/robot/screen/builder.2-steel-cream-crew.png",
+      "face": "casting/robot/screen/builder.2-steel-cream-face.png",
+      "look_small": "casting/robot/screen/builder.2-steel-cream-look.jpg",
+      "rank": 24
+    },
+    {
+      "scores": {
+        "builds": 0.938,
+        "stands_apart": 0.527,
+        "face": 0.95,
+        "colours": 0.858,
+        "cards": 0.984,
+        "total": 0.85
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.5859375,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.997,
+          "arms_at": 0.363,
+          "arm_band": 0.079,
+          "reach": 1.157,
+          "feet_width": 0.488,
+          "stray": 0.0,
+          "margin": 0.012
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.599,
+          "head_square": 0.749,
+          "crew_px_tall": 150,
+          "against": {
+            "Flamenco Dancer": 0.599,
+            "Stocky Pirate Deckhand": 0.484,
+            "Lizardkin Warrior": 0.483,
+            "Roosevelt Wrestler 1890s": 0.425,
+            "Shadow Ninja": 0.396,
+            "Cave Troll": 0.381,
+            "Plain Young Villager": 0.33,
+            "Young Lincoln Frontier Wrestler": 0.294
+          }
+        },
+        "face": {
+          "head_px_wide": 66.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2842,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 11.0,
+          "contrast": 0.606,
+          "grille_bars": 2
+        },
+        "colours": {
+          "breakdown_share": 0.761,
+          "by_colour": {
+            "mustard enamel": 0.255,
+            "steel blue": 0.09,
+            "charcoal": 0.377,
+            "lamp cream": 0.025,
+            "tomato red": 0.013
+          },
+          "main": "#ce9021",
+          "main_is": "charcoal",
+          "lead": 0.695,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 32.9,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0008,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.24,
+          "right": 1.29
+        }
+      },
+      "flags": [],
+      "id": "builder.2",
+      "look": "builder",
+      "n": 2,
+      "name": "Builder",
+      "suits": "square-deal",
+      "picture": "casting/robot/headshots/builder.2.jpg",
+      "small": "casting/robot/screen/builder.2-crew.png",
+      "face": "casting/robot/screen/builder.2-face.png",
+      "look_small": "casting/robot/screen/builder.2-look.jpg",
+      "vision": {
+        "id": "builder.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 25
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.811,
+        "face": 1.0,
+        "colours": 1.0,
+        "cards": 0.681,
+        "total": 0.814
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.997,
+          "arms_at": 0.299,
+          "arm_band": 0.054,
+          "reach": 1.071,
+          "feet_width": 0.258,
+          "stray": 0.0,
+          "margin": 0.031
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.518,
+          "head_square": 0.907,
+          "crew_px_tall": 140,
+          "against": {
+            "Plain Young Villager": 0.518,
+            "Stocky Pirate Deckhand": 0.518,
+            "Shadow Ninja": 0.516,
+            "Roosevelt Wrestler 1890s": 0.421,
+            "Young Lincoln Frontier Wrestler": 0.385,
+            "Flamenco Dancer": 0.366,
+            "Lizardkin Warrior": 0.332,
+            "Cave Troll": 0.247
+          }
+        },
+        "face": {
+          "head_px_wide": 39.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 1979,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 8.5,
+          "contrast": 0.623,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.868,
+          "by_colour": {
+            "mustard enamel": 0.297,
+            "steel blue": 0.253,
+            "charcoal": 0.261,
+            "lamp cream": 0.038,
+            "tomato red": 0.018
+          },
+          "main": "#d4981a",
+          "main_is": "mustard enamel",
+          "lead": 1.0,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 37.7,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0014,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.29,
+          "right": 1.29
+        }
+      },
+      "flags": [
+        "wears cloth that hangs: short apron (from its brief)"
+      ],
+      "id": "brewer",
+      "look": "brewer",
+      "n": 1,
+      "name": "Teahouse brewer",
+      "suits": "pearl",
+      "picture": "casting/robot/headshots/brewer.jpg",
+      "small": "casting/robot/screen/brewer-crew.png",
+      "face": "casting/robot/screen/brewer-face.png",
+      "look_small": "casting/robot/screen/brewer-look.jpg",
+      "vision": {
+        "id": "brewer",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 26
+    },
+    {
+      "scores": {
+        "builds": 0.961,
+        "stands_apart": 0.787,
+        "face": 1.0,
+        "colours": 1.0,
+        "cards": 0.685,
+        "total": 0.802
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.78125,
+          "plain_ground": 1.0,
+          "front_on": 0.9743368273115888,
+          "t_pose": 1.0,
+          "mirror_shared": 0.945,
+          "arms_at": 0.363,
+          "arm_band": 0.065,
+          "reach": 1.115,
+          "feet_width": 0.319,
+          "stray": 0.0,
+          "margin": 0.016
+        },
+        "stands_apart": {
+          "shares_most_with": "Stocky Pirate Deckhand",
+          "shared": 0.525,
+          "head_square": 0.894,
+          "crew_px_tall": 140,
+          "against": {
+            "Stocky Pirate Deckhand": 0.525,
+            "Shadow Ninja": 0.495,
+            "Roosevelt Wrestler 1890s": 0.481,
+            "Flamenco Dancer": 0.47,
+            "Plain Young Villager": 0.46,
+            "Lizardkin Warrior": 0.397,
+            "Young Lincoln Frontier Wrestler": 0.383,
+            "Cave Troll": 0.281
+          }
+        },
+        "face": {
+          "head_px_wide": 50.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3091,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 11.0,
+          "contrast": 0.636,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.918,
+          "by_colour": {
+            "mustard enamel": 0.306,
+            "steel blue": 0.292,
+            "charcoal": 0.261,
+            "lamp cream": 0.042,
+            "tomato red": 0.017
+          },
+          "main": "#e0a81e",
+          "main_is": "mustard enamel",
+          "lead": 1.0,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 42.4,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0011,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.07,
+          "right": 1.07
+        }
+      },
+      "flags": [
+        "wears cloth that hangs: short apron (from its brief)"
+      ],
+      "id": "brewer.3",
+      "look": "brewer",
+      "n": 3,
+      "name": "Teahouse brewer",
+      "suits": "pearl",
+      "picture": "casting/robot/headshots/brewer.3.jpg",
+      "small": "casting/robot/screen/brewer.3-crew.png",
+      "face": "casting/robot/screen/brewer.3-face.png",
+      "look_small": "casting/robot/screen/brewer.3-look.jpg",
+      "vision": {
+        "id": "brewer.3",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 27
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.839,
+        "face": 0.95,
+        "colours": 0.756,
+        "cards": 0.899,
+        "total": 0.791
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.99,
+          "arms_at": 0.372,
+          "arm_band": 0.045,
+          "reach": 1.265,
+          "feet_width": 0.257,
+          "stray": 0.0022,
+          "margin": 0.033
+        },
+        "stands_apart": {
+          "shares_most_with": "Plain Young Villager",
+          "shared": 0.433,
+          "head_square": 0.848,
+          "crew_px_tall": 145,
+          "against": {
+            "Plain Young Villager": 0.433,
+            "Roosevelt Wrestler 1890s": 0.425,
+            "Shadow Ninja": 0.425,
+            "Stocky Pirate Deckhand": 0.423,
+            "Flamenco Dancer": 0.387,
+            "Young Lincoln Frontier Wrestler": 0.355,
+            "Lizardkin Warrior": 0.316,
+            "Cave Troll": 0.239
+          }
+        },
+        "face": {
+          "head_px_wide": 67.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3939,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 12.5,
+          "contrast": 0.746,
+          "grille_bars": 2
+        },
+        "colours": {
+          "breakdown_share": 0.956,
+          "by_colour": {
+            "clay cream": 0.26,
+            "steel blue": 0.0,
+            "ink": 0.295,
+            "lamp cream": 0.052
+          },
+          "main": "#e6e1d9",
+          "main_is": "steel blue",
+          "lead": 0.742,
+          "nearest_cast": "Flamenco Dancer",
+          "cast_gap": 14.0,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.005,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.4
+        },
+        "hands": {
+          "left": 1.82,
+          "right": 1.88
+        }
+      },
+      "flags": [
+        "14% of its outline is grey and nearly the background's colour: a shadow or haze, or paint too pale to cut out cleanly (TRELLIS may build a floor or lose an edge)"
+      ],
+      "colourway": {
+        "id": "clay",
+        "name": "Clay and steel",
+        "of": "clerk.2",
+        "swatches": [
+          "#F2EFE9",
+          "#44679B",
+          "#1C1917",
+          "#F2E6C8",
+          "#44679B"
+        ]
+      },
+      "id": "clerk.2-clay",
+      "look": "clerk",
+      "n": 2,
+      "name": "Shop clerk",
+      "suits": "counter",
+      "picture": "casting/robot/headshots/clerk.2-clay.jpg",
+      "small": "casting/robot/screen/clerk.2-clay-crew.png",
+      "face": "casting/robot/screen/clerk.2-clay-face.png",
+      "look_small": "casting/robot/screen/clerk.2-clay-look.jpg",
+      "rank": 28
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.783,
+        "face": 0.9,
+        "colours": 0.971,
+        "cards": 0.69,
+        "total": 0.779
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.991,
+          "arms_at": 0.317,
+          "arm_band": 0.045,
+          "reach": 1.303,
+          "feet_width": 0.274,
+          "stray": 0.0,
+          "margin": 0.051
+        },
+        "stands_apart": {
+          "shares_most_with": "Stocky Pirate Deckhand",
+          "shared": 0.538,
+          "head_square": 0.904,
+          "crew_px_tall": 140,
+          "against": {
+            "Stocky Pirate Deckhand": 0.538,
+            "Shadow Ninja": 0.491,
+            "Roosevelt Wrestler 1890s": 0.456,
+            "Plain Young Villager": 0.448,
+            "Flamenco Dancer": 0.441,
+            "Lizardkin Warrior": 0.381,
+            "Young Lincoln Frontier Wrestler": 0.358,
+            "Cave Troll": 0.289
+          }
+        },
+        "face": {
+          "head_px_wide": 65.5,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3229,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 12.0,
+          "contrast": 0.628,
+          "grille_bars": 1
+        },
+        "colours": {
+          "breakdown_share": 0.804,
+          "by_colour": {
+            "mustard enamel": 0.279,
+            "steel blue": 0.186,
+            "charcoal": 0.264,
+            "lamp cream": 0.056,
+            "tomato red": 0.019
+          },
+          "main": "#d09824",
+          "main_is": "mustard enamel",
+          "lead": 1.0,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 34.4,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0007,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.0
+        },
+        "hands": {
+          "left": 1.62,
+          "right": 1.62
+        }
+      },
+      "flags": [
+        "wears cloth that hangs: short apron (from its brief)"
+      ],
+      "id": "brewer.2",
+      "look": "brewer",
+      "n": 2,
+      "name": "Teahouse brewer",
+      "suits": "pearl",
+      "picture": "casting/robot/headshots/brewer.2.jpg",
+      "small": "casting/robot/screen/brewer.2-crew.png",
+      "face": "casting/robot/screen/brewer.2-face.png",
+      "look_small": "casting/robot/screen/brewer.2-look.jpg",
+      "vision": {
+        "id": "brewer.2",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 29
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.689,
+        "face": 1.0,
+        "colours": 0.727,
+        "cards": 0.677,
+        "total": 0.735
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.985,
+          "arms_at": 0.468,
+          "arm_band": 0.063,
+          "reach": 1.057,
+          "feet_width": 0.335,
+          "stray": 0.0003,
+          "margin": 0.027
+        },
+        "stands_apart": {
+          "shares_most_with": "Stocky Pirate Deckhand",
+          "shared": 0.517,
+          "head_square": 0.804,
+          "crew_px_tall": 145,
+          "against": {
+            "Stocky Pirate Deckhand": 0.517,
+            "Flamenco Dancer": 0.509,
+            "Shadow Ninja": 0.503,
+            "Roosevelt Wrestler 1890s": 0.484,
+            "Plain Young Villager": 0.472,
+            "Lizardkin Warrior": 0.408,
+            "Young Lincoln Frontier Wrestler": 0.368,
+            "Cave Troll": 0.305
+          }
+        },
+        "face": {
+          "head_px_wide": 65.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 3687,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 15.5,
+          "contrast": 0.733,
+          "grille_bars": 3
+        },
+        "colours": {
+          "breakdown_share": 0.951,
+          "by_colour": {
+            "clay cream": 0.267,
+            "steel blue": 0.0,
+            "ink": 0.232,
+            "lamp cream": 0.068
+          },
+          "main": "#e2dcd6",
+          "main_is": "steel blue",
+          "lead": 0.694,
+          "nearest_cast": "Flamenco Dancer",
+          "cast_gap": 12.1,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0162,
+          "thin_pieces": 3,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.1,
+          "right": 1.1
+        }
+      },
+      "flags": [
+        "18% of its outline is grey and nearly the background's colour: a shadow or haze, or paint too pale to cut out cleanly (TRELLIS may build a floor or lose an edge)"
+      ],
+      "colourway": {
+        "id": "cream-steel",
+        "name": "Cream and steel",
+        "of": "capsule-hatchling-robot.3",
+        "swatches": [
+          "#F2EFE9",
+          "#44679B",
+          "#1C1917",
+          "#F2E6C8",
+          "#44679B"
+        ]
+      },
+      "id": "capsule-hatchling-robot.3-cream-steel",
+      "look": "capsule-hatchling-robot",
+      "n": 3,
+      "name": "Capsule Hatchling Robot",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/capsule-hatchling-robot.3-cream-steel.jpg",
+      "small": "casting/robot/screen/capsule-hatchling-robot.3-cream-steel-crew.png",
+      "face": "casting/robot/screen/capsule-hatchling-robot.3-cream-steel-face.png",
+      "look_small": "casting/robot/screen/capsule-hatchling-robot.3-cream-steel-look.jpg",
+      "rank": 30
+    },
+    {
+      "scores": {
+        "builds": 0.844,
+        "stands_apart": 0.429,
+        "face": 0.1,
+        "colours": 0.905,
+        "cards": 0.804,
+        "total": 0.481
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.1953125,
+          "plain_ground": 0.9847246696565863,
+          "front_on": 0.8652326208011496,
+          "t_pose": 1.0,
+          "mirror_shared": 0.923,
+          "arms_at": 0.417,
+          "arm_band": 0.071,
+          "reach": 1.03,
+          "feet_width": 0.376,
+          "stray": 0.0091,
+          "margin": 0.004
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.635,
+          "head_square": 0.703,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.635,
+            "Stocky Pirate Deckhand": 0.473,
+            "Roosevelt Wrestler 1890s": 0.43,
+            "Shadow Ninja": 0.426,
+            "Lizardkin Warrior": 0.421,
+            "Plain Young Villager": 0.372,
+            "Cave Troll": 0.345,
+            "Young Lincoln Frontier Wrestler": 0.301
+          }
+        },
+        "face": {
+          "head_px_wide": 73.0,
+          "plate": true,
+          "eyes": 0,
+          "plate_px": 1403
+        },
+        "colours": {
+          "breakdown_share": 0.936,
+          "by_colour": {
+            "mustard enamel": 0.208,
+            "steel blue": 0.134,
+            "charcoal": 0.361,
+            "lamp cream": 0.225,
+            "tomato red": 0.007
+          },
+          "main": "#d59414",
+          "main_is": "charcoal",
+          "lead": 0.618,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 38.1,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0098,
+          "thin_pieces": 1,
+          "thin_cm": 3,
+          "sticks_up_cm": 0.3
+        },
+        "hands": {
+          "left": 1.23,
+          "right": 1.11
+        }
+      },
+      "flags": [
+        "19% of its outline is grey and nearly the background's colour: a shadow or haze, or paint too pale to cut out cleanly (TRELLIS may build a floor or lose an edge)"
+      ],
+      "id": "stagehand-robot.3",
+      "look": "stagehand-robot",
+      "n": 3,
+      "name": "Stagehand Robot",
+      "suits": "crew",
+      "picture": "casting/robot/headshots/stagehand-robot.3.jpg",
+      "small": "casting/robot/screen/stagehand-robot.3-crew.png",
+      "face": "casting/robot/screen/stagehand-robot.3-face.png",
+      "look_small": "casting/robot/screen/stagehand-robot.3-look.jpg",
+      "vision": {
+        "id": "stagehand-robot.3",
+        "breaks": [],
+        "pose": "t-pose"
+      },
+      "rank": 31
+    },
+    {
+      "scores": {
+        "builds": 1.0,
+        "stands_apart": 0.739,
+        "face": 0.25,
+        "colours": 0.885,
+        "cards": 0.589,
+        "total": 0.476
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 1.0,
+          "plain_ground": 1.0,
+          "front_on": 1.0,
+          "t_pose": 1.0,
+          "mirror_shared": 0.991,
+          "arms_at": 0.427,
+          "arm_band": 0.057,
+          "reach": 1.034,
+          "feet_width": 0.318,
+          "stray": 0.0,
+          "margin": 0.021
+        },
+        "stands_apart": {
+          "shares_most_with": "Shadow Ninja",
+          "shared": 0.477,
+          "head_square": 0.807,
+          "crew_px_tall": 145,
+          "against": {
+            "Shadow Ninja": 0.477,
+            "Roosevelt Wrestler 1890s": 0.468,
+            "Plain Young Villager": 0.466,
+            "Stocky Pirate Deckhand": 0.454,
+            "Flamenco Dancer": 0.452,
+            "Young Lincoln Frontier Wrestler": 0.371,
+            "Lizardkin Warrior": 0.371,
+            "Cave Troll": 0.258
+          }
+        },
+        "face": {
+          "head_px_wide": 52.0,
+          "plate": true,
+          "eyes": 1,
+          "plate_px": 1757
+        },
+        "colours": {
+          "breakdown_share": 0.687,
+          "by_colour": {
+            "mustard enamel": 0.323,
+            "steel blue": 0.005,
+            "charcoal": 0.273,
+            "lamp cream": 0.039,
+            "tomato red": 0.047
+          },
+          "main": "#c98b1f",
+          "main_is": "mustard enamel",
+          "lead": 1.0,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 31.7,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0009,
+          "thin_pieces": 0,
+          "thin_cm": 3,
+          "sticks_up_cm": 11.0
+        },
+        "hands": {
+          "left": 1.44,
+          "right": 1.44
+        }
+      },
+      "flags": [
+        "something thin rises 11 cm above its head (an antenna?)",
+        "seen: antenna with a red ball on its head"
+      ],
+      "id": "tin-toy.3",
+      "look": "tin-toy",
+      "n": 3,
+      "name": "Tin toy",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/tin-toy.3.jpg",
+      "small": "casting/robot/screen/tin-toy.3-crew.png",
+      "face": "casting/robot/screen/tin-toy.3-face.png",
+      "look_small": "casting/robot/screen/tin-toy.3-look.jpg",
+      "vision": {
+        "id": "tin-toy.3",
+        "breaks": [
+          "antenna with a red ball on its head"
+        ],
+        "pose": "t-pose"
+      },
+      "rank": 32
+    },
+    {
+      "scores": {
+        "builds": 0.823,
+        "stands_apart": 0.514,
+        "face": 0.95,
+        "colours": 0.818,
+        "cards": 0.417,
+        "total": 0.431
+      },
+      "numbers": {
+        "builds": {
+          "whole": 1.0,
+          "in_frame": 0.0,
+          "plain_ground": 0.898015160840252,
+          "front_on": 0.93129409740148,
+          "t_pose": 1.0,
+          "mirror_shared": 0.936,
+          "arms_at": 0.421,
+          "arm_band": 0.051,
+          "reach": 0.972,
+          "feet_width": 0.52,
+          "stray": 0.0094,
+          "margin": 0.0
+        },
+        "stands_apart": {
+          "shares_most_with": "Flamenco Dancer",
+          "shared": 0.716,
+          "head_square": 0.852,
+          "crew_px_tall": 145,
+          "against": {
+            "Flamenco Dancer": 0.716,
+            "Lizardkin Warrior": 0.468,
+            "Stocky Pirate Deckhand": 0.456,
+            "Roosevelt Wrestler 1890s": 0.405,
+            "Shadow Ninja": 0.399,
+            "Plain Young Villager": 0.355,
+            "Cave Troll": 0.332,
+            "Young Lincoln Frontier Wrestler": 0.296
+          }
+        },
+        "face": {
+          "head_px_wide": 56.0,
+          "plate": true,
+          "eyes": 2,
+          "plate_px": 2233,
+          "level": true,
+          "apart": true,
+          "eye_px_wide": 10.5,
+          "contrast": 0.599,
+          "grille_bars": 2
+        },
+        "colours": {
+          "breakdown_share": 0.853,
+          "by_colour": {
+            "mustard enamel": 0.156,
+            "steel blue": 0.03,
+            "charcoal": 0.189,
+            "lamp cream": 0.466,
+            "tomato red": 0.012
+          },
+          "main": "#c68e22",
+          "main_is": "lamp cream",
+          "lead": 0.412,
+          "nearest_cast": "Plain Young Villager",
+          "cast_gap": 30.9,
+          "shine": 0.0
+        },
+        "cards": {
+          "thin_share": 0.0153,
+          "thin_pieces": 1,
+          "thin_cm": 3,
+          "sticks_up_cm": 12.3
+        },
+        "hands": {
+          "left": 1.27,
+          "right": 1.27
+        }
+      },
+      "flags": [
+        "44% of its outline is grey and nearly the background's colour: a shadow or haze, or paint too pale to cut out cleanly (TRELLIS may build a floor or lose an edge)",
+        "something thin rises 12 cm above its head (an antenna?)",
+        "seen: antenna with a red ball on its head"
+      ],
+      "id": "tin-toy",
+      "look": "tin-toy",
+      "n": 1,
+      "name": "Tin toy",
+      "suits": "helper",
+      "picture": "casting/robot/headshots/tin-toy.jpg",
+      "small": "casting/robot/screen/tin-toy-crew.png",
+      "face": "casting/robot/screen/tin-toy-face.png",
+      "look_small": "casting/robot/screen/tin-toy-look.jpg",
+      "vision": {
+        "id": "tin-toy",
+        "breaks": [
+          "antenna with a red ball on its head"
+        ],
+        "pose": "t-pose"
+      },
+      "rank": 33
+    }
+  ],
+  "sheet": "casting/robot/screen-contact-sheet.png",
+  "colourway_sheet": "casting/robot/colourways-contact-sheet.png"
+}

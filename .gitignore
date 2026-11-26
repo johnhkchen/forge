@@ -24,3 +24,10 @@ runs/*/card.jpg
 # Marble worlds as World Labs hands them over (splats, collision mesh, panorama): big, and fetched with credits
 world/marble/
 evidence/marble/diorama/cut/
+
+# The screen test's cache of the cast's outlines, and its Blender log (scripts/casting/screen.py, casting.py screen-3d)
+casting/*/screen/.cast/
+casting/*/screen/*.log
+
+# Codex's full-size headshots stay on this Mac; git keeps a 1024-pixel JPEG of each (screen.py keep)
+casting/*/headshots/full/

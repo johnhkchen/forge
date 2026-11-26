@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# The `claude` CLI for one short structured answer (a brief, more looks, a
+# look at some pictures), with nothing in its context that the answer does not
+# need. Called as `claude` is; BAML's Writer and Looker clients use it.
+#
+# Left to itself, `claude -p` brings everything an interactive coding session
+# has: Claude Code's own long system prompt, every MCP server and connector the
+# user has (each tool's schema), every skill and plugin, and the user's
+# settings (their model and effort). For the robot's "more looks" that was
+# about 194,000 tokens in, $1.80, for an answer of 9,400 tokens. Here:
+#   --strict-mcp-config         no MCP servers or connectors (BAML passes its own when it has tools)
+#   --setting-sources project   not the user's settings: no plugins, no effort level of theirs
+#   --disable-slash-commands    no skills listed
+#   --system-prompt             one line in place of Claude Code's own (the prompt brings its own instructions)
+# BAML already passes --tools "" (no built-in tools) and --no-session-persistence.
+exec claude "$@" \
+  --strict-mcp-config \
+  --setting-sources project \
+  --disable-slash-commands \
+  --system-prompt "You answer one request for a 3D character pipeline. The request says what to write; answer through the structured output you are given, and nothing else."

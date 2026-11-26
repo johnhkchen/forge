@@ -15,6 +15,7 @@ What it shows:
   chemistry    the crew's take with one dancer swapped plays from the crew's own files and the candidate's
   scores       the judges' rows sum up into the few numbers the page shows
   api          GET /api/casting, a note through POST, a plan that writes nothing, a stranger's page refused
+  wider        a look's several pictures, the screen test's best few, the mesh screen's price, a take that starts from its mesh
 """
 
 import http.client
@@ -50,7 +51,7 @@ def write(path, value):
 def world():
     """A copy of casting/ beside a small runs/ and shots/ of its own: a robot run with its sides, and the cast."""
     top = tempfile.mkdtemp(prefix="casting-test-")
-    shutil.copytree(os.path.join(REPO, "casting"), os.path.join(top, "casting"))
+    shutil.copytree(os.path.join(REPO, "casting"), os.path.join(top, "casting"), ignore=shutil.ignore_patterns("full", ".cast"))
     runs, shots = os.path.join(top, "runs"), os.path.join(top, "shots")
     for i, run in enumerate([RUN] + CAST):
         write(os.path.join(runs, run, "brief.json"), {"name": run[20:].replace("-", " ").title(), "character": True, "size_m": 1.45 + 0.1 * i})
@@ -110,11 +111,17 @@ def test_files():
 def test_board():
     """the furthest stage reached, worked out from the files"""
     top, cast = world()
-    shutil.rmtree(os.path.join(cast.root, "robot", "candidates"))
+    for gone in ("candidates", "headshots", "screen"):
+        shutil.rmtree(os.path.join(cast.root, "robot", gone), ignore_errors=True)
+    for gone in ("screen.json", "mesh-screen.json"):
+        if os.path.exists(os.path.join(cast.root, "robot", gone)):
+            os.remove(os.path.join(cast.root, "robot", gone))
     os.remove(os.path.join(cast.root, "robot", "baseline.json")) if os.path.exists(os.path.join(cast.root, "robot", "baseline.json")) else None
     check("a breakdown and nothing else is at the breakdown", cast.board("robot")["now"] == "breakdown")
     write(os.path.join(cast.root, "robot", "headshots", "tin-toy.png"), "png")
     check("a drawn headshot is at headshots", cast.board("robot")["now"] == "headshots" and cast.board("robot")["pictured"] == 1)
+    casting.write_json(os.path.join(cast.root, "robot", "screen.json"), {"shots": [{"id": "tin-toy", "look": "tin-toy", "scores": {"total": 0.9}, "flags": []}]})
+    check("a screened headshot is at the screen test", cast.board("robot")["now"] == "screen" and cast.board("robot")["screened"] == 1)
     cast.shortlist("robot", "tin-toy")
     check("shortlisting it makes a candidate with no take", cast.board("robot")["now"] == "shortlist" and cast.candidate("robot", "tin-toy")["takes"] == [])
     cast.add_take("robot", "tin-toy", os.path.join(cast.runs, RUN))
@@ -189,7 +196,7 @@ def test_choices():
     refused("a status that is not one is refused", lambda: cast.set_status("robot", "stand-in", "famous"))
     cast.set_status("robot", "stand-in", "let go")
     check("letting one go keeps it, marked", cast.candidate("robot", "stand-in")["status"] == "let go")
-    refused("a headshot not drawn yet cannot be shortlisted", lambda: cast.shortlist("robot", "clerk"))
+    refused("a headshot not drawn yet cannot be shortlisted", lambda: cast.shortlist("robot", "clerk.9"))
     refused("a look that is not in the role cannot be shortlisted", lambda: cast.shortlist("robot", "dragon"))
     refused("a name that climbs out of casting/ is refused", lambda: cast.candidate("robot", "../../etc"))
     refused("a role that climbs out is refused", lambda: cast.role("../runs"))
@@ -301,7 +308,99 @@ def test_api():
         shutil.rmtree(top)
 
 
-TESTS = [test_files, test_board, test_costs, test_notes, test_choices, test_reel, test_chemistry, test_scores, test_api]
+def test_wider():
+    """several pictures of a look, the screen test's best few, the mesh screen's plan, and a take that starts from its mesh"""
+    top, cast = world()
+    for gone in ("candidates", "headshots"):
+        shutil.rmtree(os.path.join(cast.root, "robot", gone), ignore_errors=True)
+    for name in ("tin-toy.png", "tin-toy.2.png", "tin-toy.3.png", "clerk.png", "clerk.2.png", "clerk.x.png", "notes.txt"):
+        write(os.path.join(cast.root, "robot", "headshots", name), "png")
+    check("a look's pictures are its first, then .2, .3; a name that is not one is left out",
+          [s for s, _, _ in cast.pictures("robot", "tin-toy")] == ["tin-toy", "tin-toy.2", "tin-toy.3"] and [s for s, _, _ in cast.pictures("robot", "clerk")] == ["clerk", "clerk.2"])
+    looks = len(cast.role("robot")["looks"])
+    check("three of each look draws only what is missing, and new looks add three each",
+          cast.to_draw("robot", 0, 3) == looks * 3 - 5 and cast.to_draw("robot", 4, 3) == looks * 3 - 5 + 12 and cast.to_draw("robot", 0, 1) == looks - 2)
+    plan = cast.plan("headshots", "robot", more=4, variations=3)
+    check("the headshots' plan names the pictures and the Opus ask, and the command carries both", plan["pictures"] == looks * 3 + 7 and "Opus" in plan["cost"] and plan["command"].endswith("go 4 3"), plan["command"])
+    rows = [{"id": "clerk.2", "look": "clerk", "scores": {"total": 0.95}, "flags": []}, {"id": "clerk", "look": "clerk", "scores": {"total": 0.94}, "flags": []},
+            {"id": "tin-toy.3", "look": "tin-toy", "scores": {"total": 0.93}, "flags": ["something thin rises 12 cm above its head (an antenna?)"]},
+            {"id": "tin-toy.2", "look": "tin-toy", "scores": {"total": 0.80}, "flags": []}]
+    casting.write_json(os.path.join(cast.root, "robot", "screen.json"), {"shots": rows})
+    check("the best few are one a look first, none flagged, then the rest by score", cast.top_shots("robot", 3) == ["clerk.2", "tin-toy.2", "clerk"], ",".join(cast.top_shots("robot", 3)))
+    mesh = cast.plan("mesh", "robot", shots=["clerk.2", "tin-toy.2"])
+    check("the mesh screen is paid, its price is the meshes', and it starts nothing", mesh["paid"] and mesh["dry_run"] and mesh["high"] == round(2 * cast.costs()["mesh"]["usd"], 2)
+          and mesh["command"] == "just casting-mesh-screen robot clerk.2,tin-toy.2 go")
+    refused("a mesh screen of a headshot not drawn is refused", lambda: cast.plan("mesh", "robot", shots=["clerk.7"]))
+    c = cast.shortlist("robot", "clerk.2")
+    check("shortlisting picture 2 makes candidate clerk-2, with its own picture", c["look"] == "clerk" and c["variation"] == 2 and os.path.isfile(cast.candidate_path("robot", "clerk-2"))
+          and next(p for p in cast.summary("robot")["candidates"] if p["id"] == "clerk-2")["picture"] == "casting/robot/headshots/clerk.2.png")
+    refused("a shot that is not one is refused", lambda: cast.shortlist("robot", "clerk.two"))
+    write(os.path.join(cast.runs, RUN, "mesh.glb"), "glb")
+    cast.add_mesh("robot", "clerk.2", os.path.join(cast.runs, RUN))
+    check("a mesh the screen built is kept, and the candidate's take starts from it", cast.meshes("robot")["clerk.2"]["run"] == RUN and cast.candidate("robot", "clerk-2")["screen_run"] == RUN)
+    full, less = cast.plan("take", "robot"), cast.plan("take", "robot", "clerk-2")
+    check("so its first take costs a mesh less", round(full["high"] - less["high"], 2) == cast.costs()["mesh"]["usd"], less["cost"])
+    check("a mesh built already is said so, not built again", "clerk.2" in (cast.plan("mesh", "robot", shots=["clerk.2"]).get("warning") or ""))
+    summary = cast.summary("robot")
+    row = next(r for r in summary["screen"]["shots"] if r["id"] == "clerk.2")
+    check("the page gets the screen with each row's candidate and mesh", row["candidate"] == "clerk-2" and row["mesh"]["run"] == RUN and
+          [p["shot"] for p in next(l for l in summary["looks"] if l["id"] == "clerk")["pictures"]] == ["clerk", "clerk.2"])
+    idea = {"brief": {"name": "Stagehand Robot", "subject": "A robot in a T-pose.", "character": True}, "why": "For the crew.", "suits": "crew"}
+    look = cast.add_look("robot", idea)
+    kept = next(l for l in cast.role("robot")["looks"] if l["id"] == look)
+    check("a look Opus wrote keeps its why and the way it could arrive", kept["why"] == "For the crew." and kept["suits"] == "crew" and kept["brief"]["name"] == "Stagehand Robot")
+    shutil.rmtree(top)
+
+
+def test_colourways():
+    """a headshot drawn again in other colours: its name, its candidate, what is left to draw"""
+    top, cast = world()
+    role = cast.role("robot")
+    ways = [w for l in role["looks"] for w in l.get("colourways") or []]
+    check("every colourway names its headshot and has five swatches, the face plate dark and the eyes light",
+          ways and all(w["headshot"].startswith(w["of"] if "." in w["of"] else w["of"] + ".1") and len(w["swatches"]) == 5 for w in ways)
+          and all(int(w["swatches"][2]["hex"][1:3], 16) < 0x40 and int(w["swatches"][3]["hex"][1:3], 16) > 0xD0 for w in ways), "%d colourways" % len(ways))
+    check("no colourway leads with the cast's navy, browns, greens or the dancer's red (hue and lightness of its lead colour)",
+          all(not lead_clashes(w["swatches"][0]["hex"]) for w in ways), ", ".join("%s %s" % (w["id"], w["swatches"][0]["hex"]) for w in ways if lead_clashes(w["swatches"][0]["hex"])))
+    check("at most one colourway a robot leans on the brand's palette", all(sum(1 for w in l.get("colourways") or [] if w.get("brand")) <= 1 for l in role["looks"]))
+    check("a colourway's name splits into its look, picture and colourway, and makes its own candidate",
+          cast.shot("clerk.2-lilac") == ("clerk", 2, "lilac") and casting.candidate_id("clerk", 2, "lilac") == "clerk-2-lilac" and casting.shot_name("clerk", 1, "lilac") == "clerk.1-lilac")
+    for gone in ("headshots",):
+        shutil.rmtree(os.path.join(cast.root, "robot", gone), ignore_errors=True)
+    write(os.path.join(cast.root, "robot", "headshots", "clerk.2.jpg"), "jpg")
+    write(os.path.join(cast.root, "robot", "headshots", "clerk.2-lilac.jpg"), "jpg")
+    todo = cast.colourways_to_draw("robot")
+    check("the colourways left to draw are those whose headshot is drawn and they are not",
+          "clerk.2-tangerine" in todo and "clerk.2-lilac" not in todo and not any(t.startswith("builder") for t in todo), ",".join(todo))
+    check("the plain pictures of a look leave its colourways out, and they are listed apart",
+          [s for s, _, _ in cast.pictures("robot", "clerk")] == ["clerk.2"] and [s for s, _, _, _ in cast.pictures("robot", "clerk", colourways=True)] == ["clerk.2-lilac"])
+    c = cast.shortlist("robot", "clerk.2-lilac")
+    check("shortlisting a colourway makes its own candidate, with its picture, colourway and why",
+          c["colourway"] == "lilac" and c["variation"] == 2 and "lilac" in c["name"] and
+          next(p for p in cast.summary("robot")["candidates"] if p["id"] == "clerk-2-lilac")["picture"] == "casting/robot/headshots/clerk.2-lilac.jpg")
+    refused("a colourway not written in the breakdown cannot be shortlisted", lambda: cast.shortlist("robot", "clerk.2-plaid"))
+    plan = cast.plan("colourways", "robot")
+    check("drawing the colourways is a paid step on the plan, Codex only", plan["paid"] and plan["pictures"] == len(todo) and "Opus" in plan["cost"] and plan["command"] == "just casting-colourways robot go")
+    looks = {l["id"]: l for l in cast.summary("robot")["looks"]}
+    check("the page gets each look's colourways with their pictures", any(w["picture"] for w in looks["clerk"]["colourways"]))
+    shutil.rmtree(top)
+
+
+def lead_clashes(hex_):
+    """Whether a lead colour is the cast's: navy (dark blue), brown or linen (dark or pale low-saturation orange),
+    green, or red. Hue in degrees, saturation and lightness 0..1."""
+    import colorsys
+    r, g, b = (int(hex_[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hue, light, sat = colorsys.rgb_to_hls(r, g, b)
+    hue *= 360
+    navy = 200 <= hue <= 250 and light < 0.35
+    brown = 15 <= hue <= 45 and (light < 0.4 or sat < 0.3) and not light > 0.9
+    green = 75 <= hue <= 165 and sat > 0.2
+    red = (hue < 12 or hue > 345) and sat > 0.45
+    return navy or brown or green or red
+
+
+TESTS = [test_files, test_board, test_costs, test_notes, test_choices, test_reel, test_chemistry, test_scores, test_api, test_wider, test_colourways]
 
 
 def main():

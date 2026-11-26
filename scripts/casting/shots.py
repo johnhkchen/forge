@@ -37,6 +37,8 @@ def stages(role, candidate):
     return [
         ("1-board-and-breakdown", page, "true", "document.querySelector('.casting-board')"),
         ("2-headshots", page, scroll("stage-headshots"), "document.querySelector('.casting-looks')"),
+        ("2b-screen-test", page, scroll("stage-screen"), "document.querySelector('.casting-shot img.casting-shot-face')?.complete"),
+        ("2c-colourways", page, "document.querySelector('.casting-shot.has-colourways')?.scrollIntoView({block: 'start'}); true", "document.querySelector('.casting-colourway img')?.complete"),
         ("3-shortlist", page, scroll("stage-shortlist"), "document.querySelector('.casting-person')"),
         ("4-tape-the-reel", person, scroll("stage-tapes"), cards_ready),
         ("5-chemistry-crew-dance", person, click("The crew dance") + ";" + scroll("stage-tapes"), watch_ready),
