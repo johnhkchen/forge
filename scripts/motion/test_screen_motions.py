@@ -224,19 +224,17 @@ def choreography(motion_id: str, frames: int, amp: float) -> list:
             b = bump(t, 0.15, 0.85, 0.2)
             p.update(drop=0.45 * amp * b, spine=(25.0 * b * amp, 0.0, 0.0))
             p["arms"] = {s: (arm_dir(s, 12 + 70 * b * amp, 70 * b), arm_dir(s, 6 + 70 * b * amp, 80 * b)) for s in ("Left", "Right")}
-        elif motion_id == "reach-stretch":
-            up = bump(t, 0.08, 0.92, 0.12)
-            lean = 20.0 * (bump(t, 0.35, 0.6, 0.08) - bump(t, 0.6, 0.85, 0.08))
-            p["spine"] = (0.0, -lean * amp, 0.0)
+        elif motion_id == "reach-up":
+            up = bump(t, 0.1, 0.9, 0.2)
             e = 12 + 158 * amp * up
             p["arms"] = {s: (arm_dir(s, e), arm_dir(s, e)) for s in ("Left", "Right")}
         elif motion_id == "look-around":
             look = 55.0 * (bump(t, 0.08, 0.3) - bump(t, 0.33, 0.55))
             nod = 35.0 * (bump(t, 0.78, 0.92) - bump(t, 0.6, 0.75))
             p["neck"] = (nod * amp, look * amp)
-        elif motion_id == "wave-both":
-            arms = {}
-            for side, a, b in (("Right", 0.06, 0.46), ("Left", 0.54, 0.94)):
+        elif motion_id == "wave-right":
+            arms = {"Left": hang("Left")}
+            for side, a, b in (("Right", 0.08, 0.92),):
                 up = bump(t, a, b, 0.08)
                 wag = 25.0 * math.sin(2 * math.pi * 2.0 * f / FPS) * up
                 e = 12 + 128 * amp * up
@@ -319,7 +317,7 @@ def contacts_of(local_rows: list, roots: list) -> list:
     return out
 
 
-LIBRARY_SENTENCES = {m["sentence"]: m["id"] for m in json.load(open(os.path.join(REPO, "motion", "library", "library.json")))["motions"]}
+LIBRARY_SENTENCES = {m["sentence"]: m["id"] for m in json.load(open(os.path.join(REPO, "motion", "library", "library.json")))["motions"] if m.get("sentence")}
 
 
 def variant_of(text: str, seed: int) -> str:
@@ -344,7 +342,7 @@ def pretend(request: dict) -> dict:
     assert request["kind"] == "text" and 1 <= len(request["prompts"]) <= 8
     answer, segments = None, []
     for prompt in request["prompts"]:
-        assert 8 <= prompt["frames"] <= 300 and not prompt.get("constraints")
+        assert 8 <= prompt["frames"] <= 300 and all(c["type"] == "path" and len(c["points"]) == prompt["frames"] for c in prompt.get("constraints") or [])
         motion_id = LIBRARY_SENTENCES.get(prompt["text"], "stand-easy")
         part = pretend_motion(motion_id, prompt["frames"], variant_of(prompt["text"], request["seed"]))
         if answer is None:
@@ -377,10 +375,13 @@ def to_the_end(library: str, sent: list = None, **more) -> dict:
     raise AssertionError("still something to make after three passes")
 
 
-def a_library(root: str) -> str:
+def a_library(root: str, takes: int = None) -> str:
     folder = os.path.join(root, "library")
     os.makedirs(folder)
-    shutil.copyfile(os.path.join(REPO, "motion", "library", "library.json"), os.path.join(folder, "library.json"))
+    lib = json.load(open(os.path.join(REPO, "motion", "library", "library.json")))
+    if takes:
+        lib["takes"] = takes
+    json.dump(lib, open(os.path.join(folder, "library.json"), "w"))
     return folder
 
 
@@ -390,12 +391,14 @@ def a_library(root: str) -> str:
 def test_the_library_is_a_short_plain_list_that_covers_every_hard_joint():
     lib = screen_motions.load()
     motions = lib["motions"]
-    assert 10 <= len(motions) <= 14, len(motions)
+    asked = [m for m in motions if not m.get("mirror_of")]  # the ones Kimodo makes; a mirror image is free
+    assert 10 <= len(asked) <= 14 and len(motions) <= 15, len(motions)
     for m in motions:
-        assert m["seconds"] <= 8 and m["sentence"].startswith("A person ") and len(m["sentence"].split()) <= 24, m
         assert len(m["why"]) > 40 and m["joints"] and m["asks"], m["id"]
+    for m in asked:
+        assert m["seconds"] <= 8 and m["sentence"].startswith("A person ") and len(m["sentence"].split()) <= 24, m
     joints = " ".join(j for m in motions for j in m["joints"])
-    for needed in ("knees", "hips", "shoulders", "shoulders behind", "elbows", "neck", "spine twist", "spine bend", "spine side bend", "ankles", "collar bones"):
+    for needed in ("knees", "hips", "shoulders", "shoulders behind", "elbows", "neck", "spine twist", "spine bend", "ankles", "collar bones", "wrists"):
         assert needed in joints, needed
     asked = {(a["measure"], a.get("at_least")) for m in motions for a in m["asks"]}
     # A deep bend of the knees, both arms overhead, a full turn on the spot, a quick turn back, a hand to the floor.
@@ -421,13 +424,21 @@ def test_a_library_that_cannot_be_made_is_refused():
 # ---- measuring --------------------------------------------------------------------------
 
 
+def made_as(m: dict, variant: str) -> dict:
+    """A library motion as the pretend worker makes it (a mirror image: its source's, mirrored)."""
+    lib = {x["id"]: x for x in screen_motions.load()["motions"]}
+    if m.get("mirror_of"):
+        source = lib[m["mirror_of"]]
+        return screen_motions.mirrored(SK, pretend_motion(source["id"], int(source["seconds"] * FPS), variant))
+    return pretend_motion(m["id"], int(m["seconds"] * FPS), variant)
+
+
 def test_every_motion_done_well_does_what_it_is_asked_and_done_by_half_does_not():
     for m in screen_motions.load()["motions"]:
-        frames = int(m["seconds"] * FPS)
-        good = screen_motions.score_take(SK, pretend_motion(m["id"], frames, "good"), m["asks"])
+        good = screen_motions.score_take(SK, made_as(m, "good"), m["asks"])
         assert good["does_what_was_asked"], (m["id"], good["missed"], good["measures"])
         assert good["parts"]["slide"] < 1.0 and good["parts"]["head"] == 0 and good["parts"]["ends"] < 5, (m["id"], good["parts"], good["measures"])
-        half = screen_motions.score_take(SK, pretend_motion(m["id"], frames, "shallow"), m["asks"])
+        half = screen_motions.score_take(SK, made_as(m, "shallow"), m["asks"])
         assert not half["does_what_was_asked"] and half["score"] > good["score"] + 25, (m["id"], half["measures"])
 
 
@@ -458,7 +469,8 @@ def test_five_takes_each_on_its_own_seed_and_the_one_done_well_is_kept():
         result = to_the_end(library, sent, only=only)
         assert len(sent) == 15 and all(len(r["prompts"]) == 1 for r in sent)
         assert len({r["seed"] for r in sent}) == 15, "every take rolls its own dice"
-        assert all(not r["prompts"][0].get("constraints") and r["steps"] == 100 and r["tidy"] for r in sent)
+        assert all(r["steps"] == 100 and r["tidy"] for r in sent)
+        assert [bool(r["prompts"][0].get("constraints")) for r in sent].count(True) == 10, "the turn and the walk are held to a path"
         assert set(result["state"].values()) == {"made"} and set(result["state"]) == set(only)
         for mid in only:
             kept = json.load(open(os.path.join(library, mid, "motion.json")))
@@ -515,7 +527,7 @@ def test_the_dry_run_prints_every_job_and_its_cost_and_sends_nothing():
         with redirect_stdout(printed):
             assert screen_motions.main(["plan", "--library", library]) == 0
         lines = printed.getvalue().splitlines()
-        motions = screen_motions.load(library)["motions"]
+        motions = [m for m in screen_motions.load(library)["motions"] if not m.get("mirror_of")]
         jobs = [l for l in lines if l.startswith("SCREEN job ")]
         assert len(jobs) == 5 * len(motions), len(jobs)
         assert any('deep-squat take 3' in l and "A person slowly squats" in l for l in jobs)
@@ -552,15 +564,16 @@ def test_screen_play_lines_the_cast_up_for_the_watch_page_and_the_reel_reads_the
     root = tempfile.mkdtemp(prefix="forge-screen-")
     try:
         runs, shots = os.path.join(root, "runs"), os.path.join(root, "shots")
-        library = a_library(root)
-        to_the_end(library, only=["deep-squat"], takes=1)
+        library = a_library(root, takes=1)
+        to_the_end(library, only=["deep-squat"])
         names = ["2026-11-20T14-02-41-young-lincoln-frontier-wrestler", "2026-11-20T13-52-46-stocky-pirate-deckhand"]
         for name in names:
             os.makedirs(os.path.join(runs, name, "profiles"))
             json.dump({"name": name.split("-", 3)[-1].replace("-", " ").title(), "size_m": 1.8}, open(os.path.join(runs, name, "brief.json"), "w"))
             for version in ("lowpoly", "midpoly"):
                 open(os.path.join(runs, name, "profiles", "%s-screen-deep-squat.glb" % version), "wb").close()
-                json.dump({"screen": {"id": "deep-squat", "ask": json.load(open(os.path.join(library, "deep-squat", "motion.json")))["ask"]}},
+                kept_squat = json.load(open(os.path.join(library, "deep-squat", "motion.json")))
+                json.dump({"screen": {"id": "deep-squat", "ask": kept_squat["ask"], "take": kept_squat["take"]}},
                           open(os.path.join(runs, name, "profiles", "%s-screen-deep-squat.json" % version), "w"))
         for name in names:  # the versions it is played on
             open(os.path.join(runs, name, "lowpoly.glb"), "wb").close()
@@ -570,7 +583,9 @@ def test_screen_play_lines_the_cast_up_for_the_watch_page_and_the_reel_reads_the
         assert screen_play.missing(first, ["deep-squat", "kick"], ["lowpoly", "midpoly"], library) == []
         record = os.path.join(first, "profiles", "midpoly-screen-deep-squat.json")
         kept = json.load(open(record))
-        json.dump({"screen": {"id": "deep-squat", "ask": "an older take"}}, open(record, "w"))
+        json.dump({"screen": {"id": "deep-squat", "ask": "an older sentence", "take": kept["screen"]["take"]}}, open(record, "w"))
+        assert screen_play.missing(first, ["deep-squat"], ["lowpoly", "midpoly"], library) == ["deep-squat"]
+        json.dump({"screen": {"id": "deep-squat", "ask": kept["screen"]["ask"], "take": 4}}, open(record, "w"))  # another take kept since
         assert screen_play.missing(first, ["deep-squat"], ["lowpoly", "midpoly"], library) == ["deep-squat"]
         assert screen_play.missing(first, ["deep-squat"], ["lowpoly"], library) == []
         json.dump(kept, open(record, "w"))
@@ -611,6 +626,85 @@ def test_screen_play_lines_the_cast_up_for_the_watch_page_and_the_reel_reads_the
         assert casting.library_wanted(cast_office.reel(), os.path.join(runs, names[0]), "lowpoly", library) == []
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+
+# ---- what the first real takes taught -------------------------------------------------------
+
+
+def test_a_mirror_image_swaps_left_for_right_and_twice_is_the_same_again():
+    wave = pretend_motion("wave-right", 150, "good")
+    left = screen_motions.mirrored(SK, wave)
+    a, b = screen_motions.measures(SK, wave), screen_motions.measures(SK, left)
+    assert a["right_hand_over_shoulder"] > 0.1 and a["left_hand_over_shoulder"] < -0.3
+    assert abs(b["left_hand_over_shoulder"] - a["right_hand_over_shoulder"]) < 1e-3 and abs(b["right_hand_over_shoulder"] - a["left_hand_over_shoulder"]) < 1e-3
+    for f in (0, 75, 149):  # every joint exactly where its partner was, reflected
+        pa, _ = SK.fk(wave["root"][f], [tuple(wave["rotations"][f][4 * j : 4 * j + 4]) for j in range(len(SK.joints))])
+        pb, _ = SK.fk(left["root"][f], [tuple(left["rotations"][f][4 * j : 4 * j + 4]) for j in range(len(SK.joints))])
+        for name, j in I.items():
+            k = I.get(name.replace("Left", "@").replace("Right", "Left").replace("@", "Right"), j)
+            assert math.dist(pb[j], (-pa[k][0], pa[k][1], pa[k][2])) < 1e-3, (name, f)
+    back = screen_motions.mirrored(SK, left)
+    assert max(abs(x - y) for r, q in zip(back["rotations"], wave["rotations"]) for x, y in zip(r, q) if abs(x + y) > 1e-3 or abs(x - y) < 1e-3) < 1e-3
+    assert left["contacts"][0] == wave["contacts"][0][2:] + wave["contacts"][0][:2]
+
+
+def test_the_mirror_is_made_free_once_its_source_is_and_follows_it():
+    root = tempfile.mkdtemp(prefix="forge-screen-")
+    try:
+        library = a_library(root, takes=2)
+        sent = []
+        result = to_the_end(library, sent, only=["wave-right", "wave-left"])
+        assert len(sent) == 2 and all(r["prompts"][0]["text"].startswith("A person waves") for r in sent), "the mirror is never asked for"
+        assert result["state"]["wave-left"] == "made"
+        left = json.load(open(os.path.join(library, "wave-left", "motion.json")))
+        scores = json.load(open(os.path.join(library, "wave-left", "scores.json")))
+        assert left["mirror_of"] == "wave-right" and scores["does_what_was_asked"]
+        import screen_play
+
+        assert set(screen_play.made(library)) == {"wave-right", "wave-left"}
+        # Rescored, the source may keep another take: the mirror follows it.
+        before = left["ask"]
+        kept = json.load(open(os.path.join(library, "wave-right", "motion.json")))
+        json.dump(dict(kept, take=1 - kept["take"]), open(os.path.join(library, "wave-right", "motion.json"), "w"))
+        screen_motions.step(library, sk=SK, only=["wave-right", "wave-left"])
+        assert json.load(open(os.path.join(library, "wave-left", "motion.json")))["ask"] != before
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def test_a_walk_and_a_turn_are_held_to_a_path_and_the_rest_find_their_own_way():
+    lib = {m["id"]: m for m in screen_motions.load()["motions"]}
+    walk = screen_motions.batch_request([dict(screen_motions.ask_for(lib["walk-turn-back"]), take=0)])["prompts"][0]["constraints"][0]
+    assert walk["type"] == "path" and len(walk["points"]) == 240 and "headings" not in walk
+    out = max(p[1] for p in walk["points"])
+    assert 2.3 < out < 2.5 and abs(walk["points"][-1][1]) < 1e-6 and abs(walk["points"][0][1]) < 1e-6
+    turn = screen_motions.batch_request([dict(screen_motions.ask_for(lib["turn-circle"]), take=0)])["prompts"][0]["constraints"][0]
+    assert turn["headings"][0] == 0 and turn["headings"][-1] == 360 and all(b >= a for a, b in zip(turn["headings"], turn["headings"][1:]))
+    assert all(p == [0.0, 0.0] for p in turn["points"]), "on the spot"
+    squat = screen_motions.batch_request([dict(screen_motions.ask_for(lib["deep-squat"]), take=0)])["prompts"][0]
+    assert "constraints" not in squat
+    # A motion held to a path never shares a job: its path starts where it stands.
+    wanted = screen_motions.takes_wanted([screen_motions.ask_for(lib[m], 1) for m in ("deep-squat", "walk-turn-back", "kick")])
+    jobs = screen_motions.batches(wanted, 8)
+    assert sorted(len(j) for j in jobs) == [1, 2] and [a["id"] for j in jobs if len(j) == 1 for a in j] == ["walk-turn-back"]
+
+
+def test_a_slouch_held_all_through_is_not_a_bow_and_does_not_count_as_standing():
+    m = next(x for x in screen_motions.load()["motions"] if x["id"] == "shrug-bow")
+    slouch = choreography("shrug-bow", 180, 1.0)
+    for p in slouch:  # bowed 35 degrees from the first frame to the last, with a little more in the middle
+        pitch, roll, twist = p.get("spine", (0.0, 0.0, 0.0))
+        p["spine"] = (35.0 + 0.15 * pitch, roll, twist)
+    roots, rows = [], []
+    for p in slouch:
+        root, local = pose(p)
+        roots.append(list(root))
+        rows.append([c for q in local for c in q])
+    motion = dict(pretend_motion("shrug-bow", 180, "good"), root=roots, rotations=rows)
+    held = screen_motions.score_take(SK, motion, m["asks"])
+    assert held["measures"]["bow"] < 10 and not held["measures"]["starts_standing"] and not held["does_what_was_asked"]
+    done = screen_motions.score_take(SK, pretend_motion("shrug-bow", 180, "good"), m["asks"])
+    assert done["does_what_was_asked"] and done["measures"]["bow"] > 40
 
 
 if __name__ == "__main__":

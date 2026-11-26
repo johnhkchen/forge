@@ -119,27 +119,37 @@ def load(library: str = LIBRARY) -> dict:
 MEASURES = (
     "weight_shift", "wander", "hips_drop", "turn", "out", "back", "knee_lift", "elbow_bend", "hands_over_head",
     "side_bend", "head_turn", "head_nod", "hand_over_shoulder", "hand_low", "hands_over_shoulders", "hands_behind",
-    "feet_apart", "shrug", "bow", "twist", "foot_high",
+    "feet_apart", "shrug", "bow", "twist", "foot_high", "right_hand_over_shoulder", "left_hand_over_shoulder",
 )
 
 
 def check(library: dict) -> None:
     """A library that cannot be made is refused here, before anything is sent."""
     seen = set()
+    made = {m.get("id") for m in library.get("motions") or [] if not m.get("mirror_of")}
     for m in library.get("motions") or []:
-        for key in ("id", "name", "sentence", "seconds", "why", "joints", "asks"):
+        for key in ("id", "name", "why", "joints", "asks") + (() if m.get("mirror_of") else ("sentence", "seconds")):
             if not m.get(key):
                 raise ValueError(f"motion {m.get('id')!r} has no {key}")
         if m["id"] in seen or not m["id"].replace("-", "").isalnum() or m["id"] != m["id"].lower():
             raise ValueError(f"a motion id is lowercase letters, digits and dashes, and used once: {m['id']!r}")
         seen.add(m["id"])
+        for ask in m["asks"]:
+            if ask.get("measure") not in MEASURES or ("at_least" in ask) == ("at_most" in ask):
+                raise ValueError(f"{m['id']}: an ask is a known measure with at_least or at_most: {ask}")
+        if m.get("mirror_of"):  # made free, as the mirror image of another motion Kimodo made
+            if m["mirror_of"] not in made:
+                raise ValueError(f"{m['id']}: mirror_of names a motion Kimodo makes in this library, not {m['mirror_of']!r}")
+            continue
+        for key in m.get("path") or []:
+            if len(key) not in (3, 4) or len(key) != len(m["path"][0]) or not 0.0 <= float(key[0]) <= float(m["seconds"]):
+                raise ValueError(f"{m['id']}: a path is [seconds, x, z] or [seconds, x, z, heading] keys inside the motion, all alike: {key}")
+        if [k[0] for k in m.get("path") or []] != sorted(k[0] for k in m.get("path") or []):
+            raise ValueError(f"{m['id']}: a path's keys go in order of time")
         if not 2.0 <= float(m["seconds"]) <= MOST_SECONDS:
             raise ValueError(f"{m['id']}: a screen-test motion lasts 2 to {MOST_SECONDS:g} seconds")
         if not m["sentence"].startswith("A person ") or not m["sentence"].endswith("."):
             raise ValueError(f"{m['id']}: Kimodo's sentences are about \"A person ...\" and end with a full stop")
-        for ask in m["asks"]:
-            if ask.get("measure") not in MEASURES or ("at_least" in ask) == ("at_most" in ask):
-                raise ValueError(f"{m['id']}: an ask is a known measure with at_least or at_most: {ask}")
     if not seen:
         raise ValueError("the library has no motions")
 
@@ -166,21 +176,49 @@ def ask_for(motion: dict, takes: int = TAKES) -> dict:
         "guidance": list(GUIDANCE),
         "takes": int(takes),
     }
+    if motion.get("path"):  # where the body goes over the ground, and which way it faces (keys; see path_of)
+        ask["path"] = [[float(v) for v in key] for key in motion["path"]]
     return {"id": motion["id"], **ask, "hash": digest(ask)}
 
 
+def path_of(keys: list, frames: int) -> dict:
+    """A path constraint from keys [seconds, x, z] or [seconds, x, z, heading]: a point (and a heading, when the keys
+    give one) for every frame, eased from key to key and held before the first and after the last. Kimodo is held to
+    it, as a run is held to its straight line. Heading 0 faces +Z and 90 faces +X, as a motion's own heading does."""
+    points, headings = [], []
+    for f in range(frames):
+        t = f / FPS
+        a = max([k for k in keys if k[0] <= t] or [keys[0]], key=lambda k: k[0])
+        b = min([k for k in keys if k[0] >= t] or [keys[-1]], key=lambda k: k[0])
+        w = 0.0 if b[0] <= a[0] else (t - a[0]) / (b[0] - a[0])
+        w = w * w * (3.0 - 2.0 * w)
+        points.append([round(a[1] + (b[1] - a[1]) * w, 4), round(a[2] + (b[2] - a[2]) * w, 4)])
+        if len(a) > 3:
+            headings.append(round(a[3] + (b[3] - a[3]) * w, 3))
+    out = {"type": "path", "frames": list(range(frames)), "points": points}
+    if headings:
+        out["headings"] = headings
+    return out
+
+
 def batch_request(asks: list) -> dict:
-    """One Kimodo job: these sentences one after the other, on the first one's seed. No path: each finds its own way."""
+    """One Kimodo job: these sentences one after the other, on the first one's seed. Most have no path and find their
+    own way about the spot; one that walks somewhere is held to its path (and always goes in a job of its own)."""
     first = asks[0]
-    return {"kind": "text", "prompts": [{"text": a["prompt"], "frames": a["frames"]} for a in asks],
-            "seed": first["seed"], "steps": first["steps"], "guidance": first["guidance"], "tidy": True}
+    prompts = []
+    for a in asks:
+        prompt = {"text": a["prompt"], "frames": a["frames"]}
+        if a.get("path"):
+            prompt["constraints"] = [path_of(a["path"], a["frames"])]
+        prompts.append(prompt)
+    return {"kind": "text", "prompts": prompts, "seed": first["seed"], "steps": first["steps"], "guidance": first["guidance"], "tidy": True}
 
 
 def batches(wanted: list, size: int = ALONE) -> list:
     """The takes as jobs. A job has one seed, so only takes of the same number share one."""
     groups = {}
     for ask in wanted:
-        groups.setdefault(ask["take"] if size > 1 else (ask["id"], ask["take"]), []).append(ask)
+        groups.setdefault(ask["take"] if size > 1 and not ask.get("path") else (ask["id"], ask["take"]), []).append(ask)
     out = []
     for group in groups.values():
         out += [group[i : i + size] for i in range(0, len(group), size)]
@@ -268,6 +306,8 @@ def measures(sk: Skeleton, motion: dict) -> dict:
     out["hands_over_head"] = max(min(p[i["LeftHand"]][1], p[i["RightHand"]][1]) - p[head][1] for p, _ in frames) / unit
     out["hand_over_shoulder"] = min(max(p[i[s + "Hand"]][1] - p[i[s + "Arm"]][1] for p, _ in frames) for s in ("Left", "Right")) / unit
     out["hands_over_shoulders"] = out["hand_over_shoulder"]
+    for s in ("Left", "Right"):
+        out[s.lower() + "_hand_over_shoulder"] = max(p[i[s + "Hand"]][1] - p[i[s + "Arm"]][1] for p, _ in frames) / unit
     out["hand_low"] = min(min(p[i["LeftHand"]][1], p[i["RightHand"]][1]) for p, _ in frames) / unit
     chest = i["Chest"]
 
@@ -281,7 +321,10 @@ def measures(sk: Skeleton, motion: dict) -> dict:
     spine = [angles_of(relative(t, chest, 0)) for _, t in frames]
     out["twist"] = min(max(a[0] for a in spine), -min(a[0] for a in spine))
     out["side_bend"] = min(max(a[2] for a in spine), -min(a[2] for a in spine))
-    out["bow"] = max(angles_of(t[chest])[1] for _, t in frames)
+    # How far the chest goes over from where it started: a body that slouches all through has not bowed.
+    pitch = [angles_of(t[chest])[1] for _, t in frames]
+    out["bow"] = max(pitch) - pitch[0]
+    out["chest_pitch_ends"] = [round(pitch[0], 1), round(pitch[-1], 1)]
     neck = [angles_of(relative(t, head, chest)) for _, t in frames]
     out["head_turn"] = min(max(a[0] for a in neck), -min(a[0] for a in neck))
     out["head_nod"] = max(a[1] for a in neck) - min(a[1] for a in neck)
@@ -326,11 +369,13 @@ def measures(sk: Skeleton, motion: dict) -> dict:
         return [body_frame(headings[f], tuple(q[k] - p[0][k] for k in range(3))) for q in p]
     a, b = posture(0), posture(count - 1)
     out["ends_apart_cm"] = round(100.0 * math.sqrt(sum(math.dist(x, y) ** 2 for x, y in zip(a, b)) / len(a)), 2)
-    out["starts_standing"] = (rest_hips - frames[0][0][0][1]) / unit < 0.12
-    out["ends_standing"] = (rest_hips - frames[-1][0][0][1]) / unit < 0.12
+    # Standing: the hips up, and the chest upright (not slouched over).
+    out["starts_standing"] = (rest_hips - frames[0][0][0][1]) / unit < 0.12 and abs(pitch[0]) < UPRIGHT_DEG
+    out["ends_standing"] = (rest_hips - frames[-1][0][0][1]) / unit < 0.12 and abs(pitch[-1]) < UPRIGHT_DEG
     return {k: round(v, 3) if isinstance(v, float) else v for k, v in out.items()}
 
 
+UPRIGHT_DEG = 25.0  # a chest pitched further over than this is not standing up
 HEAD_FAST_DEG_S = 400.0  # a head turned quickly by a person; faster than this is flung
 CHIN_UP_DEG = 40.0  # thrown back past this, unless the sentence asks for a look up (then 60)
 
@@ -378,18 +423,73 @@ def stretch_of(sk: Skeleton, answer: dict, number: int, ask: dict) -> dict:
     return clip
 
 
-def step(library: str = LIBRARY, cache: str = None, sk: Skeleton = None, only=None, takes: int = None, size: int = ALONE) -> dict:
-    """Do as much as the answers on hand allow. Returns the jobs still to send and where each motion stands."""
+def mirrored(sk: Skeleton, motion: dict) -> dict:
+    """The motion as its mirror image, left for right: a wave with the right hand becomes a wave with the left.
+
+    Each joint takes its partner's turn from the T-pose (LeftArm takes RightArm's), reflected across the body's
+    middle; the hips go to the other side of the line they walk along; the feet's contacts swap. Turns are mirrored
+    in the world, not joint by joint, so it holds however the skeleton's own joint axes are laid out."""
+    joints = len(sk.joints)
+    partner = [sk.index.get(name.replace("Left", "@").replace("Right", "Left").replace("@", "Right"), j) for j, name in enumerate(sk.joints)]
+    roots, rows = [], []
+    for root, row in zip(motion["root"], motion["rotations"]):
+        _, rot = sk.fk(root, [tuple(row[4 * j : 4 * j + 4]) for j in range(joints)])
+        turns = [qmul(rot[j], qconj(sk.rest_world_rot[j])) for j in range(joints)]
+        world = []
+        for j in range(joints):
+            x, y, z, w = turns[partner[j]]
+            world.append(qmul((x, -y, -z, w), sk.rest_world_rot[j]))  # reflected across the plane x = 0
+        local = [world[j] if sk.parents[j] < 0 else qmul(qconj(world[sk.parents[j]]), world[j]) for j in range(joints)]
+        roots.append([round(-root[0], 5), root[1], root[2]])
+        rows.append([round(c, 6) for q in local for c in q])
+    out = dict(motion, root=roots, rotations=rows)
+    out["contacts"] = [[c[2], c[3], c[0], c[1]] for c in motion["contacts"]]
+    return out
+
+
+def mirror_ask(source_hash: str) -> str:
+    return digest({"mirror_of": source_hash})
+
+
+def make_mirrors(library: str, lib: dict, sk: Skeleton, only=None, again: bool = False) -> dict:
+    """The free motions: each the mirror image of one Kimodo made, scored on its own asks. {id: state}."""
+    state = {}
+    for m in lib["motions"]:
+        if not m.get("mirror_of") or (only and m["id"] not in only and m["mirror_of"] not in only):
+            continue
+        source = read_json(os.path.join(library, m["mirror_of"], "motion.json"))
+        if not source:
+            state[m["id"]] = "waiting for %s" % m["mirror_of"]
+            continue
+        ask = mirror_ask(source["ask"] + ":%s" % source.get("take"))
+        kept = read_json(os.path.join(library, m["id"], "motion.json")) or {}
+        if kept.get("ask") == ask and not again:
+            state[m["id"]] = "made"
+            continue
+        motion = mirrored(sk, source)
+        scored = score_take(sk, motion, m["asks"])
+        write_json(os.path.join(library, m["id"], "motion.json"), dict(motion, ask=ask, id=m["id"], name=m["name"], mirror_of=m["mirror_of"],
+                                                                        prompt="(%s, mirrored) %s" % (m["mirror_of"], source.get("prompt"))))
+        write_json(os.path.join(library, m["id"], "scores.json"), {
+            "id": m["id"], "mirror_of": m["mirror_of"], "ask": ask, "kept": 0, "does_what_was_asked": scored["does_what_was_asked"],
+            "asks": m["asks"], "takes": [dict(scored, take=0, seed=source.get("seed"))]}, indent=1)
+        state[m["id"]] = "made"
+    return state
+
+
+def step(library: str = LIBRARY, cache: str = None, sk: Skeleton = None, only=None, takes: int = None, size: int = ALONE, again: bool = False) -> dict:
+    """Do as much as the answers on hand allow. Returns the jobs still to send and where each motion stands.
+    again: score every motion whose takes are all answered again, and keep the best anew (after a measure changed)."""
     sk = sk or Skeleton.load()
     cache = cache or os.path.join(library, ".cache")
     os.makedirs(cache, exist_ok=True)
     lib = load(library)
-    asks = {m["id"]: ask_for(m, takes or lib.get("takes") or TAKES) for m in chosen(lib, only)}
+    asks = {m["id"]: ask_for(m, takes or lib.get("takes") or TAKES) for m in chosen(lib, only) if not m.get("mirror_of")}
     by_id = {m["id"]: m for m in lib["motions"]}
     state, wanting = {}, []
     for mid, ask in asks.items():
         kept = read_json(os.path.join(library, mid, "motion.json")) or {}
-        if kept.get("ask") == ask["hash"]:
+        if kept.get("ask") == ask["hash"] and not again:
             state[mid] = "made"
         else:
             wanting.append(ask)
@@ -425,6 +525,7 @@ def step(library: str = LIBRARY, cache: str = None, sk: Skeleton = None, only=No
             "id": mid, "prompt": ask["prompt"], "ask": ask["hash"], "kept": best["take"], "does_what_was_asked": best["does_what_was_asked"],
             "asks": by_id[mid]["asks"], "takes": scores}, indent=1)
         state[mid] = "made"
+    state.update(make_mirrors(library, lib, sk, only, again))
     write_json(os.path.join(cache, "todo.json"), todo, indent=1)
     return {"todo": todo, "jobs": jobs, "asks": asks, "state": state}
 
@@ -515,9 +616,16 @@ def status_lines(library: str = LIBRARY) -> list:
     lines = []
     lib = load(library)
     for m in lib["motions"]:
-        ask = ask_for(m, lib.get("takes") or TAKES)
         kept = read_json(os.path.join(library, m["id"], "motion.json")) or {}
         scores = read_json(os.path.join(library, m["id"], "scores.json")) or {}
+        if m.get("mirror_of"):
+            if not kept:
+                lines.append("SCREEN %-15s not made yet (the mirror image of %s, free once that is made)" % (m["id"], m["mirror_of"]))
+            else:
+                s = scores["takes"][0]
+                lines.append("SCREEN %-15s the mirror image of %s, score %s%s" % (m["id"], m["mirror_of"], s["score"], "" if s["does_what_was_asked"] else " (misses %s)" % "/".join(x["measure"] for x in s["missed"])))
+            continue
+        ask = ask_for(m, lib.get("takes") or TAKES)
         if kept.get("ask") != ask["hash"]:
             lines.append("SCREEN %-15s not made yet%s" % (m["id"], " (made from an older sentence)" if kept else ""))
             continue
@@ -529,7 +637,7 @@ def status_lines(library: str = LIBRARY) -> list:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("what", choices=("plan", "step", "status", "rehearse"))
+    parser.add_argument("what", choices=("plan", "step", "status", "rehearse", "rescore"))
     parser.add_argument("folder", nargs="?", help="rehearse: the folder to rehearse in (never motion/library)")
     parser.add_argument("--only", default="", help="motion ids, joined by commas (default: all of them)")
     parser.add_argument("--library", default=LIBRARY)
@@ -551,7 +659,10 @@ def main(argv=None) -> int:
             rehearse(args.folder, only, args.takes)
             print("\n".join(status_lines(args.folder)))
             return 0
-        result = step(args.library, args.cache, only=only, takes=args.takes, size=args.batch)
+        result = step(args.library, args.cache, only=only, takes=args.takes, size=args.batch, again=args.what == "rescore")
+        if args.what == "rescore":  # never asks for anything: only what is answered is scored again
+            print("\n".join(status_lines(args.library)))
+            return 0
     except ValueError as refused:
         print("screen-motions: %s" % refused, file=sys.stderr)
         return 2

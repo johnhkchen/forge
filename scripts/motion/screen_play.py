@@ -70,13 +70,23 @@ def find_run(word: str, runs: str = RUNS) -> str:
 
 
 def made(library: str) -> dict:
-    """{id: the kept motion's ask} for every motion the library has made."""
-    listed = (read_json(os.path.join(library, "library.json")) or {}).get("motions") or []
+    """{id: the kept motion's ask and take} for every motion the library has made from its sentence as it now stands
+    (one kept from an older sentence is waiting to be made again, and is not played)."""
+    sys.path.insert(0, HERE)
+    import screen_motions
+
+    lib = read_json(os.path.join(library, "library.json")) or {}
+    listed = lib.get("motions") or []
     out = {}
     for m in listed:
         kept = read_json(os.path.join(library, m["id"], "motion.json"))
-        if kept and kept.get("ask"):
-            out[m["id"]] = {"ask": kept["ask"], "name": m["name"], "frames": len(kept["root"]), "prompt": kept.get("prompt")}
+        if m.get("mirror_of"):
+            source = read_json(os.path.join(library, m["mirror_of"], "motion.json")) or {}
+            current = bool(source) and kept and kept.get("ask") == screen_motions.mirror_ask(source.get("ask", "") + ":%s" % source.get("take"))
+        else:
+            current = kept and kept.get("ask") == screen_motions.ask_for(m, lib.get("takes") or screen_motions.TAKES)["hash"]
+        if current and kept.get("ask") and (not m.get("mirror_of") or m["mirror_of"] in out):
+            out[m["id"]] = {"ask": kept["ask"], "take": kept.get("take"), "name": m["name"], "frames": len(kept["root"]), "prompt": kept.get("prompt")}
     return out
 
 
@@ -91,7 +101,7 @@ def missing(run: str, ids: list, versions: list, library: str = LIBRARY) -> list
             if not os.path.isfile(os.path.join(run, VERSION_FILES[version])):
                 continue
             record = read_json(os.path.join(run, "profiles", "%s-screen-%s.json" % (version, mid))) or {}
-            if not os.path.isfile(os.path.join(run, "profiles", "%s-screen-%s.glb" % (version, mid))) or (record.get("screen") or {}).get("ask") != have[mid]["ask"]:
+            if not os.path.isfile(os.path.join(run, "profiles", "%s-screen-%s.glb" % (version, mid))) or [(record.get("screen") or {}).get(k) for k in ("ask", "take")] != [have[mid]["ask"], have[mid]["take"]]:
                 out.append(mid)
                 break
     return out
@@ -117,8 +127,21 @@ def role_name(run_folder: str) -> str:
     return re.sub(r"^\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-", "", run_folder)
 
 
+def cards_play(run: str) -> str:
+    """The version whose skeleton a run's cards ride (impostor.json's `plays`): its detailed cards' if it has them,
+    else any; lowpoly if it has none. The flamenco dancer's detailed cards ride her mid-poly skeleton."""
+    found = {}
+    profiles = os.path.join(run, "profiles")
+    for name in sorted(os.listdir(profiles)) if os.path.isdir(profiles) else []:
+        card = read_json(os.path.join(profiles, name, "impostor.json")) if "-impostor" in name else None
+        if card and card.get("plays"):
+            found.setdefault(card.get("profile") or name.split("-impostor")[0], card["plays"])
+    return found.get("detailed") or next(iter(found.values()), "lowpoly")
+
+
 def lineups(ids: list, runs: str = RUNS, shots: str = SHOTS, library: str = LIBRARY) -> list:
-    """For each motion, a take with everyone who has played it, side by side on the stage (shots/screen-<id>/)."""
+    """For each motion, a take with everyone who has played it, side by side on the stage (shots/screen-<id>/). Each
+    stands in the version their cards ride, so the watch page can draw them as cards and the judges can judge them."""
     have = made(library)
     out = []
     for mid in ids:
@@ -129,9 +152,13 @@ def lineups(ids: list, runs: str = RUNS, shots: str = SHOTS, library: str = LIBR
         roles, marks = {}, {}
         for k, run in enumerate(players):
             name = role_name(run)
-            glb = os.path.join(runs, run, "profiles", "lowpoly-screen-%s.glb" % mid)
+            version = cards_play(os.path.join(runs, run))
+            glb = os.path.join(runs, run, "profiles", "%s-screen-%s.glb" % (version, mid))
+            if not os.path.isfile(glb):
+                version, glb = "lowpoly", os.path.join(runs, run, "profiles", "lowpoly-screen-%s.glb" % mid)
             record = read_json(glb[:-4] + ".json") or {}
-            roles[name] = {"character": os.path.join(runs, run, "lowpoly.glb"), "glb": os.path.relpath(glb, folder), "true_size": True,
+            roles[name] = {"character": os.path.join(runs, run, "lowpoly.glb" if version == "lowpoly" else os.path.join("profiles", version + ".glb")),
+                           "glb": os.path.relpath(glb, folder), "true_size": True,
                            "size_against_soma": record.get("size_against_soma"), "clamped": (record.get("animation") or {}).get("clamped")}
             x = LINEUP_MIDDLE[0] + (k - (len(players) - 1) / 2.0) * LINEUP_APART_M
             marks[name] = {"at": [round(x, 3), LINEUP_MIDDLE[1]], "facing_deg": LINEUP_FACING}
