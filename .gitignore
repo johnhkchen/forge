@@ -27,3 +27,5 @@ evidence/marble/diorama/cut/
 
 # Segments packed for an AI restyle and what comes back (scripts/video/omni.py): made from clips that stay on this Mac
 /exports/
+# Kimodo takes for the screen-test motions (requests and answers, every take); the kept ones are motion/library/<id>/
+motion/library/.cache/

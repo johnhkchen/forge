@@ -36,6 +36,7 @@ check:
     python3 scripts/motion/author_poses.py --check | tail -1
     python3 scripts/motion/test_timeline.py | tail -1
     python3 scripts/motion/test_run_clip.py | tail -1
+    python3 scripts/motion/test_screen_motions.py | tail -1
     python3 scripts/sets/test_sets.py | tail -1
     python3 scripts/fight/test_fight.py | tail -1
     "{{blender_bin}}" -b --factory-startup -P scripts/sets/test_marble.py 2>&1 | grep -E '^MARBLE|FAIL'
@@ -439,6 +440,23 @@ runs dir="runs":
 # Only show what each character would be asked to run like: its sentence and speed (sends nothing; writes run/ask.json and the request)
 run-asks dir="runs":
     python3 scripts/motion/run_clip.py "{{dir}}"/*/ | grep -E '^RUN'
+
+# PAID (a few cents of Kimodo on RunPod): the screen-test motions in motion/library/library.json, each made five times from its one sentence, every take scored, the best kept in motion/library/<id>/. Prints every job and what it would cost and sends nothing unless go is "go". only: motion ids joined by commas (default: all)
+screen-motions go="" only="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/motion/screen_motions.py plan {{ if only != "" { "--only " + only } else { "" } }} | sed '/^RESULT/d'
+    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was sent."; exit 0; }
+    baml run screen_motions {{ if only != "" { "-- --only " + only } else { "" } }}
+    python3 scripts/motion/screen_motions.py status
+
+# Free: the screen-test motions played on a character's low-poly and mid-poly versions in one background Blender (runs/<run>/profiles/<version>-screen-<id>.glb; its cards play them too), then a line-up of everyone who has played each, for the watch page (#/watch/screen-<id>). run: a run folder, or a word of its name ("lincoln"); motions: ids (default: every one made)
+screen-play run *motions:
+    python3 scripts/motion/screen_play.py "{{run}}" {{motions}}
+
+# Free: the screen-test motions made by the offline tests' stand-in for Kimodo, into a folder of your own (never motion/library), to try screen-play before paying (python3 scripts/motion/screen_play.py <run> --library <folder>)
+screen-rehearse folder only="":
+    python3 scripts/motion/screen_motions.py rehearse "{{folder}}" {{ if only != "" { "--only " + only } else { "" } }}
 
 # Picture a walking .glb as a strip of poses (view: side, front or quarter)
 walk-strip file out view="side":

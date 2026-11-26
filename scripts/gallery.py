@@ -186,6 +186,11 @@ def cards_summary(run_id, run_dir):
         motions = [{"id": clip, "name": label, "glb": "runs/%s/profiles/%s-%s.glb" % (run_id, version, clip)}
                    for clip, label in (("walk", "Walk"), ("rom", "Warm-up"), ("run", "Run"))
                    if os.path.isfile(os.path.join(profiles, "%s-%s.glb" % (version, clip)))]
+        # the screen-test motions it has played (motion/library, `just screen-play`)
+        for file in sorted(f for f in os.listdir(profiles) if f.startswith(version + "-screen-") and f.endswith(".glb")):
+            screen = (read_json(os.path.join(profiles, file[:-4] + ".json")) or {}).get("screen") or {}
+            motions.append({"id": file[len(version) + 1:-4], "name": "Screen test: %s" % (screen.get("name") or file[len(version) + 8:-4].replace("-", " ")),
+                            "glb": "runs/%s/profiles/%s" % (run_id, file)})
         for shot in sorted(os.listdir(SHOTS)) if os.path.isdir(SHOTS) else []:
             for file in sorted(os.listdir(os.path.join(SHOTS, shot))) if os.path.isdir(os.path.join(SHOTS, shot)) else []:
                 cast = read_json(os.path.join(SHOTS, shot, file)) if file.startswith("cast-") and file.endswith(".json") else None
@@ -309,7 +314,8 @@ def takes_in(folder, name):
                           # the run this character is, whichever of its versions was cast (runs/<run>/lowpoly.glb, runs/<run>/profiles/painted.glb)
                           "run": where[where.index("runs") + 1] if "runs" in where[:-1] else None,
                           # a fight stands each fighter on a mark of the set, facing the other (fight.json); other takes have the places played in
-                          "mark": ((read_json(os.path.join(folder, "fight.json")) or {}).get("marks") or {}).get(role), "size": 1.0 if card.get("true_size") else card.get("size_against_soma", 1.0),
+                          # (a screen-test line-up, scripts/motion/screen_play.py, writes its marks into the cast file itself)
+                          "mark": (cast.get("marks") or {}).get(role) or ((read_json(os.path.join(folder, "fight.json")) or {}).get("marks") or {}).get(role), "size": 1.0 if card.get("true_size") else card.get("size_against_soma", 1.0),
                           "glb": card["glb"], "midpoly": mid if mid != card["glb"] and os.path.isfile(os.path.join(folder, mid)) else None})
         # The shot's own cameras that move (scripts/sets/camera_path.py), from its plan (a take's: its first role's)
         plan = read_json(os.path.join(folder, "plan.json")) or (read_json(os.path.join(folder, next(iter(take["roles"].values()))["folder"], "plan.json")) if take.get("roles") else None) or {}
