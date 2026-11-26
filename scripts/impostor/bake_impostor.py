@@ -220,10 +220,25 @@ CHAIN, DRESS_ROOTS, slug_of, chains_of = impostor.CHAIN, impostor.DRESS_ROOTS, i
 DRESS_LEGS = ("thigh_l", "thigh_r", "shin_l", "shin_r")  # ... and on a garment that is a mesh of its own, the legs' pull on it is the dress's too
 
 
-def dress_of(rig):
-    """chains_of for a Blender skeleton."""
+def note_of(rig):
+    """A Blender skeleton's own description of what it wears loose (cloth.py's "forge_cloth"), or None."""
+    try:
+        return json.loads(rig.get("forge_cloth") or "null")
+    except (TypeError, ValueError):
+        return None
+
+
+def garments_of(rig, note=None):
+    """impostor.garments_of for a Blender skeleton. note: the description to read it by, when the skeleton carries
+    none of its own (a detailed model given a tidy version's skeleton: that version's, impostor.note_in)."""
     folds = part_of_bone(rig)
-    return chains_of([b.name for b in rig.data.bones], lambda n: rig.data.bones[n].parent.name if rig.data.bones[n].parent else None, lambda n: folds.get(n))
+    return impostor.garments_of([b.name for b in rig.data.bones], lambda n: rig.data.bones[n].parent.name if rig.data.bones[n].parent else None, lambda n: folds.get(n), note_of(rig) or note)
+
+
+def dress_of(rig, note=None):
+    """chains_of for a Blender skeleton (note: as garments_of)."""
+    folds = part_of_bone(rig)
+    return chains_of([b.name for b in rig.data.bones], lambda n: rig.data.bones[n].parent.name if rig.data.bones[n].parent else None, lambda n: folds.get(n), note_of(rig) or note)
 
 
 def worn_dress(obj, dress):
@@ -706,9 +721,11 @@ def main():
     bends = [float(b) for b in flag("--bends", "0,45,90,120,150").split(",")]
     hinge = hinges(scene, rig, [bones[0] for name, bones in PARTS if BENT_KINDS.get(name[:-2]) in bent_kinds]) if bent_kinds else {}
     # a garment swung by chains that hang over the legs is a part of its own (--dress off: cut among the hips and legs)
-    dress = dress_of(rig) if flag("--dress", "auto") != "off" else None
+    # (what it wears is read from the skeleton's own description of it, or from that of the version whose clips these cards play)
+    told = impostor.note_in(os.path.join(os.path.dirname(source), "%s-walk.glb" % flag("--plays", profile)))
+    dress = dress_of(rig, told) if flag("--dress", "auto") != "off" else None
     if dress:
-        print("IMPOSTOR dress: %s, %d chains of %d bones hanging from %s" % (", ".join(dress["garments"]), len(dress["chains"]), len(dress["bones"]), dress["root"]), flush=True)
+        print("IMPOSTOR dress: %s (%s), %d chains of %d bones hanging from %s" % (", ".join(dress["garments"]), ", ".join(str(k) for k in dress.get("kinds") or []), len(dress["chains"]), len(dress["bones"]), dress["root"]), flush=True)
     lowered = hang_arms(scene, rig) if "--rest-pose" not in args else {}
     graph = bpy.context.evaluated_depsgraph_get()
     posed = {o.name: bpy.data.meshes.new_from_object(o.evaluated_get(graph)) for o in bodies}

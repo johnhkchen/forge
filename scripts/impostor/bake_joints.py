@@ -361,6 +361,18 @@ def main():
     else:
         extra, tidy = [], [o for o in bodies if not bake_impostor.worn_dress(o, dress)]  # the dress is its own piece
 
+    # What the skeleton wears loose, as cloth.py described it (the tidy version's own note, else the pictured model's),
+    # and the garments the pieces have clothing of: a face's "gear" is one more than its garment's place in `garb`
+    described = next((bake_impostor.garments_of(o) for o in list(extra) + [rig] if o.type == "ARMATURE" and bake_impostor.note_of(o)),
+                     bake_impostor.garments_of(rig, impostor.note_in(os.path.join(profiles, "%s-walk.glb" % card.get("plays", profile)))))
+    garb = []
+
+    def garb_of(obj):
+        name = garment_of(obj) or obj.name
+        if name not in garb:
+            garb.append(name)
+        return 1 + garb.index(name)
+
     joints, made = [], []
     head_of = lambda bone: rig.matrix_world @ rig.data.bones[bone].head_local
     wanted = []
@@ -470,7 +482,7 @@ def main():
             worn = bm.faces.layers.int.new("gear")   # whether it is clothing that comes off (a mesh of its own in the tidy version), not the body
             for f in bm.faces:
                 f[tell] = 1 if f.index in keep and keep[f.index][0] >= keep[f.index][1] else 0
-                f[worn] = 1 if obj.name.lower().startswith("gear") else 0
+                f[worn] = garb_of(obj) if obj.name.lower().startswith("gear") else 0
             bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in keep], context="FACES")
             bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)  # a .glb's mesh is split along every seam of its texture
             bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -873,13 +885,17 @@ def main():
         pull[:, [i for i, b in enumerate(bones_of) if b not in rig.pose.bones]] = 0.0  # (a group that is no bone of this skeleton pulls nothing)
         pull /= np.maximum(pull.sum(axis=1, keepdims=True), 1e-9)
         was_pull = pull.copy()
-        slot_of, worn_at = np.full(len(me.vertices), -1), np.zeros(len(me.vertices), dtype=bool)
+        slot_of, worn_at, hold_at = np.full(len(me.vertices), -1), np.zeros(len(me.vertices), dtype=bool), np.zeros(len(me.vertices))
         worn = np.zeros(len(me.polygons), dtype=np.int32)
         me.attributes["gear"].data.foreach_get("value", worn)
+        # how far each garment is held back from the neck's turn: as its description says (a collar its own share, a
+        # hood that rides the head not at all), and clothing nothing is said of by --cloth
+        holds = [impostor.hold_of(name, described, cloth) for name in garb]
         for p in me.polygons:
             slot_of[list(p.vertices)] = p.material_index
             if worn[p.index]:
                 worn_at[list(p.vertices)] = True
+                hold_at[list(p.vertices)] = np.maximum(hold_at[list(p.vertices)], holds[worn[p.index] - 1] if worn[p.index] - 1 < len(holds) else cloth)
         spot = np.array([whole.matrix_world @ v.co for v in me.vertices])
         edges = np.array([list(e.vertices) for e in me.edges], dtype=np.int64).reshape(-1, 2)
         slots = {m.name[len("joint "):]: s for s, m in enumerate(me.materials)}
@@ -891,12 +907,13 @@ def main():
                 continue
             centre, zone = np.array(head_of(j.get("about", j["bone"]))), j["zone_cm"] / 100.0
             if j["kind"] == "neck":
-                pull = yoke.lay_cloth(pull, mine & worn_at, column["neck"], column["head"], column["chest"], cloth)
+                pull = yoke.lay_cloth(pull, (mine & worn_at) * hold_at, column["neck"], column["head"], column["chest"], 1.0)
                 own = edges[mine[edges[:, 0]] & mine[edges[:, 1]]]
                 length = float(np.linalg.norm(spot[own[:, 0]] - spot[own[:, 1]], axis=1).mean()) if len(own) else 1.0
                 rounds = yoke.rounds_for(even_m, length)
                 pull[mine] = yoke.spread_pull(pull, own, ~mine | (was_pull[:, column["head"]] > 0.99), rounds)[mine]
-                j.update(even_cm=round(even_m * 100, 1), even_rounds=rounds, cloth=cloth, cloth_points=int((mine & worn_at).sum()))
+                j.update(even_cm=round(even_m * 100, 1), even_rounds=rounds, cloth=cloth, cloth_points=int((mine & worn_at).sum()),
+                         held={name: round(h, 2) for name, h in zip(garb, holds)})
                 others, up = shoulders, np.array(head_of(j["bone"])) - centre
             else:
                 others, up = [(np.array(head_of(neck["about"])), neck["zone_cm"] / 100.0)] if neck else [], None

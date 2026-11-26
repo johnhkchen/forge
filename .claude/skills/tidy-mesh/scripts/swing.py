@@ -21,7 +21,10 @@
 #   2. The start. The body is first held as it was made while the cloth
 #      settles on it ("settle"), then turned into the motion's first pose
 #      ("preroll"), so no limb starts half through the cloth. Then the motion
-#      plays; a loop is played round "rounds" times and the last round kept.
+#      plays. A loop is played round "rounds" times and the last two rounds
+#      kept: cloth never comes round to quite where it was, so the last round
+#      is faded into the one before it, frame by frame, and the loop closes on
+#      itself with no seam and no frame that is not something the cloth did.
 #   3. Onto the bones. Each chain bone is given the turn AND the move that
 #      best carry its own patch of the cloth (the points it pulls on, by how
 #      much) from where the simulated cloth settled to where it is on that
@@ -45,9 +48,9 @@
 #      point, the leg has it. No point goes under the floor.
 #   5. Each bone's turn and move are brought inside how far its kind may swing
 #      and slide, eased with the frames either side ("smooth"), and keyed, one
-#      key a frame, into the same action. A loop's end is eased onto its start,
-#      so it has no seam. What is keyed is only bones: a .glb carries it, and
-#      whatever is skinned to the chains (the cards' pieces) moves by it.
+#      key a frame, into the same action. What is keyed is only bones: a .glb
+#      carries it, and whatever is skinned to the chains (the cards' pieces)
+#      moves by it.
 #
 # "check" in the result plays it back and measures the cloth as Blender bends
 # it: turns outside a limit, how far the garment's points go into the body
@@ -61,18 +64,19 @@
 # against the legs.)
 #
 # Send through the blender MCP `execute_blender_code` tool from PARAMS down.
-# Prints RESULT {json}. Three to ten seconds for six seconds of motion.
+# Prints RESULT {json}. Four to ten seconds for six seconds of motion. The profile runner's own (it uses numpy, which the add-on's safe mode refuses).
 
 PARAMS = {
     "rig": None,        # the armature; None = the first one in the scene
     "quality": 8,       # the simulation's steps a frame
     "settle": 45,       # frames the simulated cloth is left to settle on the body as it was made, before anything moves
     "preroll": 20,      # frames the body then takes to come into the motion's first pose
-    "rounds": 3,        # a looping motion is played this many times; the last round is kept
+    "rounds": 3,        # a looping motion is played this many times (2 at least); the last round is faded into the one before
     "mass": None,       # how heavy the cloth is, kg a point. None = each garment's own (cloth.py: "kinds")
     "bend": None,       # how it resists folding (0.5 = silk, 4 = canvas). None = each garment's own
     "damp": None,       # how much the air slows it. None = each garment's own
     "shape": None,      # how hard it is held to the shape it was made in, riding the bone it hangs from (0 = a rag ... 1 = it cannot move). None = each garment's own
+    "wind": 60.0,       # the air of moving: a wind from the front this strong for each metre a second the motion says it travels (a walk or a run, played on the spot); 0 = none
     "legs": True,       # the body is in the cloth's way: the simulated cloth collides with it, and the garment's own points are kept out of the parts of it their kind names
     "floor": True,      # ... and so is the floor
     "wrap": True,       # a point of the garment found in a limb is put out on the side of it the simulated cloth is on, not the nearest
@@ -409,8 +413,9 @@ if chains:
     def simulated(rounds_played):
         """Blender's cloth simulation of every garment the chains pull on, over the motion. -> (how each chain
         bone's patch of the simulated cloth has moved from where it settled as made, in the rig's frame: {bone:
-        [frames + 1 of 4x4]} over the last round played; where the simulated cloth has each of the garments' own
-        points: [frames + 1, points, 3]). ({}, None) if there is nothing to simulate."""
+        [kept + 1 of 4x4]}; where the simulated cloth has each of the garments' own points: [kept + 1, points, 3]),
+        over the `kept` frames up to the end: the motion, or a loop's last two rounds. ({}, None) if there is
+        nothing to simulate."""
         parent_of = {name: c["parent"] for c in chains for name in c["bones"]}
         how_of = {name: c["about"] for c in chains for name in c["bones"]}
         cloths = [o for o in gear if any(name == o.name for name, _ in cloth_from)]
@@ -419,6 +424,7 @@ if chains:
         others = [o for o in scene.objects if o.type == "MESH" and o.find_armature() == rig and o not in cloths]
         hold, blend = int(PARAMS["settle"]), int(PARAMS["preroll"])
         last = frames * rounds_played
+        kept = frames * min(2, rounds_played) if rounds_played > 1 else frames
         made, colliders, changed, moves = [], [], [], {}
         try:
             # The body as it was made, held while the cloth settles, then turned into the motion's first pose: each
@@ -461,18 +467,18 @@ if chains:
                 for v in sim.data.vertices:
                     swung = sum(g.weight for g in v.groups if names[g.group] in parent_of)
                     total = sum(g.weight for g in v.groups) or 1.0
-                    kept = 0.0
+                    shaped = 0.0
                     for g in v.groups:
                         n = names[g.group]
                         if n in parent_of and g.weight > 0:
                             # what a chain held goes to the bone it hangs from: where it is pinned, the cloth rides the body
                             to_body[(v.index, parent_of[n])] = to_body.get((v.index, parent_of[n]), 0.0) + g.weight
                             mass, bend, damp, total_w = mass + g.weight * how_of[n]["mass"], bend + g.weight * how_of[n]["bend"], damp + g.weight * how_of[n]["damp"], total_w + g.weight
-                            kept = max(kept, how_of[n]["shape"])
+                            shaped = max(shaped, how_of[n]["shape"])
                             if g.weight > 0.02:
                                 patches.setdefault(n, []).append((v.index, g.weight))
                     held_by_body = max(0.0, 1.0 - (swung / total) / PIN_UNDER)
-                    pin.add([v.index], max(held_by_body ** 2, kept), "REPLACE")
+                    pin.add([v.index], max(held_by_body ** 2, shaped), "REPLACE")
                 for g in [g for g in sim.vertex_groups if g.name in parent_of]:
                     sim.vertex_groups.remove(g)
                 for (index, bone), w in to_body.items():
@@ -518,6 +524,17 @@ if chains:
                 ground.modifiers.new("forge_collide", "COLLISION")
                 ground.collision.thickness_outer = lift
                 colliders.append(ground)
+            # A walk or a run is played on the spot, but the cloth should trail as if the ground went by: the air of
+            # moving, a wind from the front as fast as the motion says it travels.
+            speed = float(about.get("speed_m_s") or 0.0)
+            if speed > 0.0 and PARAMS["wind"]:
+                bpy.ops.object.effector_add(type="WIND")  # (an empty has no field of its own until it is made as one)
+                air = bpy.context.view_layer.objects.active
+                air.name = "forge_wind"
+                air.field.strength = PARAMS["wind"] * speed
+                air.field.flow = 0.0
+                air.matrix_world = rig.matrix_world @ Matrix.Translation((0.0, -3.0, 0.6 * tall)) @ Matrix.Rotation(-math.pi / 2.0, 4, "X")  # (it blows along its z: turned to blow back, the way the character faces away from)
+                colliders.append(air)
             back = rig.matrix_world.inverted()
 
             def shown(sim):
@@ -530,7 +547,7 @@ if chains:
                 m = np.array(back @ sim.matrix_world)
                 return co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3]
             settled, sim_allow, sim_deep, sagged = {}, {}, [], []
-            sides = np.zeros((frames + 1, len(cloth_at), 3))
+            sides = np.zeros((kept + 1, len(cloth_at), 3))
             for f in range(-hold - blend, last + 1):
                 scene.frame_set(f)
                 if f == -blend:  # settled on the body as made; brought back to where the body was made, if the first frame has put it somewhere else
@@ -541,12 +558,12 @@ if chains:
                         as_made = np.array([v.co for v in sim.data.vertices]) @ m[:3, :3].T + m[:3, 3]
                         loose = np.unique(np.concatenate([index for index, _ in patches.values()])) if patches else np.zeros(0, dtype=np.int64)
                         sagged.append(float(np.linalg.norm(settled[sim.name][loose] - as_made[loose], axis=1).mean()) if len(loose) else 0.0)
-                if f < last - frames:
+                if f < last - kept:
                     continue
                 deep = 0.0
                 for sim, patches, _, where_to, take in made:
                     now, was = shown(sim), settled[sim.name]
-                    sides[f - (last - frames), where_to] = now[take]
+                    sides[f - (last - kept), where_to] = now[take]
                     for k, i, name in bone_list:  # (from the top of each chain down: a bone leans on how the one above it was carried)
                         if name not in patches:
                             continue
@@ -560,7 +577,7 @@ if chains:
                         loose = np.unique(np.concatenate([index for index, _ in patches.values()])) if patches else np.zeros(0, dtype=np.int64)
                         if sim.name not in sim_allow:
                             sim_allow[sim.name] = np.maximum(in_rods(was[loose], rest_rods, np.zeros((len(loose), len(rod_names))))[0], 0.0)
-                        over = in_rods(now[loose], taken[f - (last - frames)]["rods"], sim_allow[sim.name])[0] - PARAMS["clearance"] * tall
+                        over = in_rods(now[loose], taken[(f - (last - kept)) % frames if kept > frames else f - (last - kept)]["rods"], sim_allow[sim.name])[0] - PARAMS["clearance"] * tall
                         deep = max(deep, float(over.max()) if over.size else 0.0)
                 sim_deep.append(deep)
             result["simulated_cloth"] = {"deepest_in_the_body_cm": round(100 * max(sim_deep + [0.0]), 2), "frames_in_the_body": int(sum(d > 0.005 for d in sim_deep)),
@@ -572,7 +589,9 @@ if chains:
                 bpy.data.objects.remove(sim, do_unlink=True)
                 bpy.data.meshes.remove(mesh)
             for obj in colliders:
-                if obj.name.startswith("forge_ground"):
+                if obj.name.startswith("forge_wind"):
+                    bpy.data.objects.remove(obj, do_unlink=True)
+                elif obj.name.startswith("forge_ground"):
                     mesh = obj.data
                     bpy.data.objects.remove(obj, do_unlink=True)
                     bpy.data.meshes.remove(mesh)
@@ -656,25 +675,41 @@ if chains:
         return held(quat.to_matrix(), limits.get(name) or free), move
 
     # ---- simulate; then each frame's bones: where each one's patch of the simulated cloth is, kept clear, inside what its kind may do ----
-    patched, sides = simulated(max(1, int(PARAMS["rounds"])) if loops else 1) if len(cloth_at) else ({}, None)
+    patched, sides = simulated(max(2, int(PARAMS["rounds"])) if loops else 1) if len(cloth_at) else ({}, None)
     result["simulated"] = bool(patched)
+    two_rounds = bool(patched) and loops
     played = {name: [] for _, _, name in bone_list}  # {bone: [each frame's (turn, move), in the bone's own axes]}
-    for f in range(frames + 1):
+    for f in range((2 * frames if two_rounds else frames) + 1):
+        shot = taken[f % frames if two_rounds else f]
         poses = np.zeros((len(bone_list), 4, 4))
         for b, (k, i, name) in enumerate(bone_list):
-            above = poses[b - 1] if i else taken[f]["parent"][chains[k]["parent"]]
+            above = poses[b - 1] if i else shot["parent"][chains[k]["parent"]]
             # a bone with no cloth of its own to say goes with the bone above it
             poses[b] = patched[name][f] @ np.array(rest[name]) if name in patched else above @ chains[k]["local"][i]
         if patched:
-            poses = cleared(poses, taken[f], sides[f])
+            poses = cleared(poses, shot, sides[f])
         real = np.zeros_like(poses)
         for b, (k, i, name) in enumerate(bone_list):
-            frame = (real[b - 1] if i else taken[f]["parent"][chains[k]["parent"]]) @ chains[k]["local"][i]
+            frame = (real[b - 1] if i else shot["parent"][chains[k]["parent"]]) @ chains[k]["local"][i]
             turn, move = capped(np.linalg.inv(frame) @ poses[b], name)
             basis = np.eye(4)
             basis[:3, :3], basis[:3, 3] = np.array(turn), np.array(move)
             real[b] = frame @ basis
             played[name].append((turn.to_quaternion(), move))
+    # A loop's cloth never comes round to quite where it was (it flutters; a second round is not the first). So the
+    # last round is faded into the round before it: frame f is the last round's, less and less, and the one before's,
+    # more and more. Its first frame is the last round's first and its last is the round before's last, which are
+    # the same moment: the loop closes on itself, and every frame is between two things the cloth really did.
+    apart = 0.0
+    if two_rounds:
+        for name, rows in played.items():
+            faded = []
+            for f in range(frames + 1):
+                (q_old, m_old), (q_new, m_new) = rows[f], rows[frames + f]
+                apart = max(apart, math.degrees(q_old.rotation_difference(q_new).angle if q_old.rotation_difference(q_new).angle <= math.pi else 2.0 * math.pi - q_old.rotation_difference(q_new).angle))
+                faded.append((q_new.slerp(q_old, f / frames), m_new.lerp(m_old, f / frames)))
+            rows[:] = faded
+    result["rounds_apart_deg"] = round(apart, 1)
 
     # ---- the simulation's small shakes: each turn and move is eased with the frames either side (a loop's ends are each other's neighbours) ----
     for name, rows in played.items():
@@ -687,7 +722,8 @@ if chains:
                 if not loops and f in (0, len(rows) - 1):
                     eased.append(rows[f])
                     continue
-                near = [rows[(f + d) % len(rows)] if loops else rows[f + d] for d in (-1, 0, 1)]
+                # (a loop's last frame is its first again: the frame before its first is the one before its last)
+                near = [rows[(f + d) % frames] if loops else rows[f + d] for d in (-1, 0, 1)]
                 quats = [q.copy() for q, _ in near]
                 for q in (quats[0], quats[2]):
                     if q.dot(quats[1]) < 0:

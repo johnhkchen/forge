@@ -1,7 +1,7 @@
 """Does loose cloth keep out of the body, off the floor, and still? Any clip of any character, every frame, measured.
 
     Blender -b --factory-startup -P scripts/fabric_judge.py -- --glb <a clip's .glb>,... [--out evidence/fabric]
-        [--tag after] [--every 1] [--fps 30] [--worst 4] [--stills 0] [--stills-at 30,90]
+        [--tag after] [--every 1] [--fps 30] [--worst 4] [--stills 0] [--stills-at 30,90] [--gear "work apron"]
 
 judge_legs.py asks one question of one garment: do a skirt's chains keep clear of the thighs and shins. This asks
 the same of every garment that swings on chains (cloth.py names them cloth_<gear>_<chain>_<n>: a skirt, a tunic's
@@ -90,7 +90,7 @@ def all_chains(rig):
     return sorted(chains, key=lambda c: c["bones"][0])
 
 
-def judge_film(glb, fps=30, every=1, worst=4, stills=0, out=None, tag="", at=None):
+def judge_film(glb, fps=30, every=1, worst=4, stills=0, out=None, tag="", at=None, named=()):
     import bpy
     from mathutils import Vector
     from mathutils.bvhtree import BVHTree
@@ -105,18 +105,21 @@ def judge_film(glb, fps=30, every=1, worst=4, stills=0, out=None, tag="", at=Non
         return report
     chains = all_chains(rig)
     report["chains"] = len(chains)
-    if not chains:
+    meshes = [o for o in scene.objects if o.type == "MESH" and o.find_armature() == rig]
+    # (--gear: garments judged whole, chains or none. A piece that rides the body stiff, as an apron did before it
+    # was given chains, has no loose cloth to find: named, all of it is judged, so before can be set beside after)
+    told = [o for o in meshes if o.get("forge") == "gear" and any(n.lower() in (str(o.get("gear") or "") + " " + o.name).lower() for n in named)]
+    if not chains and not told:
         report["cloth"] = None
         return report
     note = json.loads(rig.get("forge_cloth", "{}"))
     report["garments"] = note.get("garments") or sorted({(c.get("gear"), c["parent"]) for c in chains})
     chain_bones = {b for c in chains for b in c["bones"]}
-    meshes = [o for o in scene.objects if o.type == "MESH" and o.find_armature() == rig]
 
     def swung(obj):
         ids = {g.index for g in obj.vertex_groups if g.name in chain_bones}
         return any(g.group in ids and g.weight > 0.05 for v in obj.data.vertices for g in v.groups)
-    cloths = [o for o in meshes if o.get("forge") == "gear" and swung(o)]
+    cloths = told or [o for o in meshes if o.get("forge") == "gear" and swung(o)]
     bodies = [o for o in meshes if o.get("forge") != "gear"]
     report["cloth"] = [o.name for o in cloths]
     if not cloths or not bodies:
@@ -144,6 +147,8 @@ def judge_film(glb, fps=30, every=1, worst=4, stills=0, out=None, tag="", at=Non
     def pulled(obj):
         """Which of a garment's points the chains pull on (SWUNG of their weight or more): the loose cloth. The rest
         of a tunic is a shirt, and goes where the body's own weights take it; that is not the swing's to mend."""
+        if obj in told:
+            return np.ones(len(obj.data.vertices), dtype=bool)
         ids = {g.index for g in obj.vertex_groups if g.name in chain_bones}
         return np.array([sum(g.weight for g in v.groups if g.group in ids) >= SWUNG * max(sum(g.weight for g in v.groups), 1e-9) for v in obj.data.vertices], dtype=bool)
     shape = []
@@ -352,10 +357,11 @@ def main():
     fps, every, worst, stills = int(flag("--fps", "30")), int(flag("--every", "1")), int(flag("--worst", "4")), int(flag("--stills", "0"))
     films = [g for g in flag("--glb", "").split(",") if g]
     at = [int(f) for f in flag("--stills-at", "").split(",") if f]
+    named = [g for g in flag("--gear", "").split(",") if g]
     os.makedirs(out, exist_ok=True)
     began, reports = time.time(), []
     for glb in films:
-        r = judge_film(os.path.abspath(glb), fps, every, worst, stills, out, tag, at)
+        r = judge_film(os.path.abspath(glb), fps, every, worst, stills, out, tag, at, named)
         reports.append(r)
         print("FABRIC %s: %s" % (os.path.basename(glb), line_of(r)), flush=True)
     path = os.path.join(out, "fabric%s.json" % (tag and "-" + tag))

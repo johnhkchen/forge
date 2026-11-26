@@ -1005,10 +1005,17 @@ def tint_place(joint_at, center, ring):
     return joint_at + unit(center - joint_at) * (TINT_IN * ring)
 
 
-# ---------- a dress: a garment swung by chains of bones that hang over the legs (bake_impostor.py, bake_joints.py) ----------
+# ---------- garments: what a skeleton wears loose, and how the cards show each (bake_impostor.py, bake_joints.py) ----------
+# cloth.py says of every hanging piece what kind of garment it is and, with it, how flat cards show it ("card" in
+# its "kinds"): "piece" = a card of its own and one skinned piece of the model moved by its chains (a skirt, a
+# tunic's hem, an apron, a coat's tails, a cape); "rides" = it stays in the card of the bone it hangs from (a hood,
+# on the head's); "held" = it has no chains, and the neck's piece holds it back from the neck's turn (a collar).
+# That description rides in every .glb (the skeleton's "forge_cloth"), and the cards read it here: nothing in the
+# cards asks what a garment is called or who wears it.
 
-CHAIN = re.compile(r"^cloth_(.+)_(\d+)_(\d+)$")  # a swing chain's bone, as cloth.py names it: cloth_<gear>_<chain>_<bone>
-DRESS_ROOTS = ("hips", "spine")    # chains hanging from a bone of these parts hang over the legs: a skirt, a dress, a robe, a coat's tails
+CHAIN = re.compile(r"^cloth_(.+)_(\d+)_(\d+)$")  # a chain's bone, as cloth.py names it: cloth_<gear>_<chain>_<bone>
+DRESS_ROOTS = ("hips", "spine")    # a file with no description: chains hanging from a bone of these parts hang over the legs, and are a piece
+CLOTH_HOLD = 0.5   # clothing nothing is said of gives this share of what the neck and head pull on it to the chest (yoke.py: lay_cloth)
 
 
 def slug_of(text):
@@ -1019,34 +1026,97 @@ def slug_of(text):
     return out[:18] or "cloth"
 
 
-def chains_of(names, parent_of, fold):
-    """The dress a skeleton has, from its bones' names: {"root": the body bone its chains hang from, "bones": every
-    chain bone, "chains": [[a chain's bones, top down], ...], "garments": [the slugs of the garments they swing]}, or
-    None when it has none. names: every bone; parent_of(name): its parent's name or None; fold(name): the part a body
-    bone belongs to. Only chains whose top hangs from a bone of DRESS_ROOTS count (a hood's hangs from the head: the
-    head's card has the face, and a hood does not tear between the legs). Several garments with such chains (a skirt
-    and a coat's tails) make one dress, about the lowest root."""
-    chains, root, slugs = {}, None, []
+def note_in(path):
+    """The description of what a skeleton wears loose that a .glb carries (cloth.py's "forge_cloth", on its
+    skeleton's node), as a dict; None if the file has none, or is not there."""
+    try:
+        with open(path, "rb") as f:
+            f.read(12)
+            size, _ = struct.unpack("<I4s", f.read(8))
+            doc = json.loads(f.read(size))
+    except (OSError, ValueError, struct.error):
+        return None
+    for node in doc.get("nodes") or []:
+        told = (node.get("extras") or {}).get("forge_cloth")
+        if told:
+            try:
+                return json.loads(told) if isinstance(told, str) else told
+            except ValueError:
+                return None
+    return None
+
+
+def garments_of(names, parent_of, fold, note=None):
+    """Every garment a skeleton wears loose: [{"slug", "gear", "kind", "parent": the body bone it hangs from,
+    "card": "piece" | "rides" | "held", "hold": (a held one) the share it is held back, "chains": [[a chain's
+    bones, top down], ...]}]. names: every bone; parent_of(name): its parent's name or None; fold(name): the part a
+    body bone belongs to; note: the skeleton's own description (cloth.py's "forge_cloth", as a dict), or None.
+
+    The chains are read off the bones' names either way (they are what is in the file). What each is comes from
+    the note; for a file that has none (made before cloth.py wrote one), from where its chains hang: over the legs
+    is a piece, anywhere else rides."""
+    chains = {}
     for name in names:
         if not CHAIN.match(name):
             continue
         top = name
         while parent_of(top) is not None and CHAIN.match(parent_of(top)):
             top = parent_of(top)
-        hang = parent_of(top)
-        if hang is None or fold(hang) not in DRESS_ROOTS:
-            continue
-        chains.setdefault(top, []).append(name)
-        if root is None or fold(hang) == "hips":
-            root = hang
-        slug = CHAIN.match(top).group(1)
-        if slug not in slugs:
-            slugs.append(slug)
-    if not chains:
-        return None
+        if parent_of(top) is not None:
+            chains.setdefault(top, []).append(name)
     depth = lambda n: int(CHAIN.match(n).group(3))
-    ordered = [sorted(bones, key=depth) for _, bones in sorted(chains.items())]
-    return {"root": root, "bones": [b for chain in ordered for b in chain], "chains": ordered, "garments": slugs}
+    told = {}  # the note's garments, by the slug their chains carry and the bone they hang from
+    for g in (note or {}).get("garments") or []:
+        told[(g.get("slug") or slug_of(g.get("gear")), g.get("parent"))] = g
+    for c in (note or {}).get("chains") or []:  # (a second piece of one gear has a slug of its own: its chains say which garment they are)
+        if c.get("bones") and CHAIN.match(c["bones"][0]) and isinstance(c.get("garment"), int) and c["garment"] < len(note.get("garments") or []):
+            told[(CHAIN.match(c["bones"][0]).group(1), c.get("parent"))] = note["garments"][c["garment"]]
+    out = {}
+    for top, bones in sorted(chains.items()):
+        slug, hang = CHAIN.match(top).group(1), parent_of(top)
+        said = told.get((slug, hang)) or {}
+        mine = out.setdefault((slug, hang), {"slug": slug, "gear": said.get("gear") or slug, "kind": said.get("kind"), "parent": hang,
+                                             "card": said.get("card") or ("piece" if fold(hang) in DRESS_ROOTS else "rides"), "chains": []})
+        mine["chains"].append(sorted(bones, key=depth))
+    garments = list(out.values())
+    for g in (note or {}).get("garments") or []:  # ... and those with no chains at all: a collar
+        if not g.get("chains"):
+            garments.append({"slug": g.get("slug") or slug_of(g.get("gear")), "gear": g.get("gear"), "kind": g.get("kind"), "parent": g.get("parent"),
+                             "card": g.get("card") or "held", "hold": float(g.get("hold", CLOTH_HOLD)), "chains": []})
+    return garments
+
+
+def chains_of(names, parent_of, fold, note=None):
+    """The dress a skeleton has: every garment the cards show as a piece (garments_of), as one: {"root": the body
+    bone its chains hang from, "bones": every chain bone, "chains": [[a chain's bones, top down], ...], "garments":
+    [the slugs of the garments they move], "kinds": [what cloth.py said each is]}, or None when it has none. A hood
+    rides the head (the head's card has the face, and a hood does not tear between the legs) and is not in it.
+    Several pieces (a skirt and a coat's tails) make one dress, about the lowest root."""
+    pieces = [g for g in garments_of(names, parent_of, fold, note) if g["card"] == "piece" and g["chains"]]
+    if not pieces:
+        return None
+    root = next((g["parent"] for g in pieces if fold(g["parent"]) == "hips"), pieces[0]["parent"])
+    ordered = [chain for g in pieces for chain in g["chains"]]
+    slugs = []
+    for g in pieces:
+        if g["slug"] not in slugs:
+            slugs.append(g["slug"])
+    return {"root": root, "bones": [b for chain in ordered for b in chain], "chains": ordered, "garments": slugs, "kinds": [g["kind"] for g in pieces]}
+
+
+def hold_of(gear, garments, default=CLOTH_HOLD):
+    """The share of what the neck and the head pull on a garment's points that the neck's piece gives back to the
+    chest (yoke.py: lay_cloth). A garment the description holds (a collar) says its own; one that rides the head or
+    the neck (a hood) is not held back at all, it goes with the head; anything else, `default`: cloth is not skin, it
+    lies on the shoulders and the neck turns inside it. gear: its name, any way it is written."""
+    slug = slug_of(gear)
+    for g in garments or []:
+        if g["slug"] == slug or g["slug"].startswith(slug + "_") or slug_of(g.get("gear")) == slug:
+            if g["card"] == "held":
+                return float(g.get("hold", default))
+            if g["card"] == "rides" and g.get("parent") in ("head", "neck"):
+                return 0.0
+    return float(default)
 
 
 def part_balls(card):

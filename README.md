@@ -227,7 +227,7 @@ Built from tubes and boxes, a pair of trousers is a stiff pipe around a leg: a g
 - **Each piece is laid on the body.** Tight things (trousers, sleeves, a shirt, wraps) are moved onto the body under them, a centimeter off it; what is worn over something else sits one step further out. Loose things (a kilt, a coat's skirts, a hood) are fitted only where they rest on the body, down to the belt or to where the body falls away, and keep their hang below that. Boots, hats and buckles keep their shape.
 - **Skin under clothes isn't drawn.** The body faces a piece hides are meshes of their own, `body under: wool trousers`, each tagged with the gear that hides it. Show one only while that gear is off. On, no skin can come through, because it isn't there; off, the body is whole. A dressed character also draws fewer triangles than before.
 - **Clothes bend with the body.** Every point of cloth gets the same pull from the bones as the skin right under it, so cloth and skin fold together.
-- **Loose cloth hangs and swings.** A kilt, a coat's skirts or the back of a hood get a few short chains of bones. After any motion is made (the walk, a shot), each chain is trailed behind the body like weights on strings, kept out of the thighs, held inside its joint limits, and saved as plain keyframes, so it plays anywhere a `.glb` does. The walk still loops without a seam.
+- **Loose cloth hangs and moves as cloth.** A skirt, an apron, a coat's skirts or the back of a hood get a few short chains of bones. After any motion is made (the walk, a run, a shot), the garment is simulated as cloth over the body and what it does is carried onto those bones and saved as plain keyframes, so it plays anywhere a `.glb` does. The walk still loops without a seam. See "Fabric".
 
 - **Clothes carry their own colors.** The detailed mesh is the picture's: one skin, dressed. When its colors are copied onto the pieces, a kilt copies only kilt and the body only skin. Where a piece has nothing of its own to copy (a hem longer than the real one, a lining, the skin under a coat) it is filled with that piece's own colors, not with the leg behind it. Flat-color low-poly versions get their colors the same way, one per piece.
 
@@ -246,7 +246,7 @@ A run can't be worked out from a tape measure the way a walk can, so it is asked
 1. **A sentence and a speed for each.** Both come from the brief and from the same four traits as the walk. "A huge person runs forward in a slow, heavy, lumbering run, with pounding steps and a stiff upper body" for the troll, at 2.5 m/s; "A stocky person runs forward stealthily in a low crouch, with light, quick, quiet steps" for the ninja, at 3.4. The speed follows the leg's length, as the walk's does. `just run-asks` shows them without sending anything.
 2. **Kimodo makes the motion.** That is NVIDIA's sentence-to-motion model, on the same RunPod worker as the shots. Each character gets six seconds along a straight line at its own speed, five times over on different dice, because the same sentence can come out well or oddly. Each take is scored (does the loop close, do the legs keep a steady beat, is the head thrown back, do both arms swing) and the best is kept. About three seconds of GPU a take. A character's clip is kept and only made again if its sentence or speed changes.
 3. **The clip is cut into a loop.** Two frames a whole number of strides apart, where the body is most alike (every joint, how fast it is moving, which feet are down), become the two ends. The end is eased into the start, the last frame is made the first again, and the travel over the ground is taken out so it runs on the spot. The speed is written down.
-4. **It goes onto the character** the way a shot does: its own skeleton and joint limits, planted feet kept planted, loose cloth swinging at running speed, a tail following the hips. Out come `profiles/lowpoly-run.glb` and `midpoly-run.glb`, with gear and prop points on the bones like the walk files.
+4. **It goes onto the character** the way a shot does: its own skeleton and joint limits, planted feet kept planted, loose cloth trailing in the wind of running, a tail following the hips. Out come `profiles/lowpoly-run.glb` and `midpoly-run.glb`, with gear and prop points on the bones like the walk files.
 
 In the gallery, a character with a run has a "Run" button beside "Walk", and a "Runs at" line.
 
@@ -1528,6 +1528,8 @@ just impostor-legs groove-flamenco after                                        
 just impostor-legs groove-flamenco before evidence/unclip --shots <the old shots folder>
 ```
 
+(Since then the swing itself has changed: the skirt is simulated as cloth, and every clip gets it. See "Fabric", below. What follows is how it stood.)
+
 **Where the swing lives.** Only in Blender. `swing.py` plays the baked dance through once more and works out where the skirt's six chains of bones go, a frame at a time, and keys them into the take's `.glb`. Everything that draws her reads those keys: Blender's films, the watch page's mesh, her cards' dress piece (it is skinned to the same chains) and the tag field. Nothing in the browser moves the skirt on its own. So one fix in `swing.py` holds everywhere, and her cards did not need baking again: their weights and pictures do not depend on the motion.
 
 **Why the legs got through.** The old swing kept each chain, a line of three bones, out of a rod round each thigh and shin. But the rods were only as thick as the gap between a chain and a leg as she stood when the skirt was made, which near the hip is almost nothing. The cloth between two chains was never tried at all, so a knee slid between two chains straight through the panel. Her hem hangs below the last joint and her flounces stand off the chains, and none of that was tried either. Nothing kept the hem off the floor.
@@ -1782,6 +1784,99 @@ In "Pixels, both" the same way round: neck and shoulders 0.68 to 0.77 from 1 m, 
 - **Her walk and run** play the same pieces and were not looked at. No phone has run it.
 
 Pictures (`exports/omni/groove-flamenco/armpit/`, out of git): `first.png`, `middle.png`, `last.png` are the push-in in bold ink as cards. `raise-last-*-before-after.png` are close on the raised shoulder at the last raise (13.96 s), `raise-both-*` with both arms up (10.75 s), and `neck-last-*` close on the neck, each in bold ink and in "Pixels, both", with before ("No flaps") on the left, taken off the watch page. `evidence/armpit/before-who-*` and `after-who-*` are the judge's own: the real model, bold ink, what draws every pixel, and what is bare (blue) and sticks out (red), at the raises and the head turns, from the push-in camera, the crew camera, 2 m and 1 m.
+
+## Fabric
+
+Cloth had been mended one case at a time: a piece for the dancer's skirt on her cards, a fix that kept her legs under it for one dance, a collar held back in the neck's piece, and a known fault on the villager's tunic. Now any hanging garment is one of a few kinds, every motion that goes onto a character ends in the same fabric step, and that step simulates the garment as cloth.
+
+```
+just fabric-survey                       # who wears what loose, and which clips still play cloth moved the old way
+just fabric-judge <a.glb>,<b.glb> after  # any clip, any garment against any part of the body, every frame
+just screen-play flamenco --again        # her screen-test motions again; #/watch/screen-deep-squat
+just fabric-test                         # the fabric path's tests, no Blender
+```
+
+**The survey** (`scripts/fabric_survey.py`; `evidence/fabric/survey-main.json` is the main folder as it stood).
+
+| | wears loose | how it was rigged | what was wrong |
+|---|---|---|---|
+| Flamenco dancer | a ruffled skirt, 71 cm, all round the hips | 6 chains of 3 bones from the hips, swung as weights on strings | her walk, her run and every screen-test motion in the main folder were baked before her legs were kept under it (that fix lived in one take, in a branch); in the deep squat the skirt lay flat out behind her and her thighs were bare |
+| Villager | a work apron; a linen tunic | the apron and the tunic's skirt were called `stiff` by his block-out, so they rode his hips like a bucket; his walk and run, made earlier, had the tunic on 4 chains from the hips and 4 more from his head | his thighs went straight through the apron on 416 of 1,668 frames; the head's chains swung his shirt with his nod |
+| Ninja | a hood | 4 chains from the head | nothing much: it never met a leg |
+| Pirate, troll, lizardkin | nothing loose | their block-outs are one mesh: there is no coat or kilt to hang | (the pirate's coat cannot swing until he is built again with gear) |
+| Lincoln, Roosevelt | nothing loose | shirts, trousers, a singlet: tight, on the body's own weights | |
+
+Where the cloth step runs was already one place: every bake of a motion goes through `scripts/motion/apply_motion.py` (a run, a shot from `just cast`, a fight, a ride, the casting tape, the screen-test motions) or the walk profile, and both run what the rig asks for after a bake, which is `swing.py`. Nothing skipped it. What went wrong was older than that: a clip keeps the cloth it was given when it was baked, so a fix to the swing reached only what was baked after it (57 clips in the main folder still play the old cloth), and what the swing could do was a row of weights kept out of two legs. The fights, the tag field's own moves and the crew's dance have nobody in loose cloth in them.
+
+**What was tried**, on the dancer's mid-poly model, by the same judge:
+
+| | deep squat: frames with the skirt in a leg | thighs bare | hem shakes | front kick |
+|---|---|---|---|---|
+| weights on strings, kept out of the legs chain by chain (as it was) | 132 of 180 | on 122 | 10.5 mm | the leg out over the hem, the skirt left hanging under it |
+| ... with each place remembering which side of a limb it was on, chains tied to their neighbours, arms in the way | 180 | on 155 | 36 mm | worse: dropped |
+| Blender's cloth simulation, the chains turned to follow it (bones that only turn, joined end to end) | 142 | not counted then | 5 mm | the chains' cloth 10 cm from the simulated cloth on average (8 standing still), the leg still out: a rod cannot follow cloth that bunches |
+| **the simulation, each bone carrying its own patch of the cloth (a turn and a move): kept** | **120** | **on none** | **2.7 mm** | **the skirt lies over the leg to the ankle** |
+
+On the way it turned out that the old swing's own sums of where the skinned cloth was were up to 20 cm off once a chain bent double (a bone carries the twist of the bones above it; the sums left that out), so it had been keeping the wrong points out of the legs.
+
+**The fabric path** (`.claude/skills/tidy-mesh/scripts/cloth.py`, `swing.py`, `drape.py`; the skill has the detail).
+
+- **Kinds.** Every hanging piece is named from how it hangs alone, never from what it is called or who wears it: a long skirt, a short one, an apron, a coat's tails, a cape, a hood, a sleeve, a sash, a loose shirt, a collar. Each kind has its chains (a long skirt 8 of 4 bones, one at the very front and back), how heavy and stiff its cloth is, how far it may swing and slide, what it is kept out of, and how flat cards show it. The whole description is written on the skeleton and rides in every `.glb`.
+- **Cloth that hangs is never stiff**, whatever a block-out called it; and cloth hangs from the head only if it is on the head (the villager's tunic hangs from his chest now, and has no chains: a loose shirt is held at both ends).
+- **One step, simulated.** After any motion is baked, each loose garment is simulated as the sheet it is (Blender's cloth: its waistband pinned, the body, the other clothes and the floor in its way), starting settled on the body as it was made. Each bone then carries its own patch of the cloth, a turn and a move a frame, from where the cloth settled, so a garment keeps the shape it was made in until something moves it. Its points are tried once more against the body, limb by limb as thick as each is, and put out on the side the simulated cloth is on. A walk or a run, played on the spot, gets a wind from the front as fast as it travels. A loop's last round is faded into the one before, so it closes with no seam.
+- **Every clip says which fabric step moved its cloth** (`swing.py`'s `FABRIC`, in the skeleton's note), so `just fabric-survey` can list what is stale and how to bake it again.
+
+**The cards** read the same description (`scripts/impostor/impostor.py`: `garments_of`, `chains_of`, `hold_of`). A garment whose kind says "piece" gets a card of its own and one skinned piece moved by its bones, wherever it hangs from: a skirt, an apron, a coat's tails, and a cape from the chest with no rule written for it. One that "rides" stays in the card of the bone it hangs from (a hood). One that is "held" is held back from the neck's turn by the share it says (a collar, a loose shirt), a hood that rides the head is not held back at all, and clothing nothing is said of is held by half as before. Because the bones now move as well as turn, and the dancer has 32 of them where she had 18, her cards were baked again (`just impostor-detailed`, `just impostor-layered`).
+
+**Before and after.** Before is the cloth code as it was, baked today on the same motions; after is this. Every frame of each clip, on the model the cards ride (`evidence/fabric/fabric-before.json`, `fabric-after.json`; the low-poly models are in there too). A frame counts when the cloth is more than half a centimetre into a part, past how it sat there as made; cloth pinched between two parts (in a lap) is counted apart.
+
+| her mid-poly model (before → after) | in a leg: deepest, frames | a leg out through it | thighs a quarter bare | in an arm, frames | an arm in through it | under the floor | swings, peak (mean) | shakes |
+|---|---|---|---|---|---|---|---|---|
+| Stand easy (180 frames) | 0.0 cm, 0 → 0.0 cm, 0 | 0 frames → 0 frames | 0 → 0 | 0 → 0 | 0 → 0 | 0.0 cm, 0 → 0.0 cm, 0 | 36 (31) → 19 (17) | 0.2 mm → 0.2 mm |
+| Jog on the spot (180 frames) | 8.3 cm, 108 → 1.4 cm, 4 | 38 frames → 0 frames | 0 → 1 | 11 → 3 | 17 → 12 | 0.0 cm, 0 → 0.0 cm, 0 | 179 (127) → 180 (97) | 19.8 mm → 8.3 mm |
+| Deep squat (180 frames) | 9.4 cm, 132 → 7.2 cm, 120 | 122 frames → 75 frames | 122 → 0 | 52 → 81 | 47 → 37 | 0.7 cm, 13 → 0.0 cm, 0 | 180 (132) → 139 (104) | 10.5 mm → 2.7 mm |
+| Look around (210 frames) | 0.0 cm, 0 → 0.0 cm, 0 | 0 frames → 0 frames | 0 → 0 | 2 → 0 | 0 → 0 | 0.0 cm, 0 → 0.0 cm, 0 | 66 (49) → 38 (28) | 0.9 mm → 0.7 mm |
+| Pick something up (180 frames) | 9.1 cm, 56 → 1.8 cm, 11 | 38 frames → 0 frames | 21 → 0 | 146 → 133 | 169 → 180 | 0.0 cm, 0 → 0.0 cm, 0 | 180 (70) → 178 (115) | 4.0 mm → 4.1 mm |
+| Arm circles (180 frames) | 0.0 cm, 0 → 0.0 cm, 0 | 0 frames → 0 frames | 0 → 0 | 0 → 0 | 0 → 0 | 0.0 cm, 0 → 0.0 cm, 0 | 41 (29) → 19 (15) | 0.8 mm → 0.9 mm |
+| Forward lunge (180 frames) | 8.6 cm, 68 → 6.4 cm, 5 | 9 frames → 0 frames | 10 → 3 | 91 → 56 | 85 → 36 | 1.6 cm, 11 → 0.0 cm, 0 | 180 (68) → 179 (60) | 6.4 mm → 3.9 mm |
+| Twist (180 frames) | 0.0 cm, 0 → 0.0 cm, 0 | 0 frames → 0 frames | 0 → 0 | 5 → 1 | 4 → 0 | 0.0 cm, 0 → 0.0 cm, 0 | 83 (33) → 34 (17) | 1.0 mm → 0.5 mm |
+| Front kick (150 frames) | 8.5 cm, 14 → 5.2 cm, 17 | 11 frames → 6 frames | 2 → 0 | 6 → 0 | 5 → 0 | 0.0 cm, 0 → 0.0 cm, 0 | 180 (64) → 143 (62) | 4.7 mm → 2.6 mm |
+| The walk (a loop) (25 frames) | 7.6 cm, 19 → 0.0 cm, 0 | 11 frames → 0 frames | 0 → 0 | 0 → 0 | 0 → 0 | 0.0 cm, 0 → 0.0 cm, 0 | 80 (54) → 72 (52) | 10.8 mm → 6.1 mm |
+| The run (a loop) (18 frames) | 6.3 cm, 18 → 0.0 cm, 0 | 16 frames → 0 frames | 0 → 0 | 0 → 0 | 0 → 0 | 0.0 cm, 0 → 0.0 cm, 0 | 88 (57) → 57 (50) | 17.3 mm → 10.7 mm |
+| **all of them** | **415 → 157 frames** | **245 → 81** | **155 → 4** | **313 → 274** | **327 → 265** | **24 → 0 frames** | | |
+
+Pictures of the same frame before and after are beside the numbers (`evidence/fabric/midpoly-screen-<move>-before-f<frame>.png`, `-after-`: the deep squat, the kick, the pick-up, the jog, the lunge), and the deep-squat line-up as the watch page draws it, as cards and as meshes (`page-deep-squat-*.png`).
+
+Her low-poly model, the same eleven clips: the skirt in a leg on 489 frames before and 182 after, a leg out through it on 296 and 100, thighs a quarter bare on 229 and 70, the hem under the floor on 119 and none.
+
+The groove dance, 421 frames (`fabric-groove-*.json`): the skirt in a leg on 106 frames and 40 after (7.4 cm at the deepest, then 4.7), an arm in through it on 42 and 16, the chains out 83 degrees on average and 56 after, the hem shaking 10.8 mm a frame and 7.5. In its low wide stance the skirt was a flat table over her knees (`midpoly-groove-before-f000.png`); it hangs between and over her legs now (`-after-`). Her low-poly model: in a leg on 160 frames and 39, but a leg out through the cloth on 52 frames where it was 15.
+
+The villager's apron, all of it judged (`fabric-*-apron.json`; before, it was stiff): in a leg on 416 frames and 263 after, an arm in through it on 219 and 89; but where it is in a leg it is deeper (10 cm in the squat, against 4.6), and a leg comes out through it on 54 frames of the squat where a stiff board never let one through. The ninja's hood: as it was. His fists are inside its side on every frame of the kick, before and after: his guard is held where the hood is.
+
+Her cards (`just impostor-dress`, 24 pictures of the groove dance; bold ink, "Pixels, both" in brackets; `evidence/fabric/dress-*.json`):
+
+| | likeness | bare pixels | torn open |
+|---|---|---|---|
+| when the dress's piece was first made (README: "A dress") | 0.66 (0.66) | 288 | 4.9 (0.7) |
+| the main folder as it stood: her cards were not baked again when the pieces changed ("No flaps", "An armpit that holds"), and the judge draws no skirt from them | 0.38 (0.44) | 3,512 (2,527) | 2,825 (2,164) |
+| now: baked again on the new bones, the dance cast again | 0.56 (0.59) | 334 (135) | 118 (67) |
+
+**What it costs.** A six-second clip, the whole bake, with three Blenders going at once: the dancer's mid-poly model 4.0 s before and 9.7 after (her skirt is 630 points; the fabric step is 8.3 s of it, 34 ms a simulated frame), her low-poly one 3.4 and 5.1; the villager 1.1 and 6.4 (he had no cloth step before); the ninja 1.5 and 9.1, low-poly 1.2 and 3.6. A walk or a run loop is 2 to 4 s. Her skeleton has 53 bones where it had 39.
+
+**Tests.** `python3 scripts/test_fabric.py` (in `just check`): the kinds, what swing.py does with a description or none, a patch carried and a row of points that must not flip, the cards reading one description, stale clips, and every clip in `runs/` this step baked (simulated, off the floor, loops closed). The flat cards' `legs` group tests the new keep-clear rule. `scripts/test_tools.py` was run against the main branch's own run of it: three cases fail here and five on main, these three among them (swing.py has not been safe-mode code since it took up numpy; a face test's `texture_size`; the rooftop shot's request bytes). Every cloth case passes here: the ninja's hood, and the recorded troll's kilt and pirate's coat skirts. On main the low-poly troll's kilt fails its seam (6 degrees eased onto the loop's start, 3 allowed). `baml test` fails the same 7 of 79 on both.
+
+**What is still weak.**
+
+- **A hand still goes into a full skirt.** In the pick-up an arm is in through the cloth on all 180 frames, as before (169). The simulated sheet hangs closer to her legs than the garment's flounces stand, so her hands miss the sheet and meet the flounces. Arms are kept out of the garment's points afterwards, but a thin arm passes between the points of a coarse skirt.
+- **The deep squat is better, not right.** Her thighs are covered, but her knees come through the top of the skirt (7 cm on 120 frames, 9 cm on 132 before) and her skirt is pinched in her lap on 18 more. The top of a skirt is carried partly by the hips and thighs, not by the cloth's bones, and it cannot stretch over a knee at her chest.
+- **Her cards open between her legs in the deepest stance** through the push-in camera (1,084 torn pixels there, none when the piece was made; in the other moments 0 to 13), and their likeness over the dance is 0.56 where it was 0.66 when the skirt hung straighter. Not run on the tag field, where a far runner's skirt is still a rigid card.
+- **The apron goes deeper into a leg than a board did**, on fewer frames. It has two chains of two bones and 40 points; a squat folds it into his lap.
+- **A simulated sheet does not meet another one, or itself.** An apron over a swinging skirt would pass through it.
+- **A hood costs as much as a skirt.** Most of the step is Blender stepping the whole body as something to collide with, 30 ms a frame on a mid-poly model whatever the garment.
+- **A loop's cloth flutters.** It never comes round to where it was (a skirt's bones differ by tens of degrees between two rounds of her run), so two rounds are faded together; her walk's hem still shakes 6 mm a frame.
+- **Kinds nobody in the cast wears were not looked at on a model**: a short skirt or kilt, a coat's tails, a cape, loose sleeves, a sash. They are named, given chains and tested as arithmetic. The tools tests' recorded troll (a kilt, 8 chains from the hips) and pirate (a coat's skirts, 6 chains) do go through the step and pass their checks (nothing in a leg, no turn outside a limit, loops closed), but nobody watched them, and the low-poly troll's kilt turns up to the 150 degrees a short skirt may in his walk (75 on his mid-poly one). A sleeve's chains would hang from an arm bone; drape.py has never marked one as hanging.
+- **swing.py is the runner's own now.** It uses numpy and takes seconds, so it does not go through the add-on's safe mode (it had not since the legs were kept under the skirt), and `check-safe` says so.
+- **Old clips stay old until baked again.** In this branch's own folders the dancer's, the villager's and the ninja's clips are all baked again (walk, run, range of motion, the screen-test motions, the groove dance, the two rooftop takes); `just fabric-survey --stale` lists what is left anywhere.
 
 ## A place from a world model
 

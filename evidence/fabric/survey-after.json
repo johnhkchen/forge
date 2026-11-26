@@ -1,0 +1,241 @@
+{
+ "fabric": 2,
+ "characters": {
+  "2026-11-20T06-16-35-cave-troll": {
+   "garments": {},
+   "clips": {
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T13-52-46-stocky-pirate-deckhand": {
+   "garments": {},
+   "clips": {
+    "detailed-walk.glb": "no loose cloth",
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-screen-arm-circles.glb": "no loose cloth",
+    "lowpoly-screen-deep-squat.glb": "no loose cloth",
+    "lowpoly-screen-jog-in-place.glb": "no loose cloth",
+    "lowpoly-screen-kick.glb": "no loose cloth",
+    "lowpoly-screen-look-around.glb": "no loose cloth",
+    "lowpoly-screen-lunge.glb": "no loose cloth",
+    "lowpoly-screen-pick-up.glb": "no loose cloth",
+    "lowpoly-screen-shrug-bow.glb": "no loose cloth",
+    "lowpoly-screen-stand-easy.glb": "no loose cloth",
+    "lowpoly-screen-twist.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T13-52-48-shadow-ninja": {
+   "garments": {
+    "lowpoly": {
+     "hood and mask (hood)": "hangs from the head on 4 chains of 2"
+    },
+    "midpoly": {
+     "hood and mask (hood)": "hangs from the head on 4 chains of 1"
+    }
+   },
+   "clips": {
+    "lowpoly-hero-mixed.glb": "current",
+    "lowpoly-hero.glb": "current",
+    "lowpoly-rom.glb": "current",
+    "lowpoly-run.glb": "current",
+    "lowpoly-screen-all.glb": "current",
+    "lowpoly-screen-arm-circles.glb": "current",
+    "lowpoly-screen-deep-squat.glb": "current",
+    "lowpoly-screen-jog-in-place.glb": "current",
+    "lowpoly-screen-kick.glb": "current",
+    "lowpoly-screen-look-around.glb": "current",
+    "lowpoly-screen-lunge.glb": "current",
+    "lowpoly-screen-pick-up.glb": "current",
+    "lowpoly-screen-stand-easy.glb": "current",
+    "lowpoly-screen-twist.glb": "current",
+    "lowpoly-walk.glb": "current",
+    "midpoly-hero-mixed.glb": "current",
+    "midpoly-hero.glb": "current",
+    "midpoly-rom.glb": "current",
+    "midpoly-run.glb": "current",
+    "midpoly-screen-all.glb": "current",
+    "midpoly-screen-arm-circles.glb": "current",
+    "midpoly-screen-deep-squat.glb": "current",
+    "midpoly-screen-jog-in-place.glb": "current",
+    "midpoly-screen-kick.glb": "current",
+    "midpoly-screen-look-around.glb": "current",
+    "midpoly-screen-lunge.glb": "current",
+    "midpoly-screen-pick-up.glb": "current",
+    "midpoly-screen-stand-easy.glb": "current",
+    "midpoly-screen-twist.glb": "current",
+    "midpoly-walk.glb": "current"
+   }
+  },
+  "2026-11-20T13-52-54-lizardkin-warrior": {
+   "garments": {},
+   "clips": {
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T14-02-41-young-lincoln-frontier-wrestler": {
+   "garments": {},
+   "clips": {
+    "detailed-walk.glb": "no loose cloth",
+    "lowpoly-rom.glb": "no loose cloth",
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-screen-arm-circles.glb": "no loose cloth",
+    "lowpoly-screen-deep-squat.glb": "no loose cloth",
+    "lowpoly-screen-jog-in-place.glb": "no loose cloth",
+    "lowpoly-screen-kick.glb": "no loose cloth",
+    "lowpoly-screen-look-around.glb": "no loose cloth",
+    "lowpoly-screen-lunge.glb": "no loose cloth",
+    "lowpoly-screen-pick-up.glb": "no loose cloth",
+    "lowpoly-screen-shrug-bow.glb": "no loose cloth",
+    "lowpoly-screen-stand-easy.glb": "no loose cloth",
+    "lowpoly-screen-twist.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth",
+    "midpoly-rom.glb": "no loose cloth",
+    "midpoly-run.glb": "no loose cloth",
+    "midpoly-screen-arm-circles.glb": "no loose cloth",
+    "midpoly-screen-deep-squat.glb": "no loose cloth",
+    "midpoly-screen-jog-in-place.glb": "no loose cloth",
+    "midpoly-screen-kick.glb": "no loose cloth",
+    "midpoly-screen-look-around.glb": "no loose cloth",
+    "midpoly-screen-lunge.glb": "no loose cloth",
+    "midpoly-screen-pick-up.glb": "no loose cloth",
+    "midpoly-screen-shrug-bow.glb": "no loose cloth",
+    "midpoly-screen-stand-easy.glb": "no loose cloth",
+    "midpoly-screen-twist.glb": "no loose cloth",
+    "midpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T14-02-45-roosevelt-wrestler-1890s": {
+   "garments": {},
+   "clips": {
+    "detailed-walk.glb": "no loose cloth",
+    "lowpoly-rom.glb": "no loose cloth",
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-screen-arm-circles.glb": "no loose cloth",
+    "lowpoly-screen-deep-squat.glb": "no loose cloth",
+    "lowpoly-screen-jog-in-place.glb": "no loose cloth",
+    "lowpoly-screen-kick.glb": "no loose cloth",
+    "lowpoly-screen-look-around.glb": "no loose cloth",
+    "lowpoly-screen-lunge.glb": "no loose cloth",
+    "lowpoly-screen-pick-up.glb": "no loose cloth",
+    "lowpoly-screen-shrug-bow.glb": "no loose cloth",
+    "lowpoly-screen-stand-easy.glb": "no loose cloth",
+    "lowpoly-screen-twist.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth",
+    "midpoly-rom.glb": "no loose cloth",
+    "midpoly-run.glb": "no loose cloth",
+    "midpoly-screen-arm-circles.glb": "no loose cloth",
+    "midpoly-screen-deep-squat.glb": "no loose cloth",
+    "midpoly-screen-jog-in-place.glb": "no loose cloth",
+    "midpoly-screen-kick.glb": "no loose cloth",
+    "midpoly-screen-look-around.glb": "no loose cloth",
+    "midpoly-screen-lunge.glb": "no loose cloth",
+    "midpoly-screen-pick-up.glb": "no loose cloth",
+    "midpoly-screen-shrug-bow.glb": "no loose cloth",
+    "midpoly-screen-stand-easy.glb": "no loose cloth",
+    "midpoly-screen-twist.glb": "no loose cloth",
+    "midpoly-walk.glb": "no loose cloth",
+    "painted-rom.glb": "no loose cloth",
+    "painted-run.glb": "no loose cloth",
+    "painted-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T18-10-09-flamenco-dancer": {
+   "garments": {
+    "detailed": {
+     "ruffled skirt (skirt)": "hangs from the hips on 8 chains of 4"
+    },
+    "lowpoly": {
+     "ruffled skirt (skirt)": "hangs from the hips on 8 chains of 4",
+     "ruffled_skirt (kind not written)": "hangs from the hips on 6 chains"
+    },
+    "midpoly": {
+     "ruffled skirt (skirt)": "hangs from the hips on 8 chains of 4",
+     "ruffled_skirt (kind not written)": "hangs from the hips on 6 chains"
+    }
+   },
+   "clips": {
+    "detailed-walk.glb": "current",
+    "lowpoly-run.glb": "current",
+    "lowpoly-screen-all.glb": "current",
+    "lowpoly-screen-arm-circles.glb": "current",
+    "lowpoly-screen-deep-squat.glb": "current",
+    "lowpoly-screen-jog-in-place.glb": "current",
+    "lowpoly-screen-kick.glb": "current",
+    "lowpoly-screen-look-around.glb": "current",
+    "lowpoly-screen-lunge.glb": "current",
+    "lowpoly-screen-pick-up.glb": "current",
+    "lowpoly-screen-shrug-bow.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-stand-easy.glb": "current",
+    "lowpoly-screen-twist.glb": "current",
+    "lowpoly-walk.glb": "current",
+    "midpoly-run.glb": "current",
+    "midpoly-screen-all.glb": "current",
+    "midpoly-screen-arm-circles.glb": "current",
+    "midpoly-screen-deep-squat.glb": "current",
+    "midpoly-screen-jog-in-place.glb": "current",
+    "midpoly-screen-kick.glb": "current",
+    "midpoly-screen-look-around.glb": "current",
+    "midpoly-screen-lunge.glb": "current",
+    "midpoly-screen-pick-up.glb": "current",
+    "midpoly-screen-shrug-bow.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-stand-easy.glb": "current",
+    "midpoly-screen-twist.glb": "current",
+    "midpoly-walk.glb": "current"
+   }
+  },
+  "2026-11-20T22-46-17-plain-young-villager": {
+   "garments": {
+    "lowpoly": {
+     "linen tunic (shirt)": "no chains: held (held)",
+     "work apron (apron)": "hangs from the hips on 2 chains of 2"
+    },
+    "midpoly": {
+     "work apron (apron)": "hangs from the hips on 2 chains of 2"
+    }
+   },
+   "clips": {
+    "lowpoly-run.glb": "current",
+    "lowpoly-screen-all.glb": "current",
+    "lowpoly-screen-arm-circles.glb": "current",
+    "lowpoly-screen-deep-squat.glb": "current",
+    "lowpoly-screen-jog-in-place.glb": "current",
+    "lowpoly-screen-kick.glb": "current",
+    "lowpoly-screen-look-around.glb": "current",
+    "lowpoly-screen-lunge.glb": "current",
+    "lowpoly-screen-pick-up.glb": "current",
+    "lowpoly-screen-stand-easy.glb": "current",
+    "lowpoly-screen-twist.glb": "current",
+    "lowpoly-walk.glb": "current",
+    "midpoly-run.glb": "current",
+    "midpoly-screen-all.glb": "current",
+    "midpoly-screen-arm-circles.glb": "current",
+    "midpoly-screen-deep-squat.glb": "current",
+    "midpoly-screen-jog-in-place.glb": "current",
+    "midpoly-screen-kick.glb": "current",
+    "midpoly-screen-look-around.glb": "current",
+    "midpoly-screen-lunge.glb": "current",
+    "midpoly-screen-pick-up.glb": "current",
+    "midpoly-screen-stand-easy.glb": "current",
+    "midpoly-screen-twist.glb": "current",
+    "midpoly-walk.glb": "current"
+   }
+  }
+ },
+ "takes": {
+  "groove-flamenco": {
+   "lowpoly-groove.glb": "current",
+   "midpoly-groove.glb": "current"
+  },
+  "hero-rooftop": {
+   "lowpoly-hero.glb": "current",
+   "midpoly-hero.glb": "current"
+  },
+  "hero-rooftop-mixed": {
+   "lowpoly-hero-mixed.glb": "current",
+   "midpoly-hero-mixed.glb": "current"
+  }
+ }
+}

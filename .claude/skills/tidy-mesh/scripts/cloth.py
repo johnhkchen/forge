@@ -30,7 +30,8 @@
 #
 # 3. Each hanging piece is said to be a kind of garment, from where it hangs
 #    and how (kind_of): a long skirt, a short one (a kilt, a tunic's hem), an
-#    apron, a coat's tails, a cape, a hood, a sleeve, a sash, or a collar.
+#    apron, a coat's tails, a cape, a hood, a sleeve, a sash, a loose shirt
+#    or a collar.
 #    "kinds" below says what each kind is like: how many chains and bones it
 #    gets, how stiff and heavy it is and how far it may swing, which parts of
 #    the body it is kept out of, and how flat cards show it. That one
@@ -38,8 +39,10 @@
 #    "chains"), goes into every .glb, and is all that swing.py, the cards
 #    (scripts/impostor) and the judges (scripts/fabric_judge.py) read: nothing
 #    downstream asks what a garment is called or who wears it. A collar is
-#    too short to swing: it gets no chains, stays with the body, and is only
-#    written down (the cards hold it back from the neck's turn).
+#    too short to swing, and a loose shirt is held at both ends (the
+#    shoulders, and the belt or the hips): they get no chains, stay with the
+#    body, and are only written down (the cards hold them back from the
+#    neck's turn).
 #
 # Send through the blender MCP `execute_blender_code` tool from PARAMS down.
 # Prints RESULT {json}. A second or two. Safe-mode compatible.
@@ -85,6 +88,7 @@ PARAMS = {
                         "swing": 100, "reach": 1.0, "collide": ["trunk", "legs"], "floor": False, "card": "rides"},
         "sash":        {"chains": [1, 1], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.08, "bend": 0.5, "damp": 0.4, "shape": 0.0,
                         "swing": 170, "reach": 2.0, "collide": ["legs", "arms"], "floor": True, "card": "rides"},
+        "shirt":       {"chains": None, "card": "held", "hold": 0.5},
         "collar":      {"chains": None, "card": "held", "hold": 0.5},
     },
     "kind": {},           # {"<gear name>": "<kind>"}: say what a piece is, where kind_of gets it wrong
@@ -147,7 +151,11 @@ def kind_of(anchor, around, facing, wide, drop, line):
     if drop < 0.06 and line > 0.68:
         return "collar"  # a neckline, a lapel: too short to swing
     if anchor == "chest" or line > 0.68:  # from the shoulders
-        return "cape" if not around or drop < 0.3 else "skirt"  # (a robe goes all the way round, to the knee or lower: it is a skirt from the chest)
+        if not around:
+            return "cape"
+        # all the way round: a loose shirt or a tunic's top ends at the waist or the hips, held there by a belt or by the hips
+        # themselves, and goes with the trunk; a robe goes on to the knee or lower, and is a skirt from the chest
+        return "shirt" if drop < 0.3 else "skirt"
     if around:
         return "skirt" if drop >= 0.3 else "short skirt"
     if wide < 0.12:
@@ -182,6 +190,7 @@ if not bodies or not gear:
 known = json.loads(rig.get("forge_rig", "{}"))
 tall = known.get("measure", {}).get("height") or max((o.matrix_world @ v.co).z for o in bodies for v in o.data.vertices)
 floor_z = known.get("measure", {}).get("floor", 0.0)
+head_from = (rig.matrix_world @ rig.data.bones["head"].head_local).z if "head" in rig.data.bones else floor_z + 0.87 * tall  # where the head starts
 
 # ---- the body: where it is, and what it weighs there ----
 points, triangles, given, facing = [], [], [], []
@@ -298,6 +307,11 @@ if PARAMS["bones"]:
                     elif bone.split("_")[0] in ("upper", "forearm"):
                         arms[bone] = arms.get(bone, 0.0) + w
             anchor = sorted(votes.items(), key=second)[-1][0] if votes else "hips"
+            if anchor in ("head", "neck") and max(s["p"].z for s in mine) < head_from + 0.03 * tall:
+                # Cloth hangs from the head only if it is on the head (a hood). A tunic's neckline lies by the neck, where
+                # the skin is the neck's and the head's, but the tunic is worn on the shoulders: it hangs from the chest.
+                # (Taken for the head's, a villager's tunic got four chains from his head that swung his shirt with his nod.)
+                anchor = "chest"
             if arms and sum(arms.values()) > 3.0 * sum(votes.values()):  # ... or from an arm, when its whole top is worn on one (a loose sleeve)
                 anchor = sorted(arms.items(), key=second)[-1][0]
             mid = sum((s["p"] for s in top), Vector()) / len(top)

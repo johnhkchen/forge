@@ -1,0 +1,239 @@
+{
+ "fabric": 2,
+ "characters": {
+  "2026-11-20T06-16-35-cave-troll": {
+   "garments": {},
+   "clips": {
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T13-52-46-stocky-pirate-deckhand": {
+   "garments": {},
+   "clips": {
+    "detailed-walk.glb": "no loose cloth",
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-screen-all.glb": "no loose cloth",
+    "lowpoly-screen-arm-circles.glb": "no loose cloth",
+    "lowpoly-screen-deep-squat.glb": "no loose cloth",
+    "lowpoly-screen-jog-in-place.glb": "no loose cloth",
+    "lowpoly-screen-kick.glb": "no loose cloth",
+    "lowpoly-screen-look-around.glb": "no loose cloth",
+    "lowpoly-screen-lunge.glb": "no loose cloth",
+    "lowpoly-screen-pick-up.glb": "no loose cloth",
+    "lowpoly-screen-reach-up.glb": "no loose cloth",
+    "lowpoly-screen-shrug-bow.glb": "no loose cloth",
+    "lowpoly-screen-stand-easy.glb": "no loose cloth",
+    "lowpoly-screen-turn-circle.glb": "no loose cloth",
+    "lowpoly-screen-twist.glb": "no loose cloth",
+    "lowpoly-screen-walk-turn-back.glb": "no loose cloth",
+    "lowpoly-screen-wave-left.glb": "no loose cloth",
+    "lowpoly-screen-wave-right.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T13-52-48-shadow-ninja": {
+   "garments": {
+    "lowpoly": {
+     "hood_and_mask (kind not written)": "hangs from the head on 4 chains"
+    },
+    "midpoly": {
+     "hood_and_mask (kind not written)": "hangs from the head on 4 chains"
+    }
+   },
+   "clips": {
+    "lowpoly-hero-mixed.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-hero.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-rom.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-run.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-walk.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-hero-mixed.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-hero.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-rom.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-run.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-walk.glb": "stale: moved before the cloth was simulated (weights on strings)"
+   }
+  },
+  "2026-11-20T13-52-54-lizardkin-warrior": {
+   "garments": {},
+   "clips": {
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T14-02-41-young-lincoln-frontier-wrestler": {
+   "garments": {},
+   "clips": {
+    "detailed-walk.glb": "no loose cloth",
+    "lowpoly-rom.glb": "no loose cloth",
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-screen-all.glb": "no loose cloth",
+    "lowpoly-screen-arm-circles.glb": "no loose cloth",
+    "lowpoly-screen-deep-squat.glb": "no loose cloth",
+    "lowpoly-screen-jog-in-place.glb": "no loose cloth",
+    "lowpoly-screen-kick.glb": "no loose cloth",
+    "lowpoly-screen-look-around.glb": "no loose cloth",
+    "lowpoly-screen-lunge.glb": "no loose cloth",
+    "lowpoly-screen-pick-up.glb": "no loose cloth",
+    "lowpoly-screen-reach-up.glb": "no loose cloth",
+    "lowpoly-screen-shrug-bow.glb": "no loose cloth",
+    "lowpoly-screen-stand-easy.glb": "no loose cloth",
+    "lowpoly-screen-turn-circle.glb": "no loose cloth",
+    "lowpoly-screen-twist.glb": "no loose cloth",
+    "lowpoly-screen-walk-turn-back.glb": "no loose cloth",
+    "lowpoly-screen-wave-left.glb": "no loose cloth",
+    "lowpoly-screen-wave-right.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth",
+    "midpoly-rom.glb": "no loose cloth",
+    "midpoly-run.glb": "no loose cloth",
+    "midpoly-screen-all.glb": "no loose cloth",
+    "midpoly-screen-arm-circles.glb": "no loose cloth",
+    "midpoly-screen-deep-squat.glb": "no loose cloth",
+    "midpoly-screen-jog-in-place.glb": "no loose cloth",
+    "midpoly-screen-kick.glb": "no loose cloth",
+    "midpoly-screen-look-around.glb": "no loose cloth",
+    "midpoly-screen-lunge.glb": "no loose cloth",
+    "midpoly-screen-pick-up.glb": "no loose cloth",
+    "midpoly-screen-reach-up.glb": "no loose cloth",
+    "midpoly-screen-shrug-bow.glb": "no loose cloth",
+    "midpoly-screen-stand-easy.glb": "no loose cloth",
+    "midpoly-screen-turn-circle.glb": "no loose cloth",
+    "midpoly-screen-twist.glb": "no loose cloth",
+    "midpoly-screen-walk-turn-back.glb": "no loose cloth",
+    "midpoly-screen-wave-left.glb": "no loose cloth",
+    "midpoly-screen-wave-right.glb": "no loose cloth",
+    "midpoly-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T14-02-45-roosevelt-wrestler-1890s": {
+   "garments": {},
+   "clips": {
+    "detailed-walk.glb": "no loose cloth",
+    "lowpoly-rom.glb": "no loose cloth",
+    "lowpoly-run.glb": "no loose cloth",
+    "lowpoly-screen-all.glb": "no loose cloth",
+    "lowpoly-screen-arm-circles.glb": "no loose cloth",
+    "lowpoly-screen-deep-squat.glb": "no loose cloth",
+    "lowpoly-screen-jog-in-place.glb": "no loose cloth",
+    "lowpoly-screen-kick.glb": "no loose cloth",
+    "lowpoly-screen-look-around.glb": "no loose cloth",
+    "lowpoly-screen-lunge.glb": "no loose cloth",
+    "lowpoly-screen-pick-up.glb": "no loose cloth",
+    "lowpoly-screen-reach-up.glb": "no loose cloth",
+    "lowpoly-screen-shrug-bow.glb": "no loose cloth",
+    "lowpoly-screen-stand-easy.glb": "no loose cloth",
+    "lowpoly-screen-turn-circle.glb": "no loose cloth",
+    "lowpoly-screen-twist.glb": "no loose cloth",
+    "lowpoly-screen-walk-turn-back.glb": "no loose cloth",
+    "lowpoly-screen-wave-left.glb": "no loose cloth",
+    "lowpoly-screen-wave-right.glb": "no loose cloth",
+    "lowpoly-walk.glb": "no loose cloth",
+    "midpoly-rom.glb": "no loose cloth",
+    "midpoly-run.glb": "no loose cloth",
+    "midpoly-screen-all.glb": "no loose cloth",
+    "midpoly-screen-arm-circles.glb": "no loose cloth",
+    "midpoly-screen-deep-squat.glb": "no loose cloth",
+    "midpoly-screen-jog-in-place.glb": "no loose cloth",
+    "midpoly-screen-kick.glb": "no loose cloth",
+    "midpoly-screen-look-around.glb": "no loose cloth",
+    "midpoly-screen-lunge.glb": "no loose cloth",
+    "midpoly-screen-pick-up.glb": "no loose cloth",
+    "midpoly-screen-reach-up.glb": "no loose cloth",
+    "midpoly-screen-shrug-bow.glb": "no loose cloth",
+    "midpoly-screen-stand-easy.glb": "no loose cloth",
+    "midpoly-screen-turn-circle.glb": "no loose cloth",
+    "midpoly-screen-twist.glb": "no loose cloth",
+    "midpoly-screen-walk-turn-back.glb": "no loose cloth",
+    "midpoly-screen-wave-left.glb": "no loose cloth",
+    "midpoly-screen-wave-right.glb": "no loose cloth",
+    "midpoly-walk.glb": "no loose cloth",
+    "painted-rom.glb": "no loose cloth",
+    "painted-run.glb": "no loose cloth",
+    "painted-walk.glb": "no loose cloth"
+   }
+  },
+  "2026-11-20T18-10-09-flamenco-dancer": {
+   "garments": {
+    "detailed": {
+     "ruffled_skirt (kind not written)": "hangs from the hips on 6 chains"
+    },
+    "lowpoly": {
+     "ruffled_skirt (kind not written)": "hangs from the hips on 6 chains"
+    },
+    "midpoly": {
+     "ruffled_skirt (kind not written)": "hangs from the hips on 6 chains"
+    }
+   },
+   "clips": {
+    "detailed-walk.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-run.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-all.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-arm-circles.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-deep-squat.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-jog-in-place.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-kick.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-look-around.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-lunge.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-pick-up.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-reach-up.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-shrug-bow.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-stand-easy.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-turn-circle.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-twist.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-walk-turn-back.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-wave-left.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-screen-wave-right.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-walk.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-run.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-all.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-arm-circles.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-deep-squat.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-jog-in-place.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-kick.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-look-around.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-lunge.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-pick-up.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-reach-up.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-shrug-bow.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-stand-easy.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-turn-circle.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-twist.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-walk-turn-back.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-wave-left.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-screen-wave-right.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-walk.glb": "stale: moved before the cloth was simulated (weights on strings)"
+   }
+  },
+  "2026-11-20T22-46-17-plain-young-villager": {
+   "garments": {
+    "lowpoly": {
+     "linen_tunic (kind not written)": "hangs from the hips on 4 chains"
+    },
+    "midpoly": {
+     "linen_tunic (kind not written)": "hangs from the hips on 4 chains",
+     "linen_tunic_9 (kind not written)": "hangs from the head on 4 chains"
+    }
+   },
+   "clips": {
+    "lowpoly-run.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "lowpoly-walk.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-run.glb": "stale: moved before the cloth was simulated (weights on strings)",
+    "midpoly-walk.glb": "stale: moved before the cloth was simulated (weights on strings)"
+   }
+  }
+ },
+ "takes": {
+  "groove-flamenco": {
+   "lowpoly-groove.glb": "stale: moved before the cloth was simulated (weights on strings)",
+   "midpoly-groove.glb": "stale: moved before the cloth was simulated (weights on strings)"
+  },
+  "hero-rooftop": {
+   "lowpoly-hero.glb": "stale: moved before the cloth was simulated (weights on strings)",
+   "midpoly-hero.glb": "stale: moved before the cloth was simulated (weights on strings)"
+  },
+  "hero-rooftop-mixed": {
+   "lowpoly-hero-mixed.glb": "stale: moved before the cloth was simulated (weights on strings)",
+   "midpoly-hero-mixed.glb": "stale: moved before the cloth was simulated (weights on strings)"
+  }
+ }
+}

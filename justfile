@@ -45,6 +45,7 @@ check:
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
     python3 scripts/impostor/test_impostor.py | tail -1
+    python3 scripts/test_fabric.py | tail -1
     python3 scripts/casting/test_casting.py | tail -1
     python3 scripts/video/test_video.py 2>/dev/null | tail -1
     python3 scripts/sets/test_camera_path.py | tail -1
@@ -465,6 +466,18 @@ walk-strip file out view="side":
 # Measure a dressed character's .glb (standing or walking): skin through its clothes over the clip, how far they sit off the body, cloth bones
 cloth-check +files:
     "{{blender_bin}}" -b --factory-startup -P scripts/cloth_check.py -- {{files}} 2>&1 | grep -E '^CLOTH|Error|Traceback'
+
+# Does loose cloth keep out of the body, off the floor, and still? Any clips of any characters (.glb files, with commas), every frame: how deep each garment goes into the legs, arms, trunk and head past how it was made (cloth pinched between two parts counted apart), a leg out through it, thighs left bare, an arm in through it, the hem under the floor, how far it swings and how much it shakes. Writes out/fabric-<tag>.json; more: --stills 2 for pictures of each clip's worst frames, --stills-at 30,90 of the frames named
+fabric-judge glbs tag="after" out="evidence/fabric" *more:
+    "{{blender_bin}}" -b --factory-startup -P scripts/fabric_judge.py -- --glb "{{glbs}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^FABRIC|^RESULT|Error|Traceback'
+
+# Who wears what loose (each garment's kind, where it hangs from, its chains), and which clips still play cloth moved by an older fabric step, with how to bake each again. No Blender. more: --stale for only what should be baked again, --out file.json
+fabric-survey runs="runs" shots="shots" *more:
+    python3 scripts/fabric_survey.py --runs "{{runs}}" --shots "{{shots}}" {{more}}
+
+# The fabric path's own tests, without Blender: garment kinds, the simulated cloth carried onto bones and kept out of the body, the cards reading the same description, stale clips; and what is baked in runs/
+fabric-test runs="runs":
+    python3 scripts/test_fabric.py --runs "{{runs}}"
 
 # Measure a painted character's walking .glb (profiles/painted-walk.glb): how far the collar opens on the neck over the clip, the feet against the floor, the body's weights. Or how clean a painted garment's edge is: `just paint-check --edges <template.glb> <garment.png>`
 paint-check +files:
