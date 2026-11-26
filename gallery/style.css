@@ -282,3 +282,5 @@ html, body { overflow-x: hidden; }
 .watch-bar .watch-play { flex: none; min-width: 5.5em; }
 .watch-bar .watch-wind { flex: 1; min-width: 0; height: 32px; accent-color: var(--clay-primary); }
 .watch-bar .watch-time { flex: none; font-variant-numeric: tabular-nums; color: var(--clay-ink-soft); font-size: 0.9rem; }
+.watch-page .versions { flex-wrap: wrap; overflow-x: visible; }  /* a line-up of every motion has more to pick from than fits one row */
+.watch-now { margin: 10px 0 0; font-family: var(--clay-font-display, Lora, serif); font-size: 1.1rem; color: var(--clay-ink); }

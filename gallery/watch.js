@@ -318,7 +318,11 @@ class TakeViewer {
     this.frame = requestAnimationFrame(() => this.tick());
     const dt = Math.min(this.clock.getDelta(), 0.1);
     if (!this.cast.length || !this.cast[0].mixer) return;
-    if (this.state.playing) this.time = (this.time + dt) % this.length;
+    if (this.state.playing) {
+      // a screen-test line-up can loop one of its motions alone (state.range: its seconds); otherwise the whole take
+      const [from, to] = this.state.range || [0, this.length];
+      this.time = this.time < from || this.time >= to ? from : from + ((this.time - from + dt) % (to - from));
+    }
     for (const actor of this.cast) actor.mixer.setTime(Math.min(this.time, actor.seconds));
     this.scene.updateMatrixWorld();
     if (this.camera === this.free) this.controls.update();
@@ -361,7 +365,9 @@ const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
 
 export function watchPage({ take, sets, runs, h, loader }) {
   const set = sets.find((s) => s.id === take.set);
-  const state = { look: "pixel-both", eye: set?.cameras?.crew ? "crew" : Object.keys(set?.cameras || {})[0] || "", cards: true, playing: true };
+  // a take may say which of its set's cameras to look through first (a screen-test line-up: the grass's ringside)
+  const first = (take.cameras || []).find((c) => set?.cameras?.[c]);
+  const state = { look: "pixel-both", eye: first || (set?.cameras?.crew ? "crew" : Object.keys(set?.cameras || {})[0] || ""), cards: true, playing: true, range: null };
   const pane = h("div", { class: "pane watch-pane" }, h("div", { class: "status" }, "Setting the stage…"));
   const stage = h("div", { class: "stage clay-surface" }, pane);
   let viewer = null;
@@ -382,6 +388,13 @@ export function watchPage({ take, sets, runs, h, loader }) {
   wind.addEventListener("change", () => { winding = false; });
   const who = take.roles.map((r) => (runs.find((x) => x.id === r.run || x.id === r.character)?.name || r.role).split(" ").slice(0, 2).join(" ")).join(", ");
   const note = h("p", { class: "about" });
+  // A screen-test line-up of every motion in turn (scripts/motion/screen_play.py) says which seconds are which motion:
+  // name the one playing, and let one be picked to loop alone.
+  const chapters = take.chapters || [];
+  const now = h("p", { class: "watch-now", "aria-live": "polite" });
+  const pickChips = chapters.length ? [chip("All, in turn", true, () => { press(pickChips, 0); state.range = null; }),
+    ...chapters.map((c, i) => chip(c.name, false, () => { press(pickChips, i + 1); state.range = [c.from_s, c.to_s]; viewer.time = c.from_s; }))] : [];
+  const chapterAt = (t) => chapters.find((c) => t >= c.from_s && t < c.to_s) || chapters.find((c) => t < c.from_s) || chapters[0];
   const page = h("article", { class: "object cards-page watch-page" },
     h("a", { class: "back", href: take.set ? `#/set/${encodeURIComponent(take.set)}` : "#/" }, `← ${set?.title || "Everything"}`),
     h("h1", {}, take.title),
@@ -389,7 +402,9 @@ export function watchPage({ take, sets, runs, h, loader }) {
     group("Drawn as", asChips),
     group("In the look", lookChips),
     group("Seen from", eyeChips),
+    chapters.length ? group("Motion", pickChips) : null,
     stage,
+    chapters.length ? now : null,
     h("div", { class: "watch-bar" }, play, wind, told),
     note,
   );
@@ -398,9 +413,18 @@ export function watchPage({ take, sets, runs, h, loader }) {
       const drawn = viewer.cast.filter((c) => c.sheet).length;
       note.textContent = `${who}. As cards, each is a handful of flat pictures riding the same skeleton the meshes do${drawn < viewer.cast.length ? `; ${viewer.cast.length - drawn} of them has no cards baked yet and stays a mesh` : ""}. No sound.`;
     } });
-    viewer.onTime = (t, length) => { if (!winding) wind.value = String(Math.round((t / length) * 1000)); told.textContent = `${clock(t)} of ${clock(length)}`; };
+    viewer.onTime = (t, length) => {
+      if (!winding) wind.value = String(Math.round((t / length) * 1000));
+      told.textContent = `${clock(t)} of ${clock(length)}`;
+      if (chapters.length) {
+        const c = chapterAt(t), text = `Now: ${c.name}${state.range ? " (on its own, round and round)" : ` (${chapters.indexOf(c) + 1} of ${chapters.length})`}`;
+        if (now.textContent !== text) now.textContent = text;
+      }
+    };
     window.forgeWatch = { state: () => viewer.report(), viewer, look: (id) => viewer.useLook(id), eye: (name) => viewer.useEye(name),
       set: (what) => { Object.assign(state, what); if (what.time !== undefined) viewer.time = what.time; },
+      // which motion of a screen-test line-up is playing now (null for any other take)
+      chapter: () => (chapters.length ? chapterAt(viewer.time).id : null),
       // the free eye brought up close to one of the cast, for a picture
       THREE,
       // the free eye stood in front of one of the cast's faces, a little to one side

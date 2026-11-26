@@ -27,3 +27,4 @@ evidence/marble/diorama/cut/
 
 # Kimodo takes for the screen-test motions (requests and answers, every take); the kept ones are motion/library/<id>/
 motion/library/.cache/
+motion/library/.joined/

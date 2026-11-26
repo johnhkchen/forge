@@ -71,8 +71,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 from run_clip import digest, read_json, write_json  # noqa: E402
-from soma import Y, Z, Skeleton, heading_of, qconj, qmul, qrot  # noqa: E402
-from timeline import by_our_joints, cut  # noqa: E402
+from soma import Y, Z, Skeleton, heading_of, qconj, qmul, qrot, qslerp  # noqa: E402
+from timeline import by_our_joints, cut, facing, moved  # noqa: E402
 
 LIBRARY = os.path.join(REPO, "motion", "library")
 FPS = 30
@@ -444,6 +444,63 @@ def mirrored(sk: Skeleton, motion: dict) -> dict:
         rows.append([round(c, 6) for q in local for c in q])
     out = dict(motion, root=roots, rotations=rows)
     out["contacts"] = [[c[2], c[3], c[0], c[1]] for c in motion["contacts"]]
+    return out
+
+
+JOIN_FRAMES = 24  # between two motions played in turn: the end of one eased into the start of the next
+
+
+def made_motions(library: str = LIBRARY) -> list:
+    """The kept motions the library has made from its list as it stands, in the list's order: [(id, name, motion)]."""
+    lib = load(library)
+    out, have = [], set()
+    for m in lib["motions"]:
+        kept = read_json(os.path.join(library, m["id"], "motion.json"))
+        if not kept:
+            continue
+        if m.get("mirror_of"):
+            source = read_json(os.path.join(library, m["mirror_of"], "motion.json")) or {}
+            current = m["mirror_of"] in have and kept.get("ask") == mirror_ask(source.get("ask", "") + ":%s" % source.get("take"))
+        else:
+            current = kept.get("ask") == ask_for(m, lib.get("takes") or TAKES)["hash"]
+        if current:
+            out.append((m["id"], m["name"], kept))
+            have.add(m["id"])
+    return out
+
+
+def joined(sk: Skeleton, motions: list, blend: int = JOIN_FRAMES) -> dict:
+    """Motions [(id, name, motion)] played one after another as one motion, each started on the spot facing ahead, the
+    end of each eased into the start of the next over `blend` frames (so the last one runs back into the first, and
+    the whole loops). `chapters` says which frames are which motion."""
+    out = {"format": "forge-soma-motion/1", "fps": FPS, "up": "+Y", "forward_at_heading_0": "+Z", "joints": list(sk.joints),
+           "root": [], "rotations": [], "contact_order": None, "contacts": [], "chapters": []}
+    placed = []
+    for mid, name, motion in motions:
+        m = by_our_joints(sk, motion)
+        m = moved(m, -facing(sk, m, 0), 0.0, 0.0)
+        m = moved(m, 0.0, -m["root"][0][0], -m["root"][0][2])
+        out["contact_order"] = m["contact_order"]
+        placed.append((mid, name, m))
+    joints = len(sk.joints)
+    for n, (mid, name, m) in enumerate(placed):
+        first = len(out["root"])
+        out["root"] += [list(r) for r in m["root"]]
+        out["rotations"] += [list(r) for r in m["rotations"]]
+        out["contacts"] += [list(c) for c in m["contacts"]]
+        out["chapters"].append({"id": mid, "name": name, "from": first, "to": len(out["root"]) - 1})
+        nxt = placed[(n + 1) % len(placed)][2]
+        a_root, a_row, a_down = m["root"][-1], m["rotations"][-1], m["contacts"][-1]
+        b_root, b_row, b_down = nxt["root"][0], nxt["rotations"][0], nxt["contacts"][0]
+        for f in range(1, blend + 1):
+            w = f / (blend + 1.0)
+            w = w * w * (3.0 - 2.0 * w)
+            out["root"].append([round(a_root[k] + (b_root[k] - a_root[k]) * w, 5) for k in range(3)])
+            out["rotations"].append([round(c, 6) for j in range(joints) for c in qslerp(tuple(a_row[4 * j : 4 * j + 4]), tuple(b_row[4 * j : 4 * j + 4]), w)])
+            out["contacts"].append([1.0 if x >= 0.5 and y >= 0.5 else 0.0 for x, y in zip(a_down, b_down)])
+    out["chapters"] = [dict(c, from_s=round(c["from"] / FPS, 3), to_s=round((c["to"] + 1) / FPS, 3)) for c in out["chapters"]]
+    out["joined_of"] = [{"id": mid, "ask": m.get("ask"), "take": m.get("take")} for mid, _, m in motions]
+    out["ask"] = digest(out["joined_of"] + [blend])
     return out
 
 
