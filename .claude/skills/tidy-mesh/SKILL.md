@@ -710,7 +710,8 @@ loop played three times over the ground (so a foot down across the seam is
 planted the same at both ends), the middle round is kept, and its travel
 is taken out again: a planted foot then slides straight back at exactly
 the run's speed, which is what animate.py holds it to. swing.py is told
-that speed, so loose cloth is blown back harder than in the walk. A tail,
+that speed, and blows a wind that fast at the simulated cloth from the
+front, so loose cloth trails back harder than in the walk. A tail,
 which no motion model has, gets its motion here as in the walk: each bone
 turns as the hips did two frames earlier, more toward the tip, and the
 tail is lifted clear of the ground.
@@ -1308,40 +1309,96 @@ its clothes; see "Robust Skin Weights Transfer via Weight Inpainting",
 Abdrashitov and others, 2023.) Hats, buckles and the foot of a boot keep
 what rig.py gave them; a boot's shaft goes with the shin.
 
-Then **loose cloth gets bones**: for each hanging piece, 4 to 8 chains
-around it (1 to 4 if it only goes part of the way round, like the back of
-a hood), each of 1 to 3 bones from the line it hangs from to the hem,
-named `cloth_<gear>_<chain>_<bone>`, children of the trunk bone the piece
-is worn on (hips, head; never a leg). Points are weighted to them more the
-lower they hang and the further they stand off the body, so a kilt's side
-resting on a thigh stays with the thigh and the panels between swing. Each
-bone has limits like any other (70 degrees out and in, 50 sideways; a
-skirt's, which hang from the hips or the spine, 100 and 75).
+Then **loose cloth gets bones**: for each hanging piece, chains around it,
+each of a few bones from the line it hangs from to the hem, named
+`cloth_<gear>_<chain>_<bone>`, children of the bone the piece is worn on
+(hips, chest, head; an arm for a loose sleeve; never a leg). Points are
+weighted to them more the lower they hang and the further they stand off
+the body, so a kilt's side resting on a thigh stays with the thigh. The
+bones of a chain are not joined end to end: each carries its own patch of
+the cloth and may slide as well as turn (swing.py).
 
-**`swing.py`: hang and swing, after any motion.** animate.py bakes the
-body and leaves the cloth bones still; its result lists `"then":
+**Every hanging piece is a kind of garment**, worked out from how it hangs
+alone, never from its name or who wears it (`kind_of`): the bone its top
+is worn on, whether it goes all the way round, which way an open one
+faces, how far it drops and how high it starts.
+
+| Kind | It is | Chains x bones | How it moves (weight, stiffness, hold) | Cards |
+|---|---|---|---|---|
+| skirt | all round the hips (or a robe from the shoulders), 30% of the height or longer | 8 x 4, one at the very front and back | heavy, soft, free | a piece of its own |
+| short skirt | all round the hips, shorter: a kilt, a tunic's hem | 4 to 8 x 3 | a little lighter and stiffer | a piece |
+| apron | part of the way round, in front | 2 to 4 x 3 | light | a piece |
+| tails | part of the way round, behind or at the sides: a coat's | 2 to 4 x 3 | as a short skirt | a piece |
+| cape | part of the way round, from the shoulders | 3 to 5 x 4 | soft | a piece |
+| hood | from the head | 1 to 4 x 3 | stiff, held to its shape, swings 80 degrees at most | rides the head's card |
+| sleeve | from an arm | 1 to 2 x 2 | light | rides the arm's |
+| sash | a hand's breadth, from the hips | 1 x 3 | a rag | rides |
+| shirt | all round from the shoulders, ending at the waist or hips | none: it stays with the body | | held back from the neck's turn by half |
+| collar | too short to swing | none | | held back by half |
+
+The table is `"kinds"` in cloth.py's PARAMS (`"kind": {"<gear>": "<kind>"}`
+says otherwise for one piece). What was decided is written on the rig as
+one description, `forge_cloth`: each garment's kind, where it hangs from,
+its chains, how heavy and stiff it is, what it is kept out of and how flat
+cards show it. It rides in every `.glb`, and it is all that swing.py, the
+cards (`scripts/impostor/impostor.py`: `garments_of`) and the judges read.
+Cloth hangs from the head only if it is on the head: a tunic's neckline
+lies by the neck, but the tunic hangs from the chest (the villager's got
+four chains from his head, once). And cloth that hangs is never stiff: a
+piece its recipe called `"stiff"` that is named for hanging cloth (a
+tunic's skirt, an apron) is loose all the same (drape.py).
+
+**`swing.py`: the one fabric step, after any motion.** animate.py bakes
+the body and leaves the cloth bones still; its result lists `"then":
 ["swing.py"]` for a rig that has them, and the runner (or Claude) runs it
-next. It plays the baked action through and trails each chain behind the
-body like weights on strings: the way spring bones move skirts and hair on
-VRM avatars and in most game engines. No cloth solver, and nothing a .glb
-can't carry: the result is one rotation key a frame on the cloth bones.
-Each bone's end keeps some of its speed, is pulled toward where it hangs
-at rest, down by gravity and back by the air of walking, stays a
-bone-length from the joint above, and is clamped to its limits. A garment
-whose chains hang from the hips or the spine (a skirt, a tunic) is then
-kept out of the thighs and shins, all chains together: rods round those
-bones as thick as the body is each way round them (rays to the skin), and
-tried against them the chains, the panels between neighbouring chains and
-the garment's own points, skinned as the mesh is; cloth on a leg's inner
-side goes round to its outer side; no point of it goes below the floor;
-pushes only partly become speed, and each turn is eased with its
-neighbours. A loop is played three times and the last round kept, then its
-end is eased onto its start, so it has no seam. `scripts/impostor/judge_legs.py`
-(`just impostor-legs`) measures a take against the real mesh.
+next. Every way a motion gets onto a character ends there (the walk, a
+run, a shot, a fight, a ride, the screen-test motions), and nothing else
+moves cloth.
 
-Because swing.py only reads the baked action, it works the same after the
-walk and after a shot, and it is the only thing that had to be added to
-the apply layer: one line in animate.py's result.
+It simulates each loose garment as the sheet of cloth it is, with
+Blender's own cloth simulation, and carries what the cloth does onto the
+garment's bones:
+
+1. **The sheet.** The garment's mesh, its points welded; what the body
+   carries of it (a waistband) pinned to the body; the body's skin, every
+   other piece of clothing and the floor to collide with. Its weight,
+   stiffness and hold come from its kind.
+2. **The start.** The body is held as it was made while the cloth settles
+   on it, then turned into the motion's first pose, so no limb starts
+   half through the cloth. A loop is played round three times.
+3. **Onto the bones.** Each chain bone gets the turn and the move that
+   best carry its own patch of the cloth from where the simulated cloth
+   settled to where it is on that frame. Starting from where it settled
+   means a garment keeps the shape it was made in while nothing moves it
+   (a simulated sheet sags; the garment's tiers do not).
+4. **Kept clear.** The garment's own points, skinned as the mesh is, are
+   tried against rods as thick as the body is each way round each limb
+   (rays to the skin), and a point in a rod is put out on the side the
+   simulated cloth is on, not the nearest: over a knee, outside a hand.
+   A leg wins over an arm. No point goes under the floor.
+5. Each bone's turn and move are brought inside what its kind may do,
+   eased with the frames either side, and keyed. A loop's last round is
+   faded into the one before it, so it closes with no seam.
+
+What is keyed is only bones (a turn and a move a frame), so a `.glb`
+carries it and whatever is skinned to the chains moves by it: the cards'
+dress piece needs no baking again when the motion changes. Four to ten
+seconds for six seconds of motion on a low-poly or mid-poly character,
+skirt or hood alike: most of it is Blender stepping the body the cloth
+collides with. A walk or a run loop takes two to four.
+
+Weights on strings (spring bones) were what moved cloth here before. They
+were kept out of the legs by pushing each chain out of each leg, and they
+could not know how cloth lies over a raised knee or piles on the floor: in
+a deep squat the skirt was flung out behind and the thighs were bare. The
+simulation was tried against them on the same motions and judged by the
+same judge (README: "Fabric"); the old way is gone, not kept beside it.
+
+`scripts/fabric_judge.py` (`just fabric-judge`) measures any finished
+`.glb`, any garment against any part of the body.
+`scripts/fabric_survey.py` (`just fabric-survey`) lists who wears what and
+which clips still play cloth moved by an older fabric step (swing.py
+writes its number, `FABRIC`, into every bake).
 
 **Measured** (`scripts/cloth_check.py`; `just test-tools` runs it on all
 five). "Through" is body points that gear covers standing still, followed
@@ -1387,9 +1444,11 @@ What is weak, most visible first:
   from its belt, or from its shoulders without one; long sleeves and sash
   ends that hang sideways are not handled. The prompt asks for a coat as a
   tight piece above the belt and a loose one below.
-- **No cloth against cloth, or against arms.** A hood's skirt can pass
-  through a raised shoulder, a kilt through a hand. Chains are not tied to
-  their neighbors, so two panels can part further than cloth would.
+- **No cloth against cloth.** A garment's simulated sheet collides with
+  the body, with the other clothes and with the floor, not with itself or
+  with another simulated garment (an apron over a swinging skirt would
+  pass through it). Arms are in its way now, but a hand still goes into a
+  full skirt's flounces (README: "Fabric").
 - **Feet inside boots.** A body foot as big as its boot shows through the
   sole from below; stiff gear is not reshaped.
 - **The fold at a joint is still a straight bend.** Cloth and skin now
@@ -2237,8 +2296,8 @@ are that work, done once. Each step's prompt carries the ones it uses
 | `animate.py` | play a motion on the rig: fit it, plant the feet, clamp to the limits, bake keyframes, measure the result | walk |
 | `build.py` | block out a low-poly version from a list of lofts, tubes, lumps, boxes and a head; join, color and check it; keep gear as groups, add sockets, keep the recipe | low poly |
 | `drape.py` | lay each piece of clothing on the body (tight, loose or stiff), and mark the skin it hides | low poly (dressed characters), profiles, walk |
-| `cloth.py` | give clothes the body's weights; give loose cloth chains of bones to hang from | walk |
-| `swing.py` | after any baked motion: make the cloth bones hang and swing, clear of the legs, inside their limits | walk |
+| `cloth.py` | give clothes the body's weights; give loose cloth chains of bones to hang from; say what kind of garment each hanging piece is | walk |
+| `swing.py` | after any baked motion: simulate each loose garment as cloth and carry it onto its bones, clear of the body and the floor (the runner's own: it uses numpy, which the add-on's safe mode refuses) | walk |
 | `toon.py` | draw the scene the comic way: flat tones, simplified colors, an ink line that stays the same width on screen | comics |
 | `face_swap.py` | put a drawn expression on the front of a rigged character's head; it turns with the head | comics |
 | `garment.py` | check a base body against the clothed character (pictures, then meshes), lay it on, and cut each hiding garment out by three votes | base body (background only) |

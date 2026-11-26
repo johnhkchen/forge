@@ -36,6 +36,7 @@ check:
     python3 scripts/motion/author_poses.py --check | tail -1
     python3 scripts/motion/test_timeline.py | tail -1
     python3 scripts/motion/test_run_clip.py | tail -1
+    python3 scripts/motion/test_screen_motions.py | tail -1
     python3 scripts/sets/test_sets.py | tail -1
     python3 scripts/fight/test_fight.py | tail -1
     "{{blender_bin}}" -b --factory-startup -P scripts/sets/test_marble.py 2>&1 | grep -E '^MARBLE|FAIL'
@@ -44,6 +45,7 @@ check:
     python3 scripts/comic/test_comic.py | tail -1
     python3 scripts/diorama/test_diorama.py | tail -1
     python3 scripts/impostor/test_impostor.py | tail -1
+    python3 scripts/test_fabric.py | tail -1
     python3 scripts/casting/test_casting.py | tail -1
     python3 scripts/video/test_video.py 2>/dev/null | tail -1
     python3 scripts/sets/test_camera_path.py | tail -1
@@ -440,6 +442,23 @@ runs dir="runs":
 run-asks dir="runs":
     python3 scripts/motion/run_clip.py "{{dir}}"/*/ | grep -E '^RUN'
 
+# PAID (a few cents of Kimodo on RunPod): the screen-test motions in motion/library/library.json, each made five times from its one sentence, every take scored, the best kept in motion/library/<id>/. Prints every job and what it would cost and sends nothing unless go is "go". only: motion ids joined by commas (default: all)
+screen-motions go="" only="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/motion/screen_motions.py plan {{ if only != "" { "--only " + only } else { "" } }} | sed '/^RESULT/d'
+    [ "{{go}}" = "go" ] || { echo "Dry run: nothing was sent."; exit 0; }
+    baml run screen_motions {{ if only != "" { "-- --only " + only } else { "" } }}
+    python3 scripts/motion/screen_motions.py status
+
+# Free: the screen-test motions played on a character's low-poly and mid-poly versions in one background Blender (runs/<run>/profiles/<version>-screen-<id>.glb; its cards play them too), then a line-up of everyone who has played each, for the watch page (#/watch/screen-<id>). run: a run folder, or a word of its name ("lincoln"); motions: ids (default: every one made)
+screen-play run *motions:
+    python3 scripts/motion/screen_play.py "{{run}}" {{motions}}
+
+# Free: the screen-test motions made by the offline tests' stand-in for Kimodo, into a folder of your own (never motion/library), to try screen-play before paying (python3 scripts/motion/screen_play.py <run> --library <folder>)
+screen-rehearse folder only="":
+    python3 scripts/motion/screen_motions.py rehearse "{{folder}}" {{ if only != "" { "--only " + only } else { "" } }}
+
 # Picture a walking .glb as a strip of poses (view: side, front or quarter)
 walk-strip file out view="side":
     "{{blender_bin}}" -b --factory-startup -P scripts/walk_strip.py -- "{{file}}" "{{out}}" --view {{view}} 2>&1 | grep -E '^STRIP|Error|Traceback'
@@ -447,6 +466,18 @@ walk-strip file out view="side":
 # Measure a dressed character's .glb (standing or walking): skin through its clothes over the clip, how far they sit off the body, cloth bones
 cloth-check +files:
     "{{blender_bin}}" -b --factory-startup -P scripts/cloth_check.py -- {{files}} 2>&1 | grep -E '^CLOTH|Error|Traceback'
+
+# Does loose cloth keep out of the body, off the floor, and still? Any clips of any characters (.glb files, with commas), every frame: how deep each garment goes into the legs, arms, trunk and head past how it was made (cloth pinched between two parts counted apart), a leg out through it, thighs left bare, an arm in through it, the hem under the floor, how far it swings and how much it shakes. Writes out/fabric-<tag>.json; more: --stills 2 for pictures of each clip's worst frames, --stills-at 30,90 of the frames named
+fabric-judge glbs tag="after" out="evidence/fabric" *more:
+    "{{blender_bin}}" -b --factory-startup -P scripts/fabric_judge.py -- --glb "{{glbs}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^FABRIC|^RESULT|Error|Traceback'
+
+# Who wears what loose (each garment's kind, where it hangs from, its chains), and which clips still play cloth moved by an older fabric step, with how to bake each again. No Blender. more: --stale for only what should be baked again, --out file.json
+fabric-survey runs="runs" shots="shots" *more:
+    python3 scripts/fabric_survey.py --runs "{{runs}}" --shots "{{shots}}" {{more}}
+
+# The fabric path's own tests, without Blender: garment kinds, the simulated cloth carried onto bones and kept out of the body, the cards reading the same description, stale clips; and what is baked in runs/
+fabric-test runs="runs":
+    python3 scripts/test_fabric.py --runs "{{runs}}"
 
 # Measure a painted character's walking .glb (profiles/painted-walk.glb): how far the collar opens on the neck over the clip, the feet against the floor, the body's weights. Or how clean a painted garment's edge is: `just paint-check --edges <template.glb> <garment.png>`
 paint-check +files:

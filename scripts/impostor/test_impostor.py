@@ -79,9 +79,9 @@ The arithmetic needs numpy. When this Python has none, the file runs itself agai
             (profiles/*-impostor-joe-layered): every picture has a layer behind listed, inside the sheet, the first
             layer is the sheet that was there before, and a frame of the walk covers all it covered without
   legs      a skirt kept outside the legs (swing.py, judge_legs.py): a rod is as thick as the leg each way round it;
-            cloth inside a leg on its outer side is pushed straight out, and cloth a leg has gone through (on its
-            inner side) is taken round to the outer side, not pushed further in; cloth that was in a rod as made may
-            stay that far in and no further; a skirt's chains are kept from the legs only, a hood's from nothing.
+            cloth inside a leg is pushed straight out, and cloth a leg has gone through (it is across the leg from
+            where the simulated cloth is) is taken through to the side it belongs on, not pushed further in; cloth
+            only round the leg from there is left; cloth that was in a rod as made may stay that far in and no further.
             The judge finds how deep a point is in a round leg, never past the leg's own thickness, and not below
             the ankle; a leg's middle line that goes out through the side of a skirt is out by as much of it as is
             past the cloth, and one that goes out under the hem is not out at all
@@ -1631,7 +1631,8 @@ def swing_parts(*names):
     with open(path) as f:
         tree = ast.parse(f.read())
     keep = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names]
-    keep += [node for node in tree.body if isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "SKIRT_FROM" for t in node.targets)]
+    # ... and its plain numbers and names (SKIRT_FROM, SAME_SIDE...): whatever is set at the top from nothing but what is written there
+    keep += [node for node in tree.body if isinstance(node, ast.Assign) and not any(isinstance(n, (ast.Call, ast.Attribute, ast.Name)) for n in ast.walk(node.value))]
     space = {"np": np, "math": math}
     exec(compile(ast.Module(body=keep, type_ignores=[]), path, "exec"), space)
     return space
@@ -1658,25 +1659,35 @@ def tube_cast(radius, top=None, bottom=None):
 
 def test_legs():
     import judge_legs
-    parts = swing_parts("thick_at", "in_rods")
+    parts = swing_parts("thick_at", "local_in", "in_rods")
     # a leg: a rod down the z axis from the hip (0, 0, 0) to the knee (0, 0, -0.4), 8 cm thick side to side (its
-    # bone's x) and 10 front to back (its z, which is the world's y here)
+    # bone's x) and 10 front to back (its z, which is the world's y here). swing.py takes its rods all together:
+    # heads, tails, each one's thickness along it and round it, and each one's x and z
     steps, around = 8, 12
     angle = np.arange(around) * 2 * math.pi / around
     profile = np.tile(np.sqrt(1.0 / ((np.cos(angle) / 0.08) ** 2 + (np.sin(angle) / 0.10) ** 2)), (steps, 1))
-    rod = (np.zeros(3), np.array([0.0, 0.0, -0.4]), profile, np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]))
-    side, front = parts["thick_at"](profile, np.array([0.5, 0.5]), np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]), rod[3], rod[4])
+    rods = (np.zeros((1, 3)), np.array([[0.0, 0.0, -0.4]]), profile[None], np.array([[1.0, 0.0, 0.0]]), np.array([[0.0, 1.0, 0.0]]))
+    side, front = parts["thick_at"](profile[None], np.array([[0.5], [0.5]]), np.array([[[1.0, 0.0, 0.0]], [[0.0, 1.0, 0.0]]]), rods[3], rods[4])[:, 0]
     check("a rod is as thick as the leg each way round it: 8 cm to the side, 10 to the front", abs(side - 0.08) < 1e-6 and abs(front - 0.10) < 1e-6, "%.3f and %.3f" % (side, front))
-    # the garment's middle is at x = -0.15 (the leg is the left one): out of the garment is +x here
     points = np.array([[0.05, 0.0, -0.2], [-0.05, 0.0, -0.2], [0.12, 0.0, -0.2]])
-    outward = np.array([[1.0, 0.0, 0.0]] * 3)
-    over, move = parts["in_rods"](points, [rod], np.zeros((3, 1)), outward)
+    over, move = parts["in_rods"](points, rods, np.zeros((3, 1)))
     moved = points + move[:, 0]
-    check("cloth in a leg on its outer side is pushed straight out to the skin", abs(over[0, 0] - 0.03) < 1e-6 and np.allclose(moved[0], [0.08, 0.0, -0.2]), str(moved[0]))
-    check("... cloth a leg has gone through (on its inner side) is taken round to the outer side, not pushed further in",
-          np.allclose(moved[1], [0.08, 0.0, -0.2]) and over[1, 0] > 0.12, "%s, %.3f m" % (moved[1], over[1, 0]))
-    check("... and cloth outside the leg is clear of it", over[2, 0] < 0, "%.3f" % over[2, 0])
-    over, _ = parts["in_rods"](points[:1], [rod], np.array([[0.02]]), outward[:1])
+    check("cloth in a leg is pushed straight out to the skin, the nearest way when nothing says which side it belongs on",
+          abs(over[0, 0] - 0.03) < 1e-6 and np.allclose(moved[0], [0.08, 0.0, -0.2]) and np.allclose(moved[1], [-0.08, 0.0, -0.2]), "%s and %s" % (moved[0], moved[1]))
+    # the simulated cloth has all three points on the leg's +x side, 12 cm from its line
+    belongs = parts["local_in"](np.array([[0.12, 0.0, -0.2]] * 3), rods)
+    over, move = parts["in_rods"](points, rods, np.zeros((3, 1)), belongs)
+    moved = points + move[:, 0]
+    check("... cloth a leg has gone through (it is on the far side of the leg's line from where the simulated cloth is) is taken through to the side it belongs on, not pushed further in",
+          np.allclose(moved[1], [0.08, 0.0, -0.2]) and over[1, 0] > 0.12 and np.allclose(moved[0], [0.08, 0.0, -0.2]), "%s, %.3f m" % (moved[1], over[1, 0]))
+    check("... and cloth outside the leg on its own side is clear of it", over[2, 0] < 0, "%.3f" % over[2, 0])
+    far_side = np.array([[-0.2, 0.0, -0.2]])
+    over, move = parts["in_rods"](far_side, rods, np.zeros((1, 1)), belongs[:1])
+    check("... cloth clean through to the far side of a leg, outside it, is brought back too", over[0, 0] > 0.2 and np.allclose(far_side + move[:, 0], [[0.08, 0.0, -0.2]]), "%.3f m" % over[0, 0])
+    round_it = np.array([[0.0, 0.2, -0.2]])
+    over, _ = parts["in_rods"](round_it, rods, np.zeros((1, 1)), belongs[:1])
+    check("... but cloth that is only round the leg from where it belongs, with no leg between, is left alone", over[0, 0] < 0, "%.3f" % over[0, 0])
+    over, _ = parts["in_rods"](points[:1], rods, np.array([[0.02]]))
     check("cloth that was 2 cm in the rod as made may stay that far in, and no further", abs(over[0, 0] - 0.01) < 1e-6, "%.3f" % over[0, 0])
     check("a skirt's chains hang from the hips or the spine; a hood's do not", "hips" in parts["SKIRT_FROM"] and "spine" in parts["SKIRT_FROM"] and "head" not in parts["SKIRT_FROM"])
 

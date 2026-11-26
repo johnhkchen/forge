@@ -117,7 +117,8 @@ def spread_pull(pull, edges, pinned, rounds):
 def lay_cloth(pull, worn, neck, head, chest, share=CLOTH):
     """Cloth is not skin: a collar lies on the shoulders, and the neck turns inside it. Where a point is clothing
     (worn: V, True), `share` of what the neck and the head pull on it goes to the chest. neck, head, chest: which
-    columns of pull they are."""
+    columns of pull they are. `worn` may be a number for each point instead (0 to 1, with `share` 1): each
+    garment held back as far as it is described (impostor.py: hold_of), a hood that rides the head not at all."""
     pull = np.array(pull, dtype=np.float64)
     given = share * np.asarray(worn, dtype=np.float64)
     moved = given * (pull[:, neck] + pull[:, head])

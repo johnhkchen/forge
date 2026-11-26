@@ -22,12 +22,27 @@
 #    worn on (hips, head...). The hanging points are weighted to them, more
 #    the lower they are and the further they stand off the body: where a
 #    kilt's side rests on a thigh it stays with the thigh, and the panels
-#    between swing. The chains have joint limits like every other bone (wider
-#    for a skirt's, which hang over the legs: a knee lifts a skirt further
-#    than it swings on its own).
+#    between swing. The bones are not joined end to end: each carries its own
+#    patch of the cloth, and may slide as well as turn.
 #    Nothing moves yet: swing.py, run after animate.py, makes them hang and
 #    swing with the motion. The rig remembers to ask for it ("then" in
 #    animate.py's result).
+#
+# 3. Each hanging piece is said to be a kind of garment, from where it hangs
+#    and how (kind_of): a long skirt, a short one (a kilt, a tunic's hem), an
+#    apron, a coat's tails, a cape, a hood, a sleeve, a sash, a loose shirt
+#    or a collar.
+#    "kinds" below says what each kind is like: how many chains and bones it
+#    gets, how stiff and heavy it is and how far it may swing, which parts of
+#    the body it is kept out of, and how flat cards show it. That one
+#    description is kept on the rig ("forge_cloth": its "garments" and
+#    "chains"), goes into every .glb, and is all that swing.py, the cards
+#    (scripts/impostor) and the judges (scripts/fabric_judge.py) read: nothing
+#    downstream asks what a garment is called or who wears it. A collar is
+#    too short to swing, and a loose shirt is held at both ends (the
+#    shoulders, and the belt or the hips): they get no chains, stay with the
+#    body, and are only written down (the cards hold them back from the
+#    neck's turn).
 #
 # Send through the blender MCP `execute_blender_code` tool from PARAMS down.
 # Prints RESULT {json}. A second or two. Safe-mode compatible.
@@ -38,8 +53,45 @@ PARAMS = {
     "bones": True,        # give loose, hanging pieces bones of their own
     "chain_every": 0.16,  # one chain about every this share of the height around a piece (4 to 8 all the way round, 1 to 4 on a part of the way)
     "bone_long": 0.07,    # a chain's bones are about this share of the height long (1 to 3 bones)
-    "limits": [-70, 70, -15, 15, -50, 50],  # how far a cloth bone may turn, degrees: out/in, twist, sideways
-    "skirt_limits": [-100, 100, -45, 45, -75, 75],  # ... and one that hangs over the legs (from the hips or the spine): a knee lifts a skirt further than it swings, and swing.py keeps it out of the legs
+    "grip_over": 0.6,     # how far down a hanging piece, in bone lengths, the chains take it over from the body (below this it is all theirs)
+    "limits": [-180, 180, -180, 180, -180, 180],  # a cloth bone's joint limit, degrees: free. Cloth lies along a thigh raised past level and hangs straight down off a bowed back, and a limit that stops it short leaves the leg through it. How far each kind may swing and slide is its own "swing" and "reach", below
+    # What each kind of garment is like. A kind is worked out from where a piece hangs and how (kind_of); to say
+    # otherwise, "kind": {"<gear name>": "<kind>"}. For each:
+    #   chains      [fewest, most] chains of bones; None = none at all (it stays with the body)
+    #   every       one chain about every this share of the height round it
+    #   bones       the most bones a chain has; "bone_long": about how long each is, as a share of the height
+    #   centre      a chain at the very front and the very back (cloth folds between the legs there), not either side of them
+    #   mass        how heavy the cloth is, kg a point of its mesh (swing.py's cloth simulation)
+    #   bend        how it resists folding (0.5 = silk, 4 = canvas)
+    #   damp        how much the air slows it (0.2 = a skirt that falls back at once; more, and a thrown skirt stays up like a parasol)
+    #   shape       how hard it is held to the shape it was made in, riding the bone it hangs from (0 = a rag; 0.25 = a hood that keeps its form)
+    #   swing       how far a bone may turn from how it was made, degrees; "reach": how far it may slide, in bone lengths
+    #   collide     the parts of the body its own points are kept out of once it has moved: "legs", "arms", "trunk", "head"
+    #   floor       kept off the floor
+    #   card        how flat cards show it: "piece" = a card of its own and one skinned piece of the model moved by its
+    #               chains (a dress); "rides" = it stays in the card of the bone it hangs from (a hood, on the head's);
+    #               "held" = no chains, and the neck's piece gives "hold" of what the neck and head pull on it back to the chest
+    "kinds": {
+        "skirt":       {"chains": [8, 8], "every": 0.16, "bones": 4, "bone_long": 0.1, "centre": True, "mass": 0.15, "bend": 2.0, "damp": 0.2, "shape": 0.0,
+                        "swing": 170, "reach": 2.0, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
+        "short skirt": {"chains": [4, 8], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.12, "bend": 3.0, "damp": 0.2, "shape": 0.0,
+                        "swing": 150, "reach": 1.5, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
+        "apron":       {"chains": [2, 4], "every": 0.1, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.1, "bend": 2.0, "damp": 0.3, "shape": 0.0,
+                        "swing": 150, "reach": 1.5, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
+        "tails":       {"chains": [2, 4], "every": 0.1, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.12, "bend": 3.0, "damp": 0.2, "shape": 0.0,
+                        "swing": 150, "reach": 1.5, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
+        "cape":        {"chains": [3, 5], "every": 0.12, "bones": 4, "bone_long": 0.1, "centre": False, "mass": 0.12, "bend": 1.0, "damp": 0.3, "shape": 0.0,
+                        "swing": 170, "reach": 2.0, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
+        "hood":        {"chains": [1, 4], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.1, "bend": 4.0, "damp": 0.5, "shape": 0.25,
+                        "swing": 80, "reach": 0.6, "collide": ["trunk", "arms"], "floor": False, "card": "rides"},
+        "sleeve":      {"chains": [1, 2], "every": 0.16, "bones": 2, "bone_long": 0.07, "centre": False, "mass": 0.1, "bend": 1.5, "damp": 0.3, "shape": 0.05,
+                        "swing": 100, "reach": 1.0, "collide": ["trunk", "legs"], "floor": False, "card": "rides"},
+        "sash":        {"chains": [1, 1], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.08, "bend": 0.5, "damp": 0.4, "shape": 0.0,
+                        "swing": 170, "reach": 2.0, "collide": ["legs", "arms"], "floor": True, "card": "rides"},
+        "shirt":       {"chains": None, "card": "held", "hold": 0.5},
+        "collar":      {"chains": None, "card": "held", "hold": 0.5},
+    },
+    "kind": {},           # {"<gear name>": "<kind>"}: say what a piece is, where kind_of gets it wrong
 }
 
 import bpy
@@ -87,6 +139,33 @@ def slug_of(text):
         out = out.replace("__", "_")
     return out[:18] or "cloth"
 
+def kind_of(anchor, around, facing, wide, drop, line):
+    """What kind of garment a hanging piece is, from how it hangs alone (never its name, never who wears it).
+    anchor: the bone its top is worn on; around: it goes all the way round; facing: which way an open piece
+    faces from the middle of the body ("front", "back" or "side"); wide: how far round an open piece goes, drop:
+    how far down it hangs, line: how high its top is, all three as shares of the body's height."""
+    if anchor.split("_")[0] in ("shoulder", "upper", "forearm", "hand"):
+        return "sleeve"
+    if anchor in ("head", "neck"):
+        return "collar" if drop < 0.06 else "hood"
+    if drop < 0.06 and line > 0.68:
+        return "collar"  # a neckline, a lapel: too short to swing
+    if anchor == "chest" or line > 0.68:  # from the shoulders
+        if not around:
+            return "cape"
+        # all the way round: a loose shirt or a tunic's top ends at the waist or the hips, held there by a belt or by the hips
+        # themselves, and goes with the trunk; a robe goes on to the knee or lower, and is a skirt from the chest
+        return "shirt" if drop < 0.3 else "skirt"
+    if around:
+        return "skirt" if drop >= 0.3 else "short skirt"
+    if wide < 0.12:
+        return "sash"
+    return "apron" if facing == "front" else "tails"
+
+def facing_of(angle):
+    """Which way an angle round the body's middle is: the character faces -y."""
+    return "front" if math.sin(angle) < -0.5 else "back" if math.sin(angle) > 0.5 else "side"
+
 def turn_to(angle, start):
     """An angle brought to within half a turn of `start`."""
     while angle - start > math.pi:
@@ -110,6 +189,8 @@ if not bodies or not gear:
     raise ValueError("nothing to dress: this needs a \"body\" mesh and \"gear: ...\" meshes that drape.py has been over, all bound by rig.py")
 known = json.loads(rig.get("forge_rig", "{}"))
 tall = known.get("measure", {}).get("height") or max((o.matrix_world @ v.co).z for o in bodies for v in o.data.vertices)
+floor_z = known.get("measure", {}).get("floor", 0.0)
+head_from = (rig.matrix_world @ rig.data.bones["head"].head_local).z if "head" in rig.data.bones else floor_z + 0.87 * tall  # where the head starts
 
 # ---- the body: where it is, and what it weighs there ----
 points, triangles, given, facing = [], [], [], []
@@ -155,7 +236,7 @@ def body_weights(p):
     return blend([(given[i], max(s, 0.0)) for i, s in zip(corners, shares)]), hit[3], facing[hit[2]]
 
 # ---- each gear mesh: its points gathered where they share a place, and what drape.py said of them ----
-report, chains, new_bones = [], [], []
+report, chains, new_bones, garments = [], [], [], []
 dressed = {}
 for obj in gear:
     world = [obj.matrix_world @ v.co for v in obj.data.vertices]
@@ -218,12 +299,21 @@ if PARAMS["bones"]:
             line, drop = json.loads(obj.get("forge_hangs", "{}")).get(str(number), [max(s["p"].z for s in hanging), 0.0])
             if drop < 0.03 * tall:
                 continue
-            votes = {}
+            votes, arms = {}, {}
             for s in top:
                 for bone, w in s["w"].items():
-                    if bone in TRUNK:  # cloth hangs from the trunk, never from a leg or an arm: those swing under it
+                    if bone in TRUNK:  # cloth hangs from the trunk, never from a leg: those swing under it
                         votes[bone] = votes.get(bone, 0.0) + w
+                    elif bone.split("_")[0] in ("upper", "forearm"):
+                        arms[bone] = arms.get(bone, 0.0) + w
             anchor = sorted(votes.items(), key=second)[-1][0] if votes else "hips"
+            if anchor in ("head", "neck") and max(s["p"].z for s in mine) < head_from + 0.03 * tall:
+                # Cloth hangs from the head only if it is on the head (a hood). A tunic's neckline lies by the neck, where
+                # the skin is the neck's and the head's, but the tunic is worn on the shoulders: it hangs from the chest.
+                # (Taken for the head's, a villager's tunic got four chains from his head that swung his shirt with his nod.)
+                anchor = "chest"
+            if arms and sum(arms.values()) > 3.0 * sum(votes.values()):  # ... or from an arm, when its whole top is worn on one (a loose sleeve)
+                anchor = sorted(arms.items(), key=second)[-1][0]
             mid = sum((s["p"] for s in top), Vector()) / len(top)
             for s in hanging:
                 s["angle"] = math.atan2(s["p"].y - mid.y, s["p"].x - mid.x)
@@ -237,20 +327,31 @@ if PARAMS["bones"]:
                     gap, gap_at = angles[i + 1] - angles[i], i
             around = gap < math.radians(100)
             reach = sum(math.hypot(s["p"].x - mid.x, s["p"].y - mid.y) for s in hanging) / len(hanging)
+            start = angles[(gap_at + 1) % len(angles)]
+            arc = 2 * math.pi if around else 2 * math.pi - gap
+            gear_name = obj.get("gear") or obj.name
+            kind = PARAMS["kind"].get(gear_name) or kind_of(anchor, around, facing_of(start + arc / 2), arc * reach / tall, drop / tall, (line - floor_z) / tall)
+            about = PARAMS["kinds"].get(kind) or PARAMS["kinds"]["short skirt"]
+            slug = slug_of(gear_name)
+            if not about.get("chains"):  # a collar: too short to swing. It stays with the body, and is only written down
+                garments.append({"gear": gear_name, "slug": slug, "kind": kind, "parent": anchor, "chains": 0, "card": about.get("card", "held"), "hold": about.get("hold", 0.5),
+                                 "drop_cm": round(100 * drop, 1)})
+                continue
+            fewest, most = about["chains"]
+            every = about.get("every", PARAMS["chain_every"]) * tall
             if around:
-                count = int(min(8, max(4, 2 * round(math.pi * reach / (PARAMS["chain_every"] * tall)))))  # an even number, 4 to 8
-                centers = [math.pi / 2 + 2 * math.pi * (i + 0.5) / count for i in range(count)]  # the same on the left as on the right
+                count = int(min(max(most, 4), max(fewest, 4, 2 * round(math.pi * reach / every))))  # an even number
+                count += count % 2
+                # the same on the left as on the right: a chain either side of the front and the back, or (for a kind that folds between the legs) one at each
+                centers = [math.pi / 2 + 2 * math.pi * (i + (0.0 if about.get("centre") else 0.5)) / count for i in range(count)]
                 half = math.pi / count
             else:
-                start = angles[(gap_at + 1) % len(angles)]
-                arc = 2 * math.pi - gap
-                count = int(min(4, max(1, round(arc * reach / (PARAMS["chain_every"] * tall)))))
+                count = int(min(most, max(fewest, round(arc * reach / every))))
                 centers = [start + arc * (i + 0.5) / count for i in range(count)]
                 half = arc / (2 * count)
                 for s in hanging:
                     s["angle"] = turn_to(s["angle"], start + arc / 2)
-            long = int(min(3, max(1, round(drop / (PARAMS["bone_long"] * tall)))))
-            slug = slug_of(obj.get("gear") or obj.name)
+            long = int(min(about.get("bones", 3), max(1, round(drop / (about.get("bone_long", PARAMS["bone_long"]) * tall)))))
             if any(c["slug"] == slug for c in chains if c["island"] != (name, number)):
                 slug = "%s_%d" % (slug[:15], number)
             made = []
@@ -292,15 +393,18 @@ if PARAMS["bones"]:
                 for ci, share in mix:
                     for b, w in along.items():
                         cloth[made[ci]["bones"][b]] = share * w / total
-                grip = min(1.0, s["hang"] * long / 0.6)
+                grip = min(1.0, s["hang"] * long / PARAMS["grip_over"])
                 grip = grip * grip * (3 - 2 * grip)
                 # Cloth that rests against the body (a kilt's side on a thigh) stays with the body there; cloth that stands off it swings.
                 loose = min(1.0, max(0.0, (s["off"] - 0.0075 * tall) / (0.03 * tall)))
                 grip *= loose * loose * (3 - 2 * loose)
                 s["w"] = blend([(blend([(s["w"], 1.0)]) if grip < 1 else {}, 1.0 - grip), (cloth, grip)])
             for c in made:
-                chains.append({"slug": slug, "island": (name, number), "gear": obj.get("gear") or obj.name, "parent": anchor, "bones": c["bones"],
-                               "joints": c["joints"], "out": c["out"]})
+                chains.append({"slug": slug, "island": (name, number), "gear": gear_name, "parent": anchor, "bones": c["bones"],
+                               "joints": c["joints"], "out": c["out"], "kind": kind, "garment": len(garments)})
+            garments.append(dict({k: about[k] for k in ("mass", "bend", "damp", "shape", "swing", "reach", "collide", "floor", "card") if k in about},
+                                 gear=gear_name, slug=slug, kind=kind, parent=anchor, around=bool(around), facing=None if around else facing_of(start + arc / 2),
+                                 chains=len(made), bones_a_chain=long, drop_cm=round(100 * drop, 1)))
 
     if chains:
         for o in bpy.context.selected_objects:
@@ -318,7 +422,7 @@ if PARAMS["bones"]:
                 bone = rig.data.edit_bones.new(bone_name)
                 bone.head, bone.tail = back @ c["joints"][i], back @ c["joints"][i + 1]
                 bone.parent = rig.data.edit_bones[c["bones"][i - 1] if i else c["parent"]]
-                bone.use_connect = i > 0
+                bone.use_connect = False  # (swing.py may slide a bone as well as turn it: each carries its own patch of the cloth)
                 bone.align_roll(back.to_3x3() @ c["out"])  # its z axis points out of the cloth: x swings it out and in, z from side to side
                 new_bones.append(bone_name)
         bpy.ops.object.mode_set(mode="OBJECT")
@@ -327,7 +431,7 @@ if PARAMS["bones"]:
         for bone_name in new_bones:
             bone = rig.pose.bones[bone_name]
             bone.rotation_mode = "QUATERNION"
-            lim = [float(v) for v in PARAMS["skirt_limits" if hangs_from.get(bone_name) in ("hips", "spine") else "limits"]]
+            lim = [float(v) for v in PARAMS["limits"]]
             for old in [r for r in bone.constraints if r.type == "LIMIT_ROTATION"]:
                 bone.constraints.remove(old)
             rule = bone.constraints.new("LIMIT_ROTATION")
@@ -354,17 +458,17 @@ for name in sorted(dressed):
             groups[bone].add(spot["verts"], w, "REPLACE")
 
 # ---- what swing.py needs, kept on the rig; and the note that makes animate.py ask for it ----
-kept = [{"gear": c["gear"], "parent": c["parent"], "bones": c["bones"]} for c in chains]
-rig["forge_cloth"] = json.dumps({"chains": kept})
+kept = [{"gear": c["gear"], "parent": c["parent"], "bones": c["bones"], "kind": c["kind"], "garment": c["garment"]} for c in chains]
+rig["forge_cloth"] = json.dumps({"chains": kept, "garments": garments})
 then = [t for t in json.loads(rig.get("forge_then", "[]")) if t != "swing.py"]
 rig["forge_then"] = json.dumps(then + (["swing.py"] if chains else []))
 
 pieces = {}
 for c in chains:
-    entry = pieces.setdefault(c["island"], {"gear": c["gear"], "mesh": c["island"][0], "hangs_from": c["parent"], "chains": 0, "bones_a_chain": len(c["bones"])})
+    entry = pieces.setdefault(c["island"], {"gear": c["gear"], "mesh": c["island"][0], "kind": c["kind"], "hangs_from": c["parent"], "chains": 0, "bones_a_chain": len(c["bones"])})
     entry["chains"] += 1
 result = {
-    "rig": rig.name, "meshes": report, "cloth_bones": new_bones, "loose": list(pieces.values()),
+    "rig": rig.name, "meshes": report, "cloth_bones": new_bones, "loose": list(pieces.values()), "garments": garments,
     "bones_in_all": len(rig.data.bones), "then": json.loads(rig["forge_then"]),
 }
 print("RESULT " + json.dumps(result))

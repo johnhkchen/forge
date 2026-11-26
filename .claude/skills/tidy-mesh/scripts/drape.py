@@ -63,6 +63,7 @@ PARAMS = {
     "rings": True,       # cut edge loops: in tight pieces where the body under them has one, and in the body just inside each piece's ends
     "rings_budget": 0.12,  # ...for as long as they add no more than this share to the triangle count
     "mask": True,        # mark the body faces worn gear hides
+    "hanging_is_loose": True,  # a piece called stiff that is named for cloth that hangs (a tunic's skirt, an apron) is loose all the same
     "move": None,        # False = change nothing: only work out what each piece is, the hang and the hidden faces. None = move, unless the meshes say they were draped before they were written
 }
 
@@ -340,15 +341,27 @@ def bins_of(points, axis):
     return out
 
 def judge(isl):
-    """What a piece is taken for, and why."""
+    """What a piece is taken for, and why. Cloth that hangs is never stiff: a piece its recipe (or an older drape)
+    called stiff, named for cloth that hangs (a tunic's skirt, an apron, a coat's tails) and too big to be a
+    trimming, is loose, so it gets bones to hang from and swings like every other skirt instead of riding the hips
+    like a bucket. Only "fit" in PARAMS can say otherwise."""
+    fit, why = judged(isl)
+    part = isl["piece"] or {}
+    named = isl.get("name") or part.get("name") or isl["gear"]
+    if (fit == "stiff" and PARAMS["hanging_is_loose"] and why in ("as when it was draped", "its piece says so") and has_word(named, LOOSE) and not has_word(named, STIFF)
+            and (isl["hi"] - isl["lo"]).length >= 0.12 * tall and len(isl["points"]) > 8):
+        return "loose", "a %s hangs, though it was called stiff" % has_word(named, LOOSE)
+    return fit, why
+
+def judged(isl):
     part, tag = isl["piece"] or {}, layers[isl["layer"]]["tag"]
+    for name in (part.get("name"), isl["gear"]):
+        if name and PARAMS["fit"].get(name) in FITS:
+            return PARAMS["fit"][name], "you said so"
     for was in stored.get(isl["gear"], []):  # a mesh draped before it was written says what each of its parts was
         if sum(abs(was["lo"][i] - isl["lo"][i]) + abs(was["hi"][i] - isl["hi"][i]) for i in range(3)) < 0.02 * tall:
             isl["name"], isl["was"] = was["name"], was
             return was["fit"], "as when it was draped"
-    for name in (part.get("name"), isl["gear"]):
-        if name and PARAMS["fit"].get(name) in FITS:
-            return PARAMS["fit"][name], "you said so"
     if part.get("fit") in FITS:
         return part["fit"], "its piece says so"
     named = part.get("name") or isl["gear"]

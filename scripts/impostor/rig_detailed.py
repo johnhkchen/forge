@@ -135,7 +135,9 @@ def main():
         obj.name = obj["named"]
         del obj["named"]
     out = os.path.join(run, "profiles", name + "-walk.glb")
-    bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", export_animations=True, export_yup=True)
+    # (with what the skeleton says of itself: its description of what it wears loose, and which fabric step moved its
+    # cloth, go with it, so the cards and scripts/fabric_survey.py read this file as they read the tidy one)
+    bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", export_animations=True, export_yup=True, export_extras=True)
     said.update({"glb": out, "bytes": os.path.getsize(out), "seconds": round(time.time() - began, 1), "skeleton_from": rigged + "-walk.glb", "mesh": mesh,
                  **({"garments": sorted(o["gear"] for o in fine if o.get("kind") == "gear")} if mesh == "dressed" else {})})
     with open(os.path.join(run, "profiles", name + "-walk.json"), "w") as f:

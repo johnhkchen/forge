@@ -1,0 +1,292 @@
+{
+ "id": "look-around",
+ "prompt": "A person stands still and looks around, turning their head to the left, to the right, then looking up and down.",
+ "ask": "7d429fe014b66b2ecafb",
+ "kept": 2,
+ "does_what_was_asked": true,
+ "asks": [
+  {
+   "measure": "head_turn",
+   "at_least": 25
+  },
+  {
+   "measure": "head_nod",
+   "at_least": 25
+  },
+  {
+   "measure": "wander",
+   "at_most": 0.35
+  }
+ ],
+ "takes": [
+  {
+   "score": 41.15,
+   "does_what_was_asked": false,
+   "parts": {
+    "slide": 0.0,
+    "head": 0.0,
+    "ends": 0.0,
+    "floor": 0.0,
+    "asked": 41.15
+   },
+   "missed": [
+    {
+     "measure": "head_nod",
+     "at_least": 25,
+     "got": 19.416,
+     "short": 0.223
+    }
+   ],
+   "measures": {
+    "wander": 0.041,
+    "out": 0.041,
+    "back": 0.583,
+    "turn": 78.854,
+    "hips_drop": 0.004,
+    "weight_shift": 0.114,
+    "knee_lift": 0.007,
+    "elbow_bend": 28.994,
+    "hands_over_head": -0.761,
+    "hand_over_shoulder": -0.569,
+    "hands_over_shoulders": -0.569,
+    "left_hand_over_shoulder": -0.569,
+    "right_hand_over_shoulder": -0.569,
+    "hand_low": 0.89,
+    "hands_behind": -0.07,
+    "feet_apart": 0.228,
+    "foot_high": 0.035,
+    "twist": 2.909,
+    "side_bend": 2.125,
+    "bow": 8.363,
+    "chest_pitch_ends": [
+     2.9,
+     3.7
+    ],
+    "head_turn": 65.249,
+    "head_nod": 19.416,
+    "shrug": 0.021,
+    "slide_cm": 0.57,
+    "slide_typical_cm": 0.55,
+    "head_speed_deg_s": 284.4,
+    "chin_up_deg": 12.7,
+    "floor_cm": 0.0,
+    "ends_apart_cm": 1.61,
+    "starts_standing": true,
+    "ends_standing": true
+   },
+   "take": 0,
+   "seed": 81215
+  },
+  {
+   "score": 49.5,
+   "does_what_was_asked": false,
+   "parts": {
+    "slide": 0.0,
+    "head": 0.0,
+    "ends": 0.0,
+    "floor": 0.0,
+    "asked": 49.5
+   },
+   "missed": [
+    {
+     "measure": "head_nod",
+     "at_least": 25,
+     "got": 15.26,
+     "short": 0.39
+    }
+   ],
+   "measures": {
+    "wander": 0.097,
+    "out": 0.097,
+    "back": 0.476,
+    "turn": 76.0,
+    "hips_drop": 0.003,
+    "weight_shift": 0.154,
+    "knee_lift": 0.006,
+    "elbow_bend": 29.009,
+    "hands_over_head": -0.78,
+    "hand_over_shoulder": -0.55,
+    "hands_over_shoulders": -0.55,
+    "left_hand_over_shoulder": -0.55,
+    "right_hand_over_shoulder": -0.542,
+    "hand_low": 0.891,
+    "hands_behind": -0.005,
+    "feet_apart": 0.189,
+    "foot_high": 0.034,
+    "twist": 9.171,
+    "side_bend": 1.699,
+    "bow": 2.817,
+    "chest_pitch_ends": [
+     0.8,
+     -0.6
+    ],
+    "head_turn": 54.968,
+    "head_nod": 15.26,
+    "shrug": 0.016,
+    "slide_cm": 0.69,
+    "slide_typical_cm": 0.68,
+    "head_speed_deg_s": 133.9,
+    "chin_up_deg": 14.2,
+    "floor_cm": 0.0,
+    "ends_apart_cm": 2.88,
+    "starts_standing": true,
+    "ends_standing": true
+   },
+   "take": 1,
+   "seed": 81216
+  },
+  {
+   "score": 0.0,
+   "does_what_was_asked": true,
+   "parts": {
+    "slide": 0.0,
+    "head": 0.0,
+    "ends": 0.0,
+    "floor": 0.0,
+    "asked": 0
+   },
+   "missed": [],
+   "measures": {
+    "wander": 0.077,
+    "out": 0.077,
+    "back": 0.381,
+    "turn": 87.35,
+    "hips_drop": 0.051,
+    "weight_shift": 0.102,
+    "knee_lift": 0.006,
+    "elbow_bend": 60.537,
+    "hands_over_head": -0.627,
+    "hand_over_shoulder": -0.491,
+    "hands_over_shoulders": -0.491,
+    "left_hand_over_shoulder": -0.491,
+    "right_hand_over_shoulder": -0.479,
+    "hand_low": 0.947,
+    "hands_behind": 0.141,
+    "feet_apart": 0.331,
+    "foot_high": 0.035,
+    "twist": 4.721,
+    "side_bend": 1.174,
+    "bow": 10.144,
+    "chest_pitch_ends": [
+     10.9,
+     13.0
+    ],
+    "head_turn": 52.382,
+    "head_nod": 25.192,
+    "shrug": 0.017,
+    "slide_cm": 0.77,
+    "slide_typical_cm": 0.46,
+    "head_speed_deg_s": 160.7,
+    "chin_up_deg": 14.2,
+    "floor_cm": 0.0,
+    "ends_apart_cm": 4.72,
+    "starts_standing": true,
+    "ends_standing": true
+   },
+   "take": 2,
+   "seed": 81217
+  },
+  {
+   "score": 0.57,
+   "does_what_was_asked": true,
+   "parts": {
+    "slide": 0.57,
+    "head": 0.0,
+    "ends": 0.0,
+    "floor": 0.0,
+    "asked": 0
+   },
+   "missed": [],
+   "measures": {
+    "wander": 0.082,
+    "out": 0.082,
+    "back": 0.875,
+    "turn": 98.926,
+    "hips_drop": 0.005,
+    "weight_shift": 0.118,
+    "knee_lift": 0.01,
+    "elbow_bend": 49.309,
+    "hands_over_head": -0.682,
+    "hand_over_shoulder": -0.527,
+    "hands_over_shoulders": -0.527,
+    "left_hand_over_shoulder": -0.523,
+    "right_hand_over_shoulder": -0.527,
+    "hand_low": 0.911,
+    "hands_behind": 0.076,
+    "feet_apart": 0.322,
+    "foot_high": 0.036,
+    "twist": 2.123,
+    "side_bend": 11.143,
+    "bow": 21.663,
+    "chest_pitch_ends": [
+     8.4,
+     5.9
+    ],
+    "head_turn": 66.085,
+    "head_nod": 28.456,
+    "shrug": 0.024,
+    "slide_cm": 1.57,
+    "slide_typical_cm": 1.35,
+    "head_speed_deg_s": 159.0,
+    "chin_up_deg": 30.0,
+    "floor_cm": 0.0,
+    "ends_apart_cm": 5.52,
+    "starts_standing": true,
+    "ends_standing": true
+   },
+   "take": 3,
+   "seed": 81218
+  },
+  {
+   "score": 0.52,
+   "does_what_was_asked": true,
+   "parts": {
+    "slide": 0.52,
+    "head": 0.0,
+    "ends": 0.0,
+    "floor": 0.0,
+    "asked": 0
+   },
+   "missed": [],
+   "measures": {
+    "wander": 0.065,
+    "out": 0.065,
+    "back": 1.0,
+    "turn": 86.239,
+    "hips_drop": 0.017,
+    "weight_shift": 0.099,
+    "knee_lift": 0.006,
+    "elbow_bend": 50.065,
+    "hands_over_head": -0.654,
+    "hand_over_shoulder": -0.484,
+    "hands_over_shoulders": -0.484,
+    "left_hand_over_shoulder": -0.484,
+    "right_hand_over_shoulder": -0.466,
+    "hand_low": 0.919,
+    "hands_behind": 0.132,
+    "feet_apart": 0.388,
+    "foot_high": 0.035,
+    "twist": 6.174,
+    "side_bend": 14.123,
+    "bow": 28.621,
+    "chest_pitch_ends": [
+     3.9,
+     6.5
+    ],
+    "head_turn": 31.98,
+    "head_nod": 34.231,
+    "shrug": 0.036,
+    "slide_cm": 1.52,
+    "slide_typical_cm": 1.36,
+    "head_speed_deg_s": 188.8,
+    "chin_up_deg": 28.8,
+    "floor_cm": 0.0,
+    "ends_apart_cm": 3.28,
+    "starts_standing": true,
+    "ends_standing": true
+   },
+   "take": 4,
+   "seed": 81219
+  }
+ ]
+}
