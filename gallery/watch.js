@@ -89,6 +89,7 @@ class TakeViewer {
       cam.position.fromArray(card.at);
       cam.lookAt(new THREE.Vector3().fromArray(card.aim));
       this.fixed[name] = cam;
+      (this.aims ||= {})[name] = new THREE.Vector3().fromArray(card.aim); // the spot it looks at: "Look around" turns about it
     }
     this.moving = take.moving_cameras || {}; // the shot's own cameras that move: placed from the take's clock each frame
     for (const name of Object.keys(this.moving)) this.fixed[name] = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 300);
@@ -277,9 +278,30 @@ class TakeViewer {
   }
 
   useEye(name) {
+    const was = this.fixed[this.state.eye];
+    if (!this.fixed[name] && was) this.takeOver(was, this.state.eye);
     this.state.eye = this.fixed[name] ? name : "";
     this.camera = this.fixed[name] || this.free;
     this.controls.enabled = !this.fixed[name];
+  }
+
+  // "Look around" picks up where a fixed eye left off: the same spot, the same lens, turning about the
+  // spot that eye was looking at (a moving eye: the point along its line nearest the middle of the cast).
+  takeOver(cam, name) {
+    const ahead = cam.getWorldDirection(new THREE.Vector3());
+    let pivot = this.aims?.[name]?.clone();
+    if (!pivot) {
+      const middle = new THREE.Vector3(), at = new THREE.Vector3();
+      let n = 0;
+      for (const actor of this.cast) if (actor.bones?.hips) { middle.add(at.setFromMatrixPosition(actor.bones.hips.matrixWorld)); n += 1; }
+      const along = n ? middle.divideScalar(n).sub(cam.position).dot(ahead) : 0;
+      pivot = cam.position.clone().addScaledVector(ahead, along > 0.5 ? along : 4);
+    }
+    this.free.position.copy(cam.position);
+    this.free.fov = cam.fov;
+    this.free.updateProjectionMatrix();
+    this.controls.target.copy(pivot);
+    this.controls.update();
   }
 
   // Put every card of one of the cast where its bone is now, for where the eye is now.
