@@ -32,6 +32,7 @@ import json
 import math
 import os
 import sys
+import time
 
 import bpy
 
@@ -168,7 +169,9 @@ def fit(source, plain, name, recipe=None, spec=None, tail=False, echo=None, true
             record["tail"] = added
     record["animation"] = run_script("animate.py", dict(spec.get("animate", {}), motion=plain, action=name, check=True), echo)
     for script in record["animation"].get("then", []):  # what the rig asks for after any bake: swing.py, for cloth bones
+        started = time.time()
         record[script[:-3]] = run_script(script, spec.get(script[:-3], {}), echo)
+        record[script[:-3]]["seconds"] = round(time.time() - started, 2)
     return record
 
 
