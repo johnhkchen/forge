@@ -594,9 +594,12 @@ def test_screen_play_lines_the_cast_up_for_the_watch_page_and_the_reel_reads_the
         cast = json.load(open(os.path.join(shots, "screen-deep-squat", "cast-screen.json")))
         take = json.load(open(os.path.join(shots, "screen-deep-squat", "take.json")))
         assert made == [os.path.join(shots, "screen-deep-squat")] and take["title"].startswith("Deep squat")
-        assert sorted(cast["roles"]) == ["stocky-pirate-deckhand", "young-lincoln-frontier-wrestler"] and cast["set"] == "studio" and set(cast["marks"]) == set(cast["roles"])
-        spots = sorted(m["at"][0] for m in cast["marks"].values())
-        assert abs(spots[1] - spots[0]) >= 1.0, "side by side, with room between"
+        assert sorted(cast["roles"]) == ["stocky-pirate-deckhand", "young-lincoln-frontier-wrestler"] and cast["set"] == "grass" and set(cast["marks"]) == set(cast["roles"])
+        spots = [m["at"] for m in cast["marks"].values()]
+        assert abs(math.dist(*spots) - 1.3) < 0.01, "side by side, 1.3 m apart"
+        assert cast["cameras"][0] == "ringside" and all(m["facing_deg"] == 40.8 for m in cast["marks"].values()), "on the grass, facing the ringside camera"
+        middle = [(spots[0][k] + spots[1][k]) / 2 for k in range(2)]
+        assert math.dist(middle, [-6.0, 2.0]) < 0.01, "centred on the boxing circle"
         for role, part in cast["roles"].items():
             assert part["true_size"] and os.path.isfile(os.path.join(shots, "screen-deep-squat", part["glb"])), part
         # The gallery's watch page reads it as any take, each on its mark.
@@ -605,6 +608,22 @@ def test_screen_play_lines_the_cast_up_for_the_watch_page_and_the_reel_reads_the
 
         found = gallery.takes_in(os.path.join(shots, "screen-deep-squat"), "screen-deep-squat")
         assert found and len(found[0]["roles"]) == 2 and all(r["mark"] and r["size"] == 1.0 and r["midpoly"] for r in found[0]["roles"]), found
+        assert found[0]["cameras"][0] == "ringside" and found[0]["chapters"] is None
+        # Every motion in turn: once each has its clip of them all, a line-up that names which seconds are which.
+        for name in names:
+            for version in ("lowpoly", "midpoly"):
+                open(os.path.join(runs, name, "profiles", "%s-screen-all.glb" % version), "wb").close()
+                json.dump({"screen": {"id": "all", "ask": screen_play.joined_ask(library), "seconds": 6.0,
+                                      "chapters": [{"id": "deep-squat", "name": "Deep squat", "from": 0, "to": 179, "from_s": 0.0, "to_s": 6.0}]}},
+                          open(os.path.join(runs, name, "profiles", "%s-screen-all.json" % version), "w"))
+        assert not screen_play.missing_joined(first, ["lowpoly", "midpoly"], library)
+        screen_play.lineups(["deep-squat"], runs, shots, library)
+        turn = gallery.takes_in(os.path.join(shots, "screen-all"), "screen-all")[0]
+        assert turn["chapters"][0]["name"] == "Deep squat" and turn["cameras"][0] == "ringside" and len(turn["roles"]) == 2
+        # The studio, for the judges: across the stage, facing its crew camera.
+        screen_play.lineups(["deep-squat"], runs, os.path.join(root, "judge-shots"), library, "studio")
+        studio = json.load(open(os.path.join(root, "judge-shots", "screen-deep-squat", "cast-screen.json")))
+        assert studio["set"] == "studio" and studio["cameras"][0] == "crew"
         # The casting reel: a library side plays the run's own screen-test clip.
         sys.path.insert(0, os.path.join(REPO, "scripts", "casting"))
         import casting
@@ -705,6 +724,43 @@ def test_a_slouch_held_all_through_is_not_a_bow_and_does_not_count_as_standing()
     assert held["measures"]["bow"] < 10 and not held["measures"]["starts_standing"] and not held["does_what_was_asked"]
     done = screen_motions.score_take(SK, pretend_motion("shrug-bow", 180, "good"), m["asks"])
     assert done["does_what_was_asked"] and done["measures"]["bow"] > 40
+
+
+def test_a_longer_row_still_fits_a_camera_on_the_grass():
+    import screen_play
+
+    four = screen_play.lineup(4)
+    assert four["cameras"][0] == "ringside" and four["facing_deg"] == 40.8 and four["apart_m"] == 1.3 and four["fits"]
+    assert [[-7.476, 3.275], [-6.492, 2.425], [-5.508, 1.575], [-4.524, 0.725]] == four["spots"], "as the user placed them"
+    five = screen_play.lineup(5)
+    assert five["cameras"][0] == "wide" and five["fits"] and five["apart_m"] == 1.3, "too long for ringside: it faces the wide camera"
+    eight = screen_play.lineup(8)
+    assert eight["fits"] and eight["apart_m"] < 1.3, "too long even for the wide camera: it closes up"
+    card = json.load(open(os.path.join(REPO, "sets", "grass", "set.json")))
+    for x, z in eight["spots"]:
+        assert screen_play.sees(card["cameras"]["wide"], (x, 1.0, z))
+
+
+def test_every_motion_in_turn_is_one_clip_that_loops_and_says_which_is_which():
+    lib = {m["id"]: m for m in screen_motions.load()["motions"]}
+    kept = [(mid, lib[mid]["name"], dict(pretend_motion(mid, int(lib[mid]["seconds"] * FPS), "good"), ask=mid, take=0)) for mid in ("deep-squat", "turn-circle", "kick")]
+    kept[1][2]["root"] = [[r[0] + 3.0, r[1], r[2] - 2.0] for r in kept[1][2]["root"]]  # wherever a motion was made, it starts on the spot
+    together = screen_motions.joined(SK, kept)
+    blend = screen_motions.JOIN_FRAMES
+    assert len(together["root"]) == sum(len(m["root"]) for _, _, m in kept) + 3 * blend
+    chapters = together["chapters"]
+    assert [c["id"] for c in chapters] == ["deep-squat", "turn-circle", "kick"] and chapters[0]["from"] == 0
+    for a, b in zip(chapters, chapters[1:]):
+        assert b["from"] == a["to"] + 1 + blend and abs(b["from_s"] - (a["to_s"] + blend / FPS)) < 1e-6
+    for c in chapters:  # each begins on the spot, facing ahead
+        root = together["root"][c["from"]]
+        assert abs(root[0]) < 1e-3 and abs(root[2]) < 1e-3
+    # The last frame runs back into the first: the loop has no jump bigger than any frame inside a motion.
+    step = lambda a, b: math.dist(together["root"][a], together["root"][b])  # noqa: E731
+    inside = max(step(f, f + 1) for c in chapters for f in range(c["from"], c["to"]))
+    assert step(len(together["root"]) - 1, 0) <= inside + 1e-6
+    assert all(step(f, f + 1) <= inside + 0.05 for f in range(len(together["root"]) - 1))
+    assert together["ask"] == screen_motions.digest(together["joined_of"] + [blend])
 
 
 if __name__ == "__main__":
