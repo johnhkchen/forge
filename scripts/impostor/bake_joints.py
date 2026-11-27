@@ -492,7 +492,7 @@ def main():
         before = sum(len(bm.faces) for _, _, bm, _ in pieces)
         trunk_side = sum(t for _, _, _, t in pieces)
         cuts = 0
-        while wrap and trunk_side * 4 ** (cuts + 1) <= full * 4:
+        while wrap and trunk_side > 0 and trunk_side * 4 ** (cuts + 1) <= full * 4:  # (nothing on the trunk's side, as at a robot's bolted neck: nothing to match, no cuts)
             cuts += 1
         objects = []
         for obj, data, bm, _ in pieces:
