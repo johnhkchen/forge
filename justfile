@@ -473,8 +473,8 @@ fabric-judge glbs tag="after" out="evidence/fabric" *more:
     "{{blender_bin}}" -b --factory-startup -P scripts/fabric_judge.py -- --glb "{{glbs}}" --tag "{{tag}}" --out "{{out}}" {{more}} 2>&1 | grep -E '^FABRIC|^RESULT|Error|Traceback'
 
 # Who wears what loose (each garment's kind, where it hangs from, its chains), and which clips still play cloth moved by an older fabric step, with how to bake each again. No Blender. more: --stale for only what should be baked again, --out file.json
-fabric-survey runs="runs" shots="shots" *more:
-    python3 scripts/fabric_survey.py --runs "{{runs}}" --shots "{{shots}}" {{more}}
+fabric-survey *more:
+    python3 scripts/fabric_survey.py {{more}}
 
 # The fabric path's own tests, without Blender: garment kinds, the simulated cloth carried onto bones and kept out of the body, the cards reading the same description, stale clips; and what is baked in runs/
 fabric-test runs="runs":

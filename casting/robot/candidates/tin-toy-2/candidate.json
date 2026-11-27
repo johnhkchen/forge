@@ -1,0 +1,19 @@
+{
+  "name": "Tin toy (2)",
+  "stand_in": false,
+  "why": "The plainest reading of the breakdown: a wind-up toy robot, the kind that walks across a table.",
+  "look": "tin-toy",
+  "variation": 2,
+  "status": "shortlisted",
+  "takes": [
+    {
+      "n": 1,
+      "run": "2026-11-26T23-36-00-tin-toy-robot",
+      "made": "2026-11-26",
+      "how": "From the headshot.",
+      "answers": []
+    }
+  ],
+  "notes": [],
+  "screen_run": "2026-11-26T23-36-00-tin-toy-robot"
+}

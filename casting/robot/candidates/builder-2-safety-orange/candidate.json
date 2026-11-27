@@ -1,0 +1,20 @@
+{
+  "name": "Builder (2), safety orange",
+  "stand_in": false,
+  "why": "A builder's own colours, site orange and a lemon hard hat; no navy, brown or green, and orange stays clear of the dancer's red.",
+  "look": "builder",
+  "variation": 2,
+  "status": "shortlisted",
+  "takes": [
+    {
+      "n": 1,
+      "run": "2026-11-26T23-31-40-builder-robot-safety-orange",
+      "made": "2026-11-26",
+      "how": "From the headshot.",
+      "answers": []
+    }
+  ],
+  "notes": [],
+  "colourway": "safety-orange",
+  "screen_run": "2026-11-26T23-31-40-builder-robot-safety-orange"
+}

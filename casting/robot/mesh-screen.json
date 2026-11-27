@@ -1,0 +1,110 @@
+{
+  "builder.2-safety-orange": {
+    "run": "2026-11-26T23-31-40-builder-robot-safety-orange",
+    "made": "2026-11-26",
+    "mesh": {
+      "triangles": 293991,
+      "pieces": 98,
+      "outside_biggest": 0.4933,
+      "came_in": "z up",
+      "height_m": 1.5,
+      "width_m": 1.748,
+      "depth_m": 0.69,
+      "views": [
+        0,
+        45,
+        90,
+        135,
+        180,
+        225,
+        270,
+        315
+      ],
+      "ups": [
+        0,
+        25
+      ],
+      "frame_m": 1.887
+    },
+    "against": {
+      "front_is": "as drawn",
+      "outline_kept": 0.947,
+      "colour_moved": 26.8,
+      "crew_px_least": 6566,
+      "crew_px_most": 10724
+    },
+    "turn": "casting/robot/screen/builder.2-safety-orange-turn.png"
+  },
+  "tin-toy": {
+    "run": "2026-11-26T23-35-06-tin-toy-robot",
+    "made": "2026-11-26",
+    "mesh": {
+      "triangles": 291279,
+      "pieces": 56,
+      "outside_biggest": 0.4311,
+      "came_in": "z up",
+      "height_m": 1.45,
+      "width_m": 1.425,
+      "depth_m": 0.381,
+      "views": [
+        0,
+        45,
+        90,
+        135,
+        180,
+        225,
+        270,
+        315
+      ],
+      "ups": [
+        0,
+        25
+      ],
+      "frame_m": 1.566
+    },
+    "against": {
+      "front_is": "as drawn",
+      "outline_kept": 0.568,
+      "colour_moved": 24.6,
+      "crew_px_least": 3210,
+      "crew_px_most": 5753
+    },
+    "turn": "casting/robot/screen/tin-toy-turn.png"
+  },
+  "tin-toy.2": {
+    "run": "2026-11-26T23-36-00-tin-toy-robot",
+    "made": "2026-11-26",
+    "mesh": {
+      "triangles": 292639,
+      "pieces": 58,
+      "outside_biggest": 0.3228,
+      "came_in": "z up",
+      "height_m": 1.45,
+      "width_m": 1.749,
+      "depth_m": 0.567,
+      "views": [
+        0,
+        45,
+        90,
+        135,
+        180,
+        225,
+        270,
+        315
+      ],
+      "ups": [
+        0,
+        25
+      ],
+      "frame_m": 1.889
+    },
+    "against": {
+      "front_is": "turned round",
+      "outline_kept": 0.938,
+      "colour_moved": 26.7,
+      "crew_px_least": 4720,
+      "crew_px_most": 9567
+    },
+    "turn": "casting/robot/screen/tin-toy.2-turn.png"
+  }
+}

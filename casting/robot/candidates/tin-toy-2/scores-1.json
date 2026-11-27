@@ -1,0 +1,90 @@
+{
+  "seams": {
+    "comic": {
+      "dark": 8.9,
+      "open": 11.1,
+      "holes": 3.5,
+      "frames": 26
+    },
+    "pixel-both": {
+      "dark": 12.6,
+      "open": 8.7,
+      "holes": 3.2,
+      "frames": 26
+    },
+    "joe": {
+      "dark": 5.7,
+      "open": 14.5,
+      "holes": 3.7,
+      "frames": 26
+    }
+  },
+  "joints": {
+    "joe": {
+      "shoulder": {
+        "likeness": 0.549,
+        "blots": 0.093,
+        "joints": 26
+      },
+      "all": {
+        "likeness": 0.664,
+        "blots": 0.065,
+        "joints": 104
+      },
+      "elbow": {
+        "likeness": 0.637,
+        "blots": 0.04,
+        "joints": 22
+      },
+      "hip": {
+        "likeness": 0.673,
+        "blots": 0.079,
+        "joints": 30
+      },
+      "knee": {
+        "likeness": 0.792,
+        "blots": 0.041,
+        "joints": 26
+      }
+    },
+    "pixel-both": {
+      "shoulder": {
+        "likeness": 0.573,
+        "blots": 0.095,
+        "joints": 26
+      },
+      "all": {
+        "likeness": 0.617,
+        "blots": 0.08,
+        "joints": 104
+      },
+      "elbow": {
+        "likeness": 0.526,
+        "blots": 0.086,
+        "joints": 22
+      },
+      "hip": {
+        "likeness": 0.656,
+        "blots": 0.068,
+        "joints": 30
+      },
+      "knee": {
+        "likeness": 0.692,
+        "blots": 0.072,
+        "joints": 26
+      }
+    }
+  },
+  "faces": null,
+  "looks": {
+    "comic": "Comic",
+    "pixel-baked": "Pixels, baked",
+    "pixel-both": "Pixels, both",
+    "joe": "Bold ink"
+  },
+  "made": "2026-11-26 16:54",
+  "role": "right",
+  "face_recipe": false,
+  "joint_pieces": true,
+  "why": null
+}
