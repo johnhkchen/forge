@@ -1825,8 +1825,37 @@ On the way it turned out that the old swing's own sums of where the skinned clot
 
 - **Kinds.** Every hanging piece is named from how it hangs alone, never from what it is called or who wears it: a long skirt, a short one, an apron, a coat's tails, a cape, a hood, a sleeve, a sash, a loose shirt, a collar. Each kind has its chains (a long skirt 8 of 4 bones, one at the very front and back), how heavy and stiff its cloth is, how far it may swing and slide, what it is kept out of, and how flat cards show it. The whole description is written on the skeleton and rides in every `.glb`.
 - **Cloth that hangs is never stiff**, whatever a block-out called it; and cloth hangs from the head only if it is on the head (the villager's tunic hangs from his chest now, and has no chains: a loose shirt is held at both ends).
-- **One step, simulated.** After any motion is baked, each loose garment is simulated as the sheet it is (Blender's cloth: its waistband pinned, the body, the other clothes and the floor in its way), starting settled on the body as it was made. Each bone then carries its own patch of the cloth, a turn and a move a frame, from where the cloth settled, so a garment keeps the shape it was made in until something moves it. Its points are tried once more against the body, limb by limb as thick as each is, and put out on the side the simulated cloth is on. A walk or a run, played on the spot, gets a wind from the front as fast as it travels. A loop's last round is faded into the one before, so it closes with no seam.
+- **One step, simulated.** After any motion is baked, each loose garment is simulated as the sheet it is (Blender's cloth: its waistband pinned, the body, the other clothes and the floor in its way), starting settled on the body as it was made. Each bone then carries its own patch of the cloth, a turn and a move a frame, from where the garment was made to where the cloth is, so it hangs as the cloth hangs, standing still too (a hood mostly keeps the shape it was made in: its kind's `drape`). Its points are tried once more against the body, limb by limb as thick as each is, and put out on the side the simulated cloth is on. A walk or a run, played on the spot, gets a wind from the front as fast as it travels. A loop's last round is faded into the one before, so it closes with no seam.
 - **Every clip says which fabric step moved its cloth** (`swing.py`'s `FABRIC`, in the skeleton's note), so `just fabric-survey` can list what is stale and how to bake it again.
+
+**Cloth that hangs** (fabric step 3). A hem that a knee or a hand had flung stayed up: after the kick her hem stood 23 cm above where it hangs, to the end of the clip; after the jog 21, after picking something up 31 (its highest tenth 52). Four things, all in the general path:
+
+- **The cloth was too light for its springs.** Blender's cloth is as stiff for light cloth as for heavy. At 0.15 kg a point a flared, flounced sheet is a paper parasol: turned up, it holds itself there. With nothing of the body in its way at all, the kick still left the hem 17 cm up. Every kind is now 1 to 2 kg a point, folds easily (0.3 where it was 2) and squashes easily along itself (5 where it was 15).
+- **A hand carried it.** The body gripped the cloth twice as hard as Blender's default, so a hand waved at her side took a flounce up with it and left it hung there (25 cm at the end of the wave). The grip is the default now.
+- **The garment kept its made shape.** Bones were moved from where the simulated cloth had settled, so tiers built standing out stayed standing out, 4 to 6 cm above the simulated hem always. Now each kind says how far it takes the cloth's own hang (`drape`): all of it for whatever hangs, a third for a hood.
+- **Gravity went by frames.** Blender counts the cloth's time in frames: a sheet falls 4.4 m in its first second at 30 frames a second, 2.8 at 24, 17.7 at 60. It is made up for now. (All the library's clips are at 30, so this was a tenth of it.)
+
+Ruled out: the pin that holds a kind to its made shape (none on a skirt), how thick the body is to the cloth, the wind of a walk (none of these clips has one), the keep-clear pass (the simulated sheet itself was up), and the hips dropping under patches that cannot stretch (they do not drop in the kick).
+
+`just fabric-judge` measures it now ("hem"): how far the lower rim is above where still cloth hangs from the bone that carries it, each frame; and how long after its highest moment it takes to come back within 3 cm and stay. Her mid-poly model, all fifteen screen motions, 2,700 frames (`evidence/fabric/hem-before-*.json`, `hem-after-*.json`; stills `hem-kick-*-f148.png`, `hem-wave-left-*-f148.png`):
+
+| | before | after |
+|---|---|---|
+| hem above where it was made to hang, mean | 12.0 cm | -9.2 cm (it hangs lower than it was made: 14 cm standing still) |
+| frames with the hem more than 5 cm up | 1,457 | 241 |
+| frames with its highest tenth more than 15 cm up | 1,127 | 82 |
+| clips where the hem never comes back down | 9 of 15 | none (0.9 s at the longest, the lunge) |
+| at the end of the kick / jog / squat / pick-up / wave | 22.7 / 21.2 / 21.6 / 31.3 / 25.0 cm up | all at or under where it was made |
+| the skirt in a leg | 160 frames | 228 |
+| a leg out through it | 81 frames | 78 |
+| thighs a quarter bare | 4 frames | 0 |
+| hem under the floor | 0 frames | 0 |
+
+Her low-poly model: the hem more than 5 cm up on 1,188 frames and 386 after, in a leg on 191 and 187, a leg out on 100 and 87, thighs bare on 85 and 19. The villager's apron: in a leg on 265 frames and 191 after, a leg out on 54 and 49. The ninja's hood: as it was (its rim 6.0 cm up on average, then 5.8).
+
+What it costs: the jog has the skirt in a shin on 49 frames where it was 4 (4.6 cm at the deepest), because the cloth now lies on the legs where it used to float clear of them A skirt that hangs to the floor dipped 3 cm under it in the lunge, since easing a frame with its neighbours undid the floor: each bone is now lifted once more, after the easing, by the most any of its points is short. The hem measure reads zero for the villager's apron on every frame, before and after: it does not find that garment's rim, and why is not looked into.
+
+A rig described before this takes its kind's new weight from `swing.py`'s `HANG`, so nobody is rigged again; clips are baked again (`just fabric-survey --stale` lists them).
 
 **The cards** read the same description (`scripts/impostor/impostor.py`: `garments_of`, `chains_of`, `hold_of`). A garment whose kind says "piece" gets a card of its own and one skinned piece moved by its bones, wherever it hangs from: a skirt, an apron, a coat's tails, and a cape from the chest with no rule written for it. One that "rides" stays in the card of the bone it hangs from (a hood). One that is "held" is held back from the neck's turn by the share it says (a collar, a loose shirt), a hood that rides the head is not held back at all, and clothing nothing is said of is held by half as before. Because the bones now move as well as turn, and the dancer has 32 of them where she had 18, her cards were baked again (`just impostor-detailed`, `just impostor-layered`).
 

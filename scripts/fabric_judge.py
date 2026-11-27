@@ -26,6 +26,13 @@ watch page plays and the cards' pieces are swung by) and on every frame, with th
                       any hem, and should
     floor             how far the lowest point of the cloth is below the floor
     swing             how far the chains' top bones turn from how they hang at rest (peak and mean)
+    hem               how far the hem is above where still, hanging cloth would have it: each point of the lower
+                      open edge against its own height as the cloth was made, carried up and down with the bone the
+                      garment hangs from, and no lower than the floor. Its mean over the hem ("lift") and the tenth
+                      of it that is highest ("rim"), each frame; how long after its highest moment the hem takes to
+                      come back down to a quarter of that (or 2 cm); and how high it still is over the clip's last
+                      third of a second. A knee lifts a hem honestly; a hem that stays up when the knee is gone
+                      does not hang
     jitter            how much the cloth's open edges shake, frame to frame (mm): each point against the middle of
                       where it was the frame before and will be the frame after
 
@@ -53,6 +60,7 @@ DEEP_M = 0.12
 PINCH_M = 0.015    # cloth in one part of the body and within this of another part's skin is pinched between them
 ROUND = 5          # a place on a leg has cloth round it when this many of eight rays out from it meet cloth...
 ROUND_M = 0.6      # ... within this far
+VIEW = (0.55, -1.0, 0.3)  # where a still is taken from: three-quarter front
 SWUNG = 0.15       # a point of a garment is loose cloth when the chains pull on it this much
 # The parts of the body cloth is tried against: {group: [(bone, how far along it counts)]}. A shin counts to just above
 # the ankle (below is a stiff shoe, and a hem lying on a shoe is not a leg through a skirt).
@@ -247,17 +255,26 @@ def judge_film(glb, fps=30, every=1, worst=4, stills=0, out=None, tag="", at=Non
 
     rig.data.pose_position = "REST"
     bpy.context.view_layer.update()
-    _, _, at_rest, _, through_rest, round_rest, _ = stood()
+    _, rim_rest, at_rest, _, through_rest, round_rest, _ = stood()
+    hung_from = chains[0]["parent"] if chains else "hips"
+    hung_rest = float((rig.matrix_world @ rig.data.bones[hung_from].head_local).z) if hung_from in rig.data.bones else 0.0
+    hem = rim_rest[:, 2] <= np.median(rim_rest[:, 2]) if len(rim_rest) else np.zeros(0, dtype=bool)  # the lower open edge (the upper is a waistband)
     was_round = round_rest >= ROUND  # the places down the legs the cloth was all round as it was made
     rest_all = {c["bones"][i]: (rig.data.bones[c["parent"]].matrix_local.inverted() @ rig.data.bones[c["bones"][i]].matrix_local).to_quaternion() for c in chains for i in range(len(c["bones"]))}
     rig.data.pose_position = "POSE"
     group_of = np.array([list(PARTS).index(g) for g, _, _ in parts])
-    rows, hems = [], []
+    rows, hems, lifts = [], [], []
     began = time.time()
     for f in frames:
         scene.frame_set(f)
         samples, rim, deep, which, through, around, pinched = stood()
         hems.append(rim)
+        if hem.any():
+            carried = float((rig.matrix_world @ rig.pose.bones[hung_from].head).z) - hung_rest
+            up = rim[hem, 2] - np.maximum(rim_rest[hem, 2] + carried, np.minimum(rim_rest[hem, 2], floor + 0.01))
+            lifts.append((float(up.mean()), float(np.sort(up)[-max(1, len(up) // 10):].mean())))
+        else:
+            lifts.append((0.0, 0.0))
         past = np.maximum(deep - at_rest, 0.0)  # (as judge_legs.py: past how deep the point sat in the body as it was made)
         squeezed = 0.0
         for i in np.nonzero(past > CLIP_CM / 100.0)[0]:
@@ -301,6 +318,16 @@ def judge_film(glb, fps=30, every=1, worst=4, stills=0, out=None, tag="", at=Non
         "jitter_mm": round(1000.0 * judge_legs.shake_of(np.stack(hems)), 3) if len(hems[0]) else 0.0,
         "worst": [rows[i] for i in order if rows[i]["into_cm"] > CLIP_CM], "rows": rows,
     })
+    lift, rim_up = np.array([l[0] for l in lifts]), np.array([l[1] for l in lifts])
+    top = int(np.argmax(lift))
+    back = next((k for k in range(top, len(lift)) if lift[k] <= max(0.02, 0.25 * lift[top])), None)
+    tail = max(1, int(round(fps / 3.0 / max(1, every))))
+    for row, (a, b) in zip(rows, lifts):
+        row["hem_lift_cm"], row["rim_lift_cm"] = round(100 * a, 1), round(100 * b, 1)
+    report["hem"] = {"lift_cm_mean": round(100 * float(lift.mean()), 1), "lift_cm_peak": round(100 * float(lift.max()), 1), "rim_cm_mean": round(100 * float(rim_up.mean()), 1),
+                     "rim_cm_peak": round(100 * float(rim_up.max()), 1), "frames_lifted_5cm": int((lift > 0.05).sum()), "frames_rim_15cm": int((rim_up > 0.15).sum()),
+                     "settles_s": round((back - top) * every / float(fps), 2) if back is not None else None, "at_the_end_cm": round(100 * float(lift[-tail:].mean()), 1),
+                     "rim_at_the_end_cm": round(100 * float(rim_up[-tail:].mean()), 1), "at_the_start_cm": round(100 * float(lift[0]), 1)}
     if (stills or at) and out:
         bad = sorted(rows, key=lambda r: -(r["into_cm"] + r["legs_out_cm"] + r["arms_in_cm"] + r["floor_dip_cm"]))[:stills]
         shown = [r["frame"] for r in bad] + [f for f in (at or []) if first <= f <= last]
@@ -329,7 +356,7 @@ def still(scene, rig, frame, path, size=720):
     hips = rig.matrix_world @ rig.pose.bones["hips"].head
     tall = float(json.loads(rig.get("forge_rig", "{}")).get("measure", {}).get("height", 1.7))
     look = Vector((hips.x, hips.y, 0.45 * tall))
-    cam.location = look + Vector((0.55, -1.0, 0.3)).normalized() * 2.1 * tall
+    cam.location = look + Vector(VIEW).normalized() * 2.1 * tall
     cam.rotation_euler = (look - cam.location).to_track_quat("-Z", "Y").to_euler()
     cam.data.lens = 60
     scene.render.filepath = path
@@ -342,11 +369,11 @@ def line_of(r):
         return "no cloth on chains"
     p = r["parts"]
     return ("into the body up to %.1f cm, %d of %d frames clip (%d over 2 cm; pinched on %d more) [legs %.1f/%d, arms %.1f/%d, trunk %.1f/%d, head %.1f/%d]; a leg out through the cloth %.1f cm, %d frames; "
-            "thighs bare %.0f%% on average, a quarter bare or more on %d frames; an arm in through it %.1f cm, %d frames; floor %.1f cm, %d frames; swing peak %.0f (mean %.0f) deg; jitter %.2f mm" % (
+            "thighs bare %.0f%% on average, a quarter bare or more on %d frames; an arm in through it %.1f cm, %d frames; floor %.1f cm, %d frames; swing peak %.0f (mean %.0f) deg; jitter %.2f mm; hem %s" % (
                 r["deepest_cm"], r["frames_clipping"], r["frames"], r["frames_over_2cm"], r["frames_pinched"], p["legs"]["deepest_cm"], p["legs"]["frames_clipping"], p["arms"]["deepest_cm"], p["arms"]["frames_clipping"],
                 p["trunk"]["deepest_cm"], p["trunk"]["frames_clipping"], p["head"]["deepest_cm"], p["head"]["frames_clipping"], r["legs_out_cm"], r["frames_legs_out"],
                 100 * r["bare_legs_mean"], r["frames_legs_bare"], r["arms_in_cm"], r["frames_arms_in"],
-                r["floor_dip_cm"], r["frames_in_floor"], r["peak_swing_deg"], r["mean_swing_deg"], r["jitter_mm"]))
+                r["floor_dip_cm"], r["frames_in_floor"], r["peak_swing_deg"], r["mean_swing_deg"], r["jitter_mm"], json.dumps(r.get("hem"))))
 
 
 def main():

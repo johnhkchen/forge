@@ -1362,15 +1362,26 @@ garment's bones:
 1. **The sheet.** The garment's mesh, its points welded; what the body
    carries of it (a waistband) pinned to the body; the body's skin, every
    other piece of clothing and the floor to collide with. Its weight,
-   stiffness and hold come from its kind.
+   stiffness and hold come from its kind. The cloth is heavy on purpose
+   (1 to 2 kg a point) and soft to fold and squash: Blender's springs are
+   as stiff for light cloth as for heavy, so a light sheet is held up by
+   its own stiffness, and a hem a knee had flung stayed 20 cm up for the
+   rest of the clip. Gravity is made up for the frame rate (Blender counts
+   the cloth's time in frames: at 24 a second it falls 2.8 m in its first
+   second, not 4.9).
 2. **The start.** The body is held as it was made while the cloth settles
    on it, then turned into the motion's first pose, so no limb starts
    half through the cloth. A loop is played round three times.
 3. **Onto the bones.** Each chain bone gets the turn and the move that
-   best carry its own patch of the cloth from where the simulated cloth
-   settled to where it is on that frame. Starting from where it settled
-   means a garment keeps the shape it was made in while nothing moves it
-   (a simulated sheet sags; the garment's tiers do not).
+   best carry its own patch of the cloth to where the simulated cloth is
+   on that frame. From where is the kind's `drape`: 1, from where the
+   garment was made, so it takes the hang of the cloth standing still too
+   (a flounce built standing out like a lampshade hangs under its weight);
+   0, from where the simulated cloth settled, so it keeps the shape it was
+   made in until something moves it. Everything that hangs has 1; a hood
+   0.3. A rig described before this (it says nothing of `drape`) takes its
+   kind's weight and hang from `swing.py`'s `HANG`, so nothing is rigged
+   again: only baked again.
 4. **Kept clear.** The garment's own points, skinned as the mesh is, are
    tried against rods as thick as the body is each way round each limb
    (rays to the skin), and a point in a rod is put out on the side the

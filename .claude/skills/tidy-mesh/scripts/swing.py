@@ -29,10 +29,18 @@
 #      best carry its own patch of the cloth (the points it pulls on, by how
 #      much) from where the simulated cloth settled to where it is on that
 #      frame. A bone is a patch of cloth, free to slide, not a rod hung off
-#      the one above (cloth.py makes them unjoined). Starting from where the
-#      simulated cloth settled, not from where it began, means a garment keeps
-#      the shape it was made in while nothing moves it (a simulated sheet
-#      sags; the garment does not), and moves by what the cloth does after.
+#      the one above (cloth.py makes them unjoined). A kind's "drape" says
+#      what the patch is carried from: where the garment was made (1: it takes
+#      the hang of the simulated cloth, standing still too, so a flounce built
+#      standing out hangs under its weight) or where the simulated cloth
+#      settled (0: it keeps the shape it was made in until something moves it:
+#      a hood).
+#
+# The cloth has to be heavy for how stiff it is. Blender's springs do not get
+# stiffer with the cloth's weight, so a light sheet (0.15 kg a point, as this
+# was first set) is held up by its own stiffness: flung by a knee, a hem
+# stayed 20 cm up for the rest of the clip, like a parasol. At 2 kg a point,
+# soft to fold and to squash, the same hem is back down in half a second.
 #   4. Kept clear. A few rigid patches cannot follow every fold, so the
 #      garment's own points, skinned as the mesh is, are tried once more
 #      against the body: each part its kind names (legs: thighs and shins;
@@ -75,7 +83,12 @@ PARAMS = {
     "mass": None,       # how heavy the cloth is, kg a point. None = each garment's own (cloth.py: "kinds")
     "bend": None,       # how it resists folding (0.5 = silk, 4 = canvas). None = each garment's own
     "damp": None,       # how much the air slows it. None = each garment's own
+    "drape": None,      # how far the garment itself takes the hang of the simulated cloth (1), or keeps the shape it was made in until something moves it (0). None = each garment's own
     "shape": None,      # how hard it is held to the shape it was made in, riding the bone it hangs from (0 = a rag ... 1 = it cannot move). None = each garment's own
+    "friction": 5.0,    # how much the body's skin and the other clothes grip the simulated cloth (Blender's own number: 0 = ice, 80 = most). At 10 a hand at her side carried a flounce up with it and it stayed there
+    "inner": 0.03,      # cloth found this far inside the body (a share of the height) is still pushed back out of it
+    "stretch": 15.0,    # how stiffly the simulated cloth resists being stretched along itself
+    "squash": 5.0,      # ... and being squashed along itself: little, so it folds and bunches where a coarse sheet would stand like paper
     "wind": 60.0,       # the air of moving: a wind from the front this strong for each metre a second the motion says it travels (a walk or a run, played on the spot); 0 = none
     "legs": True,       # the body is in the cloth's way: the simulated cloth collides with it, and the garment's own points are kept out of the parts of it their kind names
     "floor": True,      # ... and so is the floor
@@ -95,7 +108,7 @@ from mathutils import Euler, Matrix, Quaternion, Vector
 from mathutils.bvhtree import BVHTree
 from mathutils.kdtree import KDTree
 
-FABRIC = 2  # which way of moving cloth this is, written into the rig's note with every bake (1: weights on strings, before this file simulated; scripts/fabric_survey.py lists clips baked by an older one)
+FABRIC = 3  # which way of moving cloth this is, written into the rig's note with every bake (1: weights on strings, before this file simulated; 2: simulated, but light cloth that stayed up where it was flung; scripts/fabric_survey.py lists clips baked by an older one)
 # The parts of the body a garment can be kept out of (cloth.py: a kind's "collide"), and the bones of each.
 BODY = {"legs": ("thigh_l", "thigh_r", "shin_l", "shin_r"),
         "arms": ("upper_arm_l", "upper_arm_r", "forearm_l", "forearm_r", "hand_l", "hand_r"),
@@ -103,7 +116,7 @@ BODY = {"legs": ("thigh_l", "thigh_r", "shin_l", "shin_r"),
         "head": ("neck", "head")}
 SKIRT_FROM = ("hips", "spine")  # chains that hang from these hang over the legs (a skirt, a tunic, a coat's tails); a hood's hang from the head
 # A garment whose rig says nothing of its kind (a file made before cloth.py wrote one): plain cloth.
-PLAIN = {"mass": 0.15, "bend": 2.0, "shape": 0.0, "damp": 0.2, "swing": 170.0, "reach": 2.0, "floor": True}
+PLAIN = {"mass": 2.0, "bend": 0.3, "shape": 0.0, "damp": 0.2, "drape": 1.0, "swing": 170.0, "reach": 2.0, "floor": True}
 BINS = 8          # a rod's thickness is measured at this many places along it...
 AROUND = 12       # ... and this many ways round it
 SWUNG = 0.15      # a point of a garment is its loose cloth when the chains pull on it this much; less, and the body carries it (a waistband)
@@ -134,13 +147,25 @@ def curves_of(action):
         curves = list(getattr(action, "fcurves", []))
     return curves
 
+# How each kind of cloth hangs, for a rig whose description was written before fabric step 3 (it says 0.15 kg a point and
+# nothing of "drape"): the same numbers as cloth.py's kinds, which a new rig carries itself (scripts/test_fabric.py holds
+# the two tables to each other). So a character rigged long ago hangs right with no rigging again.
+HANG = {
+    "skirt": {"mass": 2.0, "bend": 0.3, "drape": 1.0}, "short skirt": {"mass": 1.6, "bend": 0.5, "drape": 1.0},
+    "apron": {"mass": 1.3, "bend": 0.3, "drape": 1.0}, "tails": {"mass": 1.6, "bend": 0.5, "drape": 1.0},
+    "cape": {"mass": 1.6, "bend": 0.2, "drape": 1.0}, "hood": {"mass": 1.3, "bend": 2.0, "drape": 0.3},
+    "sleeve": {"mass": 1.3, "bend": 0.3, "drape": 1.0}, "sash": {"mass": 1.0, "bend": 0.1, "drape": 1.0},
+}
+
 def about_of(garment, parent, params):
     """How a chain's garment is and what it is kept out of: cloth.py's description of it, or (for a rig that has
     none) plain cloth, kept out of the legs, arms and trunk if it hangs over the legs and out of the trunk and
     arms if it hangs from higher. A number in `params` is for every garment."""
     out = dict(PLAIN, collide=["legs", "arms", "trunk"] if parent in SKIRT_FROM else ["trunk", "arms"])
     out.update({k: v for k, v in (garment or {}).items() if k in out and v is not None})
-    for k in ("mass", "bend", "damp", "shape"):
+    if garment and "drape" not in garment and garment.get("kind") in HANG:  # written before cloth was made heavy: its kind's weight as it is now
+        out.update(HANG[garment["kind"]])
+    for k in ("mass", "bend", "damp", "shape", "drape"):
         if params.get(k) is not None:
             out[k] = params[k]
     return out
@@ -489,11 +514,15 @@ if chains:
                 how.mass = mass / max(total_w, 1e-9)
                 how.vertex_group_mass = "forge_pin"
                 how.pin_stiffness = 1.0
-                how.tension_stiffness = how.compression_stiffness = 15.0
+                how.tension_stiffness = PARAMS["stretch"]
+                how.compression_stiffness = PARAMS["squash"]
                 how.shear_stiffness = 5.0
                 how.bending_stiffness = bend / max(total_w, 1e-9)
                 how.tension_damping = how.compression_damping = how.shear_damping = 5.0
                 how.bending_damping = 0.5
+                # Blender's cloth counts time in frames, not seconds: a sheet falls 4.4 m in its first second at 30 frames a second,
+                # 2.8 m at 24 and 17.7 m at 60 (4.9 is right). Its weight is made up for, so cloth falls as fast at any frame rate.
+                how.effector_weights.gravity = (31.56 / max(float(scene.render.fps) / scene.render.fps_base, 1.0)) ** 2
                 how.air_damping = damp / max(total_w, 1e-9)  # (the air holds light cloth up: too much and a skirt a knee has thrown stays up like a parasol)
                 cloth.collision_settings.use_collision = True
                 cloth.collision_settings.collision_quality = 4
@@ -512,8 +541,8 @@ if chains:
                 if PARAMS["legs"] and not any(m.type == "COLLISION" for m in obj.modifiers):
                     obj.modifiers.new("forge_collide", "COLLISION")
                     obj.collision.thickness_outer = 0.7 * PARAMS["clearance"] * tall
-                    obj.collision.thickness_inner = 0.03 * tall
-                    obj.collision.cloth_friction = 10.0
+                    obj.collision.thickness_inner = PARAMS["inner"] * tall
+                    obj.collision.cloth_friction = PARAMS["friction"]
                     colliders.append(obj)
             if PARAMS["floor"] and cloth_floor.any():
                 mesh = bpy.data.meshes.new("forge_ground")
@@ -546,7 +575,7 @@ if chains:
                 bent.to_mesh_clear()
                 m = np.array(back @ sim.matrix_world)
                 return co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3]
-            settled, sim_allow, sim_deep, sagged = {}, {}, [], []
+            settled, made_at, sim_allow, sim_deep, sagged = {}, {}, {}, [], []
             sides = np.zeros((kept + 1, len(cloth_at), 3))
             for f in range(-hold - blend, last + 1):
                 scene.frame_set(f)
@@ -558,6 +587,7 @@ if chains:
                         as_made = np.array([v.co for v in sim.data.vertices]) @ m[:3, :3].T + m[:3, 3]
                         loose = np.unique(np.concatenate([index for index, _ in patches.values()])) if patches else np.zeros(0, dtype=np.int64)
                         sagged.append(float(np.linalg.norm(settled[sim.name][loose] - as_made[loose], axis=1).mean()) if len(loose) else 0.0)
+                        made_at[sim.name] = as_made
                 if f < last - kept:
                     continue
                 deep = 0.0
@@ -572,7 +602,10 @@ if chains:
                             above = moves[chains[k]["bones"][i - 1]][-1]
                         else:
                             above = np.array(rig.pose.bones[chains[k]["parent"]].matrix) @ np.linalg.inv(np.array(rest[chains[k]["parent"]]))
-                        moves.setdefault(name, []).append(rigid(was[index], now[index], w, np.array(rest[name].translation), above))
+                        # carried from where the garment was made (it hangs as cloth of its weight hangs, standing still too) or from where
+                        # the simulated cloth settled (it keeps its made shape until something moves it), as far between as its kind's "drape" says
+                        start = was[index] + how_of[name]["drape"] * (made_at[sim.name][index] - was[index])
+                        moves.setdefault(name, []).append(rigid(start, now[index], w, np.array(rest[name].translation), above))
                     if rod_names:  # how far the simulated cloth itself is in the body, past where it settled
                         loose = np.unique(np.concatenate([index for index, _ in patches.values()])) if patches else np.zeros(0, dtype=np.int64)
                         if sim.name not in sim_allow:
@@ -658,6 +691,16 @@ if chains:
             np.add.at(weight, cloth_main[hit], cloth_grip[hit] ** 2)
             has = weight > 1e-9
             poses[has, :3, 3] += push[has] / weight[has][:, None]
+        # Least squares leaves a patch's lowest point under the floor when the rest of it is clear, and cloth that hangs
+        # to the floor has many such. So last, each bone is lifted by the most any point it mainly holds is short.
+        for _ in range(2 if PARAMS["floor"] and cloth_floor.any() else 0):
+            short = lift - (worn(poses, shot) - floor_at) @ up
+            low = (short > 1e-5) & cloth_floor
+            if not low.any():
+                break
+            most = np.zeros(len(bone_list))
+            np.maximum.at(most, cloth_main[low], short[low] / np.maximum(cloth_grip[low], 0.3))
+            poses[:, :3, 3] += np.outer(most, up)
         return poses
 
     def capped(basis, name):
@@ -731,6 +774,31 @@ if chains:
                 eased.append((Quaternion([0.25 * a + 0.5 * b + 0.25 * e for a, b, e in zip(*quats)]).normalized(), 0.25 * near[0][1] + 0.5 * near[1][1] + 0.25 * near[2][1]))
             rows[:] = eased
 
+    # ---- easing a frame with its neighbours can put a hem that lies on the floor back under it: each bone is lifted once more by the most any point it mainly holds is short ----
+    if PARAMS["floor"] and patched and cloth_floor.any():
+        for f in range(frames + 1):
+            shot = taken[f % frames if loops else f]
+            for _ in range(2):
+                real, axes = np.zeros((len(bone_list), 4, 4)), []
+                for b, (k, i, name) in enumerate(bone_list):
+                    frame = (real[b - 1] if i else shot["parent"][chains[k]["parent"]]) @ chains[k]["local"][i]
+                    basis = np.eye(4)
+                    basis[:3, :3], basis[:3, 3] = np.array(played[name][f][0].to_matrix()), np.array(played[name][f][1])
+                    real[b] = frame @ basis
+                    axes.append(frame[:3, :3])
+                short = lift - (worn(real, shot) - floor_at) @ up
+                low = (short > 1e-5) & cloth_floor
+                if not low.any():
+                    break
+                most, given = np.zeros(len(bone_list)), np.zeros(len(bone_list))
+                np.maximum.at(most, cloth_main[low], short[low] / np.maximum(cloth_grip[low], 0.3))
+                for b, (k, i, name) in enumerate(bone_list):
+                    carried = given[b - 1] if i else 0.0  # a bone rides the one above it, and is lifted with it
+                    given[b] = max(most[b], carried)
+                    if most[b] > carried:
+                        turn, move = played[name][f]
+                        played[name][f] = (turn, move + Vector((axes[b].T @ (up * (most[b] - carried))).tolist()))
+
     # ---- key it; a loop's last frame is its first, and the little left over is eased out across the round ----
     worst_seam = 0.0
     for name, rows in played.items():
@@ -768,6 +836,8 @@ if chains:
     if PARAMS["check"]:
         outside, inside_cm, leg_cm, below_cm, seam, swing, slide, first_pose, lowest, highest = {}, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, {}, {}, {}
         frames_in, frames_in_leg, where = 0, 0, None
+        low = np.argsort(cloth_at @ up)[:max(1, len(cloth_at) // 4)] if len(cloth_at) else np.zeros(0, dtype=np.int64)  # the lowest quarter of the garments' points: the hems
+        hem_off, hem_high = [], []  # how far the hems are from where the simulated cloth has them, and how far above
         floor_bones = {name for c in chains for name in c["bones"] if c["about"].get("floor", True)}
         on_floor = [o for o in gear if PARAMS["floor"] and any(g.group in {x.index for x in o.vertex_groups if x.name in floor_bones} and g.weight > 0.05
                                                              for v in o.data.vertices for g in v.groups)]
@@ -796,6 +866,10 @@ if chains:
                     below_cm = max(below_cm, 100 * (measure.get("floor", 0.0) - float(co[:, 2].min())))
                 if obj.name in mine:
                     real[mine[obj.name][0]] = co[mine[obj.name][1]] @ back[:3, :3].T + back[:3, 3]
+            if sides is not None and len(low):
+                gone = real[low] - sides[f + (frames if two_rounds and f < frames else 0)][low]
+                hem_off.append(float(np.linalg.norm(gone, axis=1).mean()))
+                hem_high.append(float((gone @ up).mean()))
             if rod_names and len(real):
                 over, _ = in_rods(real, rods_now(pose), cloth_allow)
                 over -= PARAMS["clearance"] * tall  # into the skin itself, not the room kept off it
@@ -834,5 +908,7 @@ if chains:
             "hem_below_floor_cm": round(max(below_cm, 0.0), 2) if PARAMS["floor"] else None,
             "loop_seam": round(seam, 6), "most_swing_deg": round(swing, 1), "most_slide_cm": round(100 * slide, 1),
             "hem_travels_cm": round(100 * max([(highest[k] - lowest[k]).length for k in lowest] or [0.0]), 1),
+            "hem_off_the_simulated_cloth_cm": [round(100 * float(np.mean(hem_off)), 1), round(100 * float(np.max(hem_off)), 1)] if hem_off else None,
+            "hem_above_the_simulated_cloth_cm": [round(100 * float(np.mean(hem_high)), 1), round(100 * float(np.max(hem_high)), 1)] if hem_high else None,
         }
 print("RESULT " + json.dumps(result))
