@@ -97,12 +97,19 @@ def test_kinds():
     check("which way an open piece faces is read off the body, which faces -y", [cloth["facing_of"](a) for a in (-math.pi / 2, math.pi / 2, 0.0, math.pi)] == ["front", "back", "side", "side"])
     check("every kind it can name is in the table of kinds", {want for _, _, want in cases} <= set(kinds), str(sorted({want for _, _, want in cases} - set(kinds))))
     chained = {k: v for k, v in kinds.items() if v.get("chains")}
-    needs = ("chains", "every", "bones", "bone_long", "centre", "mass", "bend", "damp", "shape", "swing", "reach", "collide", "floor", "card")
+    needs = ("chains", "every", "bones", "bone_long", "centre", "mass", "bend", "damp", "shape", "drape", "swing", "reach", "collide", "floor", "card")
     missing = {k: [n for n in needs if n not in v] for k, v in chained.items() if any(n not in v for n in needs)}
     check("each kind that swings says how many chains, how heavy and stiff it is, how far it may swing and slide, what it is kept out of and how cards show it", not missing and len(chained) >= 8, str(missing))
     check("... sensibly: a long skirt is heavier than an apron and may swing further than a hood; a hood keeps its shape; only a long skirt has a chain at the very front and back",
           kinds["skirt"]["mass"] > kinds["apron"]["mass"] and kinds["skirt"]["swing"] > kinds["hood"]["swing"] and kinds["hood"]["shape"] > kinds["skirt"]["shape"]
           and [k for k, v in chained.items() if v["centre"]] == ["skirt"] and kinds["skirt"]["chains"][0] % 2 == 0)
+    check("... heavy enough to hang: a kilo a point at least, since light cloth is held up by its own stiffness and a flung hem stays up; and soft to fold, but for a hood",
+          all(v["mass"] >= 1.0 for v in chained.values()) and all(v["bend"] <= 0.5 for k, v in chained.items() if k != "hood"), str({k: (v["mass"], v["bend"]) for k, v in chained.items()}))
+    check("... what hangs takes the hang of the simulated cloth, standing still too; a hood mostly keeps the shape it was made in",
+          all(v["drape"] == 1.0 for k, v in chained.items() if k != "hood") and kinds["hood"]["drape"] < 0.5)
+    hang = parts_of("swing.py")["HANG"]
+    check("swing.py's own table of how each kind hangs, for rigs described before, says what this one says",
+          hang == {k: {n: v[n] for n in ("mass", "bend", "drape")} for k, v in chained.items()}, str(hang))
     check("... kept out of parts of the body there are: legs, arms, trunk, head", all(set(v["collide"]) <= {"legs", "arms", "trunk", "head"} and v["collide"] for v in chained.values()))
     check("... shown by the cards as a piece of their own (what hangs over the legs or from the shoulders) or riding the bone they hang from (a hood, a sleeve, a sash)",
           {k for k, v in chained.items() if v["card"] == "piece"} == {"skirt", "short skirt", "apron", "tails", "cape"} and all(v["card"] in ("piece", "rides") for v in chained.values()))
@@ -116,8 +123,12 @@ def test_swing():
     check("a garment with no description is plain cloth, kept out of the legs, arms and trunk if it hangs over the legs",
           plain["collide"] == ["legs", "arms", "trunk"] and plain["mass"] == swing["PLAIN"]["mass"] and plain["floor"] is True)
     check("... and out of the trunk and arms if it hangs from higher", swing["about_of"](None, "head", {})["collide"] == ["trunk", "arms"])
-    told = swing["about_of"]({"kind": "hood", "mass": 0.1, "bend": 4.0, "shape": 0.25, "swing": 80, "reach": 0.6, "collide": ["trunk"], "floor": False, "card": "rides"}, "head", {})
-    check("a description is taken as written", (told["mass"], told["bend"], told["shape"], told["swing"], told["collide"], told["floor"]) == (0.1, 4.0, 0.25, 80, ["trunk"], False))
+    told = swing["about_of"]({"kind": "hood", "mass": 0.7, "bend": 4.0, "shape": 0.25, "drape": 0.5, "swing": 80, "reach": 0.6, "collide": ["trunk"], "floor": False, "card": "rides"}, "head", {})
+    check("a description is taken as written", (told["mass"], told["bend"], told["shape"], told["drape"], told["swing"], told["collide"], told["floor"]) == (0.7, 4.0, 0.25, 0.5, 80, ["trunk"], False))
+    old = swing["about_of"]({"kind": "skirt", "mass": 0.15, "bend": 2.0, "shape": 0.0, "swing": 170, "reach": 2.0, "collide": ["legs"], "floor": True, "card": "piece"}, "hips", {})
+    check("... but one written before cloth was made heavy (it says nothing of drape) takes its kind's weight, fold and hang as they are now, and keeps the rest",
+          (old["mass"], old["bend"], old["drape"], old["swing"], old["collide"]) == (swing["HANG"]["skirt"]["mass"], swing["HANG"]["skirt"]["bend"], 1.0, 170, ["legs"]), str(old))
+    check("plain cloth is heavy and takes the hang of the simulated cloth too", plain["mass"] >= 1.0 and plain["drape"] == 1.0)
     check("... and a number given for every garment wins over it", swing["about_of"]({"mass": 0.1}, "head", {"mass": 0.4, "bend": None})["mass"] == 0.4)
     check("a garment is never kept out of the bone it hangs from", "hips" not in swing["rods_for"](["legs", "trunk"], "hips") and "thigh_l" in swing["rods_for"](["legs", "trunk"], "hips") and "chest" in swing["rods_for"](["legs", "trunk"], "hips"))
     sleeve = swing["rods_for"](["trunk", "arms"], "forearm_l")

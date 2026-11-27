@@ -61,8 +61,12 @@ PARAMS = {
     #   every       one chain about every this share of the height round it
     #   bones       the most bones a chain has; "bone_long": about how long each is, as a share of the height
     #   centre      a chain at the very front and the very back (cloth folds between the legs there), not either side of them
-    #   mass        how heavy the cloth is, kg a point of its mesh (swing.py's cloth simulation)
-    #   bend        how it resists folding (0.5 = silk, 4 = canvas)
+    #   mass        how heavy the cloth is, kg a point of its mesh (swing.py's cloth simulation). Heavy on purpose: the simulation's
+    #               springs are as stiff for light cloth as for heavy, so light cloth is held up by its own stiffness and a hem a
+    #               knee has flung stays up
+    #   bend        how it resists folding (0.1 = a rag, 0.3 = a skirt, 2 = a hood that keeps its form)
+    #   drape       how far the garment takes the hang of the simulated cloth, standing still too (1: a flounce built standing out
+    #               hangs under its weight), or keeps the shape it was made in until something moves it (0)
     #   damp        how much the air slows it (0.2 = a skirt that falls back at once; more, and a thrown skirt stays up like a parasol)
     #   shape       how hard it is held to the shape it was made in, riding the bone it hangs from (0 = a rag; 0.25 = a hood that keeps its form)
     #   swing       how far a bone may turn from how it was made, degrees; "reach": how far it may slide, in bone lengths
@@ -72,21 +76,21 @@ PARAMS = {
     #               chains (a dress); "rides" = it stays in the card of the bone it hangs from (a hood, on the head's);
     #               "held" = no chains, and the neck's piece gives "hold" of what the neck and head pull on it back to the chest
     "kinds": {
-        "skirt":       {"chains": [8, 8], "every": 0.16, "bones": 4, "bone_long": 0.1, "centre": True, "mass": 0.15, "bend": 2.0, "damp": 0.2, "shape": 0.0,
+        "skirt":       {"chains": [8, 8], "every": 0.16, "bones": 4, "bone_long": 0.1, "centre": True, "mass": 2.0, "bend": 0.3, "damp": 0.2, "shape": 0.0, "drape": 1.0,
                         "swing": 170, "reach": 2.0, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
-        "short skirt": {"chains": [4, 8], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.12, "bend": 3.0, "damp": 0.2, "shape": 0.0,
+        "short skirt": {"chains": [4, 8], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 1.6, "bend": 0.5, "damp": 0.2, "shape": 0.0, "drape": 1.0,
                         "swing": 150, "reach": 1.5, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
-        "apron":       {"chains": [2, 4], "every": 0.1, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.1, "bend": 2.0, "damp": 0.3, "shape": 0.0,
+        "apron":       {"chains": [2, 4], "every": 0.1, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 1.3, "bend": 0.3, "damp": 0.3, "shape": 0.0, "drape": 1.0,
                         "swing": 150, "reach": 1.5, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
-        "tails":       {"chains": [2, 4], "every": 0.1, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.12, "bend": 3.0, "damp": 0.2, "shape": 0.0,
+        "tails":       {"chains": [2, 4], "every": 0.1, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 1.6, "bend": 0.5, "damp": 0.2, "shape": 0.0, "drape": 1.0,
                         "swing": 150, "reach": 1.5, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
-        "cape":        {"chains": [3, 5], "every": 0.12, "bones": 4, "bone_long": 0.1, "centre": False, "mass": 0.12, "bend": 1.0, "damp": 0.3, "shape": 0.0,
+        "cape":        {"chains": [3, 5], "every": 0.12, "bones": 4, "bone_long": 0.1, "centre": False, "mass": 1.6, "bend": 0.2, "damp": 0.3, "shape": 0.0, "drape": 1.0,
                         "swing": 170, "reach": 2.0, "collide": ["legs", "arms", "trunk"], "floor": True, "card": "piece"},
-        "hood":        {"chains": [1, 4], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.1, "bend": 4.0, "damp": 0.5, "shape": 0.25,
+        "hood":        {"chains": [1, 4], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 1.3, "bend": 2.0, "damp": 0.5, "shape": 0.25, "drape": 0.3,
                         "swing": 80, "reach": 0.6, "collide": ["trunk", "arms"], "floor": False, "card": "rides"},
-        "sleeve":      {"chains": [1, 2], "every": 0.16, "bones": 2, "bone_long": 0.07, "centre": False, "mass": 0.1, "bend": 1.5, "damp": 0.3, "shape": 0.05,
+        "sleeve":      {"chains": [1, 2], "every": 0.16, "bones": 2, "bone_long": 0.07, "centre": False, "mass": 1.3, "bend": 0.3, "damp": 0.3, "shape": 0.05, "drape": 1.0,
                         "swing": 100, "reach": 1.0, "collide": ["trunk", "legs"], "floor": False, "card": "rides"},
-        "sash":        {"chains": [1, 1], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 0.08, "bend": 0.5, "damp": 0.4, "shape": 0.0,
+        "sash":        {"chains": [1, 1], "every": 0.16, "bones": 3, "bone_long": 0.07, "centre": False, "mass": 1.0, "bend": 0.1, "damp": 0.4, "shape": 0.0, "drape": 1.0,
                         "swing": 170, "reach": 2.0, "collide": ["legs", "arms"], "floor": True, "card": "rides"},
         "shirt":       {"chains": None, "card": "held", "hold": 0.5},
         "collar":      {"chains": None, "card": "held", "hold": 0.5},
@@ -402,7 +406,7 @@ if PARAMS["bones"]:
             for c in made:
                 chains.append({"slug": slug, "island": (name, number), "gear": gear_name, "parent": anchor, "bones": c["bones"],
                                "joints": c["joints"], "out": c["out"], "kind": kind, "garment": len(garments)})
-            garments.append(dict({k: about[k] for k in ("mass", "bend", "damp", "shape", "swing", "reach", "collide", "floor", "card") if k in about},
+            garments.append(dict({k: about[k] for k in ("mass", "bend", "damp", "shape", "drape", "swing", "reach", "collide", "floor", "card") if k in about},
                                  gear=gear_name, slug=slug, kind=kind, parent=anchor, around=bool(around), facing=None if around else facing_of(start + arc / 2),
                                  chains=len(made), bones_a_chain=long, drop_cm=round(100 * drop, 1)))
 
